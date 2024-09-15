@@ -1,29 +1,80 @@
-# Create T3 App
+# HRIStudio
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+HRIStudio is a web-based platform designed to streamline the design, execution, and analysis of Wizard-of-Oz (WoZ) experiments in Human-Robot Interaction (HRI) studies. It offers an intuitive interface for experiment creation, real-time control and monitoring during experimental runs, and comprehensive data logging and playback tools for analysis and reproducibility.
 
-## What's next? How do I make an app with this?
+## Features
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+- User-friendly graphical interface for designing WoZ experiments
+- Visual programming environment with drag-and-drop functionality
+- Real-time control and observation capabilities during live experiment sessions
+- Comprehensive data logging and playback tools
+- Integration with Robot Operating System (ROS) for various robotic platforms
+- Collaborative workflow support with multiple user accounts and data sharing
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## System Requirements
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+- Node.js (version X.X.X or higher)
+- npm (version X.X.X or higher)
+- ROS (Robot Operating System)
 
-## Learn More
+## Installation
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+1. Clone the repository:
+   ```
+   git clone https://github.com/your-username/hristudio.git
+   ```
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+2. Navigate to the project directory:
+   ```
+   cd hristudio
+   ```
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+3. Install dependencies:
+   ```
+   npm install
+   ```
 
-## How do I deploy this?
+4. Set up environment variables:
+   Create a `.env.local` file in the root directory and add the necessary environment variables (e.g., database connection string, API keys).
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+5. Run the development server:
+   ```
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Project Structure
+
+- `pages/`: Contains the Next.js pages
+- `components/`: Reusable React components
+- `public/`: Static assets
+- `styles/`: CSS styles
+- `lib/`: Utility functions and modules
+- `api/`: API routes
+- `ros/`: ROS interface and related components
+
+## Usage
+
+1. Create a new study in the Dashboard view
+2. Design your experiment using the visual programming interface in the Design view
+3. Execute the experiment using the Execute view
+4. Analyze results and playback recorded data in the Playback view
+
+For detailed usage instructions, please refer to the [User Guide](link-to-user-guide).
+
+## Contributing
+
+We welcome contributions to HRIStudio! Please read our [Contributing Guidelines](link-to-contributing-guidelines) for more information on how to get started.
+
+## License
+
+This project is licensed under the [MIT License](link-to-license-file).
+
+## Contact
+
+For questions or support, please contact [your-email@example.com](mailto:your-email@example.com).
+
+## Acknowledgments
+
+This project is being developed by Sean O'Connor and L. Felipe Perrone at Bucknell University. We would like to thank the robotics and HRI research community for their valuable insights and contributions.
