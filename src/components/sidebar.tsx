@@ -61,8 +61,8 @@ export function Sidebar() {
           <div className="flex items-center space-x-4">
             <UserButton />
             <div>
-              <p className="text-sm font-medium text-blue-800">{user?.fullName || 'User'}</p>
-              <p className="text-xs text-blue-600">{user?.primaryEmailAddress?.emailAddress || 'user@example.com'}</p>
+              <p className="text-sm font-medium text-blue-800">{user?.fullName ?? 'User'}</p>
+              <p className="text-xs text-blue-600">{user?.primaryEmailAddress?.emailAddress ?? 'user@example.com'}</p>
             </div>
           </div>
         </div>

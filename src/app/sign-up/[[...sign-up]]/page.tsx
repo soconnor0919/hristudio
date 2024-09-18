@@ -31,8 +31,9 @@ export default function SignUpPage() {
         await setActive({ session: result.createdSessionId })
         router.push("/dash")
       }
-    } catch (err: any) {
-      console.error("Error:", err.errors[0].message)
+    } catch (err) {
+      const error = err as { errors?: { message: string }[] }; // Specify type
+      console.error("Error:", error.errors?.[0]?.message ?? "Unknown error") // Use optional chaining
     }
   }
 
@@ -42,6 +43,8 @@ export default function SignUpPage() {
       strategy,
       redirectUrl: "/sso-callback",
       redirectUrlComplete: "/dash",
+    }).catch((error) => {
+      console.error("Authentication error:", error); // Handle any potential errors
     })
   }
 

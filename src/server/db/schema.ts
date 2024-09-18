@@ -1,13 +1,16 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { sql } from "drizzle-orm";
+import { pgTableCreator } from "drizzle-orm/pg-core";
+import { ColumnBaseConfig, ColumnDataType, SQL, sql } from "drizzle-orm";
 import {
   index,
-  pgTableCreator,
+  pgTable,
   serial,
+  integer,
   timestamp,
   varchar,
+  ExtraConfigColumn,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -30,7 +33,25 @@ export const posts = createTable(
       () => new Date()
     ),
   },
-  (example) => ({
+  (example: { name: SQL<unknown> | Partial<ExtraConfigColumn<ColumnBaseConfig<ColumnDataType, string>>>; }) => ({
     nameIndex: index("name_idx").on(example.name),
+  })
+);
+
+export const studies = createTable(
+  "study",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 256 }).notNull(),
+    description: varchar("description", { length: 1000 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (study: { title: SQL<unknown> | Partial<ExtraConfigColumn<ColumnBaseConfig<ColumnDataType, string>>>; }) => ({
+    titleIndex: index("title_idx").on(study.title),
   })
 );

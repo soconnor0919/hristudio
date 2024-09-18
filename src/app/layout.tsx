@@ -1,10 +1,9 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "next-themes"
 
 import "~/styles/globals.css"
 
-export const inter = Inter({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",

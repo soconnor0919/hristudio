@@ -52,7 +52,7 @@ export default function HomePage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-semibold mb-4 text-blue-700">Join the HRI Revolution</h2>
           <p className="text-lg text-gray-700 mb-6">
-            Whether you're a seasoned researcher or just starting in the field of Human-Robot Interaction, 
+            Whether you&apos;re a seasoned researcher or just starting in the field of Human-Robot Interaction, 
             HRIStudio provides the tools and support you need to succeed.
           </p>
           <div className="space-x-4">

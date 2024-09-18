@@ -1,8 +1,14 @@
 import { type PropsWithChildren } from "react"
 import { Sidebar } from "~/components/sidebar"
-import { inter } from "../layout"
+import { Inter } from "next/font/google"
 
 import "~/styles/globals.css"
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+})
 
 export default function RootLayout({ children }: PropsWithChildren) {
   return (

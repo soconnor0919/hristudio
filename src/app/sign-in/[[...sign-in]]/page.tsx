@@ -31,8 +31,9 @@ export default function SignInPage() {
         await setActive({ session: result.createdSessionId })
         router.push("/dash")
       }
-    } catch (err: any) {
-      console.error("Error:", err.errors[0].message)
+    } catch (err) {
+      const error = err as { errors?: { message: string }[] };
+      console.error("Error:", error.errors?.[0]?.message ?? "Unknown error")
     }
   }
 
@@ -42,6 +43,8 @@ export default function SignInPage() {
       strategy,
       redirectUrl: "/sso-callback",
       redirectUrlComplete: "/dash",
+    }).catch((error) => {
+      console.error("Authentication error:", error); // Handle any potential errors
     })
   }
 
@@ -90,7 +93,7 @@ export default function SignInPage() {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="mt-4 text-sm text-center">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/sign-up" className="text-blue-600 hover:underline">
               Sign up
             </Link>
