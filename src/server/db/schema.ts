@@ -1,13 +1,12 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { pgTableCreator } from "drizzle-orm/pg-core";
+import { pgTable } from "drizzle-orm/pg-core";
 import { 
   serial, 
   varchar, 
   timestamp, 
-  integer, 
-  pgTable 
+  integer 
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -17,9 +16,7 @@ import { sql } from "drizzle-orm";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `hristudio_${name}`);
-
-export const studies = createTable(
+export const studies = pgTable(
   "study",
   {
     id: serial("id").primaryKey(),
@@ -35,7 +32,7 @@ export const studies = createTable(
   }
 );
 
-export const participants = createTable(
+export const participants = pgTable(
   "participant",
   {
     id: serial("id").primaryKey(),
@@ -47,7 +44,7 @@ export const participants = createTable(
   }
 );
 
-export const contentTypes = createTable(
+export const contentTypes = pgTable(
   "content_type",
   {
     id: serial("id").primaryKey(),
@@ -55,20 +52,22 @@ export const contentTypes = createTable(
   }
 );
 
-export const contents = createTable(
+export const contents = pgTable(
   "content",
   {
     id: serial("id").primaryKey(),
     contentTypeId: integer("content_type_id").references(() => contentTypes.id).notNull(),
     uploader: varchar("uploader", { length: 256 }).notNull(),
     location: varchar("location", { length: 1000 }).notNull(),
+    previewLocation: varchar("preview_location", { length: 1000 }),
+    title: varchar("title", { length: 256 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
 );
 
-export const informedConsentForms = createTable(
+export const informedConsentForms = pgTable(
   "informed_consent_form",
   {
     id: serial("id").primaryKey(),
@@ -76,6 +75,17 @@ export const informedConsentForms = createTable(
     participantId: integer("participant_id").references(() => participants.id).notNull(),
     contentId: integer("content_id").references(() => contents.id).notNull(),
     uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+export const users = pgTable(
+  "user",
+  {
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 256 }).notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }

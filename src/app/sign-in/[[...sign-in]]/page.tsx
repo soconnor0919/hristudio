@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSignIn } from "@clerk/nextjs"
+import { useSignIn, useSignUp } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
 import { Input } from "~/components/ui/input"
@@ -12,28 +12,66 @@ import { FcGoogle } from "react-icons/fc"
 import { FaApple } from "react-icons/fa"
 
 export default function SignInPage() {
-  const { isLoaded, signIn, setActive } = useSignIn()
-  const [emailAddress, setEmailAddress] = useState("")
-  const [password, setPassword] = useState("")
-  const router = useRouter()
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { signUp } = useSignUp();
+  const [emailAddress, setEmailAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isLoaded) return
+    e.preventDefault();
+    if (!isLoaded) return;
 
     try {
       const result = await signIn.create({
         identifier: emailAddress,
         password,
-      })
+      });
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId })
-        router.push("/dash")
+        await setActive({ session: result.createdSessionId });
+        router.push("/dash");
       }
     } catch (err) {
       const error = err as { errors?: { message: string }[] };
-      console.error("Error:", error.errors?.[0]?.message ?? "Unknown error")
+      console.error("Error:", error.errors?.[0]?.message ?? "Unknown error");
+
+      // If the error indicates the user does not exist, trigger sign-up
+      if (error.errors?.[0]?.message.includes("not found")) {
+        if (!signUp) {
+          console.error("Sign-up functionality is not available.");
+          return;
+        }
+
+        try {
+          const signUpResult = await signUp.create({
+            emailAddress,
+            password,
+          });
+
+          if (signUpResult.status === "complete") {
+            await setActive({ session: signUpResult.createdSessionId });
+
+            // Create a user entry in the database
+            const response = await fetch('/api/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: emailAddress }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              console.error("Error creating user in database:", errorData.error);
+              return; // Optionally handle the error (e.g., show a message to the user)
+            }
+
+            router.push("/dash");
+          }
+        } catch (signUpErr) {
+          const signUpError = signUpErr as { errors?: { message: string }[] };
+          console.error("Sign-up Error:", signUpError.errors?.[0]?.message ?? "Unknown error");
+        }
+      }
     }
   }
 
@@ -52,7 +90,7 @@ export default function SignInPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white flex items-center justify-center">
       <Card className="w-[350px]">
         <CardHeader>
-          <CardTitle>Sign In to HRIStudio</CardTitle>
+          <CardTitle>Sign in to HRIStudio</CardTitle>
           <CardDescription>Enter your email and password to sign in</CardDescription>
         </CardHeader>
         <CardContent>

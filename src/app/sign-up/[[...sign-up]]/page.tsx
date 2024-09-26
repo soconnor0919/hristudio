@@ -66,7 +66,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white flex items-center justify-center">
       <Card className="w-[350px]">
         <CardHeader>
-          <CardTitle>Sign Up for HRIStudio</CardTitle>
+          <CardTitle>Sign up for HRIStudio</CardTitle>
           <CardDescription>Create an account to get started</CardDescription>
         </CardHeader>
         <CardContent>

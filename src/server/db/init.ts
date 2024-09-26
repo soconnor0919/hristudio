@@ -7,10 +7,9 @@ export async function initializeContentTypes() {
   if (existingTypes.length === 0) {
     await db.insert(contentTypes).values([
       { name: "Informed Consent Form" },
+      { name: "Preview Image" }, // New content type
       // Add other content types as needed
     ]);
     console.log("Content types initialized");
-  } else {
-    console.log("Content types already exist");
   }
 }

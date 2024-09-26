@@ -6,6 +6,7 @@ import {
   BeakerIcon,
   BotIcon,
   FolderIcon,
+  FileTextIcon,
   LayoutDashboard,
   Menu,
   Settings
@@ -22,6 +23,7 @@ const navItems = [
   { name: "Dashboard", href: "/dash", icon: LayoutDashboard },
   { name: "Studies", href: "/studies", icon: FolderIcon },
   { name: "Participants", href: "/participants", icon: BeakerIcon },
+  { name: "Forms", href: "/forms", icon: FileTextIcon },
   { name: "Data Analysis", href: "/analysis", icon: BarChartIcon },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
