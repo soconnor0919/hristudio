@@ -46,3 +46,37 @@ export const participants = createTable(
       .notNull(),
   }
 );
+
+export const contentTypes = createTable(
+  "content_type",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 50 }).notNull().unique(),
+  }
+);
+
+export const contents = createTable(
+  "content",
+  {
+    id: serial("id").primaryKey(),
+    contentTypeId: integer("content_type_id").references(() => contentTypes.id).notNull(),
+    uploader: varchar("uploader", { length: 256 }).notNull(),
+    location: varchar("location", { length: 1000 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+export const informedConsentForms = createTable(
+  "informed_consent_form",
+  {
+    id: serial("id").primaryKey(),
+    studyId: integer("study_id").references(() => studies.id).notNull(),
+    participantId: integer("participant_id").references(() => participants.id).notNull(),
+    contentId: integer("content_id").references(() => contents.id).notNull(),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);

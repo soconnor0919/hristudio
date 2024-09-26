@@ -1,61 +1,76 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --background: 210 50% 98%;
+    --foreground: 215 25% 27%;
+    --card: 210 50% 98%;
+    --card-foreground: 215 25% 27%;
+    --popover: 210 50% 98%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 215 60% 40%;
+    --primary-foreground: 210 50% 98%;
+    --secondary: 210 55% 92%;
+    --secondary-foreground: 215 25% 27%;
+    --muted: 210 55% 92%;
+    --muted-foreground: 215 20% 50%;
+    --accent: 210 55% 92%;
+    --accent-foreground: 215 25% 27%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 50% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 215 60% 40%;
+    --radius: 0.5rem;
+
+    /* Update gradient variables */
+    --gradient-start: 210 50% 96%;
+    --gradient-end: 210 50% 98%;
+
+    /* Update sidebar variables */
+    --sidebar-background-top: 210 55% 92%;
+    --sidebar-background-bottom: 210 55% 88%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-muted: 215 20% 50%;
+    --sidebar-hover: 210 60% 86%;
   }
+
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
+    --background: 220 20% 15%;
+    --foreground: 220 15% 85%;
+    --card: 220 20% 15%;
+    --card-foreground: 220 15% 85%;
+    --popover: 220 20% 15%;
+    --popover-foreground: 220 15% 85%;
+    --primary: 220 60% 50%;
+    --primary-foreground: 220 15% 85%;
+    --secondary: 220 25% 20%;
+    --secondary-foreground: 220 15% 85%;
+    --muted: 220 25% 20%;
+    --muted-foreground: 220 15% 65%;
+    --accent: 220 25% 20%;
+    --accent-foreground: 220 15% 85%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 220 15% 85%;
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --ring: 220 60% 50%;
+
+    /* Update gradient variables for dark mode */
+    --gradient-start: 220 20% 13%;
+    --gradient-end: 220 20% 15%;
+
+    /* Update sidebar variables for dark mode */
+    --sidebar-background-top: 220 20% 15%;
+    --sidebar-background-bottom: 220 20% 12%;
+    --sidebar-foreground: 220 15% 85%;
+    --sidebar-muted: 220 15% 65%;
+    --sidebar-hover: 220 25% 18%;
   }
 }
+
 @layer base {
   * {
     @apply border-border;

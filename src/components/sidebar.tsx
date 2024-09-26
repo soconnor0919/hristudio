@@ -16,6 +16,7 @@ import { useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet"
 import { cn } from "~/lib/utils"
+import { ThemeToggle } from "~/components/ThemeToggle"
 
 const navItems = [
   { name: "Dashboard", href: "/dash", icon: LayoutDashboard },
@@ -30,8 +31,16 @@ export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const { user } = useUser()
 
+  const HRIStudioLogo = () => (
+    <Link href="/dash" className="flex items-center font-sans text-xl text-[hsl(var(--sidebar-foreground))]">
+      <BotIcon className="h-6 w-6 mr-1 text-[hsl(var(--sidebar-muted))]" />
+      <span className="font-extrabold">HRI</span>
+      <span className="font-normal">Studio</span>
+    </Link>
+  )
+
   const SidebarContent = () => (
-    <div className="flex h-full flex-col lg:bg-blue-50">
+    <div className="flex h-full flex-col bg-gradient-to-b from-[hsl(var(--sidebar-background-top))] to-[hsl(var(--sidebar-background-bottom))]">
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
           {navItems.map((item) => {
@@ -42,8 +51,8 @@ export function Sidebar() {
                   asChild
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start text-blue-800 hover:bg-blue-100",
-                    pathname === item.href && "bg-blue-100 font-semibold"
+                    "w-full justify-start text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-hover))]",
+                    pathname === item.href && "bg-[hsl(var(--sidebar-hover))] font-semibold"
                   )}
                 >
                   <Link href={item.href} onClick={() => setIsOpen(false)}>
@@ -56,31 +65,24 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-      <div className="border-t border-blue-200 p-4">
+      <div className="border-t p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <UserButton />
             <div>
-              <p className="text-sm font-medium text-blue-800">{user?.fullName ?? 'User'}</p>
-              <p className="text-xs text-blue-600">{user?.primaryEmailAddress?.emailAddress ?? 'user@example.com'}</p>
+              <p className="text-sm font-medium text-[hsl(var(--sidebar-foreground))]">{user?.fullName ?? 'User'}</p>
+              <p className="text-xs text-[hsl(var(--sidebar-muted))]">{user?.primaryEmailAddress?.emailAddress ?? 'user@example.com'}</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </div>
     </div>
   )
 
-  const HRIStudioLogo = () => (
-    <Link href="/dash" className="flex items-center font-sans text-xl text-blue-800">
-      <BotIcon className="h-6 w-6 mr-1 text-blue-600" />
-      <span className="font-extrabold">HRI</span>
-      <span className="font-normal">Studio</span>
-    </Link>
-  )
-
   return (
     <>
-      <div className="lg:hidden fixed top-0 left-0 right-0">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
         <div className="flex h-14 items-center justify-between border-b px-4 bg-background">
           <HRIStudioLogo />
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -95,7 +97,7 @@ export function Sidebar() {
           </Sheet>
         </div>
       </div>
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-background">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-gradient-to-b lg:from-[hsl(var(--sidebar-background-top))] lg:to-[hsl(var(--sidebar-background-bottom))]">
         <div className="flex h-14 items-center border-b px-4">
           <HRIStudioLogo />
         </div>

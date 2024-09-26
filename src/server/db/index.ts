@@ -16,3 +16,8 @@ const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });
+
+import { initializeContentTypes } from "./init";
+
+// Initialize content types
+initializeContentTypes().catch(console.error);

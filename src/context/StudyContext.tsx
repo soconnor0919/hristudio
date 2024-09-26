@@ -18,9 +18,17 @@ export const StudyProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   const [studies, setStudies] = useState<Study[]>([]);
 
   const fetchAndSetStudies = async () => {
-    const response = await fetch('/api/studies');
-    const fetchedStudies = await response.json();
-    setStudies(fetchedStudies);
+    try {
+      const response = await fetch('/api/studies');
+      if (!response.ok) {
+        throw new Error('Failed to fetch studies');
+      }
+      const fetchedStudies = await response.json();
+      setStudies(fetchedStudies);
+    } catch (error) {
+      console.error('Error fetching studies:', error);
+      setStudies([]);
+    }
   };
 
   const validateAndSetSelectedStudy = async (studyId: number) => {

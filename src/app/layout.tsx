@@ -1,7 +1,7 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from "next/font/google"
 import { StudyProvider } from '~/context/StudyContext'
-
+import { ThemeProvider } from '~/components/ThemeProvider'
 import "~/styles/globals.css"
 
 const inter = Inter({
@@ -19,13 +19,15 @@ export const metadata = {
 export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
     <ClerkProvider>
-      <StudyProvider>
-        <html lang="en" className={inter.variable}>
-          <body className="font-sans">
-            {children}
-          </body>
-        </html>
-      </StudyProvider>
+      <html lang="en" className={inter.variable}>
+        <body className="font-sans">
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <StudyProvider>
+              {children}
+            </StudyProvider>
+          </ThemeProvider>
+        </body>
+      </html>
     </ClerkProvider>
   )
 }
