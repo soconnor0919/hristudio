@@ -26,6 +26,7 @@ export async function DELETE(
       .select({
         contentId: informedConsentForms.contentId,
         location: contents.location,
+        previewLocation: contents.previewLocation,
       })
       .from(informedConsentForms)
       .innerJoin(contents, eq(informedConsentForms.contentId, contents.id))
@@ -35,13 +36,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    // Delete the file from the file system
-    const fullPath = path.join(process.cwd(), form.location);
+    // Delete the file and preview from the file system
+    const fullPath = path.join(process.cwd(), form.location ?? '');
+    const previewPath = path.join(process.cwd(), form.previewLocation ?? '');
     try {
       await fs.access(fullPath);
       await fs.unlink(fullPath);
     } catch (error) {
       console.warn(`File not found or couldn't be deleted: ${fullPath}`);
+    }
+    try {
+      await fs.access(previewPath);
+      await fs.unlink(previewPath);
+    } catch (error) {
+      console.warn(`Preview file not found or couldn't be deleted: ${previewPath}`);
     }
 
     // Delete the form and content from the database
@@ -50,7 +58,7 @@ export async function DELETE(
       await tx.delete(contents).where(eq(contents.id, form.contentId));
     });
 
-    return NextResponse.json({ message: "Form deleted successfully" });
+    return NextResponse.json({ message: "Form and preview deleted successfully" });
   } catch (error) {
     console.error('Error deleting form:', error);
     return NextResponse.json({ error: 'Failed to delete form' }, { status: 500 });

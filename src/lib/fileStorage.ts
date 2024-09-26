@@ -28,7 +28,13 @@ export async function saveFile(file: File, filePath: string, previewContentTypeI
   };
 
   const convert = fromBuffer(buffer, options);
-  await convert(1);
+  const result = await convert(1);
+
+  // Rename the file to remove the ".1" suffix
+  const generatedFilePath = result.path;
+  if (generatedFilePath) {
+    await fs.rename(generatedFilePath, previewPath);
+  }
 
   // Return relative paths that can be used in URLs
   return {

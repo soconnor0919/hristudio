@@ -5,7 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { saveFile } from "~/lib/fileStorage";
 import fs from 'fs/promises';
-
+import { studies, participants } from "~/server/db/schema";
 // Function to generate a random string
 const generateRandomString = (length: number) => {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -28,10 +28,14 @@ export async function GET(request: Request) {
     location: contents.location,
     previewLocation: contents.previewLocation,
     studyId: informedConsentForms.studyId,
+    studyTitle: studies.title,
     participantId: informedConsentForms.participantId,
+    participantName: participants.name,
     contentId: informedConsentForms.contentId,
   }).from(informedConsentForms)
-    .innerJoin(contents, eq(informedConsentForms.contentId, contents.id));
+    .innerJoin(contents, eq(informedConsentForms.contentId, contents.id))
+    .innerJoin(studies, eq(informedConsentForms.studyId, studies.id))
+    .innerJoin(participants, eq(informedConsentForms.participantId, participants.id));
 
   return NextResponse.json(forms);
 }
