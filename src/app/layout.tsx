@@ -1,5 +1,6 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from "next/font/google"
+import { StudyProvider } from '~/context/StudyContext'
 
 import "~/styles/globals.css"
 
@@ -10,7 +11,7 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: "T3 App",
+  title: "HRIStudio",
   description: "Created with create-t3-app",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 }
@@ -18,13 +19,13 @@ export const metadata = {
 export default function RootLayout({ children }: React.PropsWithChildren) {
   return (
     <ClerkProvider>
-      {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
+      <StudyProvider>
         <html lang="en" className={inter.variable}>
           <body className="font-sans">
             {children}
           </body>
         </html>
-      {/* </ThemeProvider> */}
+      </StudyProvider>
     </ClerkProvider>
   )
 }

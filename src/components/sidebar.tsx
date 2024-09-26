@@ -19,8 +19,8 @@ import { cn } from "~/lib/utils"
 
 const navItems = [
   { name: "Dashboard", href: "/dash", icon: LayoutDashboard },
-  { name: "Projects", href: "/projects", icon: FolderIcon },
-  { name: "Experiments", href: "/experiments", icon: BeakerIcon },
+  { name: "Studies", href: "/studies", icon: FolderIcon },
+  { name: "Participants", href: "/participants", icon: BeakerIcon },
   { name: "Data Analysis", href: "/analysis", icon: BarChartIcon },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

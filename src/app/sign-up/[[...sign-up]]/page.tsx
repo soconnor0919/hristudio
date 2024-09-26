@@ -29,6 +29,20 @@ export default function SignUpPage() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId })
+
+        // Create a user entry in the database
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailAddress }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error("Error creating user in database:", errorData.error)
+          return // Optionally handle the error (e.g., show a message to the user)
+        }
+
         router.push("/dash")
       }
     } catch (err) {
