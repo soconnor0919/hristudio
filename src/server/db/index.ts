@@ -17,7 +17,8 @@ if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });
 
-import { initializeContentTypes } from "./init";
+import { initializeContentTypes, initializeRoles } from "./init";
 
 // Initialize content types
 initializeContentTypes().catch(console.error);
+initializeRoles().catch(console.error);

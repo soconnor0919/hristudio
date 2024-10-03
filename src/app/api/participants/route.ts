@@ -2,8 +2,11 @@ import { db } from "~/server/db";
 import { participants, trialParticipants, trials } from "~/server/db/schema";
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
+import { auth } from "@clerk/nextjs/server"; // Import auth to get userId
+import { anonymizeParticipants } from "~/lib/permissions"; // Import the anonymize function
 
 export async function GET(request: Request) {
+  const { userId } = auth(); // Get the userId from auth
   try {
     const { searchParams } = new URL(request.url);
     const studyId = searchParams.get('studyId');
@@ -16,6 +19,7 @@ export async function GET(request: Request) {
       .select({
         id: participants.id,
         name: participants.name,
+        studyId: participants.studyId,
         createdAt: participants.createdAt,
         latestTrialTimestamp: sql<Date | null>`MAX(${trials.createdAt})`.as('latestTrialTimestamp')
       })
@@ -26,7 +30,10 @@ export async function GET(request: Request) {
       .groupBy(participants.id)
       .orderBy(sql`COALESCE(MAX(${trials.createdAt}), ${participants.createdAt}) DESC`);
 
-    return NextResponse.json(participantsWithLatestTrial);
+    // Anonymize participant names
+    const anonymizedParticipants = anonymizeParticipants(participantsWithLatestTrial, userId);
+
+    return NextResponse.json(anonymizedParticipants);
   } catch (error) {
     console.error('Error in GET /api/participants:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

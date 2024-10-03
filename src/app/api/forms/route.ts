@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { saveFile } from "~/lib/fileStorage";
 import fs from 'fs/promises';
 import { studies, participants } from "~/server/db/schema";
+import { anonymizeParticipants } from "~/lib/permissions"; // Import the anonymize function
+
 // Function to generate a random string
 const generateRandomString = (length: number) => {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -37,7 +39,13 @@ export async function GET(request: Request) {
     .innerJoin(studies, eq(informedConsentForms.studyId, studies.id))
     .innerJoin(participants, eq(informedConsentForms.participantId, participants.id));
 
-  return NextResponse.json(forms);
+  // Anonymize participant names
+  const anonymizedForms = forms.map(form => ({
+    ...form,
+    participantName: `Participant ${form.participantId}` // Anonymizing logic
+  }));
+
+  return NextResponse.json(anonymizedForms);
 }
 
 export async function POST(request: Request) {

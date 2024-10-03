@@ -75,19 +75,21 @@ export function Trials() {
   };
 
   return (
-    <Card>
+    <Card className="card-level-1">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">Trials</CardTitle>
         <CreateTrialDialog onCreateTrial={createTrial} />
       </CardHeader>
       <CardContent>
         {trials.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {trials.map(trial => (
-              <Card key={trial.id} className="bg-gray-100 p-3 flex items-center justify-between">
+              <Card key={trial.id} className="card-level-2 p-3 flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">{trial.title}</h3>
-                  <p className="text-sm text-gray-500">Participants: {trial.participantIds.join(', ')}</p>
+                  <p className="text-sm text-gray-500">
+                    Participants: {trial.participantIds ? trial.participantIds.join(', ') : 'None'}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"

@@ -6,7 +6,8 @@ import {
   serial, 
   varchar, 
   timestamp, 
-  integer 
+  integer, 
+  boolean 
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -85,6 +86,7 @@ export const users = pgTable(
   {
     id: serial("id").primaryKey(),
     email: varchar("email", { length: 256 }).notNull().unique(),
+    roleId: integer("role_id").references(() => roles.id).default(0), // Link to roles
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -108,5 +110,47 @@ export const trialParticipants = pgTable(
     id: serial("id").primaryKey(),
     trialId: integer("trial_id").references(() => trials.id).notNull(),
     participantId: integer("participant_id").references(() => participants.id).notNull(),
+  }
+);
+
+export const roles = pgTable(
+  "role",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 50 }).notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+export const permissions = pgTable(
+  "permission",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 50 }).notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+export const rolePermissions = pgTable(
+  "role_permissions",
+  {
+    id: serial("id").primaryKey(),
+    roleId: integer("role_id").references(() => roles.id).notNull(),
+    permissionId: integer("permission_id").references(() => permissions.id).notNull(),
+  }
+);
+
+export const permissionTypes = pgTable(
+  "permission_type",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 50 }).notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
   }
 );
