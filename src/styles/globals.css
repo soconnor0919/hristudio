@@ -6,8 +6,8 @@
   :root {
     --background: 210 50% 98%;
     --foreground: 215 25% 27%;
-    --card: 210 50% 98%;
-    --card-foreground: 215 25% 27%;
+    --card: 210 50% 98%; /* Card background color */
+    --card-foreground: 215 25% 27%; /* Card text color */
     --popover: 210 50% 98%;
     --popover-foreground: 215 25% 27%;
     --primary: 215 60% 40%;
@@ -35,39 +35,60 @@
     --sidebar-foreground: 215 25% 27%;
     --sidebar-muted: 215 20% 50%;
     --sidebar-hover: 210 60% 86%;
+    
+    --card-level-1: 210 50% 95%; /* Level 1 card background color */
+    --card-level-2: 210 50% 90%; /* Level 2 card background color */
+    --card-level-3: 210 50% 85%; /* Level 3 card background color */
   }
 
   .dark {
-    --background: 220 20% 15%;
-    --foreground: 220 15% 85%;
-    --card: 220 20% 15%;
-    --card-foreground: 220 15% 85%;
+    --background: 220 20% 15%; /* Dark mode background */
+    --foreground: 220 20% 90%; /* Dark mode foreground */
+    --card: 220 20% 15%; /* Dark mode card background color */
+    --card-foreground: 220 20% 90%; /* Dark mode card text color */
     --popover: 220 20% 15%;
-    --popover-foreground: 220 15% 85%;
+    --popover-foreground: 220 20% 90%;
     --primary: 220 60% 50%;
-    --primary-foreground: 220 15% 85%;
-    --secondary: 220 25% 20%;
-    --secondary-foreground: 220 15% 85%;
-    --muted: 220 25% 20%;
-    --muted-foreground: 220 15% 65%;
-    --accent: 220 25% 20%;
-    --accent-foreground: 220 15% 85%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 220 15% 85%;
-    --border: 220 25% 20%;
-    --input: 220 25% 20%;
+    --primary-foreground: 220 20% 90%;
+    --secondary: 220 30% 20%; /* Darker secondary */
+    --secondary-foreground: 220 20% 90%;
+    --muted: 220 30% 20%;
+    --muted-foreground: 220 20% 70%;
+    --accent: 220 30% 20%;
+    --accent-foreground: 220 20% 90%;
+    --destructive: 0 62% 40%; /* Darker destructive */
+    --destructive-foreground: 220 20% 90%;
+    --border: 220 30% 20%;
+    --input: 220 30% 20%;
     --ring: 220 60% 50%;
 
     /* Update gradient variables for dark mode */
-    --gradient-start: 220 20% 13%;
+    --gradient-start: 220 20% 12%;
     --gradient-end: 220 20% 15%;
 
     /* Update sidebar variables for dark mode */
     --sidebar-background-top: 220 20% 15%;
     --sidebar-background-bottom: 220 20% 12%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-muted: 220 15% 65%;
-    --sidebar-hover: 220 25% 18%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-muted: 220 20% 70%;
+    --sidebar-hover: 220 30% 20%;
+    
+    --card-level-1: 220 20% 12%; /* Dark mode Level 1 card background color */
+    --card-level-2: 220 20% 10%; /* Dark mode Level 2 card background color */
+    --card-level-3: 220 20% 8%; /* Dark mode Level 3 card background color */
+  }
+
+  /* Add these utility classes */
+  .card-level-1 {
+    background-color: hsl(var(--card-level-1));
+  }
+
+  .card-level-2 {
+    background-color: hsl(var(--card-level-2));
+  }
+
+  .card-level-3 {
+    background-color: hsl(var(--card-level-3));
   }
 }
 

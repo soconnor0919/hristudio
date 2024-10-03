@@ -3,7 +3,8 @@
 import { UserButton, useUser } from "@clerk/nextjs"
 import {
   BarChartIcon,
-  BeakerIcon,
+  UsersRoundIcon, 
+  LandPlotIcon,
   BotIcon,
   FolderIcon,
   FileTextIcon,
@@ -22,7 +23,8 @@ import { ThemeToggle } from "~/components/ThemeToggle"
 const navItems = [
   { name: "Dashboard", href: "/dash", icon: LayoutDashboard },
   { name: "Studies", href: "/studies", icon: FolderIcon },
-  { name: "Participants", href: "/participants", icon: BeakerIcon },
+  { name: "Participants", href: "/participants", icon: UsersRoundIcon },
+  { name: "Trials", href: "/trials", icon: LandPlotIcon },
   { name: "Forms", href: "/forms", icon: FileTextIcon },
   { name: "Data Analysis", href: "/analysis", icon: BarChartIcon },
   { name: "Settings", href: "/settings", icon: Settings },

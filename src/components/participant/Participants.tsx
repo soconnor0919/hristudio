@@ -8,9 +8,17 @@ import { Participant } from '../../types/Participant';
 import { CreateParticipantDialog } from './CreateParticipantDialog';
 import { useToast } from '~/hooks/use-toast';
 import { ParticipantCard } from './ParticipantCard';
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+
+interface ParticipantWithTrial {
+  id: number;
+  name: string;
+  latestTrialTimestamp: string | null;
+  createdAt: string;
+}
 
 export function Participants() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<ParticipantWithTrial[]>([]);
   const { selectedStudy } = useStudyContext();
   const { toast } = useToast();
 
@@ -22,9 +30,23 @@ export function Participants() {
 
   const fetchParticipants = async () => {
     if (!selectedStudy) return;
-    const response = await fetch(`/api/participants?studyId=${selectedStudy.id}`);
-    const data = await response.json();
-    setParticipants(data);
+    try {
+      const response = await fetch(`/api/participants?studyId=${selectedStudy.id}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        setParticipants(data);
+      } catch (e) {
+        console.error('Failed to parse JSON:', text);
+        throw new Error('Invalid JSON in response');
+      }
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      // Handle the error appropriately, e.g., show a toast notification
+    }
   };
 
   const createParticipant = async (name: string) => {
@@ -41,33 +63,20 @@ export function Participants() {
   const deleteParticipant = async (id: number) => {
     if (!selectedStudy) return;
     try {
-      console.log(`Attempting to delete participant with ID: ${id}`);
       const response = await fetch(`/api/participants/${id}`, {
         method: 'DELETE',
       });
-      console.log('Delete response:', response);
 
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const result = await response.json();
-        console.log('Delete result:', result);
-
-        if (!response.ok) {
-          throw new Error(result.error || `Failed to delete participant. Status: ${response.status}`);
-        }
-
-        setParticipants(participants.filter(p => p.id !== id));
-        toast({
-          title: "Success",
-          description: "Participant deleted successfully",
-        });
-      } else {
-        const text = await response.text();
-        console.error('Unexpected response:', text);
-        throw new Error(`Unexpected response from server. Status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete participant');
       }
+
+      setParticipants(participants.filter(p => p.id !== id));
+      toast({
+        title: "Success",
+        description: "Participant deleted successfully",
+      });
     } catch (error) {
-      console.error('Error deleting participant:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : 'Failed to delete participant',
@@ -81,16 +90,36 @@ export function Participants() {
   }
 
   return (
-    <Card>
+    <Card className="card-level-1">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">Participants for {selectedStudy.title}</CardTitle>
         <CreateParticipantDialog onCreateParticipant={createParticipant} />
       </CardHeader>
       <CardContent>
         {participants.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {participants.map(participant => (
-              <ParticipantCard key={participant.id} participant={participant} onDelete={deleteParticipant} />
+              <Card key={participant.id} className="card-level-2 p-3 flex items-center w-full">
+                <Avatar className="mr-4">
+                  <AvatarFallback>{participant.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="font-semibold">{participant.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {participant.latestTrialTimestamp 
+                      ? `Last trial: ${new Date(participant.latestTrialTimestamp).toLocaleString()}` 
+                      : 'No trials yet'}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => deleteParticipant(participant.id)}
+                >
+                  Delete
+                </Button>
+              </Card>
             ))}
           </div>
         ) : (

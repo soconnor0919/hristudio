@@ -90,3 +90,23 @@ export const users = pgTable(
       .notNull(),
   }
 );
+
+export const trials = pgTable(
+  "trial",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 256 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+export const trialParticipants = pgTable(
+  "trial_participants",
+  {
+    id: serial("id").primaryKey(),
+    trialId: integer("trial_id").references(() => trials.id).notNull(),
+    participantId: integer("participant_id").references(() => participants.id).notNull(),
+  }
+);

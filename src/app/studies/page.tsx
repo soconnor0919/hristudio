@@ -3,7 +3,7 @@ import { Studies } from "~/components/study/Studies";
 
 export default function StudiesPage() {
   return (
-    <Layout>
+    <Layout pageTitle="Studies">
       <Studies />
     </Layout>
   );

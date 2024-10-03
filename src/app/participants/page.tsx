@@ -3,7 +3,7 @@ import { Participants } from "~/components/participant/Participants";
 
 const ParticipantsPage = () => {
   return (
-    <Layout>
+    <Layout pageTitle="Participants">
       <Participants />
     </Layout>
   );

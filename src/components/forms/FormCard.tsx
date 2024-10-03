@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Trash2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
 
 interface FormCardProps {
   form: {
@@ -23,7 +24,7 @@ export function FormCard({ form, onDelete }: FormCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden cursor-pointer" onClick={handleCardClick}>
+    <Card className="overflow-hidden cursor-pointer" onClick={handleCardClick} style={{ backgroundColor: 'var(--primary-card-background)' }}>
       <CardContent className="p-0 h-40 relative">
         <Image
           src={form.previewLocation}
@@ -36,16 +37,21 @@ export function FormCard({ form, onDelete }: FormCardProps) {
           }}
         />
       </CardContent>
-      <CardFooter className="flex flex-col items-start p-4">
+      <CardFooter className="flex flex-col items-start p-4" style={{ backgroundColor: 'var(--secondary-card-background)' }}>
         <div className="flex items-center justify-between w-full">
           <h3 className="font-semibold mb-2">{form.title}</h3>
-          <Trash2 
-            className="h-4 w-4 text-destructive cursor-pointer" 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(form.id);
-            }} 
-          />
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </Button>
         </div>
         <div className="flex flex-wrap gap-2 mb-2">
           <Badge variant="secondary">{form.studyTitle}</Badge>
