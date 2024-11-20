@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
 import { UserButton, useUser } from "@clerk/nextjs"
 import {
   BarChartIcon,
-  UsersRoundIcon, 
+  UsersRoundIcon,
   LandPlotIcon,
   BotIcon,
   FolderIcon,
@@ -16,18 +16,17 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Button } from "~/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "~/components/ui/sheet"
 import { cn } from "~/lib/utils"
-import { ThemeToggle } from "~/components/ThemeToggle"
 
 const navItems = [
-  { name: "Dashboard", href: "/dash", icon: LayoutDashboard },
-  { name: "Studies", href: "/studies", icon: FolderIcon },
-  { name: "Participants", href: "/participants", icon: UsersRoundIcon },
-  { name: "Trials", href: "/trials", icon: LandPlotIcon },
-  { name: "Forms", href: "/forms", icon: FileTextIcon },
-  { name: "Data Analysis", href: "/analysis", icon: BarChartIcon },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Studies", href: "/dashboard/studies", icon: FolderIcon },
+  { name: "Participants", href: "/dashboard/participants", icon: UsersRoundIcon },
+  { name: "Trials", href: "/dashboard/trials", icon: LandPlotIcon },
+  { name: "Forms", href: "/dashboard/forms", icon: FileTextIcon },
+  { name: "Data Analysis", href: "/dashboard/analysis", icon: BarChartIcon },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -36,7 +35,7 @@ export function Sidebar() {
   const { user } = useUser()
 
   const HRIStudioLogo = () => (
-    <Link href="/dash" className="flex items-center font-sans text-xl text-[hsl(var(--sidebar-foreground))]">
+    <Link href="/dashboard" className="flex items-center font-sans text-xl text-[hsl(var(--sidebar-foreground))]">
       <BotIcon className="h-6 w-6 mr-1 text-[hsl(var(--sidebar-muted))]" />
       <span className="font-extrabold">HRI</span>
       <span className="font-normal">Studio</span>
@@ -78,7 +77,6 @@ export function Sidebar() {
               <p className="text-xs text-[hsl(var(--sidebar-muted))]">{user?.primaryEmailAddress?.emailAddress ?? 'user@example.com'}</p>
             </div>
           </div>
-          <ThemeToggle />
         </div>
       </div>
     </div>
@@ -96,6 +94,7 @@ export function Sidebar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="top" className="w-full">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <SidebarContent />
             </SheetContent>
           </Sheet>

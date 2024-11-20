@@ -1,0 +1,7 @@
+Permissions:
+
+Roles table, permissions table, roles_permissions table
+user has a role, role has many permissions
+user can have multiple roles
+each role has many permissions, each action that the user can do is a permission
+

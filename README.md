@@ -1,80 +1,36 @@
-# HRIStudio
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-HRIStudio is a web-based platform designed to streamline the design, execution, and analysis of Wizard-of-Oz (WoZ) experiments in Human-Robot Interaction (HRI) studies. It offers an intuitive interface for experiment creation, real-time control and monitoring during experimental runs, and comprehensive data logging and playback tools for analysis and reproducibility.
+## Getting Started
 
-## Features
+First, run the development server:
 
-- User-friendly graphical interface for designing WoZ experiments
-- Visual programming environment with drag-and-drop functionality
-- Real-time control and observation capabilities during live experiment sessions
-- Comprehensive data logging and playback tools
-- Integration with Robot Operating System (ROS) for various robotic platforms
-- Collaborative workflow support with multiple user accounts and data sharing
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## System Requirements
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- Node.js (version X.X.X or higher)
-- npm (version X.X.X or higher)
-- ROS (Robot Operating System)
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Installation
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/your-username/hristudio.git
-   ```
+## Learn More
 
-2. Navigate to the project directory:
-   ```
-   cd hristudio
-   ```
+To learn more about Next.js, take a look at the following resources:
 
-3. Install dependencies:
-   ```
-   npm install
-   ```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-4. Set up environment variables:
-   Create a `.env.local` file in the root directory and add the necessary environment variables (e.g., database connection string, API keys).
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-5. Run the development server:
-   ```
-   npm run dev
-   ```
+## Deploy on Vercel
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## Project Structure
-
-- `pages/`: Contains the Next.js pages
-- `components/`: Reusable React components
-- `public/`: Static assets
-- `styles/`: CSS styles
-- `lib/`: Utility functions and modules
-- `api/`: API routes
-- `ros/`: ROS interface and related components
-
-## Usage
-
-1. Create a new study in the Dashboard view
-2. Design your experiment using the visual programming interface in the Design view
-3. Execute the experiment using the Execute view
-4. Analyze results and playback recorded data in the Playback view
-
-For detailed usage instructions, please refer to the [User Guide](link-to-user-guide).
-
-## Contributing
-
-We welcome contributions to HRIStudio! Please read our [Contributing Guidelines](link-to-contributing-guidelines) for more information on how to get started.
-
-## License
-
-This project is licensed under the [MIT License](link-to-license-file).
-
-## Contact
-
-For questions or support, please contact [your-email@example.com](mailto:your-email@example.com).
-
-## Acknowledgments
-
-This project is being developed by Sean O'Connor and L. Felipe Perrone at Bucknell University. We would like to thank the robotics and HRI research community for their valuable insights and contributions.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
