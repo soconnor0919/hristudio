@@ -1,4 +1,4 @@
-# HRIStudio
+# [HRIStudio](https://www.hristudio.com)
 
 A web platform for managing human-robot interaction studies, participants, and wizard-of-oz experiments.
 
