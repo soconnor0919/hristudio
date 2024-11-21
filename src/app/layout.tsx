@@ -1,13 +1,8 @@
 import {
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
-} from '@clerk/nextjs'
-import './globals.css'
-import { Button } from '~/components/ui/button';
+  ClerkProvider
+} from '@clerk/nextjs';
 import { Inter } from 'next/font/google';
+import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
