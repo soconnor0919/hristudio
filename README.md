@@ -2,6 +2,8 @@
 
 A web platform for managing human-robot interaction studies, participants, and wizard-of-oz experiments.
 
+![HRIStudio Homepage](.github/homepage-screenshot.png)
+
 ## Features
 
 - Role-based access control with granular permissions
