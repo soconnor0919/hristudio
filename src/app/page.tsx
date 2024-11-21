@@ -1,6 +1,6 @@
 'use client';
 
-import { SignedIn, SignedOut, SignInButton, SignOutButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,9 +19,9 @@ export default function Home() {
               <SignInButton mode="modal">
                 <Button variant="ghost">Sign In</Button>
               </SignInButton>
-              <SignInButton mode="modal">
+              <SignUpButton mode="modal">
                 <Button>Sign Up</Button>
-              </SignInButton>
+              </SignUpButton>
             </SignedOut>
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
@@ -41,11 +41,11 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <SignedOut>
-              <SignInButton mode="modal">
+              <SignUpButton mode="modal">
                 <Button size="lg" className="w-full sm:w-auto">
                   Get Started
                 </Button>
-              </SignInButton>
+              </SignUpButton>
             </SignedOut>
             <SignedIn>
               <Button size="lg" className="w-full sm:w-auto" asChild>
