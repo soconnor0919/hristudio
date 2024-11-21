@@ -1,18 +1,24 @@
 'use client';
 
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter 
+} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { PlusIcon, Trash2Icon } from "lucide-react";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
-  SelectLabel,
+  SelectTrigger,
+  SelectValue
 } from "~/components/ui/select";
 
 interface Study {
@@ -51,7 +57,13 @@ export default function Participants() {
 
   const fetchParticipants = async (studyId: number) => {
     try {
+      console.log(`Fetching participants for studyId: ${studyId}`);
       const response = await fetch(`/api/participants?studyId=${studyId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       setParticipants(data);
     } catch (error) {
@@ -115,26 +127,42 @@ export default function Participants() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Manage Participants</h1>
-      <div className="mb-4">
-        <Label htmlFor="study">Select Study</Label>
-        <Select onValueChange={handleStudyChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a study" />
-          </SelectTrigger>
-          <SelectContent>
-            {studies.map((study) => (
-              <SelectItem key={study.id} value={study.id.toString()}>
-                {study.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Participants</h1>
       </div>
 
-      <Card>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Study Selection</CardTitle>
+          <CardDescription>
+            Select a study to manage its participants
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="study">Select Study</Label>
+            <Select onValueChange={handleStudyChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a study" />
+              </SelectTrigger>
+              <SelectContent>
+                {studies.map((study) => (
+                  <SelectItem key={study.id} value={study.id.toString()}>
+                    {study.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Add New Participant</CardTitle>
+          <CardDescription>
+            Add a new participant to the selected study
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={addParticipant} className="space-y-4">
@@ -156,18 +184,50 @@ export default function Participants() {
         </CardContent>
       </Card>
 
-      <div className="mt-4">
-        <h2 className="text-xl font-semibold">Participant List</h2>
-        <ul>
-          {participants.map((participant) => (
-            <li key={participant.id} className="flex justify-between items-center">
-              <span>{participant.name}</span>
-              <Button onClick={() => deleteParticipant(participant.id)} variant="destructive">
-                <Trash2Icon className="w-4 h-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
+      <div className="grid gap-4">
+        {participants.map((participant) => (
+          <Card key={participant.id}>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{participant.name}</CardTitle>
+                  <CardDescription className="mt-1.5">
+                    Participant ID: {participant.id}
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-destructive"
+                  onClick={() => deleteParticipant(participant.id)}
+                >
+                  <Trash2Icon className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardFooter className="text-sm text-muted-foreground">
+              Study ID: {participant.studyId}
+            </CardFooter>
+          </Card>
+        ))}
+        {participants.length === 0 && selectedStudyId && (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                No participants found for this study. Add one above to get started.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+        {!selectedStudyId && (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                Please select a study to view its participants.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

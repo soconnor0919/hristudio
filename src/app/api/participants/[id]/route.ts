@@ -4,15 +4,15 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "~/db";
 import { participants } from "~/db/schema";
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+
+export async function DELETE(request: Request, { params }: any) {
     const { userId } = await auth();
 
     if (!userId) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { id } = await params;
-    const participantId = parseInt(id);
+    const participantId = parseInt(params.id);
 
     try {
         const result = await db
