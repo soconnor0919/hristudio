@@ -1,38 +1,100 @@
 'use client';
 
-import { SignedIn, SignedOut, SignInButton, SignOutButton, UserButton, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignOutButton, UserButton } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { BotIcon } from "lucide-react";
+import { Logo } from "~/components/logo";
 
 export default function Home() {
-  const { user, isLoaded } = useUser(); // Get user information and loading state
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (isLoaded) {
-      setLoading(false);
-    }
-  }, [isLoaded]);
-
-  if (loading) {
-    return <div>Loading...</div>; // Show a loading state while fetching user data
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-4">Welcome to HRIStudio</h1>
-      <SignedOut>
-        <SignInButton>
-          <Button>Sign In</Button>
-        </SignInButton>
-      </SignedOut>
-      <SignedIn>
-        <UserButton />
-        <p className="mt-4">Signed in as: {user?.emailAddresses[0].emailAddress}</p> {/* Display user's email */}
-        <SignOutButton>
-          <Button>Sign Out</Button>
-        </SignOutButton>
-      </SignedIn>
+    <div className="min-h-screen bg-background">
+      {/* Navigation Bar */}
+      <nav className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Logo />
+          <div className="flex items-center space-x-4">
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost">Sign In</Button>
+              </SignInButton>
+              <SignInButton mode="modal">
+                <Button>Sign Up</Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-24 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight lg:text-6xl">
+            Streamline Your HRI Research
+          </h1>
+          <p className="mt-6 text-xl text-muted-foreground">
+            A comprehensive platform for designing, executing, and analyzing Wizard-of-Oz experiments in human-robot interaction studies.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Get Started
+                </Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <Button size="lg" className="w-full sm:w-auto" asChild>
+                <Link href="/dashboard">
+                  Go to Dashboard
+                </Link>
+              </Button>
+            </SignedIn>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
+              <Link href="https://github.com/soconnor0919/hristudio" target="_blank">
+                View on GitHub
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <div className="relative">
+          <Image
+            src="/hristudio_laptop.png"
+            alt="HRIStudio Interface"
+            width={800}
+            height={600}
+            priority
+          />
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="container mx-auto px-4 py-24">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Visual Experiment Design</h3>
+            <p className="text-muted-foreground">
+              Create and configure experiments using an intuitive drag-and-drop interface without extensive coding.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Real-time Control</h3>
+            <p className="text-muted-foreground">
+              Execute experiments with synchronized views for wizards and observers, enabling seamless collaboration.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Comprehensive Analysis</h3>
+            <p className="text-muted-foreground">
+              Record, playback, and analyze experimental data with built-in annotation and export tools.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

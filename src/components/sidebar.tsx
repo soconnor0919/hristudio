@@ -18,6 +18,7 @@ import { useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "~/components/ui/sheet"
 import { cn } from "~/lib/utils"
+import { Logo } from "~/components/logo"
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -33,14 +34,6 @@ export function Sidebar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const { user } = useUser()
-
-  const HRIStudioLogo = () => (
-    <Link href="/dashboard" className="flex items-center font-sans text-xl text-[hsl(var(--sidebar-foreground))]">
-      <BotIcon className="h-6 w-6 mr-1 text-[hsl(var(--sidebar-muted))]" />
-      <span className="font-extrabold">HRI</span>
-      <span className="font-normal">Studio</span>
-    </Link>
-  )
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-gradient-to-b from-[hsl(var(--sidebar-background-top))] to-[hsl(var(--sidebar-background-bottom))]">
@@ -86,7 +79,11 @@ export function Sidebar() {
     <>
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
         <div className="flex h-14 items-center justify-between border-b px-4 bg-background">
-          <HRIStudioLogo />
+          <Logo 
+            href="/dashboard"
+            className="text-[hsl(var(--sidebar-foreground))]"
+            iconClassName="text-[hsl(var(--sidebar-muted))]"
+          />
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" className="h-14 w-14 px-0">
@@ -102,7 +99,11 @@ export function Sidebar() {
       </div>
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-gradient-to-b lg:from-[hsl(var(--sidebar-background-top))] lg:to-[hsl(var(--sidebar-background-bottom))]">
         <div className="flex h-14 items-center border-b px-4">
-          <HRIStudioLogo />
+          <Logo 
+            href="/dashboard"
+            className="text-[hsl(var(--sidebar-foreground))]"
+            iconClassName="text-[hsl(var(--sidebar-muted))]"
+          />
         </div>
         <SidebarContent />
       </div>
