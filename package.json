@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts",
+    "ngrok:start": "ngrok http --url=endless-pegasus-happily.ngrok-free.app 3000",
+    "db:drop": "tsx src/db/drop.ts",
+    "db:reset": "pnpm db:drop && pnpm db:push && pnpm db:seed"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.4.0",
@@ -24,8 +28,10 @@
     "drizzle-orm": "^0.36.3",
     "lucide-react": "^0.454.0",
     "next": "15.0.2",
+    "ngrok": "5.0.0-beta.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "svix": "^1.41.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7"
   },
