@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/db";
-import { participants } from "~/db/schema";
+import { participantsTable } from "~/db/schema";
 
 export async function GET(request: Request) {
     const { userId } = await auth();
@@ -20,8 +20,8 @@ export async function GET(request: Request) {
 
     const participantList = await db
         .select()
-        .from(participants)
-        .where(eq(participants.studyId, parseInt(studyId)));
+        .from(participantsTable)
+        .where(eq(participantsTable.studyId, parseInt(studyId)));
 
     return NextResponse.json(participantList);
 }
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     try {
         const participant = await db
-            .insert(participants)
+            .insert(participantsTable)
             .values({
                 name,
                 studyId,

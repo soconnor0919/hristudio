@@ -1,48 +1,63 @@
+import { eq, and } from "drizzle-orm";
 import { db } from "~/db";
-import { permissions, rolePermissions, userRoles } from "~/db/schema";
-import { eq } from "drizzle-orm";
+import { 
+  permissionsTable, 
+  userRolesTable, 
+  rolePermissionsTable 
+} from "~/db/schema";
 
-// Define permission codes
 export const PERMISSIONS = {
-  VIEW_PARTICIPANT_NAMES: 'view_participant_names',
-  CREATE_PARTICIPANT: 'create_participant',
-  DELETE_PARTICIPANT: 'delete_participant',
-  CREATE_STUDY: 'create_study',
-  DELETE_STUDY: 'delete_study',
-  MANAGE_ROLES: 'manage_roles',
+  VIEW_PARTICIPANT_NAMES: "view_participant_names",
+  CREATE_PARTICIPANT: "create_participant",
+  DELETE_PARTICIPANT: "delete_participant",
+  CREATE_STUDY: "create_study",
+  DELETE_STUDY: "delete_study",
+  MANAGE_ROLES: "manage_roles",
 } as const;
 
 export type PermissionCode = keyof typeof PERMISSIONS;
 
-// Cache user permissions
-const userPermissionsCache = new Map<string, Set<string>>();
-
-export async function getUserPermissions(userId: string): Promise<Set<string>> {
-  // Check cache first
-  const cached = userPermissionsCache.get(userId);
-  if (cached) return cached;
-
-  // Query permissions from database
-  const userPerms = await db
+export async function getUserPermissions(userId: string) {
+  // Get all permissions for the user through their roles
+  const userPermissions = await db
     .select({
-      permissionCode: permissions.code,
+      permissionCode: permissionsTable.code,
     })
-    .from(userRoles)
-    .leftJoin(rolePermissions, eq(userRoles.roleId, rolePermissions.roleId))
-    .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(userRoles.userId, userId));
-  const permSet = new Set<string>(userPerms.map(p => p.permissionCode).filter((code): code is string => code !== null));
-  userPermissionsCache.set(userId, permSet);
-  
-  return permSet;
+    .from(userRolesTable)
+    .innerJoin(
+      rolePermissionsTable,
+      eq(userRolesTable.roleId, rolePermissionsTable.roleId)
+    )
+    .innerJoin(
+      permissionsTable,
+      eq(rolePermissionsTable.permissionId, permissionsTable.id)
+    )
+    .where(eq(userRolesTable.userId, userId));
+
+  return userPermissions.map(p => p.permissionCode);
 }
 
-export async function hasPermission(userId: string, permissionCode: string): Promise<boolean> {
-  const userPerms = await getUserPermissions(userId);
-  return userPerms.has(permissionCode);
-}
+export async function hasPermission(userId: string, permissionCode: string) {
+  const result = await db
+    .select({
+      id: permissionsTable.id,
+    })
+    .from(userRolesTable)
+    .innerJoin(
+      rolePermissionsTable,
+      eq(userRolesTable.roleId, rolePermissionsTable.roleId)
+    )
+    .innerJoin(
+      permissionsTable,
+      eq(rolePermissionsTable.permissionId, permissionsTable.id)
+    )
+    .where(
+      and(
+        eq(userRolesTable.userId, userId),
+        eq(permissionsTable.code, permissionCode)
+      )
+    )
+    .limit(1);
 
-// Clear cache for user
-export function clearUserPermissionsCache(userId: string) {
-  userPermissionsCache.delete(userId);
+  return result.length > 0;
 }

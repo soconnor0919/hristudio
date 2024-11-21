@@ -9,6 +9,11 @@ export async function GET() {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const permissions = await getUserPermissions(userId);
-  return NextResponse.json(Array.from(permissions));
+  try {
+    const permissions = await getUserPermissions(userId);
+    return NextResponse.json(permissions);
+  } catch (error) {
+    console.error("Error fetching permissions:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
 }

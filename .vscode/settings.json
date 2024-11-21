@@ -1,6 +1,8 @@
 {
     "conventionalCommits.scopes": [
         "homepage",
-        "repo"
+        "repo",
+        "auth",
+        "perms"
     ]
 }
