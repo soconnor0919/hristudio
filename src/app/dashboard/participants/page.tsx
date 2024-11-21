@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
+import { usePermissions } from "~/hooks/usePermissions";
 
 interface Study {
   id: number;
@@ -38,6 +39,7 @@ export default function Participants() {
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [participantName, setParticipantName] = useState("");
   const [loading, setLoading] = useState(true);
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     fetchStudies();
@@ -195,14 +197,16 @@ export default function Participants() {
                     Participant ID: {participant.id}
                   </CardDescription>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-destructive"
-                  onClick={() => deleteParticipant(participant.id)}
-                >
-                  <Trash2Icon className="w-4 h-4" />
-                </Button>
+                {hasPermission('DELETE_PARTICIPANT') && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="text-destructive"
+                    onClick={() => deleteParticipant(participant.id)}
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardFooter className="text-sm text-muted-foreground">
