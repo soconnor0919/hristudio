@@ -47,6 +47,11 @@ export default function Studies() {
   const createStudy = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log("Sending study data:", {
+        title: newStudyTitle,
+        description: newStudyDescription
+      });
+
       const response = await fetch('/api/studies', {
         method: 'POST',
         headers: {
@@ -57,12 +62,20 @@ export default function Studies() {
           description: newStudyDescription,
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server response:", errorData);
+        throw new Error(errorData.error || 'Failed to create study');
+      }
+
       const newStudy = await response.json();
       setStudies([...studies, newStudy]);
       setNewStudyTitle("");
       setNewStudyDescription("");
     } catch (error) {
       console.error('Error creating study:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create study');
     }
   };
 

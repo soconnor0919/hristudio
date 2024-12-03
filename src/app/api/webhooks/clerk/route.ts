@@ -59,59 +59,57 @@ export async function POST(req: Request) {
       // Combine first and last name
       const fullName = [first_name, last_name].filter(Boolean).join(' ');
 
-      // Create/update user
-      await db
-        .insert(usersTable)
-        .values({
-          id,
-          name: fullName,
-          email: primaryEmail,
-          imageUrl: image_url,
-        })
-        .onConflictDoUpdate({
-          target: usersTable.id,
-          set: {
+      // Create/update user with a transaction
+      await db.transaction(async (tx) => {
+        // Create/update user
+        await tx
+          .insert(usersTable)
+          .values({
+            id,
             name: fullName,
             email: primaryEmail,
             imageUrl: image_url,
-            updatedAt: new Date(),
-          },
-        });
-
-      // Assign default role (Observer)
-      const observerRole = await db
-        .select()
-        .from(rolesTable)
-        .where(eq(rolesTable.name, 'Observer'))
-        .limit(1);
-
-      if (observerRole[0]) {
-        await db
-          .insert(userRolesTable)
-          .values({
-            userId: id,
-            roleId: observerRole[0].id,
           })
-          .onConflictDoNothing();
-      }
+          .onConflictDoUpdate({
+            target: usersTable.id,
+            set: {
+              name: fullName,
+              email: primaryEmail,
+              imageUrl: image_url,
+              updatedAt: new Date(),
+            },
+          });
+
+        // Get or create Observer role
+        const observerRole = await tx
+          .select()
+          .from(rolesTable)
+          .where(eq(rolesTable.name, 'Observer'))
+          .limit(1);
+
+        if (observerRole[0]) {
+          await tx
+            .insert(userRolesTable)
+            .values({
+              userId: id,
+              roleId: observerRole[0].id,
+            })
+            .onConflictDoNothing();
+        }
+      });
 
       return new Response('User created successfully', { status: 200 });
     } catch (error) {
       console.error('Error creating user:', error);
-      return new Response('Database error', { status: 500 });
+      return new Response(JSON.stringify({ error: 'Database error' }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
   }
 
-  if (eventType === 'user.deleted') {
-    try {
-      await db
-        .delete(usersTable)
-        .where(eq(usersTable.id, String(event.data.id)));
-    } catch (error) {
-      console.error('Error deleting user from database:', error);
-      return new Response('Database error', { status: 500 });
-    }
-  }
-
-  return new Response('Webhook processed successfully', { status: 200 });
+  return new Response(JSON.stringify({ message: 'Webhook processed successfully' }), { 
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
