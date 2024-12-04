@@ -1,11 +1,19 @@
 import { sql, relations } from 'drizzle-orm';
 import { integer, pgTable, serial, text, timestamp, varchar, primaryKey, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 
+export const ENVIRONMENT = {
+  DEVELOPMENT: 'development',
+  PRODUCTION: 'production',
+} as const;
+
+export type Environment = typeof ENVIRONMENT[keyof typeof ENVIRONMENT];
+
 export const usersTable = pgTable("users", {
   id: varchar("id", { length: 256 }).primaryKey(),
   name: varchar("name", { length: 256 }),
   email: varchar("email", { length: 256 }).notNull(),
   imageUrl: varchar("image_url", { length: 512 }),
+  environment: varchar("environment", { length: 20 }).notNull().default(ENVIRONMENT.DEVELOPMENT),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 });
@@ -17,6 +25,7 @@ export const studyTable = pgTable("study", {
   userId: varchar("user_id", { length: 256 })
     .references(() => usersTable.id)
     .notNull(),
+  environment: varchar("environment", { length: 20 }).notNull().default(ENVIRONMENT.DEVELOPMENT),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 });

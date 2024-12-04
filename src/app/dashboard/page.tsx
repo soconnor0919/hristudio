@@ -72,7 +72,7 @@ export default function Dashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.studyCount}</div>
+            <div className="text-2xl font-bold">{stats.studyCount ? stats.studyCount : 0}</div>
             <p className="text-xs text-muted-foreground">Active research studies</p>
           </CardContent>
         </Card>

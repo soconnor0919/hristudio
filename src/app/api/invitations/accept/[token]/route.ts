@@ -1,18 +1,16 @@
 import { eq, and } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/db";
-import { invitationsTable } from "~/db/schema";
+import { invitationsTable, userRolesTable } from "~/db/schema";
+import { ApiError, createApiResponse } from "~/lib/api-utils";
 
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   const { userId } = await auth();
   const { token } = params;
 
   if (!userId) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return ApiError.Unauthorized();
   }
 
   try {
@@ -29,30 +27,37 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       .limit(1);
 
     if (!invitation) {
-      return NextResponse.json(
-        { error: "Invalid or expired invitation" },
-        { status: 404 }
-      );
+      return ApiError.NotFound("Invitation");
     }
 
-    // Update the invitation
-    await db
-      .update(invitationsTable)
-      .set({
-        accepted: true,
-        acceptedByUserId: userId,
-      })
-      .where(eq(invitationsTable.id, invitation.id));
+    // Check if invitation has expired
+    if (new Date() > invitation.expiresAt) {
+      return ApiError.BadRequest("Invitation has expired");
+    }
 
-    return NextResponse.json(
-      { message: "Invitation accepted successfully" },
-      { status: 200 }
-    );
+    // Assign role and mark invitation as accepted in a transaction
+    await db.transaction(async (tx) => {
+      // Assign role
+      await tx
+        .insert(userRolesTable)
+        .values({
+          userId: userId,
+          roleId: invitation.roleId,
+          studyId: invitation.studyId,
+        });
+
+      // Mark invitation as accepted
+      await tx
+        .update(invitationsTable)
+        .set({
+          accepted: true,
+          acceptedByUserId: userId,
+        })
+        .where(eq(invitationsTable.id, invitation.id));
+    });
+
+    return createApiResponse({ message: "Invitation accepted successfully" });
   } catch (error) {
-    console.error("Error accepting invitation:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ApiError.ServerError(error);
   }
 } 

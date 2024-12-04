@@ -23,7 +23,6 @@ import { Logo } from "~/components/logo"
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Studies", href: "/dashboard/studies", icon: FolderIcon },
-  { name: "Participants", href: "/dashboard/participants", icon: UsersRoundIcon },
   { name: "Trials", href: "/dashboard/trials", icon: LandPlotIcon },
   { name: "Forms", href: "/dashboard/forms", icon: FileTextIcon },
   { name: "Data Analysis", href: "/dashboard/analysis", icon: BarChartIcon },

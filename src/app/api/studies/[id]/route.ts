@@ -1,45 +1,58 @@
-import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { eq, and } from "drizzle-orm";
 import { db } from "~/db";
-import { studyTable } from "~/db/schema";
-import { hasStudyAccess } from "~/lib/permissions";
+import { studyTable, userRolesTable, rolePermissionsTable, permissionsTable } from "~/db/schema";
+import { PERMISSIONS, checkPermissions } from "~/lib/permissions-server";
+import { ApiError, createApiResponse } from "~/lib/api-utils";
 
-export async function GET(
-  request: Request,
-  context: { params: { id: string } }
-) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    // Properly await and destructure params
-    const { id } = await context.params;
+    const { id } = params;
     const studyId = parseInt(id);
-    
-    // Check if user has access to this study
-    const hasAccess = await hasStudyAccess(userId, studyId);
-    if (!hasAccess) {
-      return new NextResponse("Forbidden", { status: 403 });
+
+    if (isNaN(studyId)) {
+      return ApiError.BadRequest("Invalid study ID");
     }
 
-    // Get study details
-    const study = await db
-      .select()
+    const permissionCheck = await checkPermissions({
+      studyId,
+      permission: PERMISSIONS.VIEW_STUDY
+    });
+
+    if (permissionCheck.error) {
+      return permissionCheck.error;
+    }
+
+    // Get study with permissions
+    const studyWithPermissions = await db
+      .selectDistinct({
+        id: studyTable.id,
+        title: studyTable.title,
+        description: studyTable.description,
+        createdAt: studyTable.createdAt,
+        updatedAt: studyTable.updatedAt,
+        userId: studyTable.userId,
+        permissionCode: permissionsTable.code,
+      })
       .from(studyTable)
-      .where(eq(studyTable.id, studyId))
-      .limit(1);
+      .leftJoin(userRolesTable, eq(userRolesTable.studyId, studyTable.id))
+      .leftJoin(rolePermissionsTable, eq(rolePermissionsTable.roleId, userRolesTable.roleId))
+      .leftJoin(permissionsTable, eq(permissionsTable.id, rolePermissionsTable.permissionId))
+      .where(eq(studyTable.id, studyId));
 
-    if (!study[0]) {
-      return new NextResponse("Study not found", { status: 404 });
+    if (!studyWithPermissions.length) {
+      return ApiError.NotFound("Study");
     }
 
-    return NextResponse.json(study[0]);
+    // Group permissions
+    const study = {
+      ...studyWithPermissions[0],
+      permissions: studyWithPermissions
+        .map(s => s.permissionCode)
+        .filter((code): code is string => code !== null)
+    };
+
+    return createApiResponse(study);
   } catch (error) {
-    console.error("Error fetching study:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return ApiError.ServerError(error);
   }
 } 

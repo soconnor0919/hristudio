@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getUserPermissions } from "~/lib/permissions";
+import { ApiError, createApiResponse } from "~/lib/api-utils";
+import { db } from "~/db";
+import { userRolesTable, rolePermissionsTable, permissionsTable } from "~/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function GET() {
   const { userId } = await auth();
   
   if (!userId) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return ApiError.Unauthorized();
   }
 
   try {
-    const permissions = await getUserPermissions(userId);
-    return NextResponse.json(permissions);
+    const permissions = await db
+      .selectDistinct({
+        code: permissionsTable.code,
+      })
+      .from(userRolesTable)
+      .innerJoin(rolePermissionsTable, eq(rolePermissionsTable.roleId, userRolesTable.roleId))
+      .innerJoin(permissionsTable, eq(permissionsTable.id, rolePermissionsTable.permissionId))
+      .where(eq(userRolesTable.userId, userId));
+
+    return createApiResponse(permissions.map(p => p.code));
   } catch (error) {
-    console.error("Error fetching permissions:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return ApiError.ServerError(error);
   }
 }

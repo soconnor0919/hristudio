@@ -3,46 +3,47 @@
 /* tslint:disable */
 
 import { eq } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextRequest } from "next/server";
 import { db } from "~/db";
 import { invitationsTable } from "~/db/schema";
+import { PERMISSIONS, checkPermissions } from "~/lib/permissions-server";
+import { ApiError, createApiResponse } from "~/lib/api-utils";
 
-// @ts-ignore
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
-  const { id } = params;
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
   try {
+    const { id } = params;
     const invitationId = parseInt(id, 10);
 
     if (isNaN(invitationId)) {
-      return NextResponse.json(
-        { error: "Invalid invitation ID" },
-        { status: 400 }
-      );
+      return ApiError.BadRequest("Invalid invitation ID");
+    }
+
+    // Get the invitation to check the study ID
+    const invitation = await db
+      .select()
+      .from(invitationsTable)
+      .where(eq(invitationsTable.id, invitationId))
+      .limit(1);
+
+    if (!invitation[0]) {
+      return ApiError.NotFound("Invitation");
+    }
+
+    const permissionCheck = await checkPermissions({
+      studyId: invitation[0].studyId,
+      permission: PERMISSIONS.MANAGE_ROLES
+    });
+
+    if (permissionCheck.error) {
+      return permissionCheck.error;
     }
 
     await db
       .delete(invitationsTable)
       .where(eq(invitationsTable.id, invitationId));
 
-    return NextResponse.json(
-      { message: "Invitation deleted successfully" },
-      { status: 200 }
-    );
+    return createApiResponse({ message: "Invitation deleted successfully" });
   } catch (error) {
-    console.error("Error deleting invitation:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ApiError.ServerError(error);
   }
 } 

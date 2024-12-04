@@ -1,4 +1,4 @@
-import { PERMISSIONS } from './permissions';
+import { PERMISSIONS } from './permissions-client';
 
 export const ROLES = {
   ADMIN: 'admin',
