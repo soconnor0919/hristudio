@@ -86,6 +86,7 @@ export const invitationsTable = pgTable("invitations", {
     .references(() => usersTable.id)
     .notNull(),
   accepted: boolean("accepted").default(false).notNull(),
+  acceptedByUserId: varchar("accepted_by_user_id", { length: 256 }),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),

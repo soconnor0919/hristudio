@@ -74,7 +74,8 @@ export function InvitationAcceptContent({ token }: InvitationAcceptContentProps)
           <CardHeader>
             <CardTitle>Research Study Invitation</CardTitle>
             <CardDescription>
-              You've been invited to collaborate on a research study. {!isSignedIn && " Please sign in or create an account to continue."}
+              You&apos;ve been invited to collaborate on a research study. 
+              {!isSignedIn && " Please sign in or create an account to continue."}
             </CardDescription>
           </CardHeader>
           <CardContent>

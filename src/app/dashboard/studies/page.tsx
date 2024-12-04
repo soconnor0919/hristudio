@@ -1,33 +1,29 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { PlusIcon, Trash2Icon, Settings2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { PlusIcon, Trash2Icon, Settings2Icon } from "lucide-react";
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  CardFooter 
-} from "~/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
-import Link from "next/link";
+import { Textarea } from "~/components/ui/textarea";
+import { useToast } from "~/hooks/use-toast";
 
 interface Study {
   id: number;
   title: string;
-  description: string | null;
+  description: string;
   createdAt: string;
 }
 
 export default function Studies() {
   const [studies, setStudies] = useState<Study[]>([]);
-  const [loading, setLoading] = useState(true);
   const [newStudyTitle, setNewStudyTitle] = useState("");
   const [newStudyDescription, setNewStudyDescription] = useState("");
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStudies();
@@ -40,6 +36,11 @@ export default function Studies() {
       setStudies(data);
     } catch (error) {
       console.error('Error fetching studies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load studies",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -47,12 +48,8 @@ export default function Studies() {
 
   const createStudy = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     try {
-      console.log("Sending study data:", {
-        title: newStudyTitle,
-        description: newStudyDescription
-      });
-
       const response = await fetch('/api/studies', {
         method: 'POST',
         headers: {
@@ -65,43 +62,69 @@ export default function Studies() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Server response:", errorData);
-        throw new Error(errorData.error || 'Failed to create study');
+        throw new Error('Failed to create study');
       }
 
       const newStudy = await response.json();
       setStudies([...studies, newStudy]);
       setNewStudyTitle("");
       setNewStudyDescription("");
+      
+      toast({
+        title: "Success",
+        description: "Study created successfully",
+      });
     } catch (error) {
       console.error('Error creating study:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create study');
+      toast({
+        title: "Error",
+        description: "Failed to create study",
+        variant: "destructive",
+      });
     }
   };
 
   const deleteStudy = async (id: number) => {
     try {
-      await fetch(`/api/studies/${id}`, {
+      const response = await fetch(`/api/studies/${id}`, {
         method: 'DELETE',
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete study');
+      }
+
       setStudies(studies.filter(study => study.id !== id));
+      toast({
+        title: "Success",
+        description: "Study deleted successfully",
+      });
     } catch (error) {
       console.error('Error deleting study:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete study",
+        variant: "destructive",
+      });
     }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Studies</h1>
+    <div className="container py-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Studies</h1>
+        <p className="text-muted-foreground">Manage your research studies</p>
       </div>
 
-      <Card className="mb-8">
+      <Card>
         <CardHeader>
           <CardTitle>Create New Study</CardTitle>
           <CardDescription>
@@ -117,6 +140,7 @@ export default function Studies() {
                 id="title"
                 value={newStudyTitle}
                 onChange={(e) => setNewStudyTitle(e.target.value)}
+                placeholder="Enter study title"
                 required
               />
             </div>
@@ -126,6 +150,7 @@ export default function Studies() {
                 id="description"
                 value={newStudyDescription}
                 onChange={(e) => setNewStudyDescription(e.target.value)}
+                placeholder="Enter study description"
                 rows={3}
               />
             </div>
@@ -138,39 +163,42 @@ export default function Studies() {
       </Card>
 
       <div className="grid gap-4">
-        {studies.map((study) => (
-          <Card key={study.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{study.title}</CardTitle>
-                  {study.description && (
-                    <CardDescription className="mt-1.5">
-                      {study.description}
-                    </CardDescription>
-                  )}
-                </div>
-                <div className="flex gap-2">
+        {studies.length > 0 ? (
+          studies.map((study) => (
+            <Card key={study.id}>
+              <CardHeader>
+                <CardTitle>{study.title}</CardTitle>
+                <CardDescription>{study.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    asChild
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/studies/${study.id}/settings`)}
                   >
-                    <Link href={`/dashboard/studies/${study.id}/settings`}>
-                      <Settings2Icon className="w-4 h-4" />
-                    </Link>
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Settings
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteStudy(study.id)}>
-                    <Trash2Icon className="w-4 h-4" />
+                  <Button
+                    variant="outline"
+                    onClick={() => deleteStudy(study.id)}
+                  >
+                    <Trash2Icon className="w-4 h-4 mr-2" />
+                    Delete
                   </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardFooter className="text-sm text-muted-foreground">
-              Created: {new Date(study.createdAt).toLocaleDateString()}
-            </CardFooter>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                No studies created yet. Create your first study above.
+              </p>
+            </CardContent>
           </Card>
-        ))}
+        )}
       </div>
     </div>
   );
