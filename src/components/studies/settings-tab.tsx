@@ -8,6 +8,7 @@ import { Button } from "~/components/ui/button";
 import { useToast } from "~/hooks/use-toast";
 import { useState } from "react";
 import { PERMISSIONS } from "~/lib/permissions-client";
+import { useRouter } from "next/navigation";
 
 interface SettingsTabProps {
   study: {
@@ -21,13 +22,18 @@ interface SettingsTabProps {
 export function SettingsTab({ study }: SettingsTabProps) {
   const [title, setTitle] = useState(study.title);
   const [description, setDescription] = useState(study.description || "");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const hasPermission = (permission: string) => study.permissions.includes(permission);
   const canEditStudy = hasPermission(PERMISSIONS.EDIT_STUDY);
 
   const updateStudy = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEditStudy) return;
+
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/studies/${study.id}`, {
         method: "PATCH",
@@ -37,7 +43,13 @@ export function SettingsTab({ study }: SettingsTabProps) {
         body: JSON.stringify({ title, description }),
       });
 
-      if (!response.ok) throw new Error("Failed to update study");
+      if (!response.ok) {
+        if (response.status === 403) {
+          router.push('/dashboard/studies');
+          return;
+        }
+        throw new Error("Failed to update study");
+      }
 
       toast({
         title: "Success",
@@ -47,11 +59,25 @@ export function SettingsTab({ study }: SettingsTabProps) {
       console.error("Error updating study:", error);
       toast({
         title: "Error",
-        description: "Failed to update study",
+        description: error instanceof Error ? error.message : "Failed to update study",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (!canEditStudy) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <p className="text-center text-muted-foreground">
+            You don't have permission to edit this study.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -69,7 +95,7 @@ export function SettingsTab({ study }: SettingsTabProps) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter study title"
               required
-              disabled={!canEditStudy}
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -79,14 +105,12 @@ export function SettingsTab({ study }: SettingsTabProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter study description"
-              disabled={!canEditStudy}
+              disabled={isLoading}
             />
           </div>
-          {canEditStudy && (
-            <Button type="submit">
-              Save Changes
-            </Button>
-          )}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Changes"}
+          </Button>
         </form>
       </CardContent>
     </Card>

@@ -34,7 +34,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, Array<keyof typeof PERMISSIONS>>
   
   RESEARCHER: [
     'VIEW_STUDY',
-    'VIEW_PARTICIPANT_NAMES',
     'CREATE_PARTICIPANT',
     'EDIT_PARTICIPANT',
     'VIEW_ROBOT_STATUS',
@@ -46,7 +45,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, Array<keyof typeof PERMISSIONS>>
   
   WIZARD: [
     'VIEW_STUDY',
-    'VIEW_PARTICIPANT_NAMES',
     'VIEW_ROBOT_STATUS',
     'CONTROL_ROBOT',
     'RECORD_EXPERIMENT',

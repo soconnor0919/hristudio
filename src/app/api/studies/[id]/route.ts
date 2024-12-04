@@ -6,7 +6,7 @@ import { ApiError, createApiResponse } from "~/lib/api-utils";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = params;
+    const id = await Promise.resolve(params.id);
     const studyId = parseInt(id);
 
     if (isNaN(studyId)) {

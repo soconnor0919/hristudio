@@ -7,16 +7,17 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const { userId } = await auth();
+  const { id } = await context.params;
   
   if (!userId) {
     return ApiError.Unauthorized();
   }
 
   try {
-    const studyId = parseInt(params.id);
+    const studyId = parseInt(id);
 
     if (isNaN(studyId)) {
       return ApiError.BadRequest("Invalid study ID");
@@ -27,14 +28,18 @@ export async function GET(
       permission: PERMISSIONS.VIEW_PARTICIPANT_NAMES,
     });
 
-    if (permissionCheck.error) {
-      return permissionCheck.error;
-    }
-
     const participants = await db
       .select()
       .from(participantsTable)
       .where(eq(participantsTable.studyId, studyId));
+
+    if (permissionCheck.error) {
+      const anonymizedParticipants = participants.map((participant, index) => ({
+        ...participant,
+        name: `Participant ${String.fromCharCode(65 + index)}`,
+      }));
+      return createApiResponse(anonymizedParticipants);
+    }
 
     return createApiResponse(participants);
   } catch (error) {
@@ -44,16 +49,17 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const { userId } = await auth();
+  const { id } = await context.params;
   
   if (!userId) {
     return ApiError.Unauthorized();
   }
 
   try {
-    const studyId = parseInt(params.id);
+    const studyId = parseInt(id);
     const { name } = await request.json();
 
     if (isNaN(studyId)) {
@@ -89,16 +95,17 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const { userId } = await auth();
+  const { id } = await context.params;
   
   if (!userId) {
     return ApiError.Unauthorized();
   }
 
   try {
-    const studyId = parseInt(params.id);
+    const studyId = parseInt(id);
     const { participantId } = await request.json();
 
     if (isNaN(studyId)) {

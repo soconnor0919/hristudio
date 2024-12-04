@@ -250,7 +250,11 @@ export default function Studies() {
           <Card>
             <CardContent className="py-8">
               <p className="text-center text-muted-foreground">
-                No studies created yet. Create your first study above.
+                No studies created yet.{' '}
+                {hasPermission(studies[0]?.permissions || [], PERMISSIONS.CREATE_STUDY) 
+                  ? "Create your first study above."
+                  : "Ask your administrator to create your first study."
+                }
               </p>
             </CardContent>
           </Card>

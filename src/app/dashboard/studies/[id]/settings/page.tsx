@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useParams, useRouter } from "next/navigation";
 import { SettingsTab } from "~/components/studies/settings-tab";
 import { ParticipantsTab } from "~/components/studies/participants-tab";
+import { UsersTab } from "~/components/studies/users-tab";
 import { useEffect } from "react";
+import { PERMISSIONS } from "~/lib/permissions-client";
+import { Button } from "~/components/ui/button";
+import { Settings2Icon, UsersIcon, UserIcon } from "lucide-react";
+import { cn } from "~/lib/utils";
 
 interface Study {
   id: number;
@@ -18,17 +22,32 @@ export default function StudySettings() {
   const [study, setStudy] = useState<Study | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'settings' | 'participants' | 'users'>('settings');
   const { id } = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tab = searchParams.get('tab') || 'settings';
 
   useEffect(() => {
     const fetchStudy = async () => {
       try {
         const response = await fetch(`/api/studies/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch study");
+        if (!response.ok) {
+          if (response.status === 403) {
+            router.push('/dashboard/studies');
+            return;
+          }
+          throw new Error("Failed to fetch study");
+        }
         const data = await response.json();
+        
+        // Check if user has any required permissions
+        const requiredPermissions = [PERMISSIONS.EDIT_STUDY, PERMISSIONS.MANAGE_ROLES];
+        const hasAccess = data.data.permissions.some(p => requiredPermissions.includes(p));
+
+        if (!hasAccess) {
+          router.push('/dashboard/studies');
+          return;
+        }
+
         setStudy(data.data);
       } catch (error) {
         console.error("Error fetching study:", error);
@@ -39,43 +58,65 @@ export default function StudySettings() {
     };
 
     fetchStudy();
-  }, [id]);
-
-  const handleTabChange = (value: string) => {
-    router.push(`/dashboard/studies/${id}/settings?tab=${value}`);
-  };
+  }, [id, router]);
 
   if (isLoading) {
-    return <div className="container py-6">Loading...</div>;
+    return <div>Loading...</div>;
   }
 
   if (error || !study) {
-    return <div className="container py-6 text-destructive">{error || "Study not found"}</div>;
+    return <div>Error: {error}</div>;
   }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex flex-col gap-2">
+    <div className="container py-6">
+      <div className="flex flex-col gap-2 mb-6">
         <h1 className="text-3xl font-bold tracking-tight">{study.title}</h1>
         <p className="text-muted-foreground">
-          Manage study settings and participants
+          Manage study settings, participants, and team members
         </p>
       </div>
 
-      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="participants">Participants</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-6">
+        <div className="w-48 flex flex-col gap-2">
+          <Button
+            variant={activeTab === 'settings' ? 'secondary' : 'ghost'}
+            className="justify-start"
+            onClick={() => setActiveTab('settings')}
+          >
+            <Settings2Icon className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+          <Button
+            variant={activeTab === 'participants' ? 'secondary' : 'ghost'}
+            className="justify-start"
+            onClick={() => setActiveTab('participants')}
+          >
+            <UserIcon className="mr-2 h-4 w-4" />
+            Participants
+          </Button>
+          <Button
+            variant={activeTab === 'users' ? 'secondary' : 'ghost'}
+            className="justify-start"
+            onClick={() => setActiveTab('users')}
+          >
+            <UsersIcon className="mr-2 h-4 w-4" />
+            Users
+          </Button>
+        </div>
 
-        <TabsContent value="settings" className="space-y-6">
-          <SettingsTab study={study} />
-        </TabsContent>
-
-        <TabsContent value="participants" className="space-y-6">
-          <ParticipantsTab studyId={study.id} permissions={study.permissions} />
-        </TabsContent>
-      </Tabs>
+        <div className="flex-1">
+          <div className={cn(activeTab === 'settings' ? 'block' : 'hidden')}>
+            <SettingsTab study={study} />
+          </div>
+          <div className={cn(activeTab === 'participants' ? 'block' : 'hidden')}>
+            <ParticipantsTab studyId={study.id} permissions={study.permissions} />
+          </div>
+          <div className={cn(activeTab === 'users' ? 'block' : 'hidden')}>
+            <UsersTab studyId={study.id} permissions={study.permissions} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

@@ -7,16 +7,9 @@ config({ path: '.env.local' });
 
 async function dropAllTables() {
   try {
+    // drop all tables, regardless of name
     await sql`
-      DROP TABLE IF EXISTS 
-        user_roles,
-        role_permissions,
-        permissions,
-        roles,
-        participant,
-        study,
-        users
-      CASCADE;
+      DROP TABLE IF EXISTS ${sql.raw(Object.values(tables).map(table => table.name).join(', '))}
     `;
     console.log('All tables dropped successfully');
   } catch (error) {

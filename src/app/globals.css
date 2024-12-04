@@ -10,8 +10,8 @@ body {
   :root {
     --background: 210 50% 98%;
     --foreground: 215 25% 27%;
-    --card: 210 50% 98%; /* Card background color */
-    --card-foreground: 215 25% 27%; /* Card text color */
+    --card: 210 50% 98%;
+    --card-foreground: 215 25% 27%;
     --popover: 210 50% 98%;
     --popover-foreground: 215 25% 27%;
     --primary: 215 60% 40%;
@@ -33,34 +33,36 @@ body {
     --gradient-start: 210 50% 96%;
     --gradient-end: 210 50% 98%;
 
-    /* Update sidebar variables */
-    --sidebar-background-top: 210 55% 92%;
-    --sidebar-background-bottom: 210 55% 88%;
+    /* Updated sidebar variables for a clean, light look */
+    --sidebar-background: 210 50% 98%;
     --sidebar-foreground: 215 25% 27%;
     --sidebar-muted: 215 20% 50%;
-    --sidebar-hover: 210 60% 86%;
+    --sidebar-hover: 210 50% 94%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-separator: 214 32% 91%;
+    --sidebar-active: 210 50% 92%;
     
-    --card-level-1: 210 50% 95%; /* Level 1 card background color */
-    --card-level-2: 210 50% 90%; /* Level 2 card background color */
-    --card-level-3: 210 50% 85%; /* Level 3 card background color */
+    --card-level-1: 210 50% 95%;
+    --card-level-2: 210 50% 90%;
+    --card-level-3: 210 50% 85%;
   }
 
   .dark {
-    --background: 220 20% 15%; /* Dark mode background */
-    --foreground: 220 20% 90%; /* Dark mode foreground */
-    --card: 220 20% 15%; /* Dark mode card background color */
-    --card-foreground: 220 20% 90%; /* Dark mode card text color */
+    --background: 220 20% 15%;
+    --foreground: 220 20% 90%;
+    --card: 220 20% 15%;
+    --card-foreground: 220 20% 90%;
     --popover: 220 20% 15%;
     --popover-foreground: 220 20% 90%;
     --primary: 220 60% 50%;
     --primary-foreground: 220 20% 90%;
-    --secondary: 220 30% 20%; /* Darker secondary */
+    --secondary: 220 30% 20%;
     --secondary-foreground: 220 20% 90%;
     --muted: 220 30% 20%;
     --muted-foreground: 220 20% 70%;
     --accent: 220 30% 20%;
     --accent-foreground: 220 20% 90%;
-    --destructive: 0 62% 40%; /* Darker destructive */
+    --destructive: 0 62% 40%;
     --destructive-foreground: 220 20% 90%;
     --border: 220 30% 20%;
     --input: 220 30% 20%;
@@ -70,16 +72,18 @@ body {
     --gradient-start: 220 20% 12%;
     --gradient-end: 220 20% 15%;
 
-    /* Update sidebar variables for dark mode */
+    /* Updated sidebar variables for dark mode */
     --sidebar-background-top: 220 20% 15%;
-    --sidebar-background-bottom: 220 20% 12%;
+    --sidebar-background-bottom: 220 20% 15%;
     --sidebar-foreground: 220 20% 90%;
-    --sidebar-muted: 220 20% 70%;
-    --sidebar-hover: 220 30% 20%;
+    --sidebar-muted: 220 20% 60%;
+    --sidebar-hover: 220 20% 20%;
+    --sidebar-border: 220 20% 25%;
+    --sidebar-separator: 220 20% 22%;
     
-    --card-level-1: 220 20% 12%; /* Dark mode Level 1 card background color */
-    --card-level-2: 220 20% 10%; /* Dark mode Level 2 card background color */
-    --card-level-3: 220 20% 8%; /* Dark mode Level 3 card background color */
+    --card-level-1: 220 20% 12%;
+    --card-level-2: 220 20% 10%;
+    --card-level-3: 220 20% 8%;
   }
 
   /* Add these utility classes */
@@ -103,4 +107,21 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Sidebar specific styles */
+.sidebar-separator {
+  @apply my-3 border-t border-[hsl(var(--sidebar-separator))] opacity-60;
+}
+
+.sidebar-dropdown-content {
+  @apply bg-[hsl(var(--sidebar-background))] border-[hsl(var(--sidebar-border))];
+}
+
+.sidebar-button {
+  @apply hover:bg-[hsl(var(--sidebar-hover))] text-[hsl(var(--sidebar-foreground))];
+}
+
+.sidebar-button[data-active="true"] {
+  @apply bg-[hsl(var(--sidebar-active))] font-medium;
 }

@@ -38,6 +38,11 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const hasPermission = (permission: string) => permissions.includes(permission);
+  const canCreateParticipant = hasPermission(PERMISSIONS.CREATE_PARTICIPANT);
+  const canDeleteParticipant = hasPermission(PERMISSIONS.DELETE_PARTICIPANT);
+  const canViewNames = hasPermission(PERMISSIONS.VIEW_PARTICIPANT_NAMES);
+
   useEffect(() => {
     fetchParticipants();
   }, [studyId]);
@@ -121,8 +126,6 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
     }
   };
 
-  const hasPermission = (permission: string) => permissions.includes(permission);
-
   if (isLoading) {
     return (
       <Card>
@@ -133,19 +136,9 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
     );
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <p className="text-center text-destructive">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {hasPermission(PERMISSIONS.CREATE_PARTICIPANT) && (
+      {canCreateParticipant && (
         <Card>
           <CardHeader>
             <CardTitle>Add New Participant</CardTitle>
@@ -181,12 +174,13 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
                   <div>
                     <h3 className="font-semibold">
                       {participant.name}
+                      {!canViewNames && <span className="text-sm text-muted-foreground ml-2">(ID: {participant.id})</span>}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       Added {new Date(participant.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  {hasPermission(PERMISSIONS.DELETE_PARTICIPANT) && (
+                  {canDeleteParticipant && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -222,7 +216,7 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
           <Card>
             <CardContent className="py-8">
               <p className="text-center text-muted-foreground">
-                No participants added yet. Add your first participant above.
+                No participants added yet{canCreateParticipant ? ". Add your first participant above" : ""}.
               </p>
             </CardContent>
           </Card>
