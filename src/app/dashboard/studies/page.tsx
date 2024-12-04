@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, Trash2Icon, Settings2Icon } from "lucide-react";
 import { 
   Card, 
   CardHeader, 
@@ -14,6 +14,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
+import Link from "next/link";
 
 interface Study {
   id: number;
@@ -149,9 +150,20 @@ export default function Studies() {
                     </CardDescription>
                   )}
                 </div>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteStudy(study.id)}>
-                  <Trash2Icon className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    asChild
+                  >
+                    <Link href={`/dashboard/studies/${study.id}/settings`}>
+                      <Settings2Icon className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteStudy(study.id)}>
+                    <Trash2Icon className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardFooter className="text-sm text-muted-foreground">

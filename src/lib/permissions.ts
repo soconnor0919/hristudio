@@ -29,8 +29,15 @@ export const PERMISSIONS = {
 
 export type PermissionCode = keyof typeof PERMISSIONS;
 
-export async function getUserPermissions(userId: string) {
-  // Get all permissions for the user through their roles
+export async function getUserPermissions(userId: string, studyId?: number) {
+  // Build the base query conditions
+  const conditions = [eq(userRolesTable.userId, userId)];
+  
+  // If studyId is provided, add it to conditions
+  if (studyId) {
+    conditions.push(eq(userRolesTable.studyId, studyId));
+  }
+
   const userPermissions = await db
     .select({
       permissionCode: permissionsTable.code,
@@ -44,15 +51,24 @@ export async function getUserPermissions(userId: string) {
       permissionsTable,
       eq(rolePermissionsTable.permissionId, permissionsTable.id)
     )
-    .where(eq(userRolesTable.userId, userId));
+    .where(and(...conditions));
 
   return userPermissions.map(p => p.permissionCode);
 }
 
-export async function hasPermission(userId: string, permissionCode: string) {
+export async function hasPermission(userId: string, permissionCode: string, studyId?: number) {
+  console.log("Checking permission:", {
+    userId,
+    permissionCode,
+    studyId,
+    permissionConstant: PERMISSIONS.MANAGE_ROLES
+  });
+
   const result = await db
     .select({
       id: permissionsTable.id,
+      code: permissionsTable.code,
+      roleId: userRolesTable.roleId,
     })
     .from(userRolesTable)
     .innerJoin(
@@ -66,10 +82,55 @@ export async function hasPermission(userId: string, permissionCode: string) {
     .where(
       and(
         eq(userRolesTable.userId, userId),
-        eq(permissionsTable.code, permissionCode)
+        eq(permissionsTable.code, permissionCode),
+        studyId ? eq(userRolesTable.studyId, studyId) : undefined
+      )
+    );
+
+  console.log("Permission check details:", {
+    query: "Executed",
+    foundPermissions: result.map(r => ({ roleId: r.roleId, code: r.code }))
+  });
+  
+  return result.length > 0;
+}
+
+// Helper function to check if user has any role in a study
+export async function hasStudyAccess(userId: string, studyId: number) {
+  const result = await db
+    .select()
+    .from(userRolesTable)
+    .where(
+      and(
+        eq(userRolesTable.userId, userId),
+        eq(userRolesTable.studyId, studyId)
       )
     )
     .limit(1);
 
   return result.length > 0;
+}
+
+// Helper function to get all studies a user has access to
+export async function getUserStudies(userId: string) {
+  return db
+    .selectDistinct({ studyId: userRolesTable.studyId })
+    .from(userRolesTable)
+    .where(eq(userRolesTable.userId, userId));
+}
+
+// Helper function to get all roles a user has in a study
+export async function getUserStudyRoles(userId: string, studyId: number) {
+  return db
+    .select({
+      roleId: userRolesTable.roleId,
+      createdAt: userRolesTable.createdAt,
+    })
+    .from(userRolesTable)
+    .where(
+      and(
+        eq(userRolesTable.userId, userId),
+        eq(userRolesTable.studyId, studyId)
+      )
+    );
 }

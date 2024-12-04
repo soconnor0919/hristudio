@@ -1,5 +1,5 @@
 import { sql, relations } from 'drizzle-orm';
-import { integer, pgTable, serial, text, timestamp, varchar, primaryKey } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp, varchar, primaryKey, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: varchar("id", { length: 256 }).primaryKey(),
@@ -63,9 +63,37 @@ export const userRolesTable = pgTable("user_roles", {
   roleId: integer("role_id")
     .references(() => rolesTable.id)
     .notNull(),
+  studyId: integer("study_id")
+    .references(() => studyTable.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 }, (table) => ({
-  pk: primaryKey({ columns: [table.userId, table.roleId] }),
+  pk: primaryKey({ columns: [table.userId, table.roleId, table.studyId] }),
 }));
+
+export const invitationsTable = pgTable("invitations", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 256 }).notNull(),
+  studyId: integer("study_id")
+    .references(() => studyTable.id)
+    .notNull(),
+  roleId: integer("role_id")
+    .references(() => rolesTable.id)
+    .notNull(),
+  token: varchar("token", { length: 100 }).notNull().unique(),
+  invitedById: varchar("invited_by_id", { length: 256 })
+    .references(() => usersTable.id)
+    .notNull(),
+  accepted: boolean("accepted").default(false).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    tokenIdx: uniqueIndex('invitations_token_idx').on(table.token),
+  };
+});
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   studies: many(studyTable),
@@ -78,6 +106,8 @@ export const studyRelations = relations(studyTable, ({ one, many }) => ({
     references: [usersTable.id],
   }),
   participants: many(participantsTable),
+  invitations: many(invitationsTable),
+  userRoles: many(userRolesTable),
 }));
 
 export const participantRelations = relations(participantsTable, ({ one }) => ({
@@ -115,5 +145,24 @@ export const userRolesRelations = relations(userRolesTable, ({ one }) => ({
   role: one(rolesTable, {
     fields: [userRolesTable.roleId],
     references: [rolesTable.id],
+  }),
+  study: one(studyTable, {
+    fields: [userRolesTable.studyId],
+    references: [studyTable.id],
+  }),
+}));
+
+export const invitationsRelations = relations(invitationsTable, ({ one }) => ({
+  study: one(studyTable, {
+    fields: [invitationsTable.studyId],
+    references: [studyTable.id],
+  }),
+  role: one(rolesTable, {
+    fields: [invitationsTable.roleId],
+    references: [rolesTable.id],
+  }),
+  invitedBy: one(usersTable, {
+    fields: [invitationsTable.invitedById],
+    references: [usersTable.id],
   }),
 }));

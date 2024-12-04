@@ -1,8 +1,9 @@
 import { config } from "dotenv";
+import { eq } from "drizzle-orm";
 import { db } from "./index";
 import { PERMISSIONS } from "~/lib/permissions";
 import { ROLES, ROLE_PERMISSIONS } from "~/lib/roles";
-import { permissionsTable, rolesTable, rolePermissionsTable } from "./schema";
+import { permissionsTable, rolesTable, rolePermissionsTable, userRolesTable, usersTable, studyTable } from "./schema";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
@@ -53,6 +54,31 @@ async function seed() {
           permissionId: permission.id,
         })
         .onConflictDoNothing();
+    }
+  }
+
+  // Get the first user and assign them as a Principal Investigator for their studies
+  console.log("Setting up initial user roles...");
+  const users = await db.select().from(usersTable);
+  if (users.length > 0) {
+    const piRole = roles.find(r => r.name === ROLES.PRINCIPAL_INVESTIGATOR);
+    if (piRole) {
+      // Get all studies owned by the first user
+      const userStudies = await db
+        .select()
+        .from(studyTable)
+        .where(eq(studyTable.userId, users[0].id));
+
+      // Assign PI role for each study
+      for (const study of userStudies) {
+        await db.insert(userRolesTable)
+          .values({
+            userId: users[0].id,
+            roleId: piRole.id,
+            studyId: study.id,
+          })
+          .onConflictDoNothing();
+      }
     }
   }
 
