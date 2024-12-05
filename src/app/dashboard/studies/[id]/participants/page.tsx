@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-
+import { getApiUrl } from "~/lib/fetch-utils";
 interface Participant {
   id: number;
   name: string;
@@ -48,13 +48,9 @@ export default function ParticipantsList() {
   const canDeleteParticipant = activeStudy && hasPermission(activeStudy.permissions, PERMISSIONS.DELETE_PARTICIPANT);
   const canViewNames = activeStudy && hasPermission(activeStudy.permissions, PERMISSIONS.VIEW_PARTICIPANT_NAMES);
 
-  useEffect(() => {
-    fetchParticipants();
-  }, [id]);
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     try {
-      const response = await fetch(`/api/studies/${id}/participants`, {
+      const response = await fetch(getApiUrl(`/api/studies/${id}/participants`), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -74,11 +70,15 @@ export default function ParticipantsList() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast, id]);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
 
   const handleDelete = async (participantId: number) => {
     try {
-      const response = await fetch(`/api/studies/${id}/participants`, {
+      const response = await fetch(getApiUrl(`/api/studies/${id}/participants`), {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

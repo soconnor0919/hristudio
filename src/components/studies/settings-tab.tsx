@@ -72,7 +72,7 @@ export function SettingsTab({ study }: SettingsTabProps) {
       <Card>
         <CardContent className="py-8">
           <p className="text-center text-muted-foreground">
-            You don't have permission to edit this study.
+            You don&apos;t have permission to edit this study.
           </p>
         </CardContent>
       </Card>

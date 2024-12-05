@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { useToast } from "~/hooks/use-toast";
@@ -28,11 +28,7 @@ export function InvitationsTab({ studyId, permissions }: InvitationsTabProps) {
   const hasPermission = (permission: string) => permissions.includes(permission);
   const canManageRoles = hasPermission(PERMISSIONS.MANAGE_ROLES);
 
-  useEffect(() => {
-    fetchInvitations();
-  }, [studyId]);
-
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     try {
       const response = await fetch(`/api/invitations?studyId=${studyId}`);
       if (!response.ok) throw new Error("Failed to fetch invitations");
@@ -48,7 +44,12 @@ export function InvitationsTab({ studyId, permissions }: InvitationsTabProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [studyId, toast]);
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
+
 
   const handleDeleteInvitation = async (invitationId: string) => {
     try {

@@ -21,6 +21,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { usePermissions } from "~/hooks/usePermissions";
+import { getApiUrl } from "~/lib/fetch-utils";
 
 interface Study {
   id: number;
@@ -47,7 +48,7 @@ export default function Participants() {
 
   const fetchStudies = async () => {
     try {
-      const response = await fetch('/api/studies');
+      const response = await fetch(getApiUrl('/api/studies'));
       const data = await response.json();
       setStudies(data);
     } catch (error) {
@@ -60,7 +61,7 @@ export default function Participants() {
   const fetchParticipants = async (studyId: number) => {
     try {
       console.log(`Fetching participants for studyId: ${studyId}`);
-      const response = await fetch(`/api/participants?studyId=${studyId}`);
+      const response = await fetch(getApiUrl(`/api/participants?studyId=${studyId}`));
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -84,7 +85,7 @@ export default function Participants() {
     if (!selectedStudyId) return;
 
     try {
-      const response = await fetch(`/api/participants`, {
+      const response = await fetch(getApiUrl('/api/participants'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ export default function Participants() {
 
   const deleteParticipant = async (id: number) => {
     try {
-      const response = await fetch(`/api/participants/${id}`, {
+      const response = await fetch(getApiUrl('/api/participants/${id}'), {
         method: 'DELETE',
       });
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface Study {
   id: number;
@@ -30,10 +30,10 @@ export function ActiveStudyProvider({ children }: { children: React.ReactNode })
   const [studies, setStudies] = useState<Study[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
 
-  const fetchStudies = async () => {
+  const fetchStudies = useCallback(async () => {
     try {
       const response = await fetch('/api/studies', {
         method: 'GET',
@@ -55,6 +55,7 @@ export function ActiveStudyProvider({ children }: { children: React.ReactNode })
       
       if (studiesWithDates.length === 1 && !activeStudy) {
         setActiveStudy(studiesWithDates[0]);
+        router.push(`/dashboard/studies/${studiesWithDates[0].id}`);
       }
     } catch (error) {
       console.error('Error fetching studies:', error);
@@ -62,11 +63,11 @@ export function ActiveStudyProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchStudies();
-  }, []);
+  }, [fetchStudies]);
 
   useEffect(() => {
     const studyIdMatch = pathname.match(/\/dashboard\/studies\/(\d+)/);
@@ -77,7 +78,9 @@ export function ActiveStudyProvider({ children }: { children: React.ReactNode })
         setActiveStudy(study);
       }
     } else if (!pathname.includes('/studies/new')) {
-      setActiveStudy(null);
+      if (activeStudy) {
+        setActiveStudy(null);
+      }
     }
   }, [pathname, studies]);
 

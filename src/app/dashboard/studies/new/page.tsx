@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useActiveStudy } from "~/context/active-study";
 import { hasPermission } from "~/lib/permissions-client";
 import { PERMISSIONS } from "~/lib/permissions";
-
+import { getApiUrl } from "~/lib/fetch-utils";
 export default function NewStudy() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,7 +27,7 @@ export default function NewStudy() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/studies', {
+      const response = await fetch(getApiUrl('/api/studies'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

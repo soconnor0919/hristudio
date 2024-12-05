@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { UserAvatar } from "~/components/user-avatar";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -38,8 +38,7 @@ import {
 interface User {
   id: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
+  name: string | null;
   roles: Array<{ id: number; name: string }>;
 }
 
@@ -72,23 +71,7 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
   const hasPermission = (permission: string) => permissions.includes(permission);
   const canManageRoles = hasPermission(PERMISSIONS.MANAGE_ROLES);
 
-  useEffect(() => {
-    fetchData();
-  }, [studyId]);
-
-  const fetchData = async () => {
-    try {
-      await Promise.all([
-        fetchUsers(),
-        fetchInvitations(),
-        fetchRoles(),
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch(`/api/studies/${studyId}/users`);
       if (!response.ok) throw new Error("Failed to fetch users");
@@ -102,9 +85,9 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
         variant: "destructive",
       });
     }
-  };
+  }, [studyId, toast]);
 
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     try {
       const response = await fetch(`/api/invitations?studyId=${studyId}`);
       if (!response.ok) throw new Error("Failed to fetch invitations");
@@ -118,9 +101,9 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
         variant: "destructive",
       });
     }
-  };
+  }, [studyId, toast]);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await fetch("/api/roles");
       if (!response.ok) throw new Error("Failed to fetch roles");
@@ -136,7 +119,24 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetchUsers(),
+        fetchInvitations(),
+        fetchRoles(),
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchUsers, fetchInvitations, fetchRoles]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleRoleChange = async (userId: string, newRoleId: string) => {
     try {

@@ -10,7 +10,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   const { userId } = await auth();
-  const { id } = await context.params;
+  const { id } = await Promise.resolve(context.params);
   
   if (!userId) {
     return ApiError.Unauthorized();
@@ -52,7 +52,7 @@ export async function POST(
   context: { params: { id: string } }
 ) {
   const { userId } = await auth();
-  const { id } = await context.params;
+  const { id } = await Promise.resolve(context.params);
   
   if (!userId) {
     return ApiError.Unauthorized();
@@ -98,7 +98,7 @@ export async function DELETE(
   context: { params: { id: string } }
 ) {
   const { userId } = await auth();
-  const { id } = await context.params;
+  const { id } = await Promise.resolve(context.params);
   
   if (!userId) {
     return ApiError.Unauthorized();

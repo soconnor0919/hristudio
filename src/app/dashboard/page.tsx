@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { BookOpen, Settings2 } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { Breadcrumb } from "~/components/breadcrumb";
+import { getApiUrl } from "~/lib/fetch-utils";
 
 interface DashboardStats {
   studyCount: number;
@@ -22,15 +23,11 @@ export default function Dashboard() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
-      const studiesRes = await fetch('/api/studies');
+      const studiesRes = await fetch(getApiUrl('/api/studies'));
       const studies = await studiesRes.json();
-      
+
       // For now, just show study count
       setStats({
         studyCount: studies.data.length,
@@ -46,7 +43,12 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
 
   if (loading) {
     return (
@@ -59,7 +61,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <Breadcrumb />
-      
+
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Overview of your research studies</p>

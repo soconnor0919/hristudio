@@ -21,6 +21,7 @@ import {
   AlertDialogFooter
 } from "~/components/ui/alert-dialog";
 import { ROLES } from "~/lib/roles";
+import { getApiUrl } from "~/lib/fetch-utils";
 
 interface Study {
   id: number;
@@ -50,7 +51,7 @@ export default function Studies() {
 
   const fetchStudies = async () => {
     try {
-      const response = await fetch("/api/studies");
+      const response = await fetch(getApiUrl("/api/studies"));
       if (!response.ok) throw new Error("Failed to fetch studies");
       const data = await response.json();
       setStudies(data.data || []);
@@ -67,7 +68,7 @@ export default function Studies() {
   const createStudy = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/studies", {
+      const response = await fetch(getApiUrl("/api/studies"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -99,7 +100,7 @@ export default function Studies() {
 
   const deleteStudy = async (id: number) => {
     try {
-      const response = await fetch(`/api/studies/${id}`, {
+      const response = await fetch(getApiUrl(`/api/studies/${id}`), {
         method: "DELETE",
       });
 

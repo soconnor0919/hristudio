@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -41,14 +41,7 @@ export function InviteUserDialog({ studyId, onInviteSent }: InviteUserDialogProp
   const [roles, setRoles] = useState<Role[]>([]);
   const { toast } = useToast();
 
-  // Fetch available roles when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchRoles();
-    }
-  }, [isOpen]);
-
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await fetch("/api/roles");
       if (!response.ok) {
@@ -67,7 +60,12 @@ export function InviteUserDialog({ studyId, onInviteSent }: InviteUserDialogProp
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  // Fetch available roles when dialog opens
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -43,11 +43,7 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
   const canDeleteParticipant = hasPermission(PERMISSIONS.DELETE_PARTICIPANT);
   const canViewNames = hasPermission(PERMISSIONS.VIEW_PARTICIPANT_NAMES);
 
-  useEffect(() => {
-    fetchParticipants();
-  }, [studyId]);
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     try {
       const response = await fetch(`/api/studies/${studyId}/participants`);
       if (!response.ok) throw new Error("Failed to fetch participants");
@@ -63,7 +59,11 @@ export function ParticipantsTab({ studyId, permissions }: ParticipantsTabProps) 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast, studyId]);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
 
   const createParticipant = async (e: React.FormEvent) => {
     e.preventDefault();

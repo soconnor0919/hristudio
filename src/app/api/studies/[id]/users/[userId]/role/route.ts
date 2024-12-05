@@ -9,7 +9,7 @@ export async function PUT(
   context: { params: { id: string; userId: string } }
 ) {
   try {
-    const { id, userId } = await context.params;
+    const { id, userId } = await Promise.resolve(context.params);
     const studyId = parseInt(id);
 
     if (isNaN(studyId)) {

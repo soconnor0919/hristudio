@@ -11,7 +11,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   const { userId } = await auth();
-  const { id } = context.params;
+  const { id } = await Promise.resolve(context.params);
   
   if (!userId) {
     return ApiError.Unauthorized();

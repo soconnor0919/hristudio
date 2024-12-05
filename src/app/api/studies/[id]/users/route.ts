@@ -9,7 +9,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = await Promise.resolve(context.params);
     const studyId = parseInt(id);
 
     if (isNaN(studyId)) {

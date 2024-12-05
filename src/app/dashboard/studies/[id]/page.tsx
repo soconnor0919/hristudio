@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import Link from "next/link";
+import { getApiUrl } from "~/lib/fetch-utils";
 
 interface StudyStats {
   participantCount: number;
@@ -31,13 +32,9 @@ export default function StudyDashboard() {
   const { id } = useParams();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchStudyStats();
-  }, [id]);
-
-  const fetchStudyStats = async () => {
+  const fetchStudyStats = useCallback(async () => {
     try {
-      const response = await fetch(`/api/studies/${id}/stats`);
+      const response = await fetch(getApiUrl(`/api/studies/${id}/stats`));
       if (!response.ok) throw new Error("Failed to fetch study statistics");
       const data = await response.json();
       setStats(data.data);
@@ -51,7 +48,11 @@ export default function StudyDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, id]);
+
+  useEffect(() => {
+    fetchStudyStats();
+  }, [fetchStudyStats]);
 
   if (loading) {
     return (

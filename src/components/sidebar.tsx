@@ -187,15 +187,19 @@ export function Sidebar() {
         <div className="border-t border-[hsl(var(--sidebar-separator))]">
           <div className="flex items-center justify-between pt-4">
             <div className="flex items-center space-x-4">
-              <UserButton />
-              <div>
-                <p className="text-sm font-medium text-[hsl(var(--sidebar-foreground))]">
-                  {user?.fullName ?? user?.username ?? 'User'}
-                </p>
-                <p className="text-xs text-[hsl(var(--sidebar-muted))]">
-                  {user?.primaryEmailAddress?.emailAddress ?? 'user@example.com'}
-                </p>
+              <div className="w-8 h-8">
+                <UserButton afterSignOutUrl="/" />
               </div>
+              {user && (
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[hsl(var(--sidebar-foreground))] truncate">
+                    {user.fullName ?? user.username ?? 'User'}
+                  </p>
+                  <p className="text-xs text-[hsl(var(--sidebar-muted))] truncate">
+                    {user.primaryEmailAddress?.emailAddress ?? 'user@example.com'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

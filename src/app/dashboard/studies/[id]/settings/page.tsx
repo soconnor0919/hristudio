@@ -10,6 +10,7 @@ import { PERMISSIONS } from "~/lib/permissions-client";
 import { Button } from "~/components/ui/button";
 import { Settings2Icon, UsersIcon, UserIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { getApiUrl } from "~/lib/fetch-utils";
 
 interface Study {
   id: number;
@@ -29,7 +30,7 @@ export default function StudySettings() {
   useEffect(() => {
     const fetchStudy = async () => {
       try {
-        const response = await fetch(`/api/studies/${id}`);
+        const response = await fetch(getApiUrl(`/api/studies/${id}`));
         if (!response.ok) {
           if (response.status === 403) {
             router.push('/dashboard/studies');
