@@ -46,7 +46,7 @@ const getNavItems = (studyId?: number) => [
     requiresStudy: false,
     hideWithStudy: true
   },
-  { 
+  {
     name: "Participants", 
     href: `/dashboard/studies/${studyId}/participants`, 
     icon: UsersRoundIcon,
@@ -109,7 +109,7 @@ export function Sidebar() {
   const handleStudyChange = (value: string) => {
     if (value === "all") {
       setActiveStudy(null);
-      router.push("/dashboard/studies");
+      router.push("/dashboard");
     } else {
       const study = studies.find(s => s.id.toString() === value);
       if (study) {
@@ -131,7 +131,6 @@ export function Sidebar() {
               <span className="truncate">
                 {activeStudy?.title || "All Studies"}
               </span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
             </div>
           </SelectTrigger>
           <SelectContent className="sidebar-dropdown-content">

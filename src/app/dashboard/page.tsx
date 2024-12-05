@@ -34,17 +34,6 @@ export default function Dashboard() {
         studyCount: data.length,
         activeInvitationCount: 0
       });
-
-      // If there's only one study and we're on the main dashboard, select it
-      if (data.length === 1) {
-        const study = {
-          ...data[0],
-          createdAt: new Date(data[0].createdAt),
-          updatedAt: data[0].updatedAt ? new Date(data[0].updatedAt) : null
-        };
-        setActiveStudy(study);
-        router.push(`/dashboard/studies/${study.id}`);
-      }
     } catch (error) {
       console.error("Error fetching stats:", error);
       toast({
@@ -55,7 +44,7 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, router, setActiveStudy]);
+  }, [toast]);
 
   useEffect(() => {
     fetchStats();

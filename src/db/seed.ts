@@ -110,7 +110,7 @@ function getRoleDescription(roleKey: string): string {
     PRINCIPAL_INVESTIGATOR:
       "Lead researcher responsible for study design and oversight",
     RESEARCHER:
-      "Study team member with data collection and analysis capabilities",
+      "Study team member with access to anonymized data and experiment monitoring capabilities",
     WIZARD: "Operator controlling robot behavior during experiments",
     OBSERVER: "Team member observing and annotating experiments",
     ASSISTANT: "Support staff with limited view access",

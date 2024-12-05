@@ -166,7 +166,6 @@ export default function ParticipantsList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead><Skeleton className="h-4 w-[40px]" /></TableHead>
                     <TableHead><Skeleton className="h-4 w-[120px]" /></TableHead>
                     <TableHead><Skeleton className="h-4 w-[100px]" /></TableHead>
                     <TableHead className="w-[100px]"><Skeleton className="h-4 w-[60px]" /></TableHead>
@@ -175,7 +174,6 @@ export default function ParticipantsList() {
                 <TableBody>
                   {[1, 2, 3].map((i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-8" /></TableCell>
@@ -250,7 +248,6 @@ export default function ParticipantsList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Added</TableHead>
                   {canDeleteParticipant && <TableHead className="w-[100px]">Actions</TableHead>}
@@ -259,7 +256,6 @@ export default function ParticipantsList() {
               <TableBody>
                 {participants.map((participant) => (
                   <TableRow key={participant.id}>
-                    <TableCell>{participant.id}</TableCell>
                     <TableCell>
                       {canViewNames ? participant.name : `Participant ${participant.id}`}
                     </TableCell>

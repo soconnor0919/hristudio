@@ -34,8 +34,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, Array<keyof typeof PERMISSIONS>>
   
   RESEARCHER: [
     'VIEW_STUDY',
-    'CREATE_PARTICIPANT',
-    'EDIT_PARTICIPANT',
     'VIEW_ROBOT_STATUS',
     'VIEW_EXPERIMENT',
     'VIEW_EXPERIMENT_DATA',

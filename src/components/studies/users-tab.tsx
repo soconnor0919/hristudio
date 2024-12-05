@@ -91,6 +91,10 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
   const fetchInvitations = useCallback(async () => {
     try {
       const response = await fetch(`/api/invitations?studyId=${studyId}`);
+      if (response.status === 403) {
+        // Silently handle 403 errors as they're expected for researchers
+        return;
+      }
       if (!response.ok) throw new Error("Failed to fetch invitations");
       const data = await response.json();
       setInvitations(data.data || []);
@@ -109,9 +113,7 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
       const response = await fetch("/api/roles");
       if (!response.ok) throw new Error("Failed to fetch roles");
       const data = await response.json();
-      setRoles(data.filter((role: Role) => 
-        !['admin'].includes(role.name)
-      ));
+      setRoles(data);
     } catch (error) {
       console.error("Error fetching roles:", error);
       toast({
@@ -125,15 +127,15 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
-        fetchUsers(),
-        fetchInvitations(),
-        fetchRoles(),
-      ]);
+      const promises = [fetchUsers(), fetchRoles()];
+      if (canManageRoles) {
+        promises.push(fetchInvitations());
+      }
+      await Promise.all(promises);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchUsers, fetchInvitations, fetchRoles]);
+  }, [fetchUsers, fetchInvitations, fetchRoles, canManageRoles]);
 
   useEffect(() => {
     fetchData();
@@ -218,10 +220,15 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
             <div>
               <CardTitle>Study Members</CardTitle>
               <CardDescription>
-                Manage users and their roles in this study
+                {canManageRoles ? 'Manage users and their roles in this study' : 'View study members'}
               </CardDescription>
             </div>
-            {canManageRoles && <InviteUserDialog studyId={studyId} onInviteSent={fetchInvitations} />}
+            {canManageRoles && (
+              <InviteUserDialog 
+                studyId={studyId} 
+                onInviteSent={() => canManageRoles && fetchInvitations()} 
+              />
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -248,14 +255,15 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    {canManageRoles ? (
-                      <Select
-                        value={user.roles[0]?.id.toString()}
-                        onValueChange={(value) => handleRoleChange(user.id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue />
-                        </SelectTrigger>
+                    <Select
+                      value={user.roles[0]?.id.toString()}
+                      onValueChange={(value) => handleRoleChange(user.id, value)}
+                      disabled={!canManageRoles}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      {canManageRoles && (
                         <SelectContent>
                           {roles.map((role) => (
                             <SelectItem key={role.id} value={role.id.toString()}>
@@ -263,10 +271,8 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
                             </SelectItem>
                           ))}
                         </SelectContent>
-                      </Select>
-                    ) : (
-                      <span>{formatRoleName(user.roles[0]?.name || '')}</span>
-                    )}
+                      )}
+                    </Select>
                   </TableCell>
                 </TableRow>
               ))}
@@ -275,7 +281,7 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
         </CardContent>
       </Card>
 
-      {pendingInvitations.length > 0 && (
+      {canManageRoles && pendingInvitations.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Pending Invitations</CardTitle>
@@ -290,7 +296,7 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Expires</TableHead>
-                  {canManageRoles && <TableHead className="w-[100px]">Actions</TableHead>}
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -299,33 +305,31 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
                     <TableCell>{invitation.email}</TableCell>
                     <TableCell>{formatRoleName(invitation.roleName)}</TableCell>
                     <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
-                    {canManageRoles && (
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2Icon className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this invitation? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteInvitation(invitation.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this invitation? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteInvitation(invitation.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
