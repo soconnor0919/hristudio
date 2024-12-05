@@ -21,25 +21,29 @@ async function seed() {
   // Insert roles
   console.log("Inserting roles...");
   for (const [roleKey, roleName] of Object.entries(ROLES)) {
+    const roleData = {
+      name: roleName,
+      description: getRoleDescription(roleKey),
+    } as const;
+
     await db
       .insert(rolesTable)
-      .values({
-        name: roleName,
-        description: getRoleDescription(roleKey),
-      })
+      .values(roleData)
       .onConflictDoNothing();
   }
 
   // Insert permissions
   console.log("Inserting permissions...");
   for (const [permKey, permCode] of Object.entries(PERMISSIONS)) {
+    const permData = {
+      name: formatPermissionName(permKey),
+      code: permCode,
+      description: getPermissionDescription(permKey),
+    } as const;
+
     await db
       .insert(permissionsTable)
-      .values({
-        name: formatPermissionName(permKey),
-        code: permCode,
-        description: getPermissionDescription(permKey),
-      })
+      .values(permData)
       .onConflictDoNothing();
   }
 

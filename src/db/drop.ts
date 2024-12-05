@@ -1,5 +1,4 @@
 import { sql } from '@vercel/postgres';
-import { db } from './index';
 import { config } from 'dotenv';
 
 // load .env.local
@@ -7,9 +6,18 @@ config({ path: '.env.local' });
 
 async function dropAllTables() {
   try {
-    // drop all tables, regardless of name
+    // Drop tables in order considering foreign key dependencies
     await sql`
-      DROP TABLE IF EXISTS ${sql.raw(Object.values(tables).map(table => table.name).join(', '))}
+      DROP TABLE IF EXISTS 
+        invitations,
+        user_roles,
+        role_permissions,
+        permissions,
+        roles,
+        participant,
+        study,
+        users
+      CASCADE;
     `;
     console.log('All tables dropped successfully');
   } catch (error) {
