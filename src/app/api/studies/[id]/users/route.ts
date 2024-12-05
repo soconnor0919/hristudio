@@ -31,6 +31,7 @@ export async function GET(
         id: usersTable.id,
         email: usersTable.email,
         name: usersTable.name,
+        imageUrl: usersTable.imageUrl,
         roleId: rolesTable.id,
         roleName: rolesTable.name,
       })
@@ -47,6 +48,7 @@ export async function GET(
           id: curr.id,
           email: curr.email,
           name: curr.name,
+          imageUrl: curr.imageUrl,
           roles: [{
             id: curr.roleId,
             name: curr.roleName,
@@ -63,6 +65,7 @@ export async function GET(
       id: string;
       email: string;
       name: string | null;
+      imageUrl: string | null;
       roles: Array<{ id: number; name: string }>;
     }>);
 

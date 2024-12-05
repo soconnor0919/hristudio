@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { Button } from "~/components/ui/button";
 import { BookOpen, Settings2 } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
-import { Breadcrumb } from "~/components/breadcrumb";
 import { getApiUrl } from "~/lib/fetch-utils";
+import { Skeleton } from "~/components/ui/skeleton";
+import { useActiveStudy } from "~/context/active-study";
 
 interface DashboardStats {
   studyCount: number;
@@ -19,114 +20,151 @@ export default function Dashboard() {
     studyCount: 0,
     activeInvitationCount: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const { studies, setActiveStudy } = useActiveStudy();
 
-  const fetchDashboardStats = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const studiesRes = await fetch(getApiUrl('/api/studies'));
-      const studies = await studiesRes.json();
-
-      // For now, just show study count
+      const response = await fetch(getApiUrl('/api/studies'));
+      if (!response.ok) throw new Error("Failed to fetch studies");
+      const { data } = await response.json();
       setStats({
-        studyCount: studies.data.length,
-        activeInvitationCount: 0,
+        studyCount: data.length,
+        activeInvitationCount: 0
       });
+
+      // If there's only one study and we're on the main dashboard, select it
+      if (data.length === 1) {
+        const study = {
+          ...data[0],
+          createdAt: new Date(data[0].createdAt),
+          updatedAt: data[0].updatedAt ? new Date(data[0].updatedAt) : null
+        };
+        setActiveStudy(study);
+        router.push(`/dashboard/studies/${study.id}`);
+      }
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      console.error("Error fetching stats:", error);
       toast({
         title: "Error",
         description: "Failed to load dashboard statistics",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, router, setActiveStudy]);
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, [fetchDashboardStats]);
+    fetchStats();
+  }, [fetchStats]);
 
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-[200px] mb-2" />
+            <Skeleton className="h-4 w-[300px]" />
+          </div>
+          <Skeleton className="h-10 w-[140px]" />
+        </div>
+
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-[100px]" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-7 w-[50px] mb-1" />
+                <Skeleton className="h-3 w-[120px]" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-[120px] mb-2" />
+            <Skeleton className="h-4 w-[200px]" />
+          </CardHeader>
+          <CardContent className="flex gap-4">
+            <Skeleton className="h-10 w-[140px]" />
+            <Skeleton className="h-10 w-[120px]" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Breadcrumb />
-
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your research studies</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Welcome back to your research dashboard
+          </p>
+        </div>
+        <Button onClick={() => router.push('/dashboard/studies/new')}>
+          Create New Study
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Studies
+            </CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.studyCount}</div>
-            <p className="text-xs text-muted-foreground">Active research studies</p>
+            <p className="text-xs text-muted-foreground">
+              Active research studies
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Invitations</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Invitations
+            </CardTitle>
             <Settings2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeInvitationCount}</div>
-            <p className="text-xs text-muted-foreground">Awaiting acceptance</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and actions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => router.push('/dashboard/studies')}
-            >
-              <BookOpen className="mr-2 h-4 w-4" />
-              Manage Studies
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Getting Started</CardTitle>
-            <CardDescription>Tips for using HRIStudio</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              • Create a new study from the Studies page
-            </p>
-            <p className="text-sm text-muted-foreground">
-              • Invite collaborators using study settings
-            </p>
-            <p className="text-sm text-muted-foreground">
-              • Configure study parameters and forms
+            <p className="text-xs text-muted-foreground">
+              Awaiting responses
             </p>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common tasks and actions</CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-4">
+          <Button onClick={() => router.push('/dashboard/studies/new')}>
+            Create New Study
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/settings')}
+          >
+            <Settings2 className="w-4 h-4 mr-2" />
+            Settings
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

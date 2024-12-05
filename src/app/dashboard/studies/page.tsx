@@ -1,13 +1,10 @@
 'use client';
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, Trash2Icon, Settings2 } from "lucide-react";
+import { PlusIcon, Trash2Icon, Settings2, ArrowRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
 import { useToast } from "~/hooks/use-toast";
 import { PERMISSIONS, hasPermission } from "~/lib/permissions-client";
 import {
@@ -20,21 +17,22 @@ import {
   AlertDialogTrigger,
   AlertDialogFooter
 } from "~/components/ui/alert-dialog";
-import { ROLES } from "~/lib/roles";
 import { getApiUrl } from "~/lib/fetch-utils";
+import { Skeleton } from "~/components/ui/skeleton";
+import { useActiveStudy } from "~/context/active-study";
 
 interface Study {
   id: number;
   title: string;
   description: string | null;
-  createdAt: string;
-  updatedAt: string | null;
   userId: string;
+  environment: string;
+  createdAt: Date;
+  updatedAt: Date | null;
   permissions: string[];
   roles: string[];
 }
 
-// Helper function to format role name
 function formatRoleName(role: string): string {
   return role
     .split('_')
@@ -44,17 +42,21 @@ function formatRoleName(role: string): string {
 
 export default function Studies() {
   const [studies, setStudies] = useState<Study[]>([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const { setActiveStudy } = useActiveStudy();
 
-  const fetchStudies = async () => {
+  const fetchStudies = useCallback(async () => {
     try {
       const response = await fetch(getApiUrl("/api/studies"));
       if (!response.ok) throw new Error("Failed to fetch studies");
-      const data = await response.json();
-      setStudies(data.data || []);
+      const { data } = await response.json();
+      setStudies(data.map((study: any) => ({
+        ...study,
+        createdAt: new Date(study.createdAt),
+        updatedAt: study.updatedAt ? new Date(study.updatedAt) : null
+      })));
     } catch (error) {
       console.error("Error fetching studies:", error);
       toast({
@@ -62,51 +64,22 @@ export default function Studies() {
         description: "Failed to load studies",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const createStudy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(getApiUrl("/api/studies"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title, description }),
-      });
+  useEffect(() => {
+    fetchStudies();
+  }, [fetchStudies]);
 
-      if (!response.ok) {
-        throw new Error("Failed to create study");
-      }
-
-      const data = await response.json();
-      setStudies([...studies, data.data]);
-      setTitle("");
-      setDescription("");
-      toast({
-        title: "Success",
-        description: "Study created successfully",
-      });
-    } catch (error) {
-      console.error("Error creating study:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create study",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteStudy = async (id: number) => {
+  const handleDelete = async (id: number) => {
     try {
       const response = await fetch(getApiUrl(`/api/studies/${id}`), {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete study");
-      }
+      if (!response.ok) throw new Error("Failed to delete study");
 
       setStudies(studies.filter(study => study.id !== id));
       toast({
@@ -123,139 +96,137 @@ export default function Studies() {
     }
   };
 
-  // Fetch studies on mount
-  useState(() => {
-    fetchStudies();
-  });
+  const handleEnterStudy = (study: Study) => {
+    setActiveStudy(study);
+    router.push(`/dashboard/studies/${study.id}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-[150px] mb-2" />
+            <Skeleton className="h-4 w-[300px]" />
+          </div>
+          <Skeleton className="h-10 w-[140px]" />
+        </div>
+
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-[200px] mb-1" />
+                    <Skeleton className="h-4 w-[300px] mb-1" />
+                    <Skeleton className="h-4 w-[150px]" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-[100px]" />
+                    <Skeleton className="h-9 w-9" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Studies</h1>
-        <p className="text-muted-foreground">
-          Manage your research studies and experiments
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Studies</h2>
+          <p className="text-muted-foreground">
+            Manage your research studies and experiments
+          </p>
+        </div>
+        {hasPermission(studies[0]?.permissions || [], PERMISSIONS.CREATE_STUDY) && (
+          <Button onClick={() => router.push('/dashboard/studies/new')}>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Create New Study
+          </Button>
+        )}
       </div>
-
-      {hasPermission(studies[0]?.permissions || [], PERMISSIONS.CREATE_STUDY) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Study</CardTitle>
-            <CardDescription>Add a new research study to your collection</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createStudy} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Study Title</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter study title"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter study description"
-                />
-              </div>
-              <Button type="submit">
-                <PlusIcon className="w-4 h-4 mr-2" />
-                Create Study
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid gap-4">
         {studies.length > 0 ? (
           studies.map((study) => (
-            <Card key={study.id} className="overflow-hidden">
-              <div className="p-6">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold leading-none tracking-tight">
-                        {study.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {study.description || "No description provided."}
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-muted-foreground">Your Roles: </span>
-                        <span className="text-foreground">
-                          {study.roles?.map(formatRoleName).join(", ")}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {(hasPermission(study.permissions, PERMISSIONS.EDIT_STUDY) || 
-                        hasPermission(study.permissions, PERMISSIONS.MANAGE_ROLES)) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/dashboard/studies/${study.id}/settings`)}
-                        >
-                          <Settings2 className="w-4 h-4 mr-2" />
-                          Settings
-                        </Button>
-                      )}
-                      {hasPermission(study.permissions, PERMISSIONS.MANAGE_SYSTEM_SETTINGS) && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2Icon className="w-4 h-4 mr-2" />
+            <Card key={study.id}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold leading-none tracking-tight">
+                      {study.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {study.description || "No description provided."}
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Your Roles: </span>
+                      <span className="text-foreground">
+                        {study.roles?.map(formatRoleName).join(", ")}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEnterStudy(study)}
+                    >
+                      Enter Study
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    {(hasPermission(study.permissions, PERMISSIONS.EDIT_STUDY) || 
+                      hasPermission(study.permissions, PERMISSIONS.MANAGE_ROLES)) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/dashboard/studies/${study.id}/settings`)}
+                      >
+                        <Settings2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {hasPermission(study.permissions, PERMISSIONS.DELETE_STUDY) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Study</AlertDialogTitle>
+                          </AlertDialogHeader>
+                          <p>
+                            Are you sure you want to delete this study? This action cannot be undone.
+                          </p>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(study.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
                               Delete
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                              <div className="text-sm text-muted-foreground">
-                                <p className="mb-2">
-                                  This action cannot be undone. This will permanently delete the study
-                                  &quot;{study.title}&quot; and all associated data including:
-                                </p>
-                                <ul className="list-disc list-inside">
-                                  <li>All participant data</li>
-                                  <li>All user roles and permissions</li>
-                                  <li>All pending invitations</li>
-                                </ul>
-                              </div>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteStudy(study.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete Study
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
-              </div>
+              </CardContent>
             </Card>
           ))
         ) : (
           <Card>
             <CardContent className="py-8">
               <p className="text-center text-muted-foreground">
-                No studies created yet.{' '}
-                {hasPermission(studies[0]?.permissions || [], PERMISSIONS.CREATE_STUDY) 
-                  ? "Create your first study above."
-                  : "Ask your administrator to create your first study."
-                }
+                No studies found{hasPermission(studies[0]?.permissions || [], PERMISSIONS.CREATE_STUDY) ? ". Create your first study above" : ""}.
               </p>
             </CardContent>
           </Card>

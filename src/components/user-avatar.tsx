@@ -1,9 +1,10 @@
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface UserAvatarProps {
   user: {
     name?: string | null;
     email: string;
+    imageUrl?: string | null;
   };
   className?: string;
 }
@@ -21,6 +22,7 @@ export function UserAvatar({ user, className }: UserAvatarProps) {
 
   return (
     <Avatar className={className}>
+      {user.imageUrl && <AvatarImage src={user.imageUrl} alt={user.name || user.email} />}
       <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>
   );

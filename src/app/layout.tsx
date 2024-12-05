@@ -1,36 +1,23 @@
-import {
-  ClerkProvider
-} from '@clerk/nextjs';
-import { Analytics } from "@vercel/analytics/react"
+import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from 'next/font/google';
-import './globals.css';
-import { Metadata } from 'next';
+import { Toaster } from "~/components/ui/toaster";
+import "~/app/globals.css";
 
 const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'HRIStudio',
-  description: 'A platform for managing human-robot interaction studies',
-  icons: {
-    icon: [
-      { url: '/icon', type: 'image/svg+xml' },
-    ],
-  },
-};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <ClerkProvider>
-      <Analytics />
       <html lang="en">
         <body className={inter.className}>
           {children}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }

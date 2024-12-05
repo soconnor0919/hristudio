@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 import { useActiveStudy } from "~/context/active-study";
-import { Breadcrumb } from "~/components/breadcrumb";
 import { Skeleton } from "~/components/ui/skeleton";
 
 export default function StudyLayout({
@@ -34,10 +33,5 @@ export default function StudyLayout({
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <Breadcrumb />
-      {children}
-    </div>
-  );
+  return children;
 } 

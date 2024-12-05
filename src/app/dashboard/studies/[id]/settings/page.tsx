@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SettingsTab } from "~/components/studies/settings-tab";
-import { ParticipantsTab } from "~/components/studies/participants-tab";
 import { UsersTab } from "~/components/studies/users-tab";
 import { useEffect } from "react";
 import { PERMISSIONS } from "~/lib/permissions-client";
 import { Button } from "~/components/ui/button";
-import { Settings2Icon, UsersIcon, UserIcon } from "lucide-react";
+import { Settings2Icon, UsersIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { getApiUrl } from "~/lib/fetch-utils";
+import { Card, CardContent } from "~/components/ui/card";
+import { Skeleton } from "~/components/ui/skeleton";
 
 interface Study {
   id: number;
@@ -23,7 +24,7 @@ export default function StudySettings() {
   const [study, setStudy] = useState<Study | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'settings' | 'participants' | 'users'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'users'>('settings');
   const { id } = useParams();
   const router = useRouter();
 
@@ -62,7 +63,36 @@ export default function StudySettings() {
   }, [id, router]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-[150px] mb-2" />
+            <Skeleton className="h-4 w-[250px]" />
+          </div>
+        </div>
+
+        <div className="flex gap-6">
+          <div className="w-48 flex flex-col gap-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+
+          <div className="flex-1">
+            <Card>
+              <CardContent className="py-6">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-2/3" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !study) {
@@ -70,12 +100,14 @@ export default function StudySettings() {
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex flex-col gap-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">{study.title}</h1>
-        <p className="text-muted-foreground">
-          Manage study settings, participants, and team members
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
+          <p className="text-muted-foreground">
+            Manage study settings and team members
+          </p>
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -87,14 +119,6 @@ export default function StudySettings() {
           >
             <Settings2Icon className="mr-2 h-4 w-4" />
             Settings
-          </Button>
-          <Button
-            variant={activeTab === 'participants' ? 'secondary' : 'ghost'}
-            className="justify-start"
-            onClick={() => setActiveTab('participants')}
-          >
-            <UserIcon className="mr-2 h-4 w-4" />
-            Participants
           </Button>
           <Button
             variant={activeTab === 'users' ? 'secondary' : 'ghost'}
@@ -109,9 +133,6 @@ export default function StudySettings() {
         <div className="flex-1">
           <div className={cn(activeTab === 'settings' ? 'block' : 'hidden')}>
             <SettingsTab study={study} />
-          </div>
-          <div className={cn(activeTab === 'participants' ? 'block' : 'hidden')}>
-            <ParticipantsTab studyId={study.id} permissions={study.permissions} />
           </div>
           <div className={cn(activeTab === 'users' ? 'block' : 'hidden')}>
             <UsersTab studyId={study.id} permissions={study.permissions} />

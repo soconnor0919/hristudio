@@ -1,7 +1,7 @@
 import { Sidebar } from "~/components/sidebar";
-import { cn } from "~/lib/utils";
-import { StudyProvider } from "~/context/StudyContext";
+import { Breadcrumb } from "~/components/breadcrumb";
 import { ActiveStudyProvider } from "~/context/active-study";
+import { StudyProvider } from "~/context/StudyContext";
 
 export default function DashboardLayout({
   children,
@@ -11,15 +11,14 @@ export default function DashboardLayout({
   return (
     <ActiveStudyProvider>
       <StudyProvider>
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-screen">
           <Sidebar />
-          <main className={cn(
-            "flex-1 overflow-y-auto",
-            "lg:pt-8 p-8",
-            "pt-[calc(3.5rem+2rem)]"
-          )}>
-            {children}
-          </main>
+          <div className="flex-1 flex flex-col min-h-0">
+            <main className="flex-1 overflow-y-auto p-6">
+              <Breadcrumb />
+              {children}
+            </main>
+          </div>
         </div>
       </StudyProvider>
     </ActiveStudyProvider>

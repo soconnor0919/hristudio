@@ -38,6 +38,14 @@ const getNavItems = (studyId?: number) => [
     exact: true,
     requiresStudy: false
   },
+  {
+    name: "Studies",
+    href: "/dashboard/studies",
+    icon: FolderIcon,
+    exact: true,
+    requiresStudy: false,
+    hideWithStudy: true
+  },
   { 
     name: "Participants", 
     href: `/dashboard/studies/${studyId}/participants`, 
@@ -84,7 +92,7 @@ export function Sidebar() {
 
   const navItems = getNavItems(activeStudy?.id)
   const visibleNavItems = activeStudy 
-    ? navItems 
+    ? navItems.filter(item => !item.hideWithStudy)
     : navItems.filter(item => !item.requiresStudy)
 
   const isActiveRoute = (item: { href: string, exact?: boolean, baseRoute?: string }) => {

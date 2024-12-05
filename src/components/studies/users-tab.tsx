@@ -40,6 +40,7 @@ interface User {
   email: string;
   name: string | null;
   roles: Array<{ id: number; name: string }>;
+  imageUrl: string;
 }
 
 interface Invitation {
@@ -211,17 +212,17 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Team Members</h2>
-        {canManageRoles && <InviteUserDialog studyId={studyId} onInviteSent={fetchInvitations} />}
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>Study Members</CardTitle>
-          <CardDescription>
-            Manage users and their roles in this study
-          </CardDescription>
+        <CardHeader className="flex flex-col justify-between">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Study Members</CardTitle>
+              <CardDescription>
+                Manage users and their roles in this study
+              </CardDescription>
+            </div>
+            {canManageRoles && <InviteUserDialog studyId={studyId} onInviteSent={fetchInvitations} />}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -240,6 +241,7 @@ export function UsersTab({ studyId, permissions }: UsersTabProps) {
                       user={{
                         name: formatName(user),
                         email: user.email,
+                        imageUrl: user.imageUrl,
                       }}
                     />
                     <span>{formatName(user)}</span>

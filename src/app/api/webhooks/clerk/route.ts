@@ -46,19 +46,27 @@ export async function POST(req: Request) {
   const eventType = evt.type;
   console.log(`Webhook received: ${eventType}`);
 
-  if (eventType === 'user.created') {
-    const { id, email_addresses, first_name, last_name } = evt.data;
+  if (eventType === 'user.created' || eventType === 'user.updated') {
+    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
     const primaryEmail = email_addresses?.[0]?.email_address;
 
-    // Create user in our database
+    // Create or update user in our database
     await db.insert(usersTable).values({
       id,
       email: primaryEmail,
-      firstName: first_name || null,
-      lastName: last_name || null,
-    }).onConflictDoNothing();
+      name: [first_name, last_name].filter(Boolean).join(' ') || null,
+      imageUrl: image_url,
+    }).onConflictDoUpdate({
+      target: usersTable.id,
+      set: {
+        email: primaryEmail,
+        name: [first_name, last_name].filter(Boolean).join(' ') || null,
+        imageUrl: image_url,
+        updatedAt: new Date(),
+      }
+    });
 
-    console.log(`Created user in database: ${id}`);
+    console.log(`${eventType === 'user.created' ? 'Created' : 'Updated'} user in database: ${id}`);
   }
 
   return new Response('', { status: 200 });
