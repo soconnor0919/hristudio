@@ -1,12 +1,12 @@
-import { BotIcon } from "lucide-react";
-import Link from "next/link";
-import { cn } from "~/lib/utils";
+import { BotIcon } from "lucide-react"
+import Link from "next/link"
+import { cn } from "~/lib/utils"
 
 interface LogoProps {
-  href?: string;
-  className?: string;
-  iconClassName?: string;
-  textClassName?: string;
+  href?: string
+  className?: string
+  iconClassName?: string
+  textClassName?: string
 }
 
 export function Logo({ 
@@ -32,5 +32,5 @@ export function Logo({
         <span className="font-normal">Studio</span>
       </span>
     </Link>
-  );
-}
+  )
+} 

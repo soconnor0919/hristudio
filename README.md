@@ -1,85 +1,188 @@
-# [HRIStudio](https://www.hristudio.com)
+# HRIStudio
 
-A web platform for managing human-robot interaction studies, participants, and wizard-of-oz experiments.
-
-![HRIStudio Homepage](.github/homepage-screenshot.png)
-
-## Features
-
-- Role-based access control with granular permissions
-- Study management and participant tracking
-- Wizard-of-oz experiment support
-- Data collection and analysis tools
-- Secure authentication with Clerk
-- Real-time participant management
-- Study-specific data isolation
+A modern web application for managing human-robot interaction studies, built with Next.js 14, TypeScript, and the App Router.
 
 ## Tech Stack
 
-- [Next.js](https://nextjs.org/) - React framework with App Router
-- [TypeScript](https://www.typescriptlang.org/) - Static type checking
-- [Clerk](https://clerk.com/) - Authentication and user management
-- [Drizzle ORM](https://orm.drizzle.team/) - TypeScript ORM
-- [PostgreSQL](https://www.postgresql.org/) - Database
-- [TailwindCSS](https://tailwindcss.com/) - Utility-first CSS
-- [Shadcn UI](https://ui.shadcn.com/) - Component library
-- [Radix UI](https://www.radix-ui.com/) - Accessible component primitives
-- [Lucide Icons](https://lucide.dev/) - Icon system
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Authentication**: NextAuth.js
+- **Database**: PostgreSQL with Drizzle ORM
+- **UI Components**: Shadcn UI + Radix UI
+- **Styling**: Tailwind CSS
+- **API Layer**: tRPC
+- **File Storage**: MinIO (S3-compatible)
 
-## Getting Started
+## Key Principles
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/hristudio.git
-   ```
+### TypeScript Usage
+- Use TypeScript for all code files
+- Prefer interfaces over types
+- Avoid enums; use const objects with `as const` instead
+- Use proper type inference with `zod` schemas
 
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+### Component Structure
+- Use functional components with TypeScript interfaces
+- Structure files in this order:
+  1. Exported component
+  2. Subcomponents
+  3. Helper functions
+  4. Static content
+  5. Types/interfaces
 
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   ```
+### Naming Conventions
+- Use lowercase with dashes for directories (e.g., `components/auth-wizard`)
+- Use PascalCase for components
+- Use camelCase for functions and variables
+- Prefix boolean variables with auxiliary verbs (e.g., `isLoading`, `hasError`)
 
-4. Set up the database:
-   ```bash
-   pnpm db:push
-   ```
+### Data Management
+- Use Drizzle ORM for database operations
+- Split names into `firstName` and `lastName` fields
+- Use tRPC for type-safe API calls
+- Implement proper error handling and loading states
 
-5. Start the development server:
-   ```bash
-   pnpm dev
-   ```
+### Authentication
+- Use NextAuth.js for authentication
+- Handle user sessions with JWT strategy
+- Store passwords with bcrypt hashing
+- Implement proper CSRF protection
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Project Structure
-
+### File Structure
 ```
 src/
-├── app/              # Next.js app router pages and API routes
-├── components/       # React components
-│   ├── ui/          # Shadcn UI components
-│   └── ...          # Feature-specific components
-├── context/         # React context providers
-├── db/              # Database schema and configuration
-├── hooks/           # Custom React hooks
-├── lib/             # Utility functions and permissions
-└── types/           # TypeScript type definitions
+├── app/                    # Next.js App Router pages
+├── components/            
+│   ├── ui/                # Reusable UI components
+│   └── layout/            # Layout components
+├── server/
+│   ├── api/               # tRPC routers
+│   ├── auth/              # Authentication config
+│   └── db/                # Database schema and config
+└── lib/                   # Utility functions
 ```
+
+### Best Practices
+
+#### Forms
+```typescript
+// Form Schema
+const formSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email(),
+  // ...
+});
+
+// Form Component
+export function MyForm() {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      // ...
+    },
+  });
+}
+```
+
+#### Server Components
+- Use Server Components by default
+- Add 'use client' only when needed for:
+  - Event listeners
+  - Browser APIs
+  - React hooks
+  - Client-side state
+
+#### Image Handling
+```typescript
+// Image Upload
+const handleFileUpload = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
+  return response.json();
+};
+
+// Image Display
+<Image
+  src={imageUrl}
+  alt="Description"
+  width={size}
+  height={size}
+  className="object-cover"
+  priority={isAboveFold}
+/>
+```
+
+#### Database Schema
+```typescript
+// User Table
+export const users = createTable("user", {
+  id: varchar("id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull(),
+  // ...
+});
+```
+
+### Performance Optimization
+- Use React Server Components where possible
+- Implement proper image optimization
+- Use dynamic imports for large client components
+- Implement proper caching strategies
+
+### Security
+- Implement proper CSRF protection
+- Use environment variables for sensitive data
+- Implement proper input validation
+- Use proper content security policies
 
 ## Development
 
-- Run `pnpm db:studio` to open the Drizzle Studio database UI
-- Use `pnpm lint` to check for code style issues
-- Run `pnpm build` to create a production build
+```bash
+# Install dependencies
+pnpm install
 
-## License
+# Set up environment variables
+cp .env.example .env.local
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+# Start development server
+pnpm dev
+
+# Run type checking
+pnpm type-check
+
+# Run linting
+pnpm lint
+```
+
+## Database Migrations
+
+```bash
+# Generate migration
+pnpm drizzle-kit generate:pg
+
+# Push migration
+pnpm db:push
+```
+
+## Deployment
+
+The application is designed to be deployed on any platform that supports Node.js. We recommend using Vercel for the best Next.js deployment experience.
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+1. Follow the TypeScript guidelines
+2. Use the provided component patterns
+3. Implement proper error handling
+4. Add appropriate tests
+5. Follow the commit message convention

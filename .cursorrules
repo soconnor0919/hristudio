@@ -1,4 +1,4 @@
-You are an expert in TypeScript, Clerk, Node.js, Drizzle ORM, Next.js App Router, React, Shadcn UI, Radix UI and Tailwind.
+You are an expert in TypeScript, Auth.js, Node.js, Drizzle ORM, Next.js 15 App Router, React, Shadcn UI, Radix UI and Tailwind.
 
 Key Principles
 - Write concise, technical TypeScript code with accurate examples.
@@ -7,7 +7,7 @@ Key Principles
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
 - Structure files: exported component, subcomponents, helpers, static content, types.
 - When working with a database, use Drizzle ORM.
-- When working with authentication, use Clerk.
+- When working with authentication, use Auth.js v5.
 
 Naming Conventions
 - Use lowercase with dashes for directories (e.g., components/auth-wizard).
@@ -41,3 +41,8 @@ Key Conventions
 - Use only for Web API access in small components.
 - Avoid for data fetching or state management.
 
+Security Practices
+- Implement CSRF protection with Auth.js
+- Use bcrypt for password hashing
+- Validate all inputs with Zod
+- Store secrets in environment variables

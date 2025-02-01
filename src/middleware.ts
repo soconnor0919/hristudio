@@ -1,34 +1,30 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from 'next/server'
+import { NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
+import { withAuth } from "next-auth/middleware"
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/invite/accept/(.*)'
-])
-
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/api/invitations/accept/(.*)'
-])
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) {
+// Export withAuth middleware with custom configuration
+export default withAuth(
+  // `withAuth` augments your `Request` with the user's token.
+  function middleware(req) {
+    // If the user is not logged in and trying to access protected routes, redirect to signin
+    if (!req.nextauth.token && req.nextUrl.pathname.startsWith("/dashboard")) {
+      return NextResponse.redirect(new URL("/auth/signin", req.url))
+    }
     return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token
+    },
   }
+)
 
-  if (isProtectedRoute(req)) {
-    await auth.protect()
-    return NextResponse.next()
-  }
-
-  return NextResponse.next()
-})
-
+// Specify protected routes
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
-  ],
-};
+    "/dashboard/:path*",
+    "/studies/:path*",
+    "/experiments/:path*",
+    "/api/trpc/:path*"
+  ]
+} 

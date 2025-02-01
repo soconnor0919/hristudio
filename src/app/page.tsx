@@ -1,31 +1,36 @@
-'use client';
-
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { getServerAuthSession } from "~/server/auth";
 import { Button } from "~/components/ui/button";
-import Image from "next/image";
 import Link from "next/link";
 import { BotIcon } from "lucide-react";
 import { Logo } from "~/components/logo";
 
-export default function Home() {
+export default async function Home() {
+  const session = await getServerAuthSession();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
       <nav className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Logo />
+          <div className="flex items-center space-x-2">
+            <Logo />
+          </div>
           <div className="flex items-center space-x-4">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button variant="ghost">Sign In</Button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button>Sign Up</Button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
+            {!session && (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Sign Up</Link>
+                </Button>
+              </>
+            )}
+            {session && (
+              <Button asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            )}
           </div>
         </div>
       </nav>
@@ -40,20 +45,15 @@ export default function Home() {
             A comprehensive platform for designing, executing, and analyzing Wizard-of-Oz experiments in human-robot interaction studies.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <SignedOut>
-              <SignUpButton mode="modal">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Get Started
-                </Button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
+            {!session ? (
               <Button size="lg" className="w-full sm:w-auto" asChild>
-                <Link href="/dashboard">
-                  Go to Dashboard
-                </Link>
+                <Link href="/register">Get Started</Link>
               </Button>
-            </SignedIn>
+            ) : (
+              <Button size="lg" className="w-full sm:w-auto" asChild>
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            )}
             <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
               <Link href="https://github.com/soconnor0919/hristudio" target="_blank">
                 View on GitHub
@@ -61,14 +61,11 @@ export default function Home() {
             </Button>
           </div>
         </div>
-        <div className="relative">
-          <Image
-            src="/hristudio_laptop.png"
-            alt="HRIStudio Interface"
-            width={800}
-            height={600}
-            priority
-          />
+        <div className="relative aspect-video">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <BotIcon className="h-32 w-32 text-primary/40" />
+          </div>
         </div>
       </section>
 

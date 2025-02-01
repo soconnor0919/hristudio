@@ -1,159 +1,68 @@
-'use client';
+import { Beaker, Plus, Users } from "lucide-react"
+import Link from "next/link"
+import { Button } from "~/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
+import { PageContent } from "~/components/layout/page-content"
+import { PageHeader } from "~/components/layout/page-header"
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Button } from "~/components/ui/button";
-import { BookOpen, Settings2 } from "lucide-react";
-import { useToast } from "~/hooks/use-toast";
-import { getApiUrl } from "~/lib/fetch-utils";
-import { Skeleton } from "~/components/ui/skeleton";
-import { useActiveStudy } from "~/context/active-study";
-
-interface DashboardStats {
-  studyCount: number;
-  activeInvitationCount: number;
-}
-
-export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
-    studyCount: 0,
-    activeInvitationCount: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const { toast } = useToast();
-  const { studies, setActiveStudy } = useActiveStudy();
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await fetch(getApiUrl('/api/studies'));
-      if (!response.ok) throw new Error("Failed to fetch studies");
-      const { data } = await response.json();
-      setStats({
-        studyCount: data.length,
-        activeInvitationCount: 0
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard statistics",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-[200px] mb-2" />
-            <Skeleton className="h-4 w-[300px]" />
-          </div>
-          <Skeleton className="h-10 w-[140px]" />
+export default function DashboardPage() {
+  return (
+    <>
+      <PageHeader 
+        title="Dashboard"
+        description="Welcome to your research platform."
+      />
+      <PageContent>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
+              <Beaker className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                Active research studies
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Participants</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                Across all studies
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/studies/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create New Study
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          {[1, 2].map((i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-[100px]" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-7 w-[50px] mb-1" />
-                <Skeleton className="h-3 w-[120px]" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
         <Card>
           <CardHeader>
-            <Skeleton className="h-5 w-[120px] mb-2" />
-            <Skeleton className="h-4 w-[200px]" />
-          </CardHeader>
-          <CardContent className="flex gap-4">
-            <Skeleton className="h-10 w-[140px]" />
-            <Skeleton className="h-10 w-[120px]" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Welcome back to your research dashboard
-          </p>
-        </div>
-        <Button onClick={() => router.push('/dashboard/studies/new')}>
-          Create New Study
-        </Button>
-      </div>
-
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Studies
-            </CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.studyCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Active research studies
+            <p className="text-sm text-muted-foreground">
+              No recent activity to show.
             </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Invitations
-            </CardTitle>
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeInvitationCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting responses
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks and actions</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <Button onClick={() => router.push('/dashboard/studies/new')}>
-            Create New Study
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard/settings')}
-          >
-            <Settings2 className="w-4 h-4 mr-2" />
-            Settings
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+      </PageContent>
+    </>
+  )
+} 

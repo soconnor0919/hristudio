@@ -1,43 +1,42 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": false,
-    "noEmit": true,
+    /* Base Options: */
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "target": "es2022",
+    "allowJs": true,
     "resolveJsonModule": true,
+    "moduleDetection": "force",
     "isolatedModules": true,
+
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "checkJs": true,
+
+    /* Bundled projects */
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "jsx": "preserve",
+    "plugins": [{ "name": "next" }],
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+
+    /* Path Aliases */
+    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    "noUncheckedIndexedAccess": false,
-    "suppressImplicitAnyIndexErrors": true,
-    "ignoreDeprecations": "5.0",
-    "exactOptionalPropertyTypes": false,
-    "strictPropertyInitialization": false,
-    "strictNullChecks": false
+    }
   },
   "include": [
+    ".eslintrc.cjs",
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "src/types/**/*.d.ts"
+    "**/*.cjs",
+    "**/*.js",
+    ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "src/app/api/invitations/[id]/route.ts"
-  ]
+  "exclude": ["node_modules"]
 }
