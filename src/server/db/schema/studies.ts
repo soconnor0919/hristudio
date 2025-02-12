@@ -1,8 +1,9 @@
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, text, timestamp, varchar, serial } from "drizzle-orm/pg-core";
+import { integer, pgEnum, text, timestamp, varchar, serial, jsonb } from "drizzle-orm/pg-core";
 import { ROLES } from "~/lib/permissions/constants";
 import { createTable } from "../utils";
 import { users } from "./auth";
+import { type Step } from "~/lib/experiments/types";
 
 // Create enum from role values
 export const studyRoleEnum = pgEnum("study_role", [
@@ -73,6 +74,13 @@ export const studyActivityTypeEnum = pgEnum("study_activity_type", [
   "invitation_revoked",
 ]);
 
+// Create enum for experiment status
+export const experimentStatusEnum = pgEnum("experiment_status", [
+  "draft",
+  "active",
+  "archived",
+]);
+
 export const studies = createTable("study", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 256 }).notNull(),
@@ -136,12 +144,26 @@ export const studyInvitations = createTable("study_invitation", {
   createdById: varchar("created_by", { length: 255 }).notNull().references(() => users.id),
 });
 
+export const experiments = createTable("experiment", {
+  id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
+  studyId: integer("study_id").notNull().references(() => studies.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  version: integer("version").notNull().default(1),
+  status: experimentStatusEnum("status").notNull().default("draft"),
+  steps: jsonb("steps").$type<Step[]>().default([]),
+  createdById: varchar("created_by", { length: 255 }).notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
 // Relations
 export const studiesRelations = relations(studies, ({ one, many }) => ({
   creator: one(users, { fields: [studies.createdById], references: [users.id] }),
   members: many(studyMembers),
   participants: many(participants),
   invitations: many(studyInvitations),
+  experiments: many(experiments),
 }));
 
 export const studyMembersRelations = relations(studyMembers, ({ one }) => ({
@@ -156,4 +178,9 @@ export const participantsRelations = relations(participants, ({ one }) => ({
 export const studyInvitationsRelations = relations(studyInvitations, ({ one }) => ({
   study: one(studies, { fields: [studyInvitations.studyId], references: [studies.id] }),
   creator: one(users, { fields: [studyInvitations.createdById], references: [users.id] }),
+}));
+
+export const experimentsRelations = relations(experiments, ({ one }) => ({
+  study: one(studies, { fields: [experiments.studyId], references: [studies.id] }),
+  creator: one(users, { fields: [experiments.createdById], references: [users.id] }),
 })); 

@@ -7,7 +7,8 @@ import {
   User,
   Microscope,
   Users,
-  Plus
+  Plus,
+  FlaskConical
 } from "lucide-react"
 import * as React from "react"
 import { useSession } from "next-auth/react"
@@ -71,6 +72,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               url: `/dashboard/studies/${activeStudy.id}/participants/new`,
               // Only show if user is admin
               hidden: activeStudy.role !== "ADMIN",
+            },
+          ],
+        },
+        {
+          title: "Experiments",
+          url: `/dashboard/studies/${activeStudy.id}/experiments`,
+          icon: FlaskConical,
+          items: [
+            {
+              title: "All Experiments",
+              url: `/dashboard/studies/${activeStudy.id}/experiments`,
+            },
+            {
+              title: "Create Experiment",
+              url: `/dashboard/studies/${activeStudy.id}/experiments/new`,
+              hidden: !["OWNER", "ADMIN", "PRINCIPAL_INVESTIGATOR"].map(r => r.toLowerCase()).includes(activeStudy.role.toLowerCase()),
             },
           ],
         },

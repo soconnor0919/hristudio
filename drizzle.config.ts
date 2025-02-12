@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["hristudio_*"],
+  tablesFilter: ["hs_*"],
 } satisfies Config;

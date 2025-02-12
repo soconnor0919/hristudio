@@ -184,7 +184,7 @@ export const studyRouter = createTRPCRouter({
     .input(
       z.object({
         title: z.string().min(1, "Title is required"),
-        description: z.string().optional(),
+      description: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -198,10 +198,10 @@ export const studyRouter = createTRPCRouter({
         const result = await db
           .insert(studies)
           .values({
-            title: input.title,
+          title: input.title,
             description: input.description ?? "",
-            createdById: ctx.session.user.id,
-            createdAt: new Date(),
+          createdById: ctx.session.user.id,
+          createdAt: new Date(),
             updatedAt: new Date(),
           })
           .returning();

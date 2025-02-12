@@ -1,178 +1,144 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { experiments, studyMembers } from "~/server/db/schema";
+import { type Step } from "~/lib/experiments/types";
 
 const createExperimentSchema = z.object({
-  studyId: z.string().uuid(),
-  robotId: z.string().uuid(),
-  title: z.string().min(1).max(256),
+  studyId: z.number(),
+  title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  estimatedDuration: z.number().int().min(0).optional(),
-  order: z.number().int().min(0),
+  steps: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    actions: z.array(z.object({
+      id: z.string(),
+      type: z.string(),
+      parameters: z.record(z.any()),
+      order: z.number(),
+    })),
+    order: z.number(),
+  })).default([]),
+});
+
+const updateExperimentSchema = z.object({
+  id: z.number(),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.enum(["draft", "active", "archived"]).optional(),
+  steps: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    actions: z.array(z.object({
+      id: z.string(),
+      type: z.string(),
+      parameters: z.record(z.any()),
+      order: z.number(),
+    })),
+    order: z.number(),
+  })).optional(),
 });
 
 export const experimentRouter = createTRPCRouter({
-  create: protectedProcedure
-    .input(createExperimentSchema)
-    .mutation(async ({ ctx, input }) => {
+  getByStudyId: protectedProcedure
+    .input(z.object({ studyId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      // Check if user is a member of the study
       const membership = await ctx.db.query.studyMembers.findFirst({
-        where: eq(studyMembers.studyId, input.studyId),
+        where: and(
+          eq(studyMembers.studyId, input.studyId),
+          eq(studyMembers.userId, ctx.session.user.id),
+        ),
       });
 
       if (!membership) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Study not found",
-        });
-      }
-
-      if (membership.role !== "admin" && membership.role !== "principal_investigator") {
-        throw new TRPCError({
           code: "FORBIDDEN",
-          message: "You don't have permission to create experiments",
+          message: "You do not have permission to view experiments in this study",
         });
       }
 
-      const [experiment] = await ctx.db
-        .insert(experiments)
-        .values(input)
-        .returning();
+      return ctx.db.query.experiments.findMany({
+        where: eq(experiments.studyId, input.studyId),
+        orderBy: experiments.createdAt,
+      });
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, input.id),
+      });
 
       if (!experiment) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create experiment",
+          code: "NOT_FOUND",
+          message: "Experiment not found",
+        });
+      }
+
+      // Check if user has access to the study
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, experiment.studyId),
+          eq(studyMembers.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to view this experiment",
         });
       }
 
       return experiment;
     }),
 
-  list: protectedProcedure
-    .input(z.object({ studyId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
+  create: protectedProcedure
+    .input(createExperimentSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Check if user has permission to create experiments
       const membership = await ctx.db.query.studyMembers.findFirst({
-        where: eq(studyMembers.studyId, input.studyId),
+        where: and(
+          eq(studyMembers.studyId, input.studyId),
+          eq(studyMembers.userId, ctx.session.user.id),
+        ),
       });
 
-      if (!membership) {
+      if (!membership || !["owner", "admin", "principal_investigator"]
+        .includes(membership.role.toLowerCase())) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Study not found",
+          code: "FORBIDDEN",
+          message: "You do not have permission to create experiments in this study",
         });
       }
 
-      const experimentList = await ctx.db.query.experiments.findMany({
-        where: eq(experiments.studyId, input.studyId),
-        orderBy: (experiments, { asc }) => [asc(experiments.order)],
-        with: {
-          robot: true,
-        },
-      });
+      const [experiment] = await ctx.db
+        .insert(experiments)
+        .values({
+          studyId: input.studyId,
+          title: input.title,
+          description: input.description,
+          steps: input.steps as Step[],
+          version: 1,
+          status: "draft",
+          createdById: ctx.session.user.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
 
-      return experimentList;
-    }),
-
-  byId: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const experiment = await ctx.db.query.experiments.findFirst({
-        where: eq(experiments.id, input.id),
-        with: {
-          robot: true,
-          study: true,
-        },
-      });
-
-      if (!experiment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Experiment not found",
-        });
-      }
-
-      const membership = await ctx.db.query.studyMembers.findFirst({
-        where: eq(studyMembers.studyId, experiment.studyId),
-      });
-
-      if (!membership) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Study not found",
-        });
-      }
-
-      return {
-        ...experiment,
-        role: membership.role,
-      };
+      return experiment;
     }),
 
   update: protectedProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        title: z.string().min(1).max(256).optional(),
-        description: z.string().optional(),
-        estimatedDuration: z.number().int().min(0).optional(),
-        order: z.number().int().min(0).optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-
-      const experiment = await ctx.db.query.experiments.findFirst({
-        where: eq(experiments.id, id),
-      });
-
-      if (!experiment) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Experiment not found",
-        });
-      }
-
-      const membership = await ctx.db.query.studyMembers.findFirst({
-        where: eq(studyMembers.studyId, experiment.studyId),
-      });
-
-      if (!membership) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Study not found",
-        });
-      }
-
-      if (membership.role !== "admin" && membership.role !== "principal_investigator") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to update this experiment",
-        });
-      }
-
-      const [updated] = await ctx.db
-        .update(experiments)
-        .set(data)
-        .where(eq(experiments.id, id))
-        .returning();
-
-      if (!updated) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Experiment not found",
-        });
-      }
-
-      return {
-        ...updated,
-        role: membership.role,
-      };
-    }),
-
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(updateExperimentSchema)
     .mutation(async ({ ctx, input }) => {
       const experiment = await ctx.db.query.experiments.findFirst({
         where: eq(experiments.id, input.id),
@@ -185,36 +151,72 @@ export const experimentRouter = createTRPCRouter({
         });
       }
 
+      // Check if user has permission to edit experiments
       const membership = await ctx.db.query.studyMembers.findFirst({
-        where: eq(studyMembers.studyId, experiment.studyId),
+        where: and(
+          eq(studyMembers.studyId, experiment.studyId),
+          eq(studyMembers.userId, ctx.session.user.id),
+        ),
       });
 
-      if (!membership) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Study not found",
-        });
-      }
-
-      if (membership.role !== "admin" && membership.role !== "principal_investigator") {
+      if (!membership || !["owner", "admin", "principal_investigator"]
+        .includes(membership.role.toLowerCase())) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "You don't have permission to delete this experiment",
+          message: "You do not have permission to edit this experiment",
         });
       }
 
-      const [deleted] = await ctx.db
-        .delete(experiments)
+      const [updatedExperiment] = await ctx.db
+        .update(experiments)
+        .set({
+          title: input.title,
+          description: input.description,
+          status: input.status,
+          steps: input.steps as Step[] | undefined,
+          version: experiment.version + 1,
+          updatedAt: new Date(),
+        })
         .where(eq(experiments.id, input.id))
         .returning();
 
-      if (!deleted) {
+      return updatedExperiment;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, input.id),
+      });
+
+      if (!experiment) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Experiment not found",
         });
       }
 
-      return deleted;
+      // Check if user has permission to delete experiments
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, experiment.studyId),
+          eq(studyMembers.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!membership || !["owner", "admin", "principal_investigator"]
+        .includes(membership.role.toLowerCase())) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to delete this experiment",
+        });
+      }
+
+      await ctx.db
+        .delete(experiments)
+        .where(eq(experiments.id, input.id));
+
+      return { success: true };
     }),
 }); 

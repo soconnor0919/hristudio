@@ -4,7 +4,7 @@
 
 A *study* is a general term for a research project.
 
-An *experiment* is a specific set of steps and actions that will be conducted with a participant and robot.
+An *experiment* is a specific set of steps and actions that will be conducted with a participant and robot. Experiments are designed and configured via a dedicated drag and drop experiment designer. This interactive designer features a dotted background—similar to Unreal Engine's IDE drag and drop area—that clearly indicates drop zones. Users can add, reorder, and connect individual steps and actions visually.
 
 An *trial* is a specific instance of an experiment. It is a single run of the experiment with a specific participant and robot.
 
@@ -15,6 +15,21 @@ An *action* is a specific operation that is being done (like "move to position",
 A *participant* is a person that has been added to a study. This person does not have an account.
 
 A *user* is a person that has an account, which is a person that has been added to a study. Anyone can sign up for an account, but they must be added to a study or create their own. A user can have different roles in different studies.
+
+## Experiment Design and Implementation
+
+Experiments are central to HRIStudio and are managed with full CRUD operations. The Experiment Design feature includes:
+
+- **Drag and Drop Designer:** An interactive design area with a dotted background, reminiscent of Unreal Engine's IDE, which allows users to visually add, reposition, and connect steps and actions. The designer includes:
+  - A dotted grid background that provides visual cues for alignment and spacing
+  - Highlighted drop zones that activate when dragging components
+  - Visual feedback for valid/invalid drop targets
+  - Smooth animations for reordering and nesting
+  - Connection lines showing relationships between steps
+  - A side panel of available actions that can be dragged into steps
+- **Experiment Templates:** The ability to save and reuse experiment configurations.
+- **CRUD Operations:** Procedures to create, retrieve, update, and delete experiments associated with a study.
+- **Dynamic Interaction:** Support for adding and reordering steps, and nesting actions within steps.
 
 ## Roles and Permissions
 

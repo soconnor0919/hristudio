@@ -40,7 +40,7 @@ export function CreateStudyForm() {
     },
   });
 
-  const createStudy = api.study.create.useMutation({
+  const { mutate, isPending } = api.study.create.useMutation({
     onSuccess: (study) => {
       toast({
         title: "Study created",
@@ -66,7 +66,7 @@ export function CreateStudyForm() {
       });
       return;
     }
-    createStudy.mutate(data);
+    mutate(data);
   };
 
   return (
@@ -120,9 +120,9 @@ export function CreateStudyForm() {
           </Button>
           <Button
             type="submit"
-            disabled={createStudy.isLoading || status !== "authenticated"}
+            disabled={isPending || status !== "authenticated"}
           >
-            {createStudy.isLoading ? "Creating..." : "Create Study"}
+            {isPending ? "Creating..." : "Create Study"}
           </Button>
         </div>
       </form>
