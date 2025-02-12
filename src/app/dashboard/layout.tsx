@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { api } from "~/trpc/react"
 
 import { AppSidebar } from "~/components/navigation/app-sidebar"
 import { Header } from "~/components/navigation/header"
@@ -18,19 +19,39 @@ export default function DashboardLayout({
   const { data: session, status } = useSession()
   const router = useRouter()
 
+  // Get user's studies
+  const { data: studies, isLoading: isLoadingStudies } = api.study.getMyStudies.useQuery(
+    undefined,
+    {
+      enabled: status === "authenticated",
+    }
+  );
+
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login")
+      router.replace("/auth/signin")
     }
   }, [status, router])
 
+  useEffect(() => {
+    // Only redirect if we've loaded studies and user has none
+    if (!isLoadingStudies && studies && studies.length === 0) {
+      router.replace("/onboarding")
+    }
+  }, [studies, isLoadingStudies, router])
+
   // Show nothing while loading
-  if (status === "loading") {
+  if (status === "loading" || isLoadingStudies) {
     return null
   }
 
   // Show nothing if not authenticated (will redirect)
   if (!session) {
+    return null
+  }
+
+  // Show nothing if no studies (will redirect to onboarding)
+  if (studies && studies.length === 0) {
     return null
   }
 

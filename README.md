@@ -1,10 +1,10 @@
 # HRIStudio
 
-A modern web application for managing human-robot interaction studies, built with Next.js 14, TypeScript, and the App Router.
+A modern web application for managing human-robot interaction studies, built with Next.js 15, TypeScript, and the App Router.
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 with App Router
+- **Framework**: Next.js 15 with App Router
 - **Language**: TypeScript
 - **Authentication**: NextAuth.js
 - **Database**: PostgreSQL with Drizzle ORM

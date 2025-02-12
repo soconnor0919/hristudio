@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { users } from "~/server/db/schema";
+import { randomUUID } from "crypto";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -45,13 +46,14 @@ export async function POST(req: Request) {
     const hashedPassword = await hash(password, 10);
 
     await db.insert(users).values({
+      id: randomUUID(),
       firstName,
       lastName,
       email,
       password: hashedPassword,
     });
 
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

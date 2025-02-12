@@ -63,7 +63,7 @@ export function NavUser() {
                   <div className="relative size-full overflow-hidden rounded-lg">
                     <Image
                       src={session.user.image}
-                      alt={session.user.name ?? "User"}
+                      alt={session.user.firstName ?? "User"}
                       fill
                       sizes="32px"
                       className="object-cover"

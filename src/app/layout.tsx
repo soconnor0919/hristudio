@@ -1,6 +1,5 @@
 import "~/styles/globals.css";
 
-import { Inter } from "next/font/google";
 import { GeistSans } from 'geist/font/sans';
 import { headers } from "next/headers";
 
@@ -8,12 +7,6 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { Providers } from "~/components/providers";
 import DatabaseCheck from "~/components/db-check";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
-
 
 export const metadata = {
   title: "HRIStudio",
@@ -30,7 +23,7 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className={cn(
         "min-h-screen bg-background font-sans antialiased",
-        inter.variable
+        GeistSans.className
       )}>
         <TRPCReactProvider {...{ headers: headers() }}>
           <Providers>

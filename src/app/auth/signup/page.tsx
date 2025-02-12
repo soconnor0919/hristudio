@@ -1,67 +1,77 @@
-import { type Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { SignUpForm } from "~/app/_components/auth/sign-up-form";
-import { buttonVariants } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
+import { redirect } from "next/navigation";
+import { getServerAuthSession } from "~/server/auth";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "~/components/ui/card";
+import { SignUpForm } from "~/components/auth/sign-up-form";
+import { Logo } from "~/components/logo";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
+  title: "Sign Up | HRIStudio",
   description: "Create a new account",
 };
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const session = await getServerAuthSession();
+  if (session) {
+    redirect("/dashboard");
+  }
+
+  const params = await searchParams;
+  const error = params?.error ? String(params.error) : null;
+  const showError = error === "CredentialsSignin";
+
   return (
-    <div className="container relative h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
+    <div className="auth-gradient relative flex min-h-screen items-center justify-center px-4">
+      <Logo 
+        className="absolute left-4 top-4 text-lg transition-colors hover:text-primary md:left-8 md:top-8"
+        iconClassName="text-primary"
+      />
+      <div className="w-full max-w-[800px] px-4 py-8">
+        <Card className="auth-card shadow-xl transition-shadow hover:shadow-lg">
+          <CardContent className="grid p-0 md:grid-cols-2">
+            <div className="p-6 md:p-8">
+              <div className="mb-6 space-y-2">
+                <CardTitle className="text-2xl font-bold tracking-tight">
+                  Create an account
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Get started with HRIStudio
+                </CardDescription>
+              </div>
+              <SignUpForm error={showError} />
+            </div>
+            <div className="relative hidden h-full md:block">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/20 to-secondary/10 rounded-r-lg" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Logo 
+                  className="pointer-events-none"
+                  iconClassName="h-32 w-32 mr-0 text-primary/40"
+                  textClassName="sr-only"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link 
+            href={`/auth/signin${params?.callbackUrl ? `?callbackUrl=${params.callbackUrl}` : ''}`}
+            className="underline underline-offset-4 hover:text-primary"
           >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          HRI Studio
-        </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;HRI Studio has revolutionized how we conduct human-robot interaction studies.&rdquo;
-            </p>
-            <footer className="text-sm">Sofia Dewar</footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Create an account
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your email below to create your account
-            </p>
-          </div>
-          <SignUpForm />
-          <p className="px-8 text-center text-sm text-muted-foreground">
-            <Link
-              href="/auth/signin"
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "hover:bg-transparent hover:underline",
-                "px-0"
-              )}
-            >
-              Already have an account? Sign In
-            </Link>
-          </p>
-        </div>
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

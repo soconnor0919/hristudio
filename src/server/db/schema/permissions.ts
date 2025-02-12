@@ -1,17 +1,19 @@
 import { relations } from "drizzle-orm";
 import {
   integer,
-  pgTable,
   primaryKey,
   text,
   timestamp,
   varchar,
+  serial,
 } from "drizzle-orm/pg-core";
-import { users } from "~/server/db/schema/auth";
-import { studies } from "~/server/db/schema/studies";
+import { users } from "./auth";
+import { studies } from "./studies";
 
-export const permissions = pgTable("permissions", {
-  id: integer("id").notNull().primaryKey(),
+import { createTable } from "../utils";
+
+export const permissions = createTable("permissions", {
+  id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   code: varchar("code", { length: 50 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
@@ -19,8 +21,8 @@ export const permissions = pgTable("permissions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const roles = pgTable("roles", {
-  id: integer("id").notNull().primaryKey(),
+export const roles = createTable("roles", {
+  id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   code: varchar("code", { length: 50 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
@@ -28,7 +30,7 @@ export const roles = pgTable("roles", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const rolePermissions = pgTable(
+export const rolePermissions = createTable(
   "role_permissions",
   {
     roleId: integer("role_id")
@@ -44,7 +46,7 @@ export const rolePermissions = pgTable(
   })
 );
 
-export const userRoles = pgTable(
+export const userRoles = createTable(
   "user_roles",
   {
     userId: varchar("user_id", { length: 255 })

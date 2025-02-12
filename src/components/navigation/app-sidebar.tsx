@@ -4,10 +4,14 @@ import {
   Beaker,
   Home,
   Settings2,
-  User
+  User,
+  Microscope,
+  Users,
+  Plus
 } from "lucide-react"
 import * as React from "react"
 import { useSession } from "next-auth/react"
+import { useStudy } from "~/components/providers/study-provider"
 
 import { StudySwitcher } from "~/components/auth/study-switcher"
 import {
@@ -20,18 +24,23 @@ import {
 import { NavMain } from "~/components/navigation/nav-main"
 import { NavUser } from "~/components/navigation/nav-user"
 
-const data = {
-  navMain: [
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session } = useSession()
+  const { activeStudy } = useStudy()
+
+  if (!session) return null
+
+  // Base navigation items that are always shown
+  const baseNavItems = [
     {
       title: "Overview",
       url: "/dashboard",
       icon: Home,
-      isActive: true,
     },
     {
       title: "Studies",
       url: "/dashboard/studies",
-      icon: Beaker,
+      icon: Microscope,
       items: [
         {
           title: "All Studies",
@@ -43,6 +52,33 @@ const data = {
         },
       ],
     },
+  ]
+
+  // Study-specific navigation items that are only shown when a study is active
+  const studyNavItems = activeStudy
+    ? [
+        {
+          title: "Participants",
+          url: `/dashboard/studies/${activeStudy.id}/participants`,
+          icon: Users,
+          items: [
+            {
+              title: "All Participants",
+              url: `/dashboard/studies/${activeStudy.id}/participants`,
+            },
+            {
+              title: "Add Participant",
+              url: `/dashboard/studies/${activeStudy.id}/participants/new`,
+              // Only show if user is admin
+              hidden: activeStudy.role !== "ADMIN",
+            },
+          ],
+        },
+      ]
+    : []
+
+  // Settings navigation items
+  const settingsNavItems = [
     {
       title: "Settings",
       url: "/dashboard/settings",
@@ -63,12 +99,9 @@ const data = {
         },
       ],
     },
-  ],
-}
+  ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession()
-  if (!session) return null
+  const navItems = [...baseNavItems, ...studyNavItems, ...settingsNavItems]
 
   return (
     <Sidebar 
@@ -81,7 +114,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <StudySwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

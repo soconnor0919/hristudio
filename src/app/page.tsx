@@ -19,10 +19,10 @@ export default async function Home() {
             {!session && (
               <>
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
+                  <Link href="/auth/signin">Sign In</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Sign Up</Link>
+                  <Link href="/auth/signup">Sign Up</Link>
                 </Button>
               </>
             )}
@@ -47,7 +47,7 @@ export default async function Home() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             {!session ? (
               <Button size="lg" className="w-full sm:w-auto" asChild>
-                <Link href="/register">Get Started</Link>
+                <Link href="/auth/signup">Get Started</Link>
               </Button>
             ) : (
               <Button size="lg" className="w-full sm:w-auto" asChild>

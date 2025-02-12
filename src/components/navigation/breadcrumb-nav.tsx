@@ -31,6 +31,39 @@ export function BreadcrumbNav() {
           label: "Create Study",
           current: true,
         })
+      } else if (paths[2]) {
+        items.push({
+          label: "Study Details",
+          href: `/dashboard/studies/${paths[2]}`,
+          current: paths.length === 3,
+        })
+
+        if (paths[3] === "participants") {
+          items.push({
+            label: "Participants",
+            href: `/dashboard/studies/${paths[2]}/participants`,
+            current: paths.length === 4,
+          })
+
+          if (paths[4] === "new") {
+            items.push({
+              label: "Add Participant",
+              current: true,
+            })
+          } else if (paths[4]) {
+            items.push({
+              label: "Participant Details",
+              current: paths.length === 5,
+            })
+
+            if (paths[5] === "edit") {
+              items.push({
+                label: "Edit",
+                current: true,
+              })
+            }
+          }
+        }
       }
     }
 
@@ -41,11 +74,11 @@ export function BreadcrumbNav() {
 
   return (
     <nav aria-label="breadcrumb">
-      <ol className="flex items-center gap-2">
+      <ol className="flex items-center">
         {breadcrumbs.map((item, index) => (
           <li key={item.label} className="flex items-center">
             {index > 0 && (
-              <span role="presentation" aria-hidden="true" className="mx-2 text-muted-foreground">
+              <span role="presentation" aria-hidden="true" className="mx-1 text-muted-foreground">
                 /
               </span>
             )}

@@ -9,6 +9,11 @@ import {
 import { type Permission, type PermissionValue } from "./constants";
 import { auth } from "~/server/auth";
 import { TRPCError } from "@trpc/server";
+import { getServerSession } from "next-auth";
+import { studyMembers } from "~/server/db/schema";
+import { ROLE_PERMISSIONS, ROLES, PERMISSIONS } from "./constants";
+import type { Session } from "next-auth";
+import { studies } from "~/server/db/schema";
 
 export async function getUserPermissions(userId: string, studyId?: number) {
   const conditions = [eq(userRoles.userId, userId)];
@@ -110,42 +115,62 @@ export async function getUserStudyRoles(userId: string, studyId: number) {
     );
 }
 
-interface PermissionCheck {
-  studyId: number;
-  permission?: PermissionValue;
-  requireStudyAccess?: boolean;
+interface CheckPermissionsOptions {
+  studyId?: number;
+  permission: Permission;
+  session: Session | null;
 }
 
-export async function checkPermissions(check: PermissionCheck) {
-  const session = await auth();
-  if (!session?.user?.id) {
+export async function checkPermissions({
+  studyId,
+  permission,
+  session,
+}: CheckPermissionsOptions): Promise<void> {
+  if (!session?.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "You must be logged in to perform this action",
     });
   }
 
-  const { studyId, permission, requireStudyAccess = true } = check;
-
-  if (requireStudyAccess) {
-    const hasAccess = await hasStudyAccess(session.user.id, studyId);
-    if (!hasAccess) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Study not found",
-      });
+  // Anyone who is logged in can create a study
+  if (!studyId) {
+    if (permission === "CREATE_STUDY") {
+      return;
     }
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Study ID is required for this action",
+    });
   }
 
-  if (permission) {
-    const hasRequiredPermission = await hasPermission(session.user.id, permission, studyId);
-    if (!hasRequiredPermission) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "You don't have permission to perform this action",
-      });
-    }
+  const membership = await db.query.studyMembers.findFirst({
+    where: and(
+      eq(studyMembers.studyId, studyId),
+      eq(studyMembers.userId, session.user.id),
+    ),
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have permission to perform this action",
+    });
   }
 
-  return { userId: session.user.id };
+  // Normalize role (convert membership.role to uppercase) so that it matches the keys in ROLE_PERMISSIONS
+  const normalizedRole = membership.role.toUpperCase() as keyof typeof ROLE_PERMISSIONS;
+  const permittedActions = ROLE_PERMISSIONS[normalizedRole] ?? [];
+
+  // For owners, they have all permissions
+  if (normalizedRole === "OWNER") {
+    return;
+  }
+
+  if (!permittedActions.includes(permission)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have permission to perform this action",
+    });
+  }
 } 

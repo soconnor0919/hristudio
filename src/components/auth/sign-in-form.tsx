@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,29 +16,46 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { useToast } from "~/components/ui/use-toast";
+import { useToast } from "~/hooks/use-toast";
+import React from "react";
 
-const formSchema = z.object({
+const signInSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type SignInValues = z.infer<typeof signInSchema>;
 
-export function SignInForm() {
+interface SignInFormProps {
+  error?: boolean;
+}
+
+export function SignInForm({ error }: SignInFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  // Show error toast if credentials are invalid
+  React.useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Invalid email or password",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+
+  const form = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
+      email: searchParams.get("email") ?? "",
       password: "",
     },
   });
 
-  async function onSubmit(data: FormValues) {
+  async function onSubmit(data: SignInValues) {
     setIsLoading(true);
 
     try {
@@ -50,20 +67,21 @@ export function SignInForm() {
 
       if (result?.error) {
         toast({
-          variant: "destructive",
           title: "Error",
           description: "Invalid email or password",
+          variant: "destructive",
         });
         return;
       }
 
+      const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+      router.push(callbackUrl);
       router.refresh();
-      router.push("/");
     } catch (error) {
       toast({
-        variant: "destructive",
         title: "Error",
         description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -91,6 +109,7 @@ export function SignInForm() {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="password"
@@ -109,6 +128,7 @@ export function SignInForm() {
             </FormItem>
           )}
         />
+
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>

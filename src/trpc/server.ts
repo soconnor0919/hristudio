@@ -15,7 +15,7 @@ const defaultQueryClientOptions = {
       onError: (error: unknown) => {
         const err = error as { message?: string };
         // Ignore unauthorized errors on public pages
-        if (err?.message === "UNAUTHORIZED" && typeof window !== "undefined" && window.location.pathname.match(/^\/(login|register|$)/)) {
+        if (err?.message === "UNAUTHORIZED" && typeof window !== "undefined" && window.location.pathname.match(/^\/(auth\/signin|auth\/signup|$)/)) {
           return;
         }
       },

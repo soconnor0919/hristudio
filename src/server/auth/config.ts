@@ -26,13 +26,20 @@ declare module "@auth/core/types" {
     user: {
       id: string;
       email: string;
+      firstName: string | null;
+      lastName: string | null;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User {
+    id?: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    password?: string | null;
+    emailVerified?: Date | null;
+    image?: string | null;
+  }
 }
 
 /**
@@ -42,7 +49,7 @@ declare module "@auth/core/types" {
  */
 export const authConfig = {
   adapter: DrizzleAdapter(db, {
-    usersTable: users,
+    usersTable: users as any,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
@@ -89,7 +96,10 @@ export const authConfig = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name ?? null,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          emailVerified: user.emailVerified,
+          image: user.image,
         };
       }
     })
@@ -100,10 +110,14 @@ export const authConfig = {
       user: {
         ...session.user,
         id: user.id,
+        email: user.email,
+        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : null,
+        firstName: user.firstName,
+        lastName: user.lastName,
       },
     }),
   },
   pages: {
-    signIn: '/login',
+    signIn: '/auth/signin',
   },
 } satisfies AuthConfig;
