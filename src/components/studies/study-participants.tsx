@@ -18,6 +18,7 @@ import { ROLES } from "~/lib/permissions/constants";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
 import { useState } from "react";
+import { TableSkeleton } from "~/components/ui/skeleton";
 
 interface StudyParticipantsProps {
   studyId: number;
@@ -38,7 +39,21 @@ export function StudyParticipants({ studyId, role }: StudyParticipantsProps) {
     .includes(role.toLowerCase());
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Study Participants</CardTitle>
+              <CardDescription>Loading participants...</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TableSkeleton />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

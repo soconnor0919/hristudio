@@ -13,6 +13,7 @@ import { StudyParticipants } from "~/components/studies/study-participants";
 import { StudyMembers } from "~/components/studies/study-members";
 import { StudyMetadata } from "~/components/studies/study-metadata";
 import { StudyActivity } from "~/components/studies/study-activity";
+import { StudyDetailsSkeleton } from "~/components/ui/skeleton";
 
 export default function StudyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -24,7 +25,28 @@ export default function StudyPage({ params }: { params: Promise<{ id: string }> 
   const { data: study, isLoading: isLoadingStudy } = api.study.getById.useQuery({ id });
 
   if (isLoadingStudy) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <PageHeader
+          title="Loading..."
+          description="Please wait while we load the study details"
+        />
+        <PageContent>
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="participants">Participants</TabsTrigger>
+              <TabsTrigger value="members">Members</TabsTrigger>
+              <TabsTrigger value="metadata">Metadata</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+              <StudyDetailsSkeleton />
+            </TabsContent>
+          </Tabs>
+        </PageContent>
+      </>
+    );
   }
 
   if (!study) {

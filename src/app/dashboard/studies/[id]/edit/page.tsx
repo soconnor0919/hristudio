@@ -7,6 +7,7 @@ import { PageHeader } from "~/components/layout/page-header";
 import { PageContent } from "~/components/layout/page-content";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { use } from "react";
+import { CardSkeleton } from "~/components/ui/skeleton";
 
 export default function EditStudyPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -29,7 +30,27 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
   }
 
   if (isLoadingStudy) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <PageHeader
+          title="Edit Study"
+          description="Loading study details..."
+        />
+        <PageContent className="max-w-2xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Study Details</CardTitle>
+              <CardDescription>
+                Please wait while we load the study information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CardSkeleton />
+            </CardContent>
+          </Card>
+        </PageContent>
+      </>
+    );
   }
 
   if (!study) {

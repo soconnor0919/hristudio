@@ -9,6 +9,7 @@ import { ParticipantForm, type ParticipantFormValues } from "~/components/partic
 import { use } from "react";
 import { useToast } from "~/hooks/use-toast";
 import { ROLES } from "~/lib/permissions/constants";
+import { CardSkeleton } from "~/components/ui/skeleton";
 
 export default function EditParticipantPage({
   params,
@@ -50,7 +51,27 @@ export default function EditParticipantPage({
   }
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <>
+        <PageHeader
+          title="Edit Participant"
+          description="Loading participant information..."
+        />
+        <PageContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>Participant Details</CardTitle>
+              <CardDescription>
+                Please wait while we load the participant information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CardSkeleton />
+            </CardContent>
+          </Card>
+        </PageContent>
+      </>
+    );
   }
 
   if (!study || !participant) {
