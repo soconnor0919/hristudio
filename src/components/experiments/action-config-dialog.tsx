@@ -30,62 +30,15 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Switch } from "~/components/ui/switch";
-import { AVAILABLE_ACTIONS } from "~/lib/experiments/actions";
-import { type ActionType } from "~/lib/experiments/types";
-
-// Define parameter schemas for each action type
-const parameterSchemas = {
-  move: z.object({
-    position: z.object({
-      x: z.number(),
-      y: z.number(),
-      z: z.number(),
-    }),
-    speed: z.number().min(0).max(1),
-    easing: z.enum(["linear", "easeIn", "easeOut", "easeInOut"]),
-  }),
-  speak: z.object({
-    text: z.string().min(1),
-    speed: z.number().min(0.5).max(2),
-    pitch: z.number().min(0.5).max(2),
-    volume: z.number().min(0).max(1),
-  }),
-  wait: z.object({
-    duration: z.number().min(0),
-    showCountdown: z.boolean(),
-  }),
-  input: z.object({
-    type: z.enum(["button", "text", "number", "choice"]),
-    prompt: z.string().optional(),
-    options: z.array(z.string()).optional(),
-    timeout: z.number().nullable(),
-  }),
-  gesture: z.object({
-    name: z.string().min(1),
-    speed: z.number().min(0).max(1),
-    intensity: z.number().min(0).max(1),
-  }),
-  record: z.object({
-    type: z.enum(["start", "stop"]),
-    streams: z.array(z.enum(["video", "audio", "sensors"])),
-  }),
-  condition: z.object({
-    condition: z.string().min(1),
-    trueActions: z.array(z.any()),
-    falseActions: z.array(z.any()).optional(),
-  }),
-  loop: z.object({
-    count: z.number().min(1),
-    actions: z.array(z.any()),
-  }),
-} satisfies Record<ActionType, z.ZodType<any>>;
+import { type ActionConfig } from "~/lib/experiments/plugin-actions";
 
 interface ActionConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: ActionType;
+  type: string;
   parameters: Record<string, any>;
   onSubmit: (parameters: Record<string, any>) => void;
+  actionConfig: ActionConfig;
 }
 
 export function ActionConfigDialog({
@@ -94,11 +47,41 @@ export function ActionConfigDialog({
   type,
   parameters,
   onSubmit,
+  actionConfig,
 }: ActionConfigDialogProps) {
-  const actionConfig = AVAILABLE_ACTIONS.find((a) => a.type === type);
-  if (!actionConfig) return null;
+  // Create a dynamic schema based on the action's parameters
+  const createDynamicSchema = () => {
+    if (!actionConfig) return z.object({});
 
-  const schema = parameterSchemas[type];
+    const schemaFields: Record<string, z.ZodType<any>> = {};
+
+    for (const [key, prop] of Object.entries(actionConfig.defaultParameters)) {
+      switch (typeof prop) {
+        case "string":
+          schemaFields[key] = z.string();
+          break;
+        case "number":
+          schemaFields[key] = z.number();
+          break;
+        case "boolean":
+          schemaFields[key] = z.boolean();
+          break;
+        case "object":
+          if (Array.isArray(prop)) {
+            schemaFields[key] = z.array(z.any());
+          } else {
+            schemaFields[key] = z.record(z.any());
+          }
+          break;
+        default:
+          schemaFields[key] = z.any();
+      }
+    }
+
+    return z.object(schemaFields);
+  };
+
+  const schema = createDynamicSchema();
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: parameters,
@@ -107,6 +90,104 @@ export function ActionConfigDialog({
   function handleSubmit(data: Record<string, any>) {
     onSubmit(data);
     onOpenChange(false);
+  }
+
+  function renderField(key: string, value: any) {
+    const fieldType = typeof value;
+
+    switch (fieldType) {
+      case "string":
+        if (value.length > 50) {
+          return (
+            <FormField
+              key={key}
+              control={form.control}
+              name={key}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{key}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          );
+        }
+        return (
+          <FormField
+            key={key}
+            control={form.control}
+            name={key}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{key}</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "number":
+        return (
+          <FormField
+            key={key}
+            control={form.control}
+            name={key}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{key}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "boolean":
+        return (
+          <FormField
+            key={key}
+            control={form.control}
+            name={key}
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>{key}</FormLabel>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "object":
+        if (Array.isArray(value)) {
+          // TODO: Add array field handling
+          return null;
+        }
+        // TODO: Add object field handling
+        return null;
+
+      default:
+        return null;
+    }
   }
 
   return (
@@ -119,280 +200,10 @@ export function ActionConfigDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {type === "move" && (
-              <>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="position.x"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>X Position</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="position.y"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Y Position</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="position.z"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Z Position</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="speed"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Speed</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Movement speed (0-1)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="easing"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Easing</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select easing type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="linear">Linear</SelectItem>
-                          <SelectItem value="easeIn">Ease In</SelectItem>
-                          <SelectItem value="easeOut">Ease Out</SelectItem>
-                          <SelectItem value="easeInOut">Ease In Out</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Movement easing function
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+            {Object.entries(actionConfig.defaultParameters).map(([key, value]) =>
+              renderField(key, value)
             )}
-
-            {type === "speak" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Text</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter text to speak"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="speed"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Speed</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0.5"
-                            max="2"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="pitch"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pitch</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0.5"
-                            max="2"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="volume"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Volume</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="1"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
-
-            {type === "wait" && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration (ms)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="100"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Wait duration in milliseconds
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="showCountdown"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Show Countdown
-                        </FormLabel>
-                        <FormDescription>
-                          Display a countdown timer during the wait
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-
-            {/* Add more action type configurations here */}
-
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Save Changes</Button>
-            </div>
+            <Button type="submit">Save Changes</Button>
           </form>
         </Form>
       </DialogContent>

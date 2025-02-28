@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { motion } from "framer-motion";
-import { AVAILABLE_ACTIONS } from "~/lib/experiments/actions";
+import { BUILT_IN_ACTIONS, getPluginActions } from "~/lib/experiments/plugin-actions";
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import { Settings, ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { ActionConfigDialog } from "../action-config-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { api } from "~/trpc/react";
 
 interface ActionNodeData {
   type: string;
@@ -26,15 +27,34 @@ interface ActionNodeData {
 export const ActionNode = memo(({ data, selected }: NodeProps<ActionNodeData>) => {
   const [configOpen, setConfigOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const actionConfig = AVAILABLE_ACTIONS.find((a) => a.type === data.type);
+
+  // Get available plugins
+  const { data: plugins } = api.pluginStore.getPlugins.useQuery();
+  const { data: installedPlugins } = api.pluginStore.getInstalledPlugins.useQuery();
+  const installedPluginIds = installedPlugins?.map(p => p.robotId) ?? [];
+
+  // Get available actions from installed plugins
+  const installedPluginActions = plugins
+    ? getPluginActions(plugins.filter(p => installedPluginIds.includes(p.robotId)))
+    : [];
+
+  // Combine built-in actions with plugin actions
+  const availableActions = [...BUILT_IN_ACTIONS, ...installedPluginActions];
+  const actionConfig = availableActions.find((a) => a.type === data.type);
+
   if (!actionConfig) return null;
 
   return (
     <>
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-primary !border-primary-foreground"
+      />
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ 
-          scale: 1, 
+        animate={{
+          scale: 1,
           opacity: 1,
         }}
         transition={{ duration: 0.2 }}
@@ -48,79 +68,47 @@ export const ActionNode = memo(({ data, selected }: NodeProps<ActionNodeData>) =
           isHovered && "before:from-border/80 before:to-border/30",
         )}
       >
-        <Card className="relative z-10 w-[250px] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-none">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
+        <Card className="relative z-10 min-w-[240px] overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-primary/20 to-primary/10 text-primary">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-primary/20 to-primary/10">
                 {actionConfig.icon}
               </div>
-              <CardTitle className="text-sm font-medium leading-none">
-                {actionConfig.title}
-              </CardTitle>
+              <CardTitle className="text-base">{actionConfig.title}</CardTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={() => setConfigOpen(true)}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => setConfigOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Configure Action</TooltipContent>
+            </Tooltip>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <CardDescription className="text-xs">
+          <CardContent>
+            <CardDescription className="line-clamp-2">
               {actionConfig.description}
             </CardDescription>
           </CardContent>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Handle
-                type="target"
-                position={Position.Top}
-                className={cn(
-                  "!h-3 !w-3 !border-2 !bg-background",
-                  "!border-border transition-colors duration-200",
-                  "data-[connecting=true]:!border-primary data-[connecting=true]:!bg-primary",
-                  "before:absolute before:inset-[-4px] before:rounded-full before:border-2 before:border-background",
-                  "after:absolute after:inset-[-8px] after:rounded-full after:border-2 after:border-border/50"
-                )}
-              />
-            </TooltipTrigger>
-            <TooltipContent side="top" className="flex items-center gap-2">
-              <ArrowDown className="h-3 w-3" />
-              Input Connection
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Handle
-                type="source"
-                position={Position.Bottom}
-                className={cn(
-                  "!h-3 !w-3 !border-2 !bg-background",
-                  "!border-border transition-colors duration-200",
-                  "data-[connecting=true]:!border-primary data-[connecting=true]:!bg-primary",
-                  "before:absolute before:inset-[-4px] before:rounded-full before:border-2 before:border-background",
-                  "after:absolute after:inset-[-8px] after:rounded-full after:border-2 after:border-border/50"
-                )}
-              />
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="flex items-center gap-2">
-              <ArrowUp className="h-3 w-3" />
-              Output Connection
-            </TooltipContent>
-          </Tooltip>
         </Card>
       </motion.div>
-
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-primary !border-primary-foreground"
+      />
       <ActionConfigDialog
         open={configOpen}
         onOpenChange={setConfigOpen}
-        type={data.type as any}
+        type={data.type}
         parameters={data.parameters}
-        onSubmit={data.onChange ?? (() => {})}
+        onSubmit={data.onChange ?? (() => { })}
+        actionConfig={actionConfig}
       />
     </>
   );

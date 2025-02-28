@@ -2,13 +2,12 @@ import { relations } from "drizzle-orm";
 import {
   integer,
   pgEnum,
-  pgTable,
   text,
   timestamp,
-  varchar,
-  serial
+  varchar
 } from "drizzle-orm/pg-core";
 import { participants } from "../schema";
+import { createTable } from "../utils";
 import { users } from "./auth";
 import { studies } from "./studies";
 
@@ -40,7 +39,7 @@ export const trialStatusEnum = pgEnum("trial_status", [
 ]);
 
 // Tables
-export const experiments = pgTable("experiments", {
+export const experiments = createTable("experiments", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   studyId: integer("study_id")
     .notNull()
@@ -59,7 +58,7 @@ export const experiments = pgTable("experiments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const steps = pgTable("steps", {
+export const steps = createTable("steps", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   experimentId: integer("experiment_id")
     .notNull()
@@ -74,7 +73,7 @@ export const steps = pgTable("steps", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const actions = pgTable("actions", {
+export const actions = createTable("actions", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   stepId: integer("step_id")
     .notNull()
@@ -88,7 +87,7 @@ export const actions = pgTable("actions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const trials = pgTable("trials", {
+export const trials = createTable("trials", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   experimentId: integer("experiment_id")
     .notNull()
@@ -110,7 +109,7 @@ export const trials = pgTable("trials", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const trialEvents = pgTable("trial_events", {
+export const trialEvents = createTable("trial_events", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   trialId: integer("trial_id")
     .notNull()

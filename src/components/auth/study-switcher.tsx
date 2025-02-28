@@ -25,23 +25,25 @@ import { cn } from "~/lib/utils"
 
 export function StudySwitcher() {
   const { status } = useSession()
-  
+
   // Show nothing while loading to prevent flash
   if (status === "loading") {
     return null
   }
-  
+
   return <StudySwitcherContent />
 }
 
 function StudySwitcherContent() {
-  const { isMobile } = useSidebar()
+  const { isMobile, state } = useSidebar()
   const router = useRouter()
   const { studies, activeStudy, setActiveStudy, isLoading } = useStudy()
 
   const handleCreateStudy = () => {
     router.push("/dashboard/studies/new")
   }
+
+  const isCollapsed = state === "collapsed"
 
   if (isLoading) {
     return (
@@ -54,10 +56,12 @@ function StudySwitcherContent() {
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent/10">
               <Notebook className="size-4 text-muted-foreground/50" />
             </div>
-            <div className="grid flex-1 gap-1">
-              <div className="h-4 w-24 rounded bg-sidebar-accent/10" />
-              <div className="h-3 w-16 rounded bg-sidebar-accent/10" />
-            </div>
+            {!isCollapsed && (
+              <div className="grid flex-1 gap-1">
+                <div className="h-4 w-24 rounded bg-sidebar-accent/10" />
+                <div className="h-3 w-16 rounded bg-sidebar-accent/10" />
+              </div>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -76,10 +80,12 @@ function StudySwitcherContent() {
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
               <Plus className="size-4" />
             </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">Create Study</span>
-              <span className="truncate text-xs">Get started</span>
-            </div>
+            {!isCollapsed && (
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Create Study</span>
+                <span className="truncate text-xs">Get started</span>
+              </div>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -93,22 +99,29 @@ function StudySwitcherContent() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className={cn(
+                "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+                isCollapsed && "justify-center p-0"
+              )}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <Notebook className="size-4" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {activeStudy?.title ?? "Select Study"}
-                </span>
-                <span className="truncate text-xs">{activeStudy?.role ?? ""}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              {!isCollapsed && (
+                <>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      {activeStudy?.title ?? "Select Study"}
+                    </span>
+                    <span className="truncate text-xs">{activeStudy?.role ?? ""}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </>
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="min-w-56 rounded-lg"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}

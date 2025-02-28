@@ -1,14 +1,12 @@
 "use client"
 
 import {
-  Beaker,
   Home,
   Settings2,
-  User,
   Microscope,
   Users,
-  Plus,
-  FlaskConical
+  FlaskConical,
+  Bot
 } from "lucide-react"
 import * as React from "react"
 import { useSession } from "next-auth/react"
@@ -42,16 +40,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Studies",
       url: "/dashboard/studies",
       icon: Microscope,
-      items: [
-        {
-          title: "All Studies",
-          url: "/dashboard/studies",
-        },
-        {
-          title: "Create Study",
-          url: "/dashboard/studies/new",
-        },
-      ],
+    },
+    {
+      title: "Robot Store",
+      url: "/dashboard/store",
+      icon: Bot,
     },
   ]
 
@@ -62,34 +55,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Participants",
           url: `/dashboard/studies/${activeStudy.id}/participants`,
           icon: Users,
-          items: [
-            {
-              title: "All Participants",
-              url: `/dashboard/studies/${activeStudy.id}/participants`,
-            },
-            {
-              title: "Add Participant",
-              url: `/dashboard/studies/${activeStudy.id}/participants/new`,
-              // Only show if user is admin
-              hidden: activeStudy.role !== "ADMIN",
-            },
-          ],
         },
         {
           title: "Experiments",
           url: `/dashboard/studies/${activeStudy.id}/experiments`,
           icon: FlaskConical,
-          items: [
-            {
-              title: "All Experiments",
-              url: `/dashboard/studies/${activeStudy.id}/experiments`,
-            },
-            {
-              title: "Create Experiment",
-              url: `/dashboard/studies/${activeStudy.id}/experiments/new`,
-              hidden: !["OWNER", "ADMIN", "PRINCIPAL_INVESTIGATOR"].map(r => r.toLowerCase()).includes(activeStudy.role.toLowerCase()),
-            },
-          ],
         },
       ]
     : []
@@ -100,22 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Settings",
       url: "/dashboard/settings",
       icon: Settings2,
-      items: [
-        {
-          title: "Account",
-          url: "/dashboard/account",
-          icon: User,
-        },
-        {
-          title: "Team",
-          url: "/dashboard/settings/team",
-        },
-        {
-          title: "Billing",
-          url: "/dashboard/settings/billing",
-        },
-      ],
-    },
+    }
   ]
 
   const navItems = [...baseNavItems, ...studyNavItems, ...settingsNavItems]

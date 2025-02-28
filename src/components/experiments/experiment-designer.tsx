@@ -17,7 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Step } from "~/lib/experiments/types";
-import { AVAILABLE_ACTIONS } from "~/lib/experiments/actions";
+import { BUILT_IN_ACTIONS, getPluginActions, type ActionConfig } from "~/lib/experiments/plugin-actions";
 import { Card } from "~/components/ui/card";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
@@ -27,6 +27,7 @@ import { ActionItem } from "./action-item";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight, Undo, Redo, ZoomIn, ZoomOut } from "lucide-react";
+import { api } from "~/trpc/react";
 import "reactflow/dist/style.css";
 
 const nodeTypes = {
@@ -51,35 +52,50 @@ export function ExperimentDesigner({
   readOnly = false,
 }: ExperimentDesignerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  // History management for undo/redo
+  // Get available plugins
+  const { data: plugins } = api.pluginStore.getPlugins.useQuery();
+  const { data: installedPlugins } = api.pluginStore.getInstalledPlugins.useQuery();
+  const installedPluginIds = installedPlugins?.map(p => p.robotId) ?? [];
+
+  // Get available actions from installed plugins
+  const installedPluginActions = plugins
+    ? getPluginActions(plugins.filter(p => installedPluginIds.includes(p.robotId)))
+    : [];
+
+  // Combine built-in actions with plugin actions
+  const availableActions = [...BUILT_IN_ACTIONS, ...installedPluginActions];
+
+  // History management
   const [history, setHistory] = useState<Step[][]>([defaultSteps]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const addToHistory = useCallback((newSteps: Step[]) => {
-    setHistory((h) => {
-      const newHistory = h.slice(0, historyIndex + 1);
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
       return [...newHistory, newSteps];
     });
-    setHistoryIndex((i) => i + 1);
+    setHistoryIndex(prev => prev + 1);
   }, [historyIndex]);
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex((i) => i - 1);
-      setSteps(history[historyIndex - 1]!);
-      onChange?.(history[historyIndex - 1]!);
+      setHistoryIndex(prev => prev - 1);
+      const prevSteps = history[historyIndex - 1]!;
+      setSteps(prevSteps);
+      onChange?.(prevSteps);
     }
   }, [history, historyIndex, onChange]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      setHistoryIndex((i) => i + 1);
-      setSteps(history[historyIndex + 1]!);
-      onChange?.(history[historyIndex + 1]!);
+      setHistoryIndex(prev => prev + 1);
+      const nextSteps = history[historyIndex + 1]!;
+      setSteps(nextSteps);
+      onChange?.(nextSteps);
     }
   }, [history, historyIndex, onChange]);
 
@@ -99,8 +115,8 @@ export function ExperimentDesigner({
           );
           const actionIndex = stepIndex !== -1
             ? newSteps[stepIndex]!.actions.findIndex(
-                a => a.id === action.id
-              )
+              a => a.id === action.id
+            )
             : -1;
 
           if (
@@ -136,18 +152,16 @@ export function ExperimentDesigner({
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => {
-        const newNodes = applyNodeChanges(changes, nds);
-        // Update selected node
-        const selectedChange = changes.find((c) => c.type === "select");
-        if (selectedChange) {
-          const selected = newNodes.find((n) => n.id === selectedChange.id);
-          setSelectedNode(selected ?? null);
-        }
-        return newNodes;
-      });
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      const selectedChange = changes.find(
+        (change) => change.type === "select"
+      );
+      if (selectedChange) {
+        const node = nodes.find((n) => n.id === selectedChange.id);
+        setSelectedNode(selectedChange.selected ? node : null);
+      }
     },
-    []
+    [nodes]
   );
 
   const onEdgesChange = useCallback(
@@ -159,17 +173,11 @@ export function ExperimentDesigner({
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      const newEdge: Edge = {
-        id: `${connection.source}-${connection.target}`,
-        source: connection.source ?? "",
-        target: connection.target ?? "",
-        type: "default",
-        animated: true,
-      };
-      setEdges((eds) => [...eds, newEdge]);
+      if (!connection.source || !connection.target) return;
 
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
+
       if (sourceNode && targetNode) {
         const newSteps = [...steps];
         const sourceStep = newSteps.find((s) =>
@@ -178,7 +186,7 @@ export function ExperimentDesigner({
         const targetStep = newSteps.find((s) =>
           s.actions.some((a) => a.id === targetNode.id)
         );
-        
+
         if (sourceStep && targetStep) {
           const sourceAction = sourceStep.actions.find(
             (a) => a.id === sourceNode.id
@@ -227,7 +235,7 @@ export function ExperimentDesigner({
         y: event.clientY,
       });
 
-      const actionConfig = AVAILABLE_ACTIONS.find((a) => a.type === type);
+      const actionConfig = availableActions.find((a) => a.type === type);
       if (!actionConfig) return;
 
       const newAction = {
@@ -251,8 +259,8 @@ export function ExperimentDesigner({
             );
             const actionIndex = stepIndex !== -1
               ? newSteps[stepIndex]!.actions.findIndex(
-                  a => a.id === newAction.id
-                )
+                a => a.id === newAction.id
+              )
               : -1;
 
             if (
@@ -284,11 +292,24 @@ export function ExperimentDesigner({
       addToHistory([...steps, newStep]);
       onChange?.([...steps, newStep]);
     },
-    [steps, onChange, reactFlowInstance, addToHistory]
+    [steps, onChange, reactFlowInstance, addToHistory, availableActions]
   );
 
+  // Group actions by source
+  const groupedActions = availableActions.reduce((acc, action) => {
+    const source = action.pluginId ?
+      plugins?.find(p => p.robotId === action.pluginId)?.name ?? action.pluginId :
+      'Built-in Actions';
+
+    if (!acc[source]) {
+      acc[source] = [];
+    }
+    acc[source].push(action);
+    return acc;
+  }, {} as Record<string, ActionConfig[]>);
+
   return (
-    <div className={cn("relative flex h-[calc(100vh-16rem)]", className)}>
+    <div className={cn("relative flex h-full", className)}>
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -298,7 +319,7 @@ export function ExperimentDesigner({
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
             className="absolute inset-y-0 left-0 z-30 w-80 overflow-hidden"
           >
-            <Card className="flex h-full flex-col rounded-r-none border-r-0 shadow-2xl">
+            <Card className="flex h-full flex-col rounded-lg border shadow-2xl">
               <Tabs defaultValue="actions" className="flex h-full flex-col">
                 <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
                   <TabsList>
@@ -316,23 +337,32 @@ export function ExperimentDesigner({
                 </div>
                 <TabsContent value="actions" className="flex-1 p-0">
                   <ScrollArea className="h-full">
-                    <div className="space-y-2 p-4">
-                      {AVAILABLE_ACTIONS.map((action) => (
-                        <ActionItem
-                          key={action.type}
-                          type={action.type}
-                          title={action.title}
-                          description={action.description}
-                          icon={action.icon}
-                          draggable
-                          onDragStart={(event) => {
-                            event.dataTransfer.setData(
-                              "application/reactflow",
-                              action.type
-                            );
-                            event.dataTransfer.effectAllowed = "move";
-                          }}
-                        />
+                    <div className="space-y-6 p-4">
+                      {Object.entries(groupedActions).map(([source, actions]) => (
+                        <div key={source} className="space-y-2">
+                          <h3 className="px-2 text-sm font-medium text-muted-foreground">
+                            {source}
+                          </h3>
+                          <div className="space-y-2">
+                            {actions.map((action) => (
+                              <ActionItem
+                                key={action.pluginId ? `${action.pluginId}:${action.type}` : action.type}
+                                type={action.type}
+                                title={action.title}
+                                description={action.description}
+                                icon={action.icon}
+                                draggable
+                                onDragStart={(event) => {
+                                  event.dataTransfer.setData(
+                                    "application/reactflow",
+                                    action.type
+                                  );
+                                  event.dataTransfer.effectAllowed = "move";
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </ScrollArea>
@@ -343,7 +373,7 @@ export function ExperimentDesigner({
                       {selectedNode ? (
                         <div className="space-y-4">
                           <h3 className="font-medium">
-                            {AVAILABLE_ACTIONS.find((a) => a.type === selectedNode.data.type)?.title}
+                            {availableActions.find((a) => a.type === selectedNode.data.type)?.title}
                           </h3>
                           <pre className="rounded-lg bg-muted p-4 text-xs">
                             {JSON.stringify(selectedNode.data.parameters, null, 2)}
@@ -397,24 +427,24 @@ export function ExperimentDesigner({
             className="react-flow-wrapper"
           >
             <Background />
-            <Controls />
+            <Controls className="!left-auto !right-8" />
             <MiniMap
               nodeColor={(node) => {
-                const action = AVAILABLE_ACTIONS.find(
+                const action = availableActions.find(
                   (a) => a.type === node.data.type
                 );
                 return action ? "hsl(var(--primary) / 0.5)" : "hsl(var(--muted))"
               }}
               maskColor="hsl(var(--background))"
-              className="!bg-card/80 !border !border-border rounded-lg backdrop-blur"
+              className="!bottom-8 !left-auto !right-8 !bg-card/80 !border !border-border rounded-lg backdrop-blur"
               style={{
                 backgroundColor: "hsl(var(--card))",
                 borderRadius: "var(--radius)",
               }}
             />
-            <Panel position="top-center" className="flex gap-2 rounded-lg bg-background/95 px-4 py-2 shadow-md backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <Panel position="top-right" className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 onClick={undo}
                 disabled={historyIndex === 0}
@@ -422,27 +452,12 @@ export function ExperimentDesigner({
                 <Undo className="h-4 w-4" />
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 onClick={redo}
                 disabled={historyIndex === history.length - 1}
               >
                 <Redo className="h-4 w-4" />
-              </Button>
-              <div className="mx-2 w-px bg-border" />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => reactFlowInstance?.zoomIn()}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => reactFlowInstance?.zoomOut()}
-              >
-                <ZoomOut className="h-4 w-4" />
               </Button>
             </Panel>
           </ReactFlow>

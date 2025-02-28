@@ -56,11 +56,12 @@ export const userRoles = createTable(
       .notNull()
       .references(() => roles.id, { onDelete: "cascade" }),
     studyId: integer("study_id")
+      .notNull()
       .references(() => studies.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.roleId, table.studyId ?? ""] }),
+    pk: primaryKey({ columns: [table.userId, table.roleId, table.studyId] }),
   })
 );
 

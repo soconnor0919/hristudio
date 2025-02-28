@@ -41,4 +41,4 @@ const createContext = cache(async () => {
 const getQueryClient = cache(() => createQueryClient(defaultQueryClientOptions));
 const getCaller = cache(async () => appRouter.createCaller(await createContext()));
 
-export { api };
+export { api, getCaller };

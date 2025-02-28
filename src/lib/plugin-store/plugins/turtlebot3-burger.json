@@ -1,0 +1,156 @@
+{
+  "robotId": "turtlebot3-burger",
+  "name": "TurtleBot3 Burger",
+  "description": "A compact, affordable, programmable, ROS2-based mobile robot for education and research",
+  "platform": "ROS2",
+  "version": "2.0.0",
+  
+  "manufacturer": {
+    "name": "ROBOTIS",
+    "website": "https://www.robotis.com/",
+    "support": "https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/"
+  },
+
+  "documentation": {
+    "mainUrl": "https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/",
+    "apiReference": "https://emanual.robotis.com/docs/en/platform/turtlebot3/ros2_manipulation/",
+    "wikiUrl": "https://wiki.ros.org/turtlebot3",
+    "videoUrl": "https://www.youtube.com/watch?v=rVM994ZhsEM"
+  },
+
+  "assets": {
+    "thumbnailUrl": "/robots/turtlebot3-burger-thumb.png",
+    "images": {
+      "main": "/robots/turtlebot3-burger-main.png",
+      "angles": {
+        "front": "/robots/turtlebot3-burger-front.png",
+        "side": "/robots/turtlebot3-burger-side.png",
+        "top": "/robots/turtlebot3-burger-top.png"
+      },
+      "dimensions": "/robots/turtlebot3-burger-dimensions.png"
+    },
+    "model": {
+      "format": "URDF",
+      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/master/turtlebot3_description/urdf/turtlebot3_burger.urdf"
+    }
+  },
+
+  "specs": {
+    "dimensions": {
+      "length": 0.138,
+      "width": 0.178,
+      "height": 0.192,
+      "weight": 1.0
+    },
+    "capabilities": [
+      "differential_drive",
+      "lidar",
+      "imu",
+      "odometry"
+    ],
+    "maxSpeed": 0.22,
+    "batteryLife": 2.5
+  },
+
+  "ros2Config": {
+    "namespace": "turtlebot3",
+    "nodePrefix": "hri_studio",
+    "defaultTopics": {
+      "cmd_vel": "/cmd_vel",
+      "odom": "/odom",
+      "scan": "/scan",
+      "imu": "/imu",
+      "joint_states": "/joint_states"
+    }
+  },
+
+  "actions": [
+    {
+      "actionId": "move-velocity",
+      "type": "move",
+      "title": "Set Velocity",
+      "description": "Control the robot's linear and angular velocity",
+      "icon": "navigation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "linear": {
+            "type": "number",
+            "title": "Linear Velocity",
+            "description": "Forward/backward velocity",
+            "default": 0,
+            "minimum": -0.22,
+            "maximum": 0.22,
+            "unit": "m/s"
+          },
+          "angular": {
+            "type": "number",
+            "title": "Angular Velocity",
+            "description": "Rotational velocity",
+            "default": 0,
+            "minimum": -2.84,
+            "maximum": 2.84,
+            "unit": "rad/s"
+          }
+        },
+        "required": ["linear", "angular"]
+      },
+      "ros2": {
+        "messageType": "geometry_msgs/msg/Twist",
+        "topic": "/cmd_vel",
+        "payloadMapping": {
+          "type": "transform",
+          "transformFn": "transformToTwist"
+        },
+        "qos": {
+          "reliability": "reliable",
+          "durability": "volatile",
+          "history": "keep_last",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "actionId": "move-to-pose",
+      "type": "move",
+      "title": "Move to Position",
+      "description": "Navigate to a specific position on the map",
+      "icon": "target",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X Position",
+            "description": "X coordinate in meters",
+            "default": 0,
+            "unit": "m"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y Position",
+            "description": "Y coordinate in meters",
+            "default": 0,
+            "unit": "m"
+          },
+          "theta": {
+            "type": "number",
+            "title": "Orientation",
+            "description": "Final orientation",
+            "default": 0,
+            "unit": "rad"
+          }
+        },
+        "required": ["x", "y", "theta"]
+      },
+      "ros2": {
+        "messageType": "geometry_msgs/msg/PoseStamped",
+        "action": "/navigate_to_pose",
+        "payloadMapping": {
+          "type": "transform",
+          "transformFn": "transformToPoseStamped"
+        }
+      }
+    }
+  ]
+} 

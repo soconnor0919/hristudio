@@ -1,403 +1,371 @@
-# Robot Plugin Store Architecture
-
-The Robot Plugin Store is a central system for managing robot definitions and their associated actions. It enables contributors to add new robotics platforms and actions, which can then be used in the experiment designer and ultimately bridge to ROS2 or other robotics middleware.
+# Plugin Store System
 
 ## Overview
 
-The plugin store consists of:
-- A JSON-based plugin format for defining robots and their actions
-- A loader system for managing and serving these plugins
-- An admin interface for managing plugins
-- Integration with the experiment designer
-- A bridge to ROS2 for executing actions
+The Plugin Store is a core feature of HRIStudio that manages robot plugins, their repositories, and their integration into the platform. It provides a robust system for loading, validating, and utilizing robot plugins within experiments.
 
-## Plugin Schema
+## Architecture
 
-### Robot Plugin Definition
+### Core Components
+
+```typescript
+export class PluginStore {
+  private plugins: Map<string, RobotPlugin> = new Map();
+  private repositories: Map<string, RepositoryMetadata> = new Map();
+  private transformFunctions: Map<string, Function> = new Map();
+  private pluginToRepo: Map<string, string> = new Map();
+  private lastRefresh: Map<string, number> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+}
+```
+
+### Plugin Types
 
 ```typescript
 interface RobotPlugin {
-  // Core metadata
-  robotId: string;          // Unique identifier for this robot
-  name: string;            // Display name
-  description?: string;    // Optional description
-  platform: string;        // e.g., "ROS2", "custom"
-  version: string;         // Semver version number
-  
-  // Manufacturer information
+  robotId: string;
+  name: string;
+  description: string;
+  platform: string;
+  version: string;
   manufacturer: {
-    name: string;         // Manufacturer name
-    website: string;      // Manufacturer website
-    support?: string;     // Support URL
+    name: string;
+    website?: string;
+    support?: string;
   };
-
-  // Documentation
   documentation: {
-    mainUrl: string;      // Main documentation URL
-    apiReference?: string; // API/ROS2 interface documentation
-    wikiUrl?: string;     // Wiki or community documentation
-    videoUrl?: string;    // Video tutorial or overview
+    mainUrl: string;
+    apiReference?: string;
+    wikiUrl?: string;
+    videoUrl?: string;
   };
-  
-  // Visual assets
   assets: {
-    thumbnailUrl: string;  // Small preview image
-    images: {             // Various robot images
-      main: string;       // Main robot image
-      angles?: {          // Optional different view angles
+    thumbnailUrl: string;
+    images: {
+      main: string;
+      angles?: {
         front?: string;
         side?: string;
         top?: string;
       };
-      dimensions?: string; // Technical drawing with dimensions
+      dimensions?: string;
     };
-    model?: {            // 3D model information
-      format: "URDF" | "glTF" | "other";
+    model?: {
+      format: string;
       url: string;
     };
   };
-
-  // Technical specifications
   specs: {
     dimensions: {
-      length: number;     // in meters
+      length: number;
       width: number;
       height: number;
-      weight: number;     // in kg
+      weight: number;
     };
-    capabilities: string[]; // e.g., ["differential_drive", "lidar", "camera"]
-    maxSpeed: number;      // in m/s
-    batteryLife: number;   // in hours
-    payload?: number;      // max payload in kg
+    capabilities: string[];
+    maxSpeed: number;
+    batteryLife: number;
   };
-
-  // Available actions for this robot
   actions: ActionDefinition[];
+}
+```
+
+## Repository Management
+
+### Loading Repositories
+
+```typescript
+async loadRepository(url: string): Promise<RepositoryMetadata> {
+  // Clean URL
+  const cleanUrl = url.trim().replace(/\/$/, "");
   
-  // Platform-specific configuration
-  ros2Config: {
-    namespace: string;
-    nodePrefix: string;
-    defaultTopics: {
-      cmd_vel: string;
-      odom: string;
-      scan: string;
-      [key: string]: string;
+  try {
+    // Fetch repository metadata
+    const metadataUrl = this.getRepositoryFileUrl(cleanUrl, "repository.json");
+    const response = await fetch(metadataUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch repository metadata: ${response.statusText}`);
+    }
+    
+    const metadata = await response.json();
+    // Validate and process metadata
+    return metadata;
+  } catch (error) {
+    throw new PluginLoadError("Failed to load repository", undefined, error);
+  }
+}
+```
+
+### Repository Metadata
+
+```typescript
+interface RepositoryMetadata {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  official: boolean;
+  author: {
+    name: string;
+    email?: string;
+    url?: string;
+    organization?: string;
+  };
+  maintainers?: Array<{
+    name: string;
+    url?: string;
+  }>;
+  compatibility: {
+    hristudio: {
+      min: string;
+      recommended?: string;
     };
+    ros2?: {
+      distributions: string[];
+      recommended?: string;
+    };
+  };
+  stats: {
+    downloads: number;
+    stars: number;
+    plugins: number;
   };
 }
+```
 
+## Plugin Loading & Validation
+
+### Loading Process
+
+1. **Repository Metadata:**
+   ```typescript
+   private async loadRepositoryPlugins(repository: RepositoryMetadata) {
+     const metadataUrl = this.getRepositoryFileUrl(
+       repository.url,
+       "repository.json"
+     );
+     // Fetch and validate metadata
+   }
+   ```
+
+2. **Individual Plugins:**
+   ```typescript
+   async loadPluginFromJson(jsonString: string): Promise<RobotPlugin> {
+     try {
+       const data = JSON.parse(jsonString);
+       return await this.validatePlugin(data);
+     } catch (error) {
+       throw new PluginLoadError(
+         "Failed to parse plugin JSON",
+         undefined,
+         error
+       );
+     }
+   }
+   ```
+
+### Validation
+
+```typescript
+private async validatePlugin(data: unknown): Promise<RobotPlugin> {
+  try {
+    return robotPluginSchema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new PluginLoadError(
+        `Invalid plugin format: ${error.errors.map(e => e.message).join(", ")}`,
+        undefined,
+        error
+      );
+    }
+    throw error;
+  }
+}
+```
+
+## Action System
+
+### Action Types
+
+```typescript
+type ActionType = 
+  | "move"      // Robot movement
+  | "speak"     // Robot speech
+  | "wait"      // Wait for a duration
+  | "input"     // Wait for user input
+  | "gesture"   // Robot gesture
+  | "record"    // Start/stop recording
+  | "condition" // Conditional branching
+  | "loop";     // Repeat actions
+```
+
+### Action Definition
+
+```typescript
 interface ActionDefinition {
-  actionId: string;       // Unique identifier for this action
-  type: ActionType;       // Type of action (move, speak, etc.)
-  title: string;         // Display name
-  description: string;   // Description of what the action does
-  icon?: string;        // Icon identifier for the UI
-  
-  // Parameter definition (using JSON Schema)
+  actionId: string;
+  type: ActionType;
+  title: string;
+  description: string;
   parameters: {
     type: "object";
-    properties: Record<string, {
-      type: string;
-      title: string;
-      description?: string;
-      default?: any;
-      minimum?: number;
-      maximum?: number;
-      enum?: string[];
-      unit?: string;     // e.g., "m/s", "rad", "m"
-    }>;
+    properties: Record<string, ParameterProperty>;
     required: string[];
   };
-
-  // ROS2 Integration details
-  ros2: {
-    messageType: string;    // ROS message type
-    topic?: string;        // ROS topic to publish to
-    service?: string;      // ROS service to call
-    action?: string;       // ROS action to execute
-    payloadMapping: {      // How parameters map to ROS messages
+  ros2?: {
+    messageType: string;
+    topic?: string;
+    service?: string;
+    action?: string;
+    payloadMapping: {
       type: "direct" | "transform";
-      map?: Record<string, string>;
-      transformFn?: string;  // Name of transform function if type="transform"
+      transformFn?: string;
     };
-    qos?: {               // Quality of Service settings
-      reliability: "reliable" | "best_effort";
-      durability: "volatile" | "transient_local";
-      history: "keep_last" | "keep_all";
-      depth?: number;
-    };
+    qos?: QoSSettings;
   };
 }
 ```
 
-### Example Plugin JSON
+### Transform Functions
 
-```json
-{
-  "robotId": "turtlebot3-burger",
-  "name": "TurtleBot3 Burger",
-  "description": "A compact, affordable, programmable, ROS2-based mobile robot for education and research",
-  "platform": "ROS2",
-  "version": "2.0.0",
+```typescript
+private transformToTwist(params: { linear: number; angular: number }) {
+  return {
+    linear: {
+      x: params.linear,
+      y: 0.0,
+      z: 0.0
+    },
+    angular: {
+      x: 0.0,
+      y: 0.0,
+      z: params.angular
+    }
+  };
+}
+```
+
+## Caching & Performance
+
+### Cache Implementation
+
+```typescript
+private shouldRefreshCache(repositoryId: string): boolean {
+  const lastRefresh = this.lastRefresh.get(repositoryId);
+  if (!lastRefresh) return true;
   
-  "manufacturer": {
-    "name": "ROBOTIS",
-    "website": "https://www.robotis.com/",
-    "support": "https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/"
-  },
-
-  "documentation": {
-    "mainUrl": "https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/",
-    "apiReference": "https://emanual.robotis.com/docs/en/platform/turtlebot3/ros2_manipulation/",
-    "wikiUrl": "https://wiki.ros.org/turtlebot3",
-    "videoUrl": "https://www.youtube.com/watch?v=rVM994ZhsEM"
-  },
-
-  "assets": {
-    "thumbnailUrl": "/robots/turtlebot3-burger-thumb.png",
-    "images": {
-      "main": "/robots/turtlebot3-burger-main.png",
-      "angles": {
-        "front": "/robots/turtlebot3-burger-front.png",
-        "side": "/robots/turtlebot3-burger-side.png",
-        "top": "/robots/turtlebot3-burger-top.png"
-      },
-      "dimensions": "/robots/turtlebot3-burger-dimensions.png"
-    },
-    "model": {
-      "format": "URDF",
-      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/master/turtlebot3_description/urdf/turtlebot3_burger.urdf"
-    }
-  },
-
-  "specs": {
-    "dimensions": {
-      "length": 0.138,
-      "width": 0.178,
-      "height": 0.192,
-      "weight": 1.0
-    },
-    "capabilities": [
-      "differential_drive",
-      "lidar",
-      "imu",
-      "odometry"
-    ],
-    "maxSpeed": 0.22,
-    "batteryLife": 2.5
-  },
-
-  "ros2Config": {
-    "namespace": "turtlebot3",
-    "nodePrefix": "hri_studio",
-    "defaultTopics": {
-      "cmd_vel": "/cmd_vel",
-      "odom": "/odom",
-      "scan": "/scan",
-      "imu": "/imu",
-      "joint_states": "/joint_states"
-    }
-  },
-
-  "actions": [
-    {
-      "actionId": "move-velocity",
-      "type": "move",
-      "title": "Set Velocity",
-      "description": "Control the robot's linear and angular velocity",
-      "icon": "navigation",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "linear": {
-            "type": "number",
-            "title": "Linear Velocity",
-            "description": "Forward/backward velocity",
-            "default": 0,
-            "minimum": -0.22,
-            "maximum": 0.22,
-            "unit": "m/s"
-          },
-          "angular": {
-            "type": "number",
-            "title": "Angular Velocity",
-            "description": "Rotational velocity",
-            "default": 0,
-            "minimum": -2.84,
-            "maximum": 2.84,
-            "unit": "rad/s"
-          }
-        },
-        "required": ["linear", "angular"]
-      },
-      "ros2": {
-        "messageType": "geometry_msgs/msg/Twist",
-        "topic": "/cmd_vel",
-        "payloadMapping": {
-          "type": "transform",
-          "transformFn": "transformToTwist"
-        },
-        "qos": {
-          "reliability": "reliable",
-          "durability": "volatile",
-          "history": "keep_last",
-          "depth": 1
-        }
-      }
-    },
-    {
-      "actionId": "move-to-pose",
-      "type": "move",
-      "title": "Move to Position",
-      "description": "Navigate to a specific position on the map",
-      "icon": "target",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "x": {
-            "type": "number",
-            "title": "X Position",
-            "description": "X coordinate in meters",
-            "default": 0,
-            "unit": "m"
-          },
-          "y": {
-            "type": "number",
-            "title": "Y Position",
-            "description": "Y coordinate in meters",
-            "default": 0,
-            "unit": "m"
-          },
-          "theta": {
-            "type": "number",
-            "title": "Orientation",
-            "description": "Final orientation",
-            "default": 0,
-            "unit": "rad"
-          }
-        },
-        "required": ["x", "y", "theta"]
-      },
-      "ros2": {
-        "messageType": "geometry_msgs/msg/PoseStamped",
-        "action": "/navigate_to_pose",
-        "payloadMapping": {
-          "type": "transform",
-          "transformFn": "transformToPoseStamped"
-        }
-      }
-    }
-  ]
+  const now = Date.now();
+  return now - lastRefresh > this.CACHE_TTL;
 }
 ```
 
-## Implementation Plan
-
-### 1. Plugin Store Module
-
-Create a TypeScript module to manage plugins:
+### Error Handling
 
 ```typescript
-// src/lib/plugin-store/types.ts
-export interface RobotPlugin { ... }
-export interface ActionDefinition { ... }
-
-// src/lib/plugin-store/store.ts
-export class PluginStore {
-  private plugins: Map<string, RobotPlugin>;
-  
-  async loadPlugins(): Promise<void>;
-  async getPlugin(robotId: string): Promise<RobotPlugin>;
-  async getAllPlugins(): Promise<RobotPlugin[]>;
+export class PluginLoadError extends Error {
+  constructor(
+    message: string,
+    public robotId?: string,
+    public cause?: unknown
+  ) {
+    super(message);
+    this.name = "PluginLoadError";
+  }
 }
 ```
 
-### 2. Admin Interface
+## Usage Examples
 
-Build an admin panel for managing plugins:
-- Upload/edit JSON plugin definitions
-- Validate plugin schema
-- Version management
-- Preview plugin details
-
-### 3. API Routes
-
-Create API endpoints for plugin management:
+### Loading a Repository
 
 ```typescript
-// GET /api/plugins
-// GET /api/plugins/:robotId
-// POST /api/plugins (with auth)
-// PUT /api/plugins/:robotId (with auth)
-// DELETE /api/plugins/:robotId (with auth)
+const store = new PluginStore();
+await store.loadRepository("https://github.com/org/robot-plugins");
 ```
 
-### 4. Experiment Designer Integration
-
-Update the experiment designer to:
-- Allow robot selection
-- Load appropriate actions
-- Configure ROS2 bridge settings
-
-### 5. ROS2 Bridge Integration
-
-Create a bridge module for executing actions:
+### Getting Plugin Information
 
 ```typescript
-// src/lib/ros2-bridge/bridge.ts
-export class ROS2Bridge {
-  async executeAction(
-    robotId: string,
-    actionId: string,
-    parameters: Record<string, any>
-  ): Promise<void>;
+const plugin = store.getPlugin("turtlebot3-burger");
+if (plugin) {
+  console.log(`Loaded ${plugin.name} version ${plugin.version}`);
+  console.log(`Supported actions: ${plugin.actions.length}`);
 }
 ```
 
-## Development Phases
+### Registering Transform Functions
 
-1. **Phase 1: Core Plugin Store**
-   - Implement plugin schema and validation
-   - Build plugin loader
-   - Create basic API endpoints
+```typescript
+store.registerTransformFunction("transformToTwist", (params) => {
+  // Custom transformation logic
+  return transformedData;
+});
+```
 
-2. **Phase 2: Admin Interface**
-   - Build plugin management UI
-   - Implement plugin upload/edit
-   - Add version control
+## Best Practices
 
-3. **Phase 3: Experiment Designer Integration**
-   - Add robot selection
-   - Update action library based on selection
-   - Enhance action configuration
+1. **Error Handling:**
+   - Always catch and properly handle plugin loading errors
+   - Provide meaningful error messages
+   - Include error context when possible
 
-4. **Phase 4: ROS2 Bridge**
-   - Implement ROS2 connection
-   - Add message transformation
-   - Test with real robots
+2. **Validation:**
+   - Validate all plugin metadata
+   - Verify action parameters
+   - Check compatibility requirements
 
-5. **Phase 5: Documentation & Testing**
-   - Write contributor guidelines
-   - Add comprehensive tests
-   - Create example plugins
+3. **Performance:**
+   - Use caching appropriately
+   - Implement lazy loading where possible
+   - Monitor memory usage
 
-## Contributing
-
-To add a new robot to the plugin store:
-
-1. Create a new JSON file following the plugin schema
-2. Test the plugin using the validation tools
-3. Submit a pull request with:
-   - Plugin JSON
-   - Any custom transformation functions
-   - Documentation updates
-   - Test cases
+4. **Security:**
+   - Validate URLs and file paths
+   - Implement proper access controls
+   - Sanitize plugin inputs
 
 ## Future Enhancements
 
-- Plugin marketplace for sharing robot definitions
-- Visual plugin builder in admin interface
-- Real-time plugin updates
-- Plugin dependency management
-- Custom action visualization components 
+1. **Plugin Versioning:**
+   - Semantic versioning support
+   - Version compatibility checking
+   - Update management
+
+2. **Advanced Caching:**
+   - Persistent cache storage
+   - Cache invalidation strategies
+   - Partial cache updates
+
+3. **Plugin Marketplace:**
+   - User ratings and reviews
+   - Download statistics
+   - Community contributions
+
+4. **Enhanced Validation:**
+   - Runtime validation
+   - Performance benchmarking
+   - Compatibility testing
+
+## Dynamic Plugin Loading
+
+The plugin store in HRI Studio supports modular loading of robot actions. Not every robot action is installed by default; instead, only the necessary plugins for the desired robots are installed. This approach offers several benefits:
+
+- Flexibility: Deploy only the robots and actions you need.
+- Performance: Avoid loading unnecessary modules, leading to faster startup times and reduced memory usage.
+- Extensibility: Allow companies and users to host their own plugin repositories with custom robot actions.
+
+### Implementation Details
+
+1. Each plugin should export a manifest adhering to the `RobotPlugin` interface, containing a unique identifier, display name, and a list of actions.
+2. The system loads only the configured plugins, which can be managed via environment variables, a database table, or an admin interface.
+3. Dynamic imports are used in the Next.js server environment to load robot actions on demand. For example:
+
+```ts
+async function loadPlugin(pluginUrl: string): Promise<RobotPlugin> {
+  const pluginModule = await import(pluginUrl);
+  return pluginModule.default as RobotPlugin;
+}
+```
+
+This design ensures that HRI Studio remains lean and agile, seamlessly integrating new robot actions without overhead. 

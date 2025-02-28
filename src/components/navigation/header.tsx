@@ -8,16 +8,19 @@ import { Logo } from "~/components/logo"
 export function Header() {
   return (
     <div className="sticky top-0 z-40 w-full">
-      <header className="mx-2 mt-2 flex h-14 items-center justify-between rounded-lg border bg-gradient-to-r from-[hsl(var(--sidebar-gradient-from))] to-[hsl(var(--sidebar-gradient-to))] px-6 shadow-sm md:ml-0">
+      <header
+        data-nav="header"
+        className="mx-2 mt-2 flex h-14 items-center justify-between rounded-lg border shadow-sm md:ml-0 px-6"
+      >
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-2 text-[hsl(var(--sidebar-text))] hover:bg-[hsl(var(--sidebar-text))]/10" />
-          <Separator orientation="vertical" className="h-4 bg-[hsl(var(--sidebar-text))]/10" />
+          <SidebarTrigger className="-ml-2 text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-hover))]/20" />
+          <Separator orientation="vertical" className="h-4 bg-[hsl(var(--sidebar-border))]" />
           <BreadcrumbNav />
         </div>
-        <Logo 
+        <Logo
           href="/dashboard"
-          className="text-[hsl(var(--sidebar-text))]"
-          iconClassName="text-[hsl(var(--sidebar-text-muted))]"
+          className="text-[hsl(var(--sidebar-foreground))]"
+          iconClassName="text-[hsl(var(--sidebar-muted))]"
         />
       </header>
     </div>

@@ -73,6 +73,12 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.name =
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : null;
       }
       return token;
     },
@@ -80,6 +86,9 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
+        session.user.name = token.name as string | null;
       }
       return session;
     },
@@ -97,4 +106,4 @@ export const getServerAuthSession = () => getServerSession(authOptions);
 export const handlers = { GET: getServerSession, POST: getServerSession };
 
 // Auth for client components
-export const auth = () => getServerSession(authOptions); 
+export const auth = () => getServerSession(authOptions);

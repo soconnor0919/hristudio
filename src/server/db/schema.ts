@@ -2,3 +2,5 @@
 export * from "./schema/auth";
 export * from "./schema/studies";
 export * from "./schema/permissions";
+export * from "./schema/experiments";
+export * from "./schema/store";

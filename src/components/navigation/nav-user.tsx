@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -20,9 +20,13 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "~/components/ui/avatar"
+import { useSidebar } from "~/components/ui/sidebar"
+import { cn } from "~/lib/utils"
 
 export function NavUser() {
   const { data: session, status } = useSession()
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
 
   if (status === "loading") {
     return (
@@ -30,15 +34,20 @@ export function NavUser() {
         <SidebarMenuItem>
           <SidebarMenuButton
             size="lg"
-            className="animate-pulse"
+            className={cn(
+              "animate-pulse",
+              isCollapsed && "justify-center p-0"
+            )}
           >
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent/10">
               <User className="size-4 text-muted-foreground/50" />
             </div>
-            <div className="grid flex-1 gap-1">
-              <div className="h-4 w-24 rounded bg-sidebar-accent/10" />
-              <div className="h-3 w-16 rounded bg-sidebar-accent/10" />
-            </div>
+            {!isCollapsed && (
+              <div className="grid flex-1 gap-1">
+                <div className="h-4 w-24 rounded bg-sidebar-accent/10" />
+                <div className="h-3 w-16 rounded bg-sidebar-accent/10" />
+              </div>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -56,7 +65,10 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className={cn(
+                "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+                isCollapsed && "justify-center p-0"
+              )}
             >
               <Avatar className="size-8 rounded-lg">
                 {session.user.image ? (
@@ -79,19 +91,23 @@ export function NavUser() {
                   </AvatarFallback>
                 )}
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {session.user.name ?? "User"}
-                </span>
-                <span className="truncate text-xs text-sidebar-muted">
-                  {session.user.email}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              {!isCollapsed && (
+                <>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      {session.user.name ?? "User"}
+                    </span>
+                    <span className="truncate text-xs text-sidebar-muted">
+                      {session.user.email}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </>
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="min-w-56 rounded-lg"
             align="end"
             sideOffset={4}
           >
@@ -138,11 +154,12 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/api/auth/signout">
-                <LogOut className="mr-2 size-4" />
-                Sign out
-              </Link>
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+              className="cursor-pointer"
+            >
+              <LogOut className="mr-2 size-4" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

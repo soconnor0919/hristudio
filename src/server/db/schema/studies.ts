@@ -1,9 +1,8 @@
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, text, timestamp, varchar, serial, jsonb } from "drizzle-orm/pg-core";
+import { integer, pgEnum, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { ROLES } from "~/lib/permissions/constants";
 import { createTable } from "../utils";
 import { users } from "./auth";
-import { type Step } from "~/lib/experiments/types";
 
 // Create enum from role values
 export const studyRoleEnum = pgEnum("study_role", [
@@ -35,12 +34,6 @@ export const activityTypeEnum = pgEnum("activity_type", [
   "participant_added",
   "participant_updated",
   "participant_removed",
-  "experiment_created",
-  "experiment_updated",
-  "experiment_deleted",
-  "trial_started",
-  "trial_completed",
-  "trial_cancelled",
   "invitation_sent",
   "invitation_accepted",
   "invitation_declined",
@@ -61,33 +54,13 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "revoked",
 ]);
 
-export const studyActivityTypeEnum = pgEnum("study_activity_type", [
-  "member_added",
-  "member_role_changed",
-  "study_updated",
-  "participant_added",
-  "participant_updated",
-  "invitation_sent",
-  "invitation_accepted",
-  "invitation_declined",
-  "invitation_expired",
-  "invitation_revoked",
-]);
-
-// Create enum for experiment status
-export const experimentStatusEnum = pgEnum("experiment_status", [
-  "draft",
-  "active",
-  "archived",
-]);
-
 export const studies = createTable("study", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
-  createdById: varchar("created_by", { length: 255 }).notNull().references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  createdById: varchar("created_by", { length: 255 }).references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const studyMembers = createTable("study_member", {
@@ -95,7 +68,7 @@ export const studyMembers = createTable("study_member", {
   studyId: integer("study_id").notNull().references(() => studies.id, { onDelete: "cascade" }),
   userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   role: studyRoleEnum("role").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const studyMetadata = createTable("study_metadata", {
@@ -103,8 +76,8 @@ export const studyMetadata = createTable("study_metadata", {
   studyId: integer("study_id").notNull().references(() => studies.id, { onDelete: "cascade" }),
   key: varchar("key", { length: 256 }).notNull(),
   value: text("value"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const studyActivities = createTable("study_activity", {
@@ -113,22 +86,20 @@ export const studyActivities = createTable("study_activity", {
   userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
   type: activityTypeEnum("type").notNull(),
   description: text("description").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const participants = createTable("participant", {
   id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
   studyId: integer("study_id").notNull().references(() => studies.id, { onDelete: "cascade" }),
-  // Identifiable information - only visible to roles with VIEW_PARTICIPANT_NAMES permission
   identifier: varchar("identifier", { length: 256 }),
   email: varchar("email", { length: 256 }),
   firstName: varchar("first_name", { length: 256 }),
   lastName: varchar("last_name", { length: 256 }),
-  // Non-identifiable information - visible to all study members
   notes: text("notes"),
   status: participantStatusEnum("status").notNull().default("active"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const studyInvitations = createTable("study_invitation", {
@@ -138,32 +109,21 @@ export const studyInvitations = createTable("study_invitation", {
   role: studyRoleEnum("role").notNull(),
   token: varchar("token", { length: 255 }).notNull().unique(),
   status: invitationStatusEnum("status").notNull().default("pending"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdById: varchar("created_by", { length: 255 }).notNull().references(() => users.id),
-});
-
-export const experiments = createTable("experiment", {
-  id: integer("id").primaryKey().notNull().generatedAlwaysAsIdentity(),
-  studyId: integer("study_id").notNull().references(() => studies.id, { onDelete: "cascade" }),
-  title: varchar("title", { length: 256 }).notNull(),
-  description: text("description"),
-  version: integer("version").notNull().default(1),
-  status: experimentStatusEnum("status").notNull().default("draft"),
-  steps: jsonb("steps").$type<Step[]>().default([]),
-  createdById: varchar("created_by", { length: 255 }).notNull().references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 // Relations
 export const studiesRelations = relations(studies, ({ one, many }) => ({
-  creator: one(users, { fields: [studies.createdById], references: [users.id] }),
+  creator: one(users, {
+    fields: [studies.createdById],
+    references: [users.id],
+  }),
   members: many(studyMembers),
   participants: many(participants),
   invitations: many(studyInvitations),
-  experiments: many(experiments),
 }));
 
 export const studyMembersRelations = relations(studyMembers, ({ one }) => ({
@@ -178,9 +138,4 @@ export const participantsRelations = relations(participants, ({ one }) => ({
 export const studyInvitationsRelations = relations(studyInvitations, ({ one }) => ({
   study: one(studies, { fields: [studyInvitations.studyId], references: [studies.id] }),
   creator: one(users, { fields: [studyInvitations.createdById], references: [users.id] }),
-}));
-
-export const experimentsRelations = relations(experiments, ({ one }) => ({
-  study: one(studies, { fields: [experiments.studyId], references: [studies.id] }),
-  creator: one(users, { fields: [experiments.createdById], references: [users.id] }),
 })); 
