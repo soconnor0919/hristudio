@@ -2,6 +2,7 @@ import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 import { db } from "~/server/db";
 import { users } from "~/server/db/schema";
@@ -16,15 +17,20 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
+      roles: Array<{
+        role: "administrator" | "researcher" | "wizard" | "observer";
+        grantedAt: Date;
+        grantedBy: string | null;
+      }>;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User {
+    id: string;
+    email: string;
+    name: string | null;
+    image: string | null;
+  }
 }
 
 /**
@@ -33,6 +39,14 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
+  },
   providers: [
     Credentials({
       name: "credentials",
@@ -41,38 +55,37 @@ export const authConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        const parsed = z
+          .object({
+            email: z.string().email(),
+            password: z.string().min(6),
+          })
+          .safeParse(credentials);
+
+        if (!parsed.success) return null;
 
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email as string),
+          where: eq(users.email, parsed.data.email),
         });
 
-        if (!user?.password) {
-          return null;
-        }
+        if (!user?.password) return null;
 
         const isValidPassword = await bcrypt.compare(
-          credentials.password as string,
+          parsed.data.password,
           user.password,
         );
 
-        if (!isValidPassword) {
-          return null;
-        }
+        if (!isValidPassword) return null;
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          image: user.image,
         };
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
   callbacks: {
     jwt: ({ token, user }) => {
       if (user) {
@@ -80,12 +93,41 @@ export const authConfig = {
       }
       return token;
     },
-    session: ({ session, token }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: token.id as string,
-      },
-    }),
+    session: async ({ session, token }) => {
+      if (token.id) {
+        // Fetch user roles from database
+        const userWithRoles = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+          with: {
+            systemRoles: {
+              with: {
+                grantedByUser: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            id: token.id as string,
+            roles:
+              userWithRoles?.systemRoles?.map((sr) => ({
+                role: sr.role,
+                grantedAt: sr.grantedAt,
+                grantedBy: sr.grantedBy,
+              })) ?? [],
+          },
+        };
+      }
+      return session;
+    },
   },
 } satisfies NextAuthConfig;

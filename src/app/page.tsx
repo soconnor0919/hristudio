@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "~/server/auth";
+import { isAdmin } from "~/lib/auth-client";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -32,9 +33,19 @@ export default async function Home() {
                 <span className="text-sm text-slate-600">
                   Welcome, {session.user.name ?? session.user.email}
                 </span>
-                <Button asChild variant="outline">
-                  <Link href="/api/auth/signout">Sign Out</Link>
-                </Button>
+                <div className="flex gap-2">
+                  {isAdmin(session) && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/admin">Admin</Link>
+                    </Button>
+                  )}
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/profile">Profile</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/auth/signout">Sign Out</Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex gap-2">
@@ -56,14 +67,14 @@ export default async function Home() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Experiments</CardTitle>
+                  <CardTitle>Studies</CardTitle>
                   <CardDescription>
-                    Design and manage your HRI experiments
+                    Manage your HRI research studies
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Button className="w-full" asChild>
-                    <Link href="/experiments">View Experiments</Link>
+                    <Link href="/studies">View Studies</Link>
                   </Button>
                 </CardContent>
               </Card>

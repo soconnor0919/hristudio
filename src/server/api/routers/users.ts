@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, count, eq, ilike, or, type SQL } from "drizzle-orm";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 import {
   adminProcedure,
@@ -197,6 +198,58 @@ export const usersRouter = createTRPCRouter({
         });
 
       return updatedUser;
+    }),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1, "Current password is required"),
+        newPassword: z
+          .string()
+          .min(6, "Password must be at least 6 characters"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { currentPassword, newPassword } = input;
+      const userId = ctx.session.user.id;
+
+      // Get current user with password
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      if (!user?.password) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isValidPassword) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Current password is incorrect",
+        });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Update password
+      await ctx.db
+        .update(users)
+        .set({
+          password: hashedNewPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      return { success: true };
     }),
 
   assignRole: adminProcedure

@@ -13,7 +13,7 @@ import {
   timestamp,
   unique,
   uuid,
-  varchar
+  varchar,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -23,7 +23,7 @@ import { type AdapterAccount } from "next-auth/adapters";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `hristudio_${name}`);
+export const createTable = pgTableCreator((name) => `hs_${name}`);
 
 // Enums
 export const systemRoleEnum = pgEnum("system_role", [
