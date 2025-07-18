@@ -1,0 +1,150 @@
+ççYou are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Radix UI, Tailwind CSS, tRPC, Drizzle ORM, NextAuth.js v5, and the HRIStudio platform architecture.
+
+Project Context
+- HRIStudio is a web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research
+- Uses PostgreSQL for structured data and MinIO (S3-compatible) for media storage
+- Implements role-based access control with four primary roles: Administrator, Researcher, Wizard, Observer
+- Features a hierarchical experiment structure: Study > Experiment > Step > Action
+- Requires real-time communication for wizard control during trials
+
+Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError, canEdit, shouldFetch)
+- Structure files: exported component, subcomponents, helpers, static content, types
+- Keep components focused and composable
+
+Naming Conventions
+- Use lowercase with dashes for directories (e.g., components/experiment-designer, features/trial-execution)
+- Favor named exports for components and utilities
+- Use PascalCase for component files (e.g., ExperimentDesigner.tsx, WizardInterface.tsx)
+- Use camelCase for utility files (e.g., robotPlugin.ts, trialValidation.ts)
+- Prefix database schema files with 'schema.' (e.g., schema.studies.ts, schema.experiments.ts)
+
+TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types for component props
+- Define explicit return types for all functions
+- Use const assertions for literal types
+- Avoid enums; use const objects with 'as const' instead
+- Create shared types in dedicated type files (e.g., types/experiment.ts, types/trial.ts)
+- Use Zod schemas for runtime validation, infer TypeScript types from Zod
+
+File Organization
+src/
+├── app/                      # Next.js app router
+│   ├── (auth)/              # Auth-related pages
+│   ├── (dashboard)/         # Authenticated app pages
+│   ├── api/                 # API routes
+│   └── layout.tsx
+├── components/              # Shared UI components
+│   ├── ui/                  # Shadcn UI components
+│   ├── experiment/          # Experiment-related components
+│   ├── trial/               # Trial execution components
+│   └── layout/              # Layout components
+├── features/                # Feature-specific modules
+│   ├── auth/                # Authentication logic
+│   ├── experiments/         # Experiment design
+│   ├── trials/              # Trial execution
+│   └── analysis/            # Data analysis
+├── lib/                     # Utilities and configurations
+│   ├── db/                  # Database setup and schemas
+│   ├── trpc/                # tRPC setup and routers
+│   ├── auth/                # NextAuth configuration
+│   └── plugins/             # Robot plugin system
+├── hooks/                   # Custom React hooks
+└── types/                   # Shared TypeScript types
+
+Database Patterns (Drizzle)
+- Define schemas using Drizzle's PostgreSQL dialect
+- Use UUID primary keys with gen_random_uuid()
+- Implement soft deletes with deleted_at timestamps
+- Add created_at and updated_at to all tables
+- Use JSONB for flexible metadata storage
+- Create database indexes for foreign keys and frequently queried fields
+- Use transactions for multi-table operations
+
+tRPC Patterns
+- Organize routers by domain (auth, studies, experiments, trials, etc.)
+- Use input validation with Zod schemas
+- Implement middleware for authentication and authorization
+- Return consistent error responses with proper error codes
+- Use optimistic updates on the client for better UX
+- Implement proper TypeScript inference throughout
+
+Authentication & Authorization
+- Use NextAuth.js v5 with database sessions
+- Implement role-based middleware in tRPC
+- Check permissions at both route and resource level
+- Store user roles in database with proper relationships
+- Use React context for client-side auth state
+- Implement audit logging for sensitive operations
+
+Component Patterns
+- Create compound components for complex UI (e.g., ExperimentDesigner.Canvas, ExperimentDesigner.Toolbar)
+- Use Radix UI primitives wrapped with Shadcn UI styling
+- Implement proper loading and error states
+- Use Suspense boundaries for async components
+- Create reusable form components with react-hook-form
+- Implement keyboard navigation for accessibility
+
+Real-time Features
+- Use WebSockets for trial execution updates
+- Implement reconnection logic for connection failures
+- Use event-based patterns for real-time communication
+- Maintain synchronization between server and client state
+- Buffer events during disconnections
+
+State Management
+- Use URL state (nuqs) for shareable application state
+- Leverage React Server Components for initial data fetching
+- Use tRPC's useQuery with proper cache strategies
+- Implement optimistic updates for user actions
+- Keep client state minimal; prefer server state
+
+Performance Optimization
+- Minimize 'use client' directives; favor RSC
+- Implement virtual scrolling for large lists
+- Use dynamic imports for heavy components
+- Optimize images with Next.js Image component
+- Implement proper database query optimization
+- Use React.memo sparingly and only when measured
+
+Security Best Practices
+- Validate all inputs on both client and server
+- Implement rate limiting on sensitive endpoints
+- Use parameterized queries (handled by Drizzle)
+- Encrypt sensitive data in database
+- Implement CSRF protection
+- Use secure HTTP headers via Next.js config
+
+Testing Approach
+- Write integration tests for tRPC procedures
+- Test authorization logic thoroughly
+- Use MSW for mocking external services
+- Test critical user flows with Playwright
+- Ensure proper error handling in tests
+
+Specific HRIStudio Patterns
+- Robot plugins must implement the standard interface
+- Trial execution follows strict state machine patterns
+- Maintain audit trail for all experiment modifications
+- Use event sourcing for trial execution history
+- Implement version control for experiment designs
+- Support offline-capable wizard interfaces
+
+Error Handling
+- Use custom error classes for different error types
+- Implement global error boundary for React
+- Log errors with appropriate context
+- Show user-friendly error messages
+- Implement retry logic for transient failures
+
+Accessibility
+- Follow WCAG 2.1 AA standards
+- Implement proper ARIA labels
+- Ensure keyboard navigation throughout
+- Test with screen readers
+- Provide visual feedback for all actions
+
+Follow Next.js 14 best practices for Data Fetching, Rendering, and Routing.
