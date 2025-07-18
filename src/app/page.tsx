@@ -30,7 +30,7 @@ export default async function Home() {
             {session?.user ? (
               <div className="flex items-center gap-4">
                 <span className="text-sm text-slate-600">
-                  Welcome, {session.user.name || session.user.email}
+                  Welcome, {session.user.name ?? session.user.email}
                 </span>
                 <Button asChild variant="outline">
                   <Link href="/api/auth/signout">Sign Out</Link>

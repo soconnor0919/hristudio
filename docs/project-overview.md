@@ -61,9 +61,11 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 ### 6. Collaboration Features
 - Multi-user support with defined roles
 - Project dashboards with status tracking
-- Shared experiment templates and resources
+- Token-based resource sharing for external collaboration
 - Activity logs and audit trails
 - Support for double-blind study designs
+- Comment system for team communication
+- File attachments for supplementary materials
 
 ## System Architecture
 
@@ -164,6 +166,14 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 - **Parameter Schemas**: Type-safe configuration with validation
 - **Communication Adapters**: Platform-specific protocol implementations
 - **Version Management**: Semantic versioning for compatibility
+
+### Token-Based Sharing Model
+- **Share Links**: Generate unique tokens for resource access
+- **Permission Control**: Granular permissions (read, comment, annotate)
+- **Expiration**: Time-limited access for security
+- **Access Tracking**: Monitor usage and analytics
+- **Public Access**: No authentication required for shared resources
+- **Revocation**: Instant access removal when needed
 
 ## Development Principles
 

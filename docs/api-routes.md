@@ -898,11 +898,11 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
 - **Input**:
   ```typescript
   {
-    studyId: string
-    resourceType: ResourceType
+    resourceType: "study" | "experiment" | "trial"
     resourceId: string
     content: string
     parentId?: string
+    metadata?: any
   }
   ```
 - **Output**: Comment object
@@ -914,11 +914,15 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
 - **Input**:
   ```typescript
   {
-    resourceType: ResourceType
+    resourceType: "study" | "experiment" | "trial"
     resourceId: string
+    parentId?: string
+    includeReplies?: boolean
+    limit?: number
+    offset?: number
   }
   ```
-- **Output**: Nested comment tree
+- **Output**: Array of comments
 - **Auth Required**: Yes (Study member)
 
 ### `collaboration.deleteComment`
@@ -934,37 +938,85 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
 - **Input**:
   ```typescript
   {
-    studyId: string
-    file: File
+    resourceType: "study" | "experiment" | "trial"
+    resourceId: string
+    fileName: string
+    fileSize: number
+    contentType: string
     description?: string
-    resourceType?: ResourceType
-    resourceId?: string
   }
   ```
-- **Output**: Attachment object
+- **Output**: 
+  ```typescript
+  {
+    attachment: AttachmentObject
+    uploadUrl: string
+  }
+  ```
 - **Auth Required**: Yes (Study member)
 
-### `collaboration.shareResource`
-- **Description**: Create shareable link
+### `collaboration.createShareLink`
+- **Description**: Create token-based shareable link for a resource
 - **Type**: Mutation
 - **Input**:
   ```typescript
   {
-    studyId: string
-    resourceType: ResourceType
+    resourceType: "study" | "experiment" | "trial"
     resourceId: string
-    permissions?: string[]
+    permissions?: ("read" | "comment" | "annotate")[]
     expiresAt?: Date
+    description?: string
   }
   ```
 - **Output**:
   ```typescript
   {
+    id: string
+    studyId: string
+    resourceType: string
+    resourceId: string
     shareToken: string
     shareUrl: string
+    permissions: string[]
+    expiresAt?: Date
+    createdAt: Date
   }
   ```
-- **Auth Required**: Yes (Study researcher)
+- **Auth Required**: Yes (Study owner/researcher)
+
+### `collaboration.getSharedResources`
+- **Description**: Get resources shared by the current user
+- **Type**: Query
+- **Input**:
+  ```typescript
+  {
+    limit?: number
+    offset?: number
+  }
+  ```
+- **Output**: Array of shared resources with share URLs
+- **Auth Required**: Yes
+
+### `collaboration.revokeShare`
+- **Description**: Revoke a share link
+- **Type**: Mutation
+- **Input**: `{ shareId: string }`
+- **Output**: `{ success: boolean }`
+- **Auth Required**: Yes (Share creator)
+
+### `collaboration.accessSharedResource`
+- **Description**: Access a shared resource via token (public endpoint)
+- **Type**: Query
+- **Input**: `{ shareToken: string }`
+- **Output**:
+  ```typescript
+  {
+    resourceType: string
+    resourceId: string
+    permissions: string[]
+  }
+  ```
+- **Auth Required**: No (Public endpoint)
 
 ## System Administration Routes (`admin`)
 

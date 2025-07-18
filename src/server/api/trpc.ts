@@ -13,6 +13,8 @@ import { ZodError } from "zod";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { userSystemRoles } from "~/server/db/schema";
+import { and, eq } from "drizzle-orm";
 
 /**
  * 1. CONTEXT
@@ -131,3 +133,32 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Admin (administrator role) procedure
+ *
+ * This procedure ensures the user is authenticated AND has administrator role.
+ * Use this for admin-only operations like user management.
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const userId = ctx.session.user.id;
+
+  // Check if user has administrator role
+  const adminRole = await ctx.db.query.userSystemRoles.findFirst({
+    where: and(
+      eq(userSystemRoles.userId, userId),
+      eq(userSystemRoles.role, "administrator"),
+    ),
+  });
+
+  if (!adminRole) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Administrator access required",
+    });
+  }
+
+  return next({
+    ctx,
+  });
+});

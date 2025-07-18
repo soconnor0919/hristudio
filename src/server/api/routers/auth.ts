@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 import { users } from "~/server/db/schema";
 
 export const authRouter = createTRPCRouter({
@@ -35,7 +39,7 @@ export const authRouter = createTRPCRouter({
 
       try {
         // Create user
-        const [newUser] = await ctx.db
+        const newUsers = await ctx.db
           .insert(users)
           .values({
             name,
@@ -46,14 +50,66 @@ export const authRouter = createTRPCRouter({
             id: users.id,
             name: users.name,
             email: users.email,
+            createdAt: users.createdAt,
           });
 
+        const newUser = newUsers[0];
+        if (!newUser) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create user",
+          });
+        }
+
         return newUser;
-      } catch (error) {
+      } catch (error: unknown) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create user",
+          message:
+            error instanceof Error ? error.message : "Failed to create user",
         });
       }
     }),
+
+  logout: protectedProcedure.mutation(async ({ ctx: _ctx }) => {
+    // Note: Actual logout is handled by NextAuth.js
+    // This endpoint is for any additional cleanup if needed
+    return { success: true };
+  }),
+
+  me: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, userId),
+      with: {
+        systemRoles: {
+          with: {
+            grantedByUser: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      columns: {
+        password: false, // Exclude password from response
+      },
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return {
+      ...user,
+      roles: user.systemRoles.map((sr) => sr.role),
+    };
+  }),
 });
