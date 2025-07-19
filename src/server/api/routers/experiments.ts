@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc, asc, inArray } from "drizzle-orm";
+import { and, eq, desc, asc, inArray, count } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
@@ -107,6 +108,111 @@ export const experimentsRouter = createTRPCRouter({
         stepCount: exp.steps.length,
         trialCount: exp.trials.length,
       }));
+    }),
+
+  getUserExperiments: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+        status: z.enum(experimentStatusEnum.enumValues).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, limit, status } = input;
+      const offset = (page - 1) * limit;
+      const userId = ctx.session.user.id;
+
+      // Get all studies user is a member of
+      const userStudies = await ctx.db.query.studyMembers.findMany({
+        where: eq(studyMembers.userId, userId),
+        columns: {
+          studyId: true,
+        },
+      });
+
+      const studyIds = userStudies.map((membership) => membership.studyId);
+
+      if (studyIds.length === 0) {
+        return {
+          experiments: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0,
+          },
+        };
+      }
+
+      // Build where conditions
+      const conditions = [inArray(experiments.studyId, studyIds)];
+
+      if (status) {
+        conditions.push(eq(experiments.status, status));
+      }
+
+      const whereClause = and(...conditions);
+
+      // Get experiments with relations
+      const userExperiments = await ctx.db.query.experiments.findMany({
+        where: whereClause,
+        with: {
+          study: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+          createdBy: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          steps: {
+            columns: {
+              id: true,
+            },
+          },
+          trials: {
+            columns: {
+              id: true,
+            },
+          },
+        },
+        limit,
+        offset,
+        orderBy: [desc(experiments.updatedAt)],
+      });
+
+      // Get total count
+      const totalCountResult = await ctx.db
+        .select({ count: count() })
+        .from(experiments)
+        .where(whereClause);
+
+      const totalCount = totalCountResult[0]?.count ?? 0;
+
+      // Transform data to include counts
+      const transformedExperiments = userExperiments.map((experiment) => ({
+        ...experiment,
+        _count: {
+          steps: experiment.steps.length,
+          trials: experiment.trials.length,
+        },
+      }));
+
+      return {
+        experiments: transformedExperiments,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      };
     }),
 
   get: protectedProcedure
@@ -988,7 +1094,10 @@ export const experimentsRouter = createTRPCRouter({
             });
           }
 
-          if (action.type === "wait" && !(action.parameters as { duration?: number })?.duration) {
+          if (
+            action.type === "wait" &&
+            !(action.parameters as { duration?: number })?.duration
+          ) {
             errors.push({
               type: "missing_duration",
               message: `Wait action "${action.name}" missing duration parameter`,
@@ -1014,5 +1123,178 @@ export const experimentsRouter = createTRPCRouter({
         errors,
         warnings,
       };
+    }),
+
+  getSteps: protectedProcedure
+    .input(z.object({ experimentId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // First verify user has access to this experiment
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, input.experimentId),
+        with: {
+          study: {
+            with: {
+              members: {
+                where: eq(studyMembers.userId, userId),
+              },
+            },
+          },
+        },
+      });
+
+      if (!experiment || experiment.study.members.length === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied to this experiment",
+        });
+      }
+
+      // Get steps with their actions
+      const experimentSteps = await ctx.db.query.steps.findMany({
+        where: eq(steps.experimentId, input.experimentId),
+        with: {
+          actions: {
+            orderBy: [asc(actions.orderIndex)],
+          },
+        },
+        orderBy: [asc(steps.orderIndex)],
+      });
+
+      // Transform to designer format
+      return experimentSteps.map((step) => ({
+        id: step.id,
+        type: step.type as "wizard" | "robot" | "parallel" | "conditional",
+        name: step.name,
+        description: step.description,
+        order: step.orderIndex,
+        duration: step.durationEstimate,
+        parameters: step.conditions as Record<string, any>,
+        parentId: undefined, // Not supported in current schema
+        children: [], // TODO: implement hierarchical steps if needed
+      }));
+    }),
+
+  saveDesign: protectedProcedure
+    .input(
+      z.object({
+        experimentId: z.string().uuid(),
+        steps: z.array(
+          z.object({
+            id: z.string(),
+            type: z.enum(["wizard", "robot", "parallel", "conditional"]),
+            name: z.string(),
+            description: z.string().optional(),
+            order: z.number(),
+            duration: z.number().optional(),
+            parameters: z.record(z.any()),
+            parentId: z.string().optional(),
+            children: z.array(z.string()).optional(),
+          }),
+        ),
+        version: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify user has write access to this experiment
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, input.experimentId),
+        with: {
+          study: {
+            with: {
+              members: {
+                where: and(
+                  eq(studyMembers.userId, userId),
+                  inArray(studyMembers.role, ["owner", "researcher"] as const),
+                ),
+              },
+            },
+          },
+        },
+      });
+
+      if (!experiment || experiment.study.members.length === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied to modify this experiment",
+        });
+      }
+
+      // Get existing steps
+      const existingSteps = await ctx.db.query.steps.findMany({
+        where: eq(steps.experimentId, input.experimentId),
+      });
+
+      const existingStepIds = new Set(existingSteps.map((s) => s.id));
+      const newStepIds = new Set(input.steps.map((s) => s.id));
+
+      // Steps to delete (exist in DB but not in input)
+      const stepsToDelete = existingSteps.filter((s) => !newStepIds.has(s.id));
+
+      // Steps to insert (in input but don't exist in DB or have temp IDs)
+      const stepsToInsert = input.steps.filter(
+        (s) => !existingStepIds.has(s.id) || s.id.startsWith("step-"),
+      );
+
+      // Steps to update (exist in both)
+      const stepsToUpdate = input.steps.filter(
+        (s) => existingStepIds.has(s.id) && !s.id.startsWith("step-"),
+      );
+
+      // Execute in transaction
+      await ctx.db.transaction(async (tx) => {
+        // Delete removed steps
+        if (stepsToDelete.length > 0) {
+          await tx.delete(steps).where(
+            inArray(
+              steps.id,
+              stepsToDelete.map((s) => s.id),
+            ),
+          );
+        }
+
+        // Insert new steps
+        for (const step of stepsToInsert) {
+          const stepId = step.id.startsWith("step-") ? randomUUID() : step.id;
+
+          await tx.insert(steps).values({
+            id: stepId,
+            experimentId: input.experimentId,
+            name: step.name,
+            description: step.description,
+            type: step.type,
+            orderIndex: step.order,
+            durationEstimate: step.duration,
+            conditions: step.parameters,
+          });
+        }
+
+        // Update existing steps
+        for (const step of stepsToUpdate) {
+          await tx
+            .update(steps)
+            .set({
+              name: step.name,
+              description: step.description,
+              type: step.type,
+              orderIndex: step.order,
+              durationEstimate: step.duration,
+              conditions: step.parameters,
+              updatedAt: new Date(),
+            })
+            .where(eq(steps.id, step.id));
+        }
+
+        // Update experiment's updated timestamp
+        await tx
+          .update(experiments)
+          .set({ updatedAt: new Date() })
+          .where(eq(experiments.id, input.experimentId));
+      });
+
+      return { success: true };
     }),
 });

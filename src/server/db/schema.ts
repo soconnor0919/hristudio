@@ -788,7 +788,12 @@ export const auditLogs = createTable(
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
-  systemRoles: many(userSystemRoles),
+  systemRoles: many(userSystemRoles, {
+    relationName: "user",
+  }),
+  grantedRoles: many(userSystemRoles, {
+    relationName: "grantedByUser",
+  }),
   createdStudies: many(studies),
   studyMemberships: many(studyMembers),
   createdExperiments: many(experiments),
@@ -814,10 +819,12 @@ export const userSystemRolesRelations = relations(
     user: one(users, {
       fields: [userSystemRoles.userId],
       references: [users.id],
+      relationName: "user",
     }),
     grantedByUser: one(users, {
       fields: [userSystemRoles.grantedBy],
       references: [users.id],
+      relationName: "grantedByUser",
     }),
   }),
 );
