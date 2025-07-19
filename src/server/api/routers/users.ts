@@ -414,4 +414,69 @@ export const usersRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  getWizards: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    // Get all studies user is a member of
+    const userStudies = await ctx.db.query.studyMembers.findMany({
+      where: eq(studyMembers.userId, userId),
+      columns: {
+        studyId: true,
+      },
+    });
+
+    const studyIds = userStudies.map((membership) => membership.studyId);
+
+    if (studyIds.length === 0) {
+      return [];
+    }
+
+    // Get all users who are members of the same studies and have wizard/researcher roles
+    const studyMembersWithUsers = await ctx.db.query.studyMembers.findMany({
+      where: inArray(studyMembers.studyId, studyIds),
+      with: {
+        user: {
+          with: {
+            systemRoles: true,
+          },
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Filter for users with wizard or researcher roles and deduplicate
+    const wizardUsers = new Map();
+
+    studyMembersWithUsers.forEach((member) => {
+      const user = member.user;
+      const hasWizardRole = user.systemRoles.some(
+        (role) =>
+          role.role === "wizard" ||
+          role.role === "researcher" ||
+          role.role === "administrator",
+      );
+
+      if (hasWizardRole && !wizardUsers.has(user.id)) {
+        wizardUsers.set(user.id, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role:
+            user.systemRoles.find(
+              (role) =>
+                role.role === "wizard" ||
+                role.role === "researcher" ||
+                role.role === "administrator",
+            )?.role || "wizard",
+        });
+      }
+    });
+
+    return Array.from(wizardUsers.values());
+  }),
 });

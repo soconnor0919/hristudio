@@ -1,5 +1,15 @@
 import { z } from "zod";
-import { eq, and, desc, asc, gte, lte, inArray, type SQL } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  asc,
+  gte,
+  lte,
+  inArray,
+  count,
+  type SQL,
+} from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -10,6 +20,7 @@ import {
   experiments,
   studyMembers,
   trialStatusEnum,
+  mediaCaptures,
 } from "~/server/db/schema";
 import type { db } from "~/server/db";
 
@@ -533,5 +544,138 @@ export const trialsRouter = createTRPCRouter({
         .offset(input.offset);
 
       return events;
+    }),
+
+  getUserTrials: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+        status: z.enum(trialStatusEnum.enumValues).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, limit, status } = input;
+      const offset = (page - 1) * limit;
+      const userId = ctx.session.user.id;
+
+      // Get all studies user is a member of
+      const userStudies = await ctx.db.query.studyMembers.findMany({
+        where: eq(studyMembers.userId, userId),
+        columns: {
+          studyId: true,
+        },
+      });
+
+      const studyIds = userStudies.map((membership) => membership.studyId);
+
+      if (studyIds.length === 0) {
+        return {
+          trials: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0,
+          },
+        };
+      }
+
+      // Build where conditions
+      const conditions = [];
+
+      if (status) {
+        conditions.push(eq(trials.status, status));
+      }
+
+      // Get trials from experiments in user's studies
+      const userTrials = await ctx.db.query.trials.findMany({
+        where: status ? and(...conditions) : undefined,
+        with: {
+          experiment: {
+            where: inArray(experiments.studyId, studyIds),
+            with: {
+              study: {
+                columns: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            columns: {
+              id: true,
+              name: true,
+              studyId: true,
+            },
+          },
+          participant: {
+            columns: {
+              id: true,
+              participantCode: true,
+              email: true,
+              name: true,
+            },
+          },
+          wizard: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          events: {
+            columns: {
+              id: true,
+            },
+          },
+          mediaCaptures: {
+            columns: {
+              id: true,
+            },
+          },
+        },
+        limit,
+        offset,
+        orderBy: [desc(trials.scheduledAt)],
+      });
+
+      // Filter out trials from experiments not in user's studies
+      const filteredTrials = userTrials.filter(
+        (trial) =>
+          trial.experiment && studyIds.includes(trial.experiment.studyId),
+      );
+
+      // Get total count
+      const totalCountResult = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(
+          and(
+            inArray(experiments.studyId, studyIds),
+            status ? eq(trials.status, status) : undefined,
+          ).filter(Boolean),
+        );
+
+      const totalCount = totalCountResult[0]?.count ?? 0;
+
+      // Transform data to include counts
+      const transformedTrials = filteredTrials.map((trial) => ({
+        ...trial,
+        _count: {
+          events: trial.events.length,
+          mediaCaptures: trial.mediaCaptures.length,
+        },
+      }));
+
+      return {
+        trials: transformedTrials,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      };
     }),
 });

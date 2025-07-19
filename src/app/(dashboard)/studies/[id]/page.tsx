@@ -52,10 +52,15 @@ const statusConfig = {
   },
 };
 
-export default async function StudyDetailPage({ params }: StudyDetailPageProps) {
+export default async function StudyDetailPage({
+  params,
+}: StudyDetailPageProps) {
   try {
-    const study = await api.studies.get({ id: params.id });
-    const members = await api.studies.getMembers({ studyId: params.id });
+    const resolvedParams = await params;
+    const study = await api.studies.get({ id: resolvedParams.id });
+    const members = await api.studies.getMembers({
+      studyId: resolvedParams.id,
+    });
 
     if (!study) {
       notFound();
@@ -67,7 +72,7 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-2 text-sm text-slate-600 mb-4">
+          <div className="mb-4 flex items-center space-x-2 text-sm text-slate-600">
             <Link href="/studies" className="hover:text-slate-900">
               Studies
             </Link>
@@ -76,9 +81,9 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
           </div>
 
           <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-3xl font-bold text-slate-900 truncate">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex items-center space-x-3">
+                <h1 className="truncate text-3xl font-bold text-slate-900">
                   {study.name}
                 </h1>
                 <Badge className={statusInfo.className} variant="secondary">
@@ -86,19 +91,19 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                   {statusInfo.label}
                 </Badge>
               </div>
-              <p className="text-slate-600 text-lg">{study.description}</p>
+              <p className="text-lg text-slate-600">{study.description}</p>
             </div>
 
-            <div className="flex items-center space-x-2 ml-4">
+            <div className="ml-4 flex items-center space-x-2">
               <Button asChild variant="outline">
                 <Link href={`/studies/${study.id}/edit`}>
-                  <Settings className="h-4 w-4 mr-2" />
+                  <Settings className="mr-2 h-4 w-4" />
                   Edit Study
                 </Link>
               </Button>
               <Button asChild>
                 <Link href={`/studies/${study.id}/experiments/new`}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   New Experiment
                 </Link>
               </Button>
@@ -106,9 +111,9 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8 lg:col-span-2">
             {/* Study Information */}
             <Card>
               <CardHeader>
@@ -118,27 +123,41 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Institution</label>
+                    <label className="text-sm font-medium text-slate-700">
+                      Institution
+                    </label>
                     <p className="text-slate-900">{study.institution}</p>
                   </div>
                   {study.irbProtocolNumber && (
                     <div>
-                      <label className="text-sm font-medium text-slate-700">IRB Protocol</label>
-                      <p className="text-slate-900">{study.irbProtocolNumber}</p>
+                      <label className="text-sm font-medium text-slate-700">
+                        IRB Protocol
+                      </label>
+                      <p className="text-slate-900">
+                        {study.irbProtocolNumber}
+                      </p>
                     </div>
                   )}
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Created</label>
+                    <label className="text-sm font-medium text-slate-700">
+                      Created
+                    </label>
                     <p className="text-slate-900">
-                      {formatDistanceToNow(study.createdAt, { addSuffix: true })}
+                      {formatDistanceToNow(study.createdAt, {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Last Updated</label>
+                    <label className="text-sm font-medium text-slate-700">
+                      Last Updated
+                    </label>
                     <p className="text-slate-900">
-                      {formatDistanceToNow(study.updatedAt, { addSuffix: true })}
+                      {formatDistanceToNow(study.updatedAt, {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -155,7 +174,7 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                   </CardTitle>
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/studies/${study.id}/experiments/new`}>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Experiment
                     </Link>
                   </Button>
@@ -166,13 +185,14 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
               </CardHeader>
               <CardContent>
                 {/* Placeholder for experiments list */}
-                <div className="text-center py-8">
-                  <FlaskConical className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <div className="py-8 text-center">
+                  <FlaskConical className="mx-auto mb-4 h-12 w-12 text-slate-400" />
+                  <h3 className="mb-2 text-lg font-semibold text-slate-900">
                     No Experiments Yet
                   </h3>
-                  <p className="text-slate-600 mb-4">
-                    Create your first experiment to start designing research protocols
+                  <p className="mb-4 text-slate-600">
+                    Create your first experiment to start designing research
+                    protocols
                   </p>
                   <Button asChild>
                     <Link href={`/studies/${study.id}/experiments/new`}>
@@ -192,13 +212,14 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <div className="py-8 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-400" />
+                  <h3 className="mb-2 text-lg font-semibold text-slate-900">
                     No Recent Activity
                   </h3>
                   <p className="text-slate-600">
-                    Activity will appear here once you start working on this study
+                    Activity will appear here once you start working on this
+                    study
                   </p>
                 </div>
               </CardContent>
@@ -216,25 +237,30 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                     <span>Team</span>
                   </CardTitle>
                   <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Invite
                   </Button>
                 </div>
                 <CardDescription>
-                  {members.length} team member{members.length !== 1 ? 's' : ''}
+                  {members.length} team member{members.length !== 1 ? "s" : ""}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {members.map((member) => (
-                    <div key={member.user.id} className="flex items-center space-x-3">
+                    <div
+                      key={member.user.id}
+                      className="flex items-center space-x-3"
+                    >
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                         <span className="text-sm font-medium text-blue-600">
-                          {(member.user.name || member.user.email).charAt(0).toUpperCase()}
+                          {(member.user.name || member.user.email)
+                            .charAt(0)
+                            .toUpperCase()}
                         </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-900">
                           {member.user.name || member.user.email}
                         </p>
                         <p className="text-xs text-slate-500 capitalize">
@@ -262,16 +288,22 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                     <span className="font-medium">0</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Total Trials:</span>
+                    <span className="text-sm text-slate-600">
+                      Total Trials:
+                    </span>
                     <span className="font-medium">0</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Participants:</span>
+                    <span className="text-sm text-slate-600">
+                      Participants:
+                    </span>
                     <span className="font-medium">0</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Completion Rate:</span>
+                    <span className="text-sm text-slate-600">
+                      Completion Rate:
+                    </span>
                     <span className="font-medium text-green-600">—</span>
                   </div>
                 </div>
@@ -284,21 +316,33 @@ export default async function StudyDetailPage({ params }: StudyDetailPageProps) 
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full justify-start"
+                >
                   <Link href={`/studies/${study.id}/participants`}>
-                    <Users className="h-4 w-4 mr-2" />
+                    <Users className="mr-2 h-4 w-4" />
                     Manage Participants
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full justify-start"
+                >
                   <Link href={`/studies/${study.id}/trials`}>
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="mr-2 h-4 w-4" />
                     Schedule Trials
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full justify-start"
+                >
                   <Link href={`/studies/${study.id}/analytics`}>
-                    <BarChart3 className="h-4 w-4 mr-2" />
+                    <BarChart3 className="mr-2 h-4 w-4" />
                     View Analytics
                   </Link>
                 </Button>

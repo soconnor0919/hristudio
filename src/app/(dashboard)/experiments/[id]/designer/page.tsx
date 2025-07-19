@@ -12,7 +12,8 @@ export default async function ExperimentDesignerPage({
   params,
 }: ExperimentDesignerPageProps) {
   try {
-    const experiment = await api.experiments.get({ id: params.id });
+    const resolvedParams = await params;
+    const experiment = await api.experiments.get({ id: resolvedParams.id });
 
     if (!experiment) {
       notFound();

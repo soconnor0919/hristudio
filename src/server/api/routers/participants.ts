@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, desc, ilike, or } from "drizzle-orm";
+import { and, count, eq, desc, ilike, or, inArray } from "drizzle-orm";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
@@ -632,5 +632,90 @@ export const participantsRouter = createTRPCRouter({
       });
 
       return forms;
+    }),
+
+  getUserParticipants: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+        search: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { page, limit, search } = input;
+      const offset = (page - 1) * limit;
+      const userId = ctx.session.user.id;
+
+      // Get all studies user is a member of
+      const userStudies = await ctx.db.query.studyMembers.findMany({
+        where: eq(studyMembers.userId, userId),
+        columns: {
+          studyId: true,
+        },
+      });
+
+      const studyIds = userStudies.map((membership) => membership.studyId);
+
+      if (studyIds.length === 0) {
+        return {
+          participants: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0,
+          },
+        };
+      }
+
+      // Build where conditions
+      const conditions = [inArray(participants.studyId, studyIds)];
+
+      if (search) {
+        conditions.push(
+          or(
+            ilike(participants.participantCode, `%${search}%`),
+            ilike(participants.name, `%${search}%`),
+            ilike(participants.email, `%${search}%`),
+          )!,
+        );
+      }
+
+      const whereClause = and(...conditions);
+
+      // Get participants
+      const userParticipants = await ctx.db.query.participants.findMany({
+        where: whereClause,
+        with: {
+          study: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        limit,
+        offset,
+        orderBy: [desc(participants.createdAt)],
+      });
+
+      // Get total count
+      const totalCountResult = await ctx.db
+        .select({ count: count() })
+        .from(participants)
+        .where(whereClause);
+
+      const totalCount = totalCountResult[0]?.count ?? 0;
+
+      return {
+        participants: userParticipants,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      };
     }),
 });
