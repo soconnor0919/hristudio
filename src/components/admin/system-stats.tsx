@@ -45,7 +45,7 @@ export function SystemStats() {
       {/* Total Users */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Total Users
           </CardTitle>
         </CardHeader>
@@ -62,7 +62,7 @@ export function SystemStats() {
       {/* Total Studies */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Studies
           </CardTitle>
         </CardHeader>
@@ -79,7 +79,7 @@ export function SystemStats() {
       {/* Total Experiments */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Experiments
           </CardTitle>
         </CardHeader>
@@ -98,7 +98,7 @@ export function SystemStats() {
       {/* Total Trials */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Trials
           </CardTitle>
         </CardHeader>
@@ -115,7 +115,7 @@ export function SystemStats() {
       {/* System Health */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             System Health
           </CardTitle>
         </CardHeader>
@@ -124,11 +124,11 @@ export function SystemStats() {
             <div className="flex h-3 w-3 items-center justify-center">
               <div className="h-2 w-2 rounded-full bg-green-500"></div>
             </div>
-            <span className="text-sm font-medium text-green-700">
+            <span className="text-sm font-medium text-green-600">
               {displayStats.systemHealth === "healthy" ? "Healthy" : "Issues"}
             </span>
           </div>
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="text-muted-foreground mt-1 text-xs">
             All services operational
           </div>
         </CardContent>
@@ -137,41 +137,49 @@ export function SystemStats() {
       {/* Uptime */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Uptime
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm font-medium">{displayStats.uptime}</div>
-          <div className="mt-1 text-xs text-slate-500">Since last restart</div>
+          <div className="text-muted-foreground mt-1 text-xs">
+            Since last restart
+          </div>
         </CardContent>
       </Card>
 
       {/* Storage Usage */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Storage Used
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm font-medium">{displayStats.storageUsed}</div>
-          <div className="mt-1 text-xs text-slate-500">Media & database</div>
+          <div className="text-muted-foreground mt-1 text-xs">
+            Media & database
+          </div>
         </CardContent>
       </Card>
 
       {/* Recent Activity */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-muted-foreground text-sm font-medium">
             Recent Activity
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            <div className="text-xs text-slate-600">2 trials started today</div>
-            <div className="text-xs text-slate-600">1 new user registered</div>
-            <div className="text-xs text-slate-600">
+            <div className="text-muted-foreground text-xs">
+              2 trials started today
+            </div>
+            <div className="text-muted-foreground text-xs">
+              1 new user registered
+            </div>
+            <div className="text-muted-foreground text-xs">
               3 experiments published
             </div>
           </div>

@@ -13,7 +13,6 @@ import {
   LogOut,
   MoreHorizontal,
   Settings,
-  User,
   Users,
   UserCheck,
   TestTube,
@@ -40,6 +39,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "~/components/ui/sidebar";
+import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Logo } from "~/components/ui/logo";
 
 import { useStudyManagement } from "~/hooks/useStudyManagement";
@@ -292,18 +292,60 @@ export function AppSidebar({
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg">
-                  <User className="h-4 w-4" />
-                  <span>{session?.user?.name ?? "User"}</span>
-                  <MoreHorizontal className="ml-auto h-4 w-4" />
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:justify-center"
+                >
+                  <Avatar className="h-6 w-6 border-2 border-slate-300 group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
+                    <AvatarImage
+                      src={session?.user?.image ?? undefined}
+                      alt={session?.user?.name ?? "User"}
+                    />
+                    <AvatarFallback className="bg-slate-600 text-xs text-white">
+                      {(session?.user?.name ?? session?.user?.email ?? "U")
+                        .charAt(0)
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-semibold">
+                      {session?.user?.name ?? "User"}
+                    </span>
+                    <span className="truncate text-xs">
+                      {session?.user?.email ?? ""}
+                    </span>
+                  </div>
+                  <MoreHorizontal className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-[--radix-popper-anchor-width]"
+                className="w-[--radix-popper-anchor-width] min-w-56 rounded-lg"
+                side="bottom"
                 align="end"
+                sideOffset={4}
               >
-                <DropdownMenuLabel>
-                  {session?.user?.name ?? "User"}
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                    <Avatar className="h-8 w-8 border-2 border-slate-300">
+                      <AvatarImage
+                        src={session?.user?.image ?? undefined}
+                        alt={session?.user?.name ?? "User"}
+                      />
+                      <AvatarFallback className="bg-slate-600 text-xs text-white">
+                        {(session?.user?.name ?? session?.user?.email ?? "U")
+                          .charAt(0)
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {session?.user?.name ?? "User"}
+                      </span>
+                      <span className="truncate text-xs">
+                        {session?.user?.email ?? ""}
+                      </span>
+                    </div>
+                  </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

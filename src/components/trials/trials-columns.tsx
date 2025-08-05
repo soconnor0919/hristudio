@@ -70,6 +70,7 @@ export type Trial = {
     logs: number;
   };
   userRole?: "owner" | "researcher" | "wizard" | "observer";
+  canAccess?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canExecute?: boolean;
@@ -162,12 +163,19 @@ function TrialActionsCell({ trial }: { trial: Trial }) {
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem asChild>
-          <Link href={`/trials/${trial.id}`}>
+        {trial.canAccess ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/trials/${trial.id}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Link>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem disabled>
             <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </Link>
-        </DropdownMenuItem>
+            View Details (Restricted)
+          </DropdownMenuItem>
+        )}
 
         {trial.canEdit && (
           <DropdownMenuItem asChild>
@@ -272,13 +280,33 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       const trial = row.original;
       return (
         <div className="max-w-[140px] min-w-0">
-          <Link
-            href={`/trials/${trial.id}`}
-            className="block truncate font-medium hover:underline"
-            title={trial.name}
-          >
-            {trial.name}
-          </Link>
+          <div className="flex items-center gap-2">
+            {trial.canAccess ? (
+              <Link
+                href={`/trials/${trial.id}`}
+                className="block truncate font-medium hover:underline"
+                title={trial.name}
+              >
+                {trial.name}
+              </Link>
+            ) : (
+              <div
+                className="text-muted-foreground block cursor-not-allowed truncate font-medium"
+                title={`${trial.name} (View access restricted)`}
+              >
+                {trial.name}
+              </div>
+            )}
+            {!trial.canAccess && (
+              <Badge
+                variant="outline"
+                className="ml-auto shrink-0 border-amber-200 bg-amber-50 text-amber-700"
+                title={`Access restricted - You are an ${trial.userRole || "observer"} on this study`}
+              >
+                {trial.userRole === "observer" ? "View Only" : "Restricted"}
+              </Badge>
+            )}
+          </div>
         </div>
       );
     },
@@ -290,16 +318,28 @@ export const trialsColumns: ColumnDef<Trial>[] = [
     ),
     cell: ({ row }) => {
       const status = row.getValue("status") as Trial["status"];
+      const trial = row.original;
       const config = statusConfig[status];
 
       return (
-        <Badge
-          variant="secondary"
-          className={`${config.className} whitespace-nowrap`}
-          title={config.description}
-        >
-          {config.label}
-        </Badge>
+        <div className="flex flex-col gap-1">
+          <Badge
+            variant="secondary"
+            className={`${config.className} whitespace-nowrap`}
+            title={config.description}
+          >
+            {config.label}
+          </Badge>
+          {trial.userRole && (
+            <Badge
+              variant="outline"
+              className="text-xs"
+              title={`Your role in this study: ${trial.userRole}`}
+            >
+              {trial.userRole}
+            </Badge>
+          )}
+        </div>
       );
     },
     filterFn: (row, id, value: string[]) => {

@@ -128,23 +128,24 @@ export const trialsRouter = createTRPCRouter({
             id: participants.id,
             participantCode: participants.participantCode,
           },
+          userRole: studyMembers.role,
         })
         .from(trials)
         .innerJoin(experiments, eq(trials.experimentId, experiments.id))
         .innerJoin(participants, eq(trials.participantId, participants.id))
         .innerJoin(studyMembers, eq(studyMembers.studyId, experiments.studyId))
-        .where(
-          and(
-            eq(studyMembers.userId, userId),
-            inArray(studyMembers.role, ["owner", "researcher", "wizard"]),
-            ...conditions,
-          ),
-        )
+        .where(and(eq(studyMembers.userId, userId), ...conditions))
         .orderBy(desc(trials.createdAt))
         .limit(input.limit)
         .offset(input.offset);
 
-      return await query;
+      const results = await query;
+
+      // Add permission flags for each trial
+      return results.map((trial) => ({
+        ...trial,
+        canAccess: ["owner", "researcher", "wizard"].includes(trial.userRole),
+      }));
     }),
 
   get: protectedProcedure
@@ -575,15 +576,19 @@ export const trialsRouter = createTRPCRouter({
       const offset = (page - 1) * limit;
       const userId = ctx.session.user.id;
 
-      // Get all studies user is a member of
+      // Get all studies user is a member of with roles
       const userStudies = await ctx.db.query.studyMembers.findMany({
         where: eq(studyMembers.userId, userId),
         columns: {
           studyId: true,
+          role: true,
         },
       });
 
       let studyIds = userStudies.map((membership) => membership.studyId);
+      const userStudyRoles = new Map(
+        userStudies.map((membership) => [membership.studyId, membership.role]),
+      );
 
       // If studyId is provided, filter to just that study (if user has access)
       if (studyId) {
@@ -704,14 +709,22 @@ export const trialsRouter = createTRPCRouter({
 
       const totalCount = totalCountResult[0]?.count ?? 0;
 
-      // Transform data to include counts
-      const transformedTrials = filteredTrials.map((trial) => ({
-        ...trial,
-        _count: {
-          events: trial.events?.length ?? 0,
-          mediaCaptures: trial.mediaCaptures?.length ?? 0,
-        },
-      }));
+      // Transform data to include counts and permission information
+      const transformedTrials = filteredTrials.map((trial) => {
+        const userRole = userStudyRoles.get(trial.experiment.studyId);
+        const canAccess =
+          userRole && ["owner", "researcher", "wizard"].includes(userRole);
+
+        return {
+          ...trial,
+          _count: {
+            events: trial.events?.length ?? 0,
+            mediaCaptures: trial.mediaCaptures?.length ?? 0,
+          },
+          userRole,
+          canAccess,
+        };
+      });
 
       return {
         trials: transformedTrials,

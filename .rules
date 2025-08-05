@@ -157,6 +157,9 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - Follow the established file naming: PascalCase for components, camelCase for utilities
 - Use Server Components by default, minimize 'use client' directives
 - Implement proper loading states and error boundaries for all async operations
+- NEVER use emojis - use Lucide icons exclusively for all visual elements
+- Maximize component reusability - create shared patterns and abstractions
+- ALL entity view pages must follow consistent patterns and layouts
 
 ### TypeScript Standards
 - 100% type safety - NO `any` types allowed in production code
@@ -178,6 +181,13 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - Use optimistic updates for better UX with proper error handling
 - Minimize database queries with efficient joins and proper indexing
 - Follow WCAG 2.1 AA accessibility standards throughout
+
+## UI/UX Standards
+- **Icons**: Use Lucide icons exclusively - NO emojis anywhere in the codebase
+- **Reusability**: Maximize component reuse through shared patterns and abstractions
+- **Entity Views**: All entity view pages (studies, experiments, participants, trials) must follow consistent patterns
+- **Page Structure**: Use global page headers, breadcrumbs, and consistent layout patterns
+- **Visual Consistency**: Maintain consistent spacing, typography, and interaction patterns
 
 ## Development Commands
 - `bun install` - Install dependencies

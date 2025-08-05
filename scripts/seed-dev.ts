@@ -233,8 +233,8 @@ async function main() {
       },
       {
         studyId: study1.id,
-        userId: seanUser.id, // Sean (observer)
-        role: "observer" as const,
+        userId: seanUser.id, // Sean (researcher)
+        role: "researcher" as const,
         joinedAt: new Date(),
       },
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, TestTube } from "lucide-react";
+import { Plus, TestTube, Eye } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
@@ -111,14 +111,19 @@ export function TrialsDataTable() {
         actions: trial._count?.events ?? 0,
         logs: trial._count?.mediaCaptures ?? 0,
       },
-      userRole: undefined,
-      canEdit: trial.status === "scheduled" || trial.status === "aborted",
+      userRole: trial.userRole,
+      canAccess: trial.canAccess ?? false,
+      canEdit:
+        trial.canAccess &&
+        (trial.status === "scheduled" || trial.status === "aborted"),
       canDelete:
-        trial.status === "scheduled" ||
-        trial.status === "aborted" ||
-        trial.status === "failed",
+        trial.canAccess &&
+        (trial.status === "scheduled" ||
+          trial.status === "aborted" ||
+          trial.status === "failed"),
       canExecute:
-        trial.status === "scheduled" || trial.status === "in_progress",
+        trial.canAccess &&
+        (trial.status === "scheduled" || trial.status === "in_progress"),
     }));
   }, [trialsData]);
 
@@ -204,6 +209,29 @@ export function TrialsDataTable() {
       />
 
       <div className="space-y-4">
+        {filteredTrials.some((trial) => !trial.canAccess) && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0">
+                <div className="rounded-full bg-amber-100 p-1">
+                  <Eye className="h-4 w-4 text-amber-600" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-amber-800">
+                  Limited Trial Access
+                </h3>
+                <p className="mt-1 text-sm text-amber-700">
+                  Some trials are marked as "View Only" or "Restricted" because
+                  you have observer-level access to their studies. Only
+                  researchers, wizards, and study owners can view detailed trial
+                  information.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <DataTable
           columns={trialsColumns}
           data={filteredTrials}
