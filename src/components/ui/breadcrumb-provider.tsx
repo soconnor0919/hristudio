@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   type ReactNode,
+  Fragment,
 } from "react";
 import {
   Breadcrumb,
@@ -59,7 +60,7 @@ export function BreadcrumbDisplay() {
     <Breadcrumb>
       <BreadcrumbList>
         {breadcrumbs.map((item, index) => (
-          <div key={index} className="flex items-center">
+          <Fragment key={index}>
             {index > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>
               {item.href ? (
@@ -68,7 +69,7 @@ export function BreadcrumbDisplay() {
                 <BreadcrumbPage>{item.label}</BreadcrumbPage>
               )}
             </BreadcrumbItem>
-          </div>
+          </Fragment>
         ))}
       </BreadcrumbList>
     </Breadcrumb>

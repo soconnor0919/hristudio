@@ -87,6 +87,24 @@ export const pluginStatusEnum = pgEnum("plugin_status", [
   "disabled",
 ]);
 
+export const blockShapeEnum = pgEnum("block_shape", [
+  "action",
+  "control",
+  "value",
+  "boolean",
+  "hat",
+  "cap",
+]);
+
+export const blockCategoryEnum = pgEnum("block_category", [
+  "wizard",
+  "robot",
+  "control",
+  "sensor",
+  "logic",
+  "event",
+]);
+
 export const mediaTypeEnum = pgEnum("media_type", ["video", "audio", "image"]);
 
 export const exportStatusEnum = pgEnum("export_status", [
@@ -297,6 +315,58 @@ export const robots = createTable("robot", {
     .notNull(),
 });
 
+export const robotPlugins = createTable("robot_plugin", {
+  id: uuid("id").notNull().primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  version: varchar("version", { length: 50 }).notNull(),
+  manufacturer: varchar("manufacturer", { length: 255 }),
+  description: text("description"),
+  robotId: uuid("robot_id").references(() => robots.id),
+  communicationProtocol: communicationProtocolEnum("communication_protocol"),
+  status: pluginStatusEnum("status").default("active").notNull(),
+  configSchema: jsonb("config_schema"),
+  capabilities: jsonb("capabilities").default([]),
+  trustLevel: trustLevelEnum("trust_level").default("community").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const blockRegistry = createTable(
+  "block_registry",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    blockType: varchar("block_type", { length: 100 }).notNull(),
+    pluginId: uuid("plugin_id").references(() => robotPlugins.id),
+    shape: blockShapeEnum("shape").notNull(),
+    category: blockCategoryEnum("category").notNull(),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    description: text("description"),
+    icon: varchar("icon", { length: 100 }),
+    color: varchar("color", { length: 50 }),
+    config: jsonb("config").notNull(),
+    parameterSchema: jsonb("parameter_schema").notNull(),
+    executionHandler: varchar("execution_handler", { length: 100 }),
+    timeout: integer("timeout"),
+    retryPolicy: jsonb("retry_policy"),
+    requiresConnection: boolean("requires_connection").default(false),
+    previewMode: boolean("preview_mode").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => ({
+    blockTypeUnique: unique().on(table.blockType, table.pluginId),
+    categoryIdx: index("block_registry_category_idx").on(table.category),
+  }),
+);
+
 export const experiments = createTable(
   "experiment",
   {
@@ -320,6 +390,9 @@ export const experiments = createTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     metadata: jsonb("metadata").default({}),
+    visualDesign: jsonb("visual_design"),
+    executionGraph: jsonb("execution_graph"),
+    pluginDependencies: text("plugin_dependencies").array(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
@@ -327,6 +400,10 @@ export const experiments = createTable(
       table.studyId,
       table.name,
       table.version,
+    ),
+    visualDesignIdx: index("experiment_visual_design_idx").using(
+      "gin",
+      table.visualDesign,
     ),
   }),
 );

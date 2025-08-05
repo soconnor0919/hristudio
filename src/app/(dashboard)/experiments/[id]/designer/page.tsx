@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ExperimentDesignerClient } from "~/components/experiments/designer/ExperimentDesignerClient";
+import { EnhancedBlockDesigner } from "~/components/experiments/designer/EnhancedBlockDesigner";
 import { api } from "~/trpc/server";
 
 interface ExperimentDesignerPageProps {
@@ -20,14 +20,17 @@ export default async function ExperimentDesignerPage({
     }
 
     return (
-      <div className="fixed inset-0 z-50">
-        <ExperimentDesignerClient
-          experiment={{
-            ...experiment,
-            description: experiment.description ?? "",
-          }}
-        />
-      </div>
+      <EnhancedBlockDesigner
+        experimentId={experiment.id}
+        initialDesign={{
+          id: experiment.id,
+          name: experiment.name,
+          description: experiment.description ?? "",
+          blocks: [],
+          version: 1,
+          lastSaved: new Date(),
+        }}
+      />
     );
   } catch (error) {
     console.error("Error loading experiment:", error);
