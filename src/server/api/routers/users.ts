@@ -9,10 +9,10 @@ import {
   protectedProcedure,
 } from "~/server/api/trpc";
 import {
+  studyMembers,
   systemRoleEnum,
   users,
   userSystemRoles,
-  studyMembers,
 } from "~/server/db/schema";
 
 export const usersRouter = createTRPCRouter({

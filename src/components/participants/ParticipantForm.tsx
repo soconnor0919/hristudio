@@ -2,9 +2,19 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Users } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
+import { Checkbox } from "~/components/ui/checkbox";
+import {
+  EntityForm,
+  FormField,
+  FormSection,
+  NextSteps,
+  Tips,
+} from "~/components/ui/entity-form";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -14,17 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Checkbox } from "~/components/ui/checkbox";
-import {
-  EntityForm,
-  FormField,
-  FormSection,
-  NextSteps,
-  Tips,
-} from "~/components/ui/entity-form";
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useStudyContext } from "~/lib/study-context";
-import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 
 const participantSchema = z.object({

@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
-    generateFileKey,
-    getMimeType, uploadFile, validateFile
+  generateFileKey,
+  getMimeType,
+  uploadFile,
+  validateFile,
 } from "~/lib/storage/minio";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     const validationResult = uploadSchema.safeParse({
-      trialId: trialId || undefined,
+      trialId: trialId ?? undefined,
       category,
       filename: file.name,
       contentType: file.type,
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
     const mediaCapture = await db
       .insert(mediaCaptures)
       .values({
-        trialId: validatedTrialId!,  // Non-null assertion since it's validated above
+        trialId: validatedTrialId!, // Non-null assertion since it's validated above
         format: file.type || getMimeType(file.name),
         fileSize: file.size,
         storagePath: fileKey,
@@ -161,7 +163,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const filename = searchParams.get("filename");
     const contentType = searchParams.get("contentType");
-    const category = searchParams.get("category") || "document";
+    const category = searchParams.get("category") ?? "document";
     const trialId = searchParams.get("trialId");
 
     if (!filename) {
@@ -188,12 +190,12 @@ export async function GET(request: NextRequest) {
       category,
       filename,
       session.user.id,
-      trialId || undefined,
+      trialId ?? undefined,
     );
 
     // Generate presigned URL for upload
     const { getUploadUrl } = await import("~/lib/storage/minio");
-    const uploadUrl = await getUploadUrl(fileKey, contentType || undefined);
+    const uploadUrl = await getUploadUrl(fileKey, contentType ?? undefined);
 
     return NextResponse.json({
       success: true,
@@ -242,9 +244,7 @@ function validateFileByCategory(
   return validateFile(file.name, file.size, types, maxSize);
 }
 
-function getCaptureType(
-  category: string,
-): "video" | "audio" | "image" {
+function getCaptureType(category: string): "video" | "audio" | "image" {
   switch (category) {
     case "video":
       return "video";

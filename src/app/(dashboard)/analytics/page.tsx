@@ -1,52 +1,50 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Activity, 
+import {
+  Activity,
+  BarChart3,
   Calendar,
+  Download,
   Filter,
-  Download
-} from "lucide-react"
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 
-import { Button } from "~/components/ui/button"
+import { StudyGuard } from "~/components/dashboard/study-guard";
+import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card"
-import { Badge } from "~/components/ui/badge"
+} from "~/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/components/ui/select"
-import { StudyGuard } from "~/components/dashboard/study-guard"
+} from "~/components/ui/select";
 
 // Mock chart component - replace with actual charting library
 function MockChart({ title, data }: { title: string; data: number[] }) {
-  const maxValue = Math.max(...data)
-  
+  const maxValue = Math.max(...data);
+
   return (
     <div className="space-y-2">
       <h4 className="text-sm font-medium">{title}</h4>
-      <div className="flex items-end space-x-1 h-32">
+      <div className="flex h-32 items-end space-x-1">
         {data.map((value, index) => (
-          <div 
+          <div
             key={index}
-            className="bg-primary rounded-t flex-1 min-h-[4px]"
+            className="bg-primary min-h-[4px] flex-1 rounded-t"
             style={{ height: `${(value / maxValue) * 100}%` }}
           />
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function AnalyticsOverview() {
@@ -62,7 +60,7 @@ function AnalyticsOverview() {
     {
       title: "Avg Trial Duration",
       value: "24.5m",
-      change: "-3%", 
+      change: "-3%",
       trend: "down",
       description: "vs last month",
       icon: Calendar,
@@ -71,7 +69,7 @@ function AnalyticsOverview() {
       title: "Completion Rate",
       value: "94.2%",
       change: "+2.1%",
-      trend: "up", 
+      trend: "up",
       description: "vs last month",
       icon: TrendingUp,
     },
@@ -80,29 +78,33 @@ function AnalyticsOverview() {
       value: "87.3%",
       change: "+5.4%",
       trend: "up",
-      description: "vs last month", 
+      description: "vs last month",
       icon: BarChart3,
     },
-  ]
+  ];
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric) => (
         <Card key={metric.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-            <metric.icon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              {metric.title}
+            </CardTitle>
+            <metric.icon className="text-muted-foreground h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metric.value}</div>
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <span className={`flex items-center ${
-                metric.trend === "up" ? "text-green-600" : "text-red-600"
-              }`}>
+            <div className="text-muted-foreground flex items-center space-x-2 text-xs">
+              <span
+                className={`flex items-center ${
+                  metric.trend === "up" ? "text-green-600" : "text-red-600"
+                }`}
+              >
                 {metric.trend === "up" ? (
-                  <TrendingUp className="h-3 w-3 mr-1" />
+                  <TrendingUp className="mr-1 h-3 w-3" />
                 ) : (
-                  <TrendingDown className="h-3 w-3 mr-1" />
+                  <TrendingDown className="mr-1 h-3 w-3" />
                 )}
                 {metric.change}
               </span>
@@ -112,13 +114,13 @@ function AnalyticsOverview() {
         </Card>
       ))}
     </div>
-  )
+  );
 }
 
 function ChartsSection() {
-  const trialData = [12, 19, 15, 27, 32, 28, 35, 42, 38, 41, 37, 44]
-  const participantData = [8, 12, 10, 15, 18, 16, 20, 24, 22, 26, 23, 28]
-  const completionData = [85, 88, 92, 89, 94, 91, 95, 92, 96, 94, 97, 94]
+  const trialData = [12, 19, 15, 27, 32, 28, 35, 42, 38, 41, 37, 44];
+  const participantData = [8, 12, 10, 15, 18, 16, 20, 24, 22, 26, 23, 28];
+  const completionData = [85, 88, 92, 89, 94, 91, 95, 92, 96, 94, 97, 94];
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -152,20 +154,22 @@ function ChartsSection() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function RecentInsights() {
   const insights = [
     {
       title: "Peak Performance Hours",
-      description: "Participants show 23% better performance during 10-11 AM trials",
+      description:
+        "Participants show 23% better performance during 10-11 AM trials",
       type: "trend",
       severity: "info",
     },
     {
       title: "Attention Span Decline",
-      description: "Average attention span has decreased by 8% over the last month",
+      description:
+        "Average attention span has decreased by 8% over the last month",
       type: "alert",
       severity: "warning",
     },
@@ -178,23 +182,23 @@ function RecentInsights() {
     {
       title: "Equipment Utilization",
       description: "Robot interaction trials are at 85% capacity utilization",
-      type: "info", 
+      type: "info",
       severity: "info",
     },
-  ]
+  ];
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "success":
-        return "bg-green-50 text-green-700 border-green-200"
+        return "bg-green-50 text-green-700 border-green-200";
       case "warning":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200"
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
       case "info":
-        return "bg-blue-50 text-blue-700 border-blue-200"
+        return "bg-blue-50 text-blue-700 border-blue-200";
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200"
+        return "bg-gray-50 text-gray-700 border-gray-200";
     }
-  }
+  };
 
   return (
     <Card>
@@ -207,18 +211,18 @@ function RecentInsights() {
       <CardContent>
         <div className="space-y-4">
           {insights.map((insight, index) => (
-            <div 
+            <div
               key={index}
-              className={`p-4 rounded-lg border ${getSeverityColor(insight.severity)}`}
+              className={`rounded-lg border p-4 ${getSeverityColor(insight.severity)}`}
             >
-              <h4 className="font-medium mb-1">{insight.title}</h4>
+              <h4 className="mb-1 font-medium">{insight.title}</h4>
               <p className="text-sm">{insight.description}</p>
             </div>
           ))}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function AnalyticsContent() {
@@ -292,7 +296,7 @@ function AnalyticsContent() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 export default function AnalyticsPage() {

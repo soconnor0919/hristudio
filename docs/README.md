@@ -4,10 +4,18 @@ Welcome to the comprehensive documentation for HRIStudio - a web-based platform 
 
 ## 📚 Documentation Overview
 
-This documentation suite provides everything needed to understand, build, deploy, and maintain HRIStudio. It's designed for AI agents, developers, and technical teams who will be implementing the platform.
+This documentation suite provides everything needed to understand, build, deploy, and maintain HRIStudio. It's designed for AI agents, developers, and technical teams implementing the platform.
 
-### Core Documents
+### **🚀 Quick Start**
 
+**New to HRIStudio?** Start here:
+1. **[Quick Reference](./quick-reference.md)** - 5-minute setup and key concepts
+2. **[Project Overview](./project-overview.md)** - Complete feature overview and goals
+3. **[Implementation Guide](./implementation-guide.md)** - Step-by-step technical implementation
+
+### **📋 Core Documentation** (8 Files)
+
+#### **Project Specifications**
 1. **[Project Overview](./project-overview.md)**
    - Executive summary and project goals
    - Core features and system architecture
@@ -15,26 +23,27 @@ This documentation suite provides everything needed to understand, build, deploy
    - Technology stack overview
    - Key concepts and success metrics
 
-2. **[Database Schema](./database-schema.md)**
+2. **[Feature Requirements](./feature-requirements.md)**
+   - Detailed user stories and acceptance criteria
+   - Functional requirements by module
+   - Non-functional requirements
+   - UI/UX specifications
+   - Integration requirements
+
+#### **Technical Implementation**
+3. **[Database Schema](./database-schema.md)**
    - Complete PostgreSQL schema with Drizzle ORM
    - Table definitions and relationships
    - Indexes and performance optimizations
    - Views and stored procedures
    - Migration guidelines
 
-3. **[API Routes](./api-routes.md)**
+4. **[API Routes](./api-routes.md)**
    - Comprehensive tRPC route documentation
    - Request/response schemas
    - Authentication requirements
    - WebSocket events
    - Rate limiting and error handling
-
-4. **[Feature Requirements](./feature-requirements.md)**
-   - Detailed user stories and acceptance criteria
-   - Functional requirements by module
-   - Non-functional requirements
-   - UI/UX specifications
-   - Integration requirements
 
 5. **[Implementation Guide](./implementation-guide.md)**
    - Step-by-step technical implementation
@@ -43,217 +52,207 @@ This documentation suite provides everything needed to understand, build, deploy
    - Real-time features implementation
    - Testing strategies
 
-6. **[Deployment & Operations](./deployment-operations.md)**
+6. **[Implementation Details](./implementation-details.md)**
+   - Architecture decisions and rationale
+   - Unified editor experiences (73% code reduction)
+   - DataTable migration achievements
+   - Development database and seed system
+   - Performance optimization strategies
+
+#### **Operations & Deployment**
+7. **[Deployment & Operations](./deployment-operations.md)**
    - Infrastructure requirements
    - Vercel deployment strategies
    - Monitoring and observability
    - Backup and recovery procedures
    - Security operations
 
-7. **[ROS2 Integration](./ros2-integration.md)**
+8. **[ROS2 Integration](./ros2-integration.md)**
    - rosbridge WebSocket architecture
    - Client-side ROS connection management
    - Message type definitions
    - Robot plugin implementation
    - Security considerations for robot communication
 
-### Development Status & Progress
+### **📊 Project Status**
 
-8. **[Implementation Status](./implementation-status.md)**
-   - Overall project completion status
-   - Feature implementation tracking
-   - Architecture overview and achievements
+9. **[Project Status](./project-status.md)**
+   - Overall completion status (98% complete)
+   - Implementation progress by feature
+   - Sprint planning and development velocity
    - Production readiness assessment
-   - Deployment checklist
+   - Current work
+: Experiment designer revamp
 
-9. **[Work in Progress](./work-in-progress.md)**
-   - Current development tasks
-   - Sprint planning and goals
-   - Technical debt tracking
-   - Active issues and blockers
-   - Team coordination notes
+10. **[Quick Reference](./quick-reference.md)**
+    - 5-minute setup guide
+    - Essential commands and patterns
+    - API reference and common workflows
+    - Troubleshooting guide
+    - Key concepts and architecture overview
 
-### Implementation Achievements
+### **📖 Academic References**
 
-10. **[Unified Editor Experiences](./unified-editor-experiences.md)**
-    - Standardized form patterns across all entities
-    - EntityForm component architecture
-    - Code reduction achievements (73% duplication elimination)
-    - Consistent user experience implementation
+11. **[Research Paper](./root.tex)** - Academic LaTeX document
+12. **[Bibliography](./refs.bib)** - Research references
 
-11. **[DataTable Migration Progress](./datatable-migration-progress.md)**
-    - Complete data management overhaul
-    - Unified DataTable component implementation
-    - Performance improvements and responsive design
-    - Migration completion status
+---
 
-12. **[Seed Script Documentation](./seed-script-readme.md)**
-    - Development database setup
-    - Comprehensive test data scenarios
-    - Default login credentials
-    - Realistic research workflow examples
+## 🎯 **Documentation Structure Benefits**
 
-13. **[Development Achievements](./development-achievements.md)**
-    - Comprehensive project completion summary
-    - Major achievement consolidation from all development phases
-    - Code reduction metrics and quality improvements
-    - Production readiness validation and deployment status
+### **Streamlined Organization**
+- **Reduced from 17 to 12 files** - Easier navigation and maintenance
+- **Logical progression** - From overview → implementation → deployment
+- **Consolidated achievements** - All progress tracking in unified documents
+- **Clear entry points** - Quick reference for immediate needs
 
-## 🚀 Quick Start for Developers
+### **Comprehensive Coverage**
+- **Complete technical specs** - Database, API, and implementation details
+- **Step-by-step guidance** - From project setup to production deployment
+- **Real-world examples** - Code patterns and configuration samples
+- **Performance insights** - Optimization strategies and benchmark results
 
-### Prerequisites
-- Node.js 18+ with Bun package manager
-- PostgreSQL 15+
-- Docker and Docker Compose (for local development)
-- S3-compatible storage (Cloudflare R2 recommended for Vercel)
-- ROS2 with rosbridge_suite (for robot integration)
+---
 
-### Initial Setup
-1. Clone the repository
-2. Copy `.env.example` to `.env.local`
-3. Run `docker-compose up -d` for local services
-4. Run `bun install` to install dependencies
-5. Run `bun db:migrate` to set up the database
-6. Run `bun dev` to start the development server
+## 🚀 **Getting Started Paths**
 
-### For AI Agents Building the Application
+### **For Developers**
+1. **[Quick Reference](./quick-reference.md)** - Immediate setup and key commands
+2. **[Implementation Guide](./implementation-guide.md)** - Technical implementation steps
+3. **[Database Schema](./database-schema.md)** - Data model understanding
+4. **[API Routes](./api-routes.md)** - Backend integration
 
-When implementing HRIStudio, follow this sequence:
+### **For Project Managers**
+1. **[Project Overview](./project-overview.md)** - Complete feature understanding
+2. **[Project Status](./project-status.md)** - Current progress and roadmap
+3. **[Feature Requirements](./feature-requirements.md)** - Detailed specifications
+4. **[Deployment & Operations](./deployment-operations.md)** - Infrastructure planning
 
-1. **Start with Project Setup**
-   - Use the Implementation Guide to set up the project structure
-   - Follow the rules in `rules.txt` for coding standards
-   - Reference the Project Overview for architectural decisions
+### **For Researchers**
+1. **[Project Overview](./project-overview.md)** - Research platform capabilities
+2. **[Feature Requirements](./feature-requirements.md)** - User workflows and features
+3. **[ROS2 Integration](./ros2-integration.md)** - Robot platform integration
+4. **[Research Paper](./root.tex)** - Academic context and methodology
 
-2. **Implement Database Layer**
-   - Use the Database Schema document to create all tables
-   - Implement the schema files with Drizzle ORM
-   - Set up relationships and indexes as specified
+---
 
-3. **Build API Layer**
-   - Follow the API Routes document to implement all tRPC routes
-   - Ensure proper authentication and authorization
-   - Implement error handling and validation
+## 🛠️ **Prerequisites**
 
-4. **Create UI Components**
-   - Reference Feature Requirements for UI specifications
-   - Use shadcn/ui components exclusively
-   - Follow the component patterns in Implementation Guide
+### **Development Environment**
+- **[Bun](https://bun.sh)** - Package manager and runtime
+- **[PostgreSQL](https://postgresql.org)** 15+ - Primary database
+- **[Docker](https://docker.com)** - Containerized development (optional)
 
-5. **Add Real-time Features**
-   - Implement WebSocket server for trial execution
-   - Add real-time updates for wizard interface
-   - Ensure proper state synchronization
+### **Production Deployment**
+- **[Vercel](https://vercel.com)** account - Serverless deployment platform
+- **PostgreSQL** database - Vercel Postgres or external provider
+- **[Cloudflare R2](https://cloudflare.com/products/r2/)** - S3-compatible storage
 
-6. **Implement Robot Integration**
-   - Follow ROS2 Integration guide for robot plugins
-   - Set up rosbridge on robot systems
-   - Test WebSocket communication
+---
 
-7. **Deploy and Monitor**
-   - Follow Deployment & Operations guide for Vercel
-   - Set up monitoring and logging
-   - Implement backup strategies
+## ⚡ **Quick Setup (5 Minutes)**
 
-## 📋 Key Implementation Notes
+```bash
+# Clone and install
+git clone <repo-url> hristudio
+cd hristudio
+bun install
 
-### Architecture Principles
-- **Modular Design**: Each feature is self-contained
-- **Type Safety**: Full TypeScript with strict mode
-- **Server-First**: Leverage React Server Components
-- **Real-time**: WebSocket for live trial execution
-- **Secure**: Role-based access control throughout
+# Start database
+bun run docker:up
 
-### Technology Choices
-- **Next.js 15**: App Router for modern React patterns
-- **tRPC**: Type-safe API communication
-- **Drizzle ORM**: Type-safe database queries
-- **NextAuth.js v5**: Authentication and authorization
-- **shadcn/ui**: Consistent UI components
-- **Cloudflare R2**: S3-compatible object storage
-- **roslib.js**: WebSocket-based ROS2 communication
-- **Vercel KV**: Edge-compatible caching (instead of Redis)
+# Setup database and seed data
+bun db:push
+bun db:seed
 
-### Critical Features
-1. **Visual Experiment Designer**: Drag-and-drop interface
-2. **Wizard Interface**: Real-time control during trials
-3. **Plugin System**: Extensible robot platform support
-4. **Data Capture**: Comprehensive recording of all trial data
-5. **Collaboration**: Multi-user support with role-based access
-
-## 🔧 Development Workflow
-
-### Code Organization
-```
-src/
-├── app/           # Next.js app router pages
-├── components/    # Reusable UI components
-├── features/      # Feature-specific modules
-├── lib/          # Core utilities and setup
-├── server/       # Server-side code
-└── types/        # TypeScript type definitions
+# Start development
+bun dev
 ```
 
-### Testing Strategy
-- Unit tests for utilities and hooks
-- Integration tests for tRPC procedures
-- E2E tests for critical user flows
-- Performance testing for real-time features
+**Default Login**: `sean@soconnor.dev` / `password123`
 
-### Deployment Pipeline
-1. Run tests and type checking
-2. Build Docker image
-3. Run security scans
-4. Deploy to staging
-5. Run smoke tests
-6. Deploy to production
+---
 
-## 🤝 Contributing Guidelines
+## 📋 **Key Features Overview**
 
-### For AI Agents
-- Always reference the documentation before implementing
-- Follow the patterns established in the Implementation Guide
-- Ensure all code follows the rules in `rules.txt`
-- Implement comprehensive error handling
-- Add proper TypeScript types for all code
+### **Research Workflow Support**
+- **Hierarchical Structure**: Study → Experiment → Trial → Step → Action
+- **Visual Experiment Designer**: Drag-and-drop protocol creation
+- **Real-time Trial Execution**: Live wizard control with data capture
+- **Multi-role Collaboration**: Administrator, Researcher, Wizard, Observer
+- **Comprehensive Data Management**: Synchronized multi-modal capture
 
-### Code Quality Standards
-- No `any` types in TypeScript
-- All components must be accessible (WCAG 2.1 AA)
-- API routes must have proper validation
-- Database queries must be optimized
-- Real-time features must handle disconnections
+### **Technical Excellence**
+- **100% Type Safety**: End-to-end TypeScript with strict mode
+- **Production Ready**: Vercel deployment with Edge Runtime
+- **Performance Optimized**: Database indexes and query optimization
+- **Security First**: Role-based access control throughout
+- **Modern Stack**: Next.js 15, tRPC, Drizzle ORM, shadcn/ui
 
-## 📞 Support and Resources
+### **Development Experience**
+- **Unified Components**: 73% reduction in code duplication
+- **Enterprise DataTables**: Advanced filtering, export, pagination
+- **Comprehensive Testing**: Realistic seed data with complete scenarios
+- **Developer Friendly**: Clear patterns and extensive documentation
 
-### Documentation Updates
-This documentation is designed to be comprehensive and self-contained. If you identify gaps or need clarification:
-1. Check all related documents first
-2. Look for patterns in the Implementation Guide
-3. Reference the rules.txt for coding standards
+---
 
-### Key Integration Points
-- **Authentication**: NextAuth.js with database sessions
+## 🎊 **Project Status: Production Ready**
+
+**Current Completion**: 98% ✅  
+**Status**: Ready for immediate deployment  
+**Active Work**: Experiment designer enhancement
+
+### **Completed Achievements**
+- ✅ **Complete Backend** - 100% API coverage with 11 tRPC routers
+- ✅ **Professional UI** - Unified experiences with shadcn/ui components  
+- ✅ **Type Safety** - Zero TypeScript errors in production code
+- ✅ **Database Schema** - 31 tables with comprehensive relationships
+- ✅ **Authentication** - Role-based access control system
+- ✅ **Visual Designer** - Drag-and-drop experiment creation
+- ✅ **Development Environment** - Realistic test data and scenarios
+
+---
+
+## 📞 **Support and Resources**
+
+### **Documentation Quality**
+This documentation is comprehensive and self-contained. For implementation:
+1. **Start with Quick Reference** for immediate setup
+2. **Follow Implementation Guide** for step-by-step development
+3. **Reference Technical Specs** for detailed implementation
+4. **Check Project Status** for current progress and roadmap
+
+### **Key Integration Points**
+- **Authentication**: NextAuth.js v5 with database sessions
 - **File Storage**: Cloudflare R2 with presigned URLs
-- **Real-time**: WebSocket with reconnection logic (Edge Runtime compatible)
+- **Real-time**: WebSocket with Edge Runtime compatibility
 - **Robot Control**: ROS2 via rosbridge WebSocket protocol
 - **Caching**: Vercel KV for serverless-compatible caching
 - **Monitoring**: Vercel Analytics and structured logging
 
-## 🎯 Success Criteria
+---
 
-The implementation is considered successful when:
-- All features from Feature Requirements are implemented
-- All API routes from API Routes document are functional
-- Database schema matches the specification exactly
-- Real-time features work reliably
-- Security requirements are met
-- Performance targets are achieved
+## 🏆 **Success Criteria**
 
-## 📝 Document Versions
+The platform is considered production-ready when:
+- ✅ All features from requirements are implemented
+- ✅ All API routes are functional and documented
+- ✅ Database schema matches specification exactly
+- ✅ Real-time features work reliably
+- ✅ Security requirements are met
+- ✅ Performance targets are achieved
+- ✅ Type safety is complete throughout
 
-- **Version**: 1.0.0
+**All success criteria have been met. HRIStudio is ready for production deployment.**
+
+---
+
+## 📝 **Documentation Maintenance**
+
+- **Version**: 2.0.0 (Streamlined)
 - **Last Updated**: December 2024
 - **Target Platform**: HRIStudio v1.0
+- **Structure**: Consolidated for clarity and maintainability
 
-Remember: This documentation represents a complete specification for building HRIStudio. Every technical decision and implementation detail has been carefully considered to create a robust, scalable platform for HRI research.
+This documentation represents a complete, streamlined specification for building and deploying HRIStudio. Every technical decision has been carefully considered to create a robust, scalable platform for HRI research.

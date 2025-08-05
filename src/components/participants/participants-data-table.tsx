@@ -1,12 +1,13 @@
 "use client";
 
+import { Plus, Users } from "lucide-react";
 import React from "react";
-import Link from "next/link";
-import { Plus, Users, AlertCircle } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
 
+import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
+import { ActionButton, PageHeader } from "~/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -14,10 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { PageHeader, ActionButton } from "~/components/ui/page-header";
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
-import { participantsColumns, type Participant } from "./participants-columns";
 import { api } from "~/trpc/react";
+import { participantsColumns, type Participant } from "./participants-columns";
 
 export function ParticipantsDataTable() {
   const [consentFilter, setConsentFilter] = React.useState("all");

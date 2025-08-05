@@ -1,184 +1,209 @@
-ççYou are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Radix UI, Tailwind CSS, tRPC, Drizzle ORM, NextAuth.js v5, and the HRIStudio platform architecture.
+You are an expert in TypeScript, Node.js, Next.js 15 App Router, React 19 RC, Shadcn UI, Radix UI, Tailwind CSS, tRPC, Drizzle ORM, NextAuth.js v5, and the HRIStudio platform architecture.
 
-Project Context
-- HRIStudio is a web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research
-- Uses PostgreSQL for structured data and MinIO (S3-compatible) for media storage
-- Implements role-based access control with four primary roles: Administrator, Researcher, Wizard, Observer
-- Features a hierarchical experiment structure: Study > Experiment > Step > Action
-- Requires real-time communication for wizard control during trials
-- Exclusively uses Bun as the package manager and runtime (never npm or yarn)
-- All creators and editors are dedicated pages, not modals or dialogs
+## Project Overview
+HRIStudio is a production-ready web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research. The platform provides researchers with standardized tools for designing experiments, executing trials, and analyzing data while ensuring reproducibility and scientific rigor.
 
-Code Style and Structure
-- Write concise, technical TypeScript code with accurate examples
-- Use functional and declarative programming patterns; avoid classes
-- Prefer iteration and modularization over code duplication
-- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError, canEdit, shouldFetch)
-- Structure files: exported component, subcomponents, helpers, static content, types
-- Keep components focused and composable
+## Technology Stack
+- **Framework**: Next.js 15 with App Router and React 19 RC
+- **Language**: TypeScript (strict mode) - 100% type safety throughout
+- **Database**: PostgreSQL with Drizzle ORM for type-safe operations
+- **Authentication**: NextAuth.js v5 with database sessions and JWT
+- **API**: tRPC for end-to-end type-safe client-server communication
+- **UI**: Tailwind CSS + shadcn/ui (built on Radix UI primitives)
+- **Storage**: Cloudflare R2 (S3-compatible) for media files
+- **Deployment**: Vercel serverless platform with Edge Runtime
+- **Package Manager**: Bun exclusively (never npm, yarn, or pnpm)
+- **Real-time**: WebSocket with Edge Runtime compatibility
 
-Naming Conventions
-- Use lowercase with dashes for directories (e.g., components/experiment-designer, features/trial-execution)
-- Favor named exports for components and utilities
-- Use PascalCase for component files (e.g., ExperimentDesigner.tsx, WizardInterface.tsx)
-- Use camelCase for utility files (e.g., robotPlugin.ts, trialValidation.ts)
-- Prefix database schema files with 'schema.' (e.g., schema.studies.ts, schema.experiments.ts)
+## Architecture & Key Concepts
+- **Hierarchical Structure**: Study → Experiment → Trial → Step → Action
+- **Role-Based Access**: Administrator, Researcher, Wizard, Observer (4 distinct roles)
+- **Real-time Trial Execution**: Live wizard control with comprehensive data capture
+- **Plugin System**: Extensible robot platform integration (RESTful, ROS2, custom)
+- **Visual Experiment Designer**: Drag-and-drop protocol creation interface
+- **Unified Form Experiences**: 73% code reduction through standardized patterns
+- **Enterprise DataTables**: Advanced filtering, pagination, export capabilities
 
-TypeScript Usage
-- Use TypeScript for all code; prefer interfaces over types for component props
-- Define explicit return types for all functions
-- Use const assertions for literal types
-- Avoid enums; use const objects with 'as const' instead
-- Create shared types in dedicated type files (e.g., types/experiment.ts, types/trial.ts)
-- Use Zod schemas for runtime validation, infer TypeScript types from Zod
+## Documentation & Quick Reference
+ALWAYS check documentation before implementing. Key files:
+- `docs/quick-reference.md` - 5-minute setup, essential commands, common patterns
+- `docs/project-overview.md` - Complete feature overview and system architecture
+- `docs/implementation-details.md` - Architecture decisions, achievements, patterns
+- `docs/database-schema.md` - Complete PostgreSQL schema with 31 tables
+- `docs/api-routes.md` - Comprehensive tRPC API reference (11 routers)
+- `docs/project-status.md` - Current completion status (98% complete, production ready)
 
-File Organization
+## File Organization & Key Locations
+```
 src/
-├── app/                      # Next.js app router
-│   ├── (auth)/              # Auth-related pages
-│   ├── (dashboard)/         # Authenticated app pages
-│   ├── api/                 # API routes
-│   └── layout.tsx
-├── components/              # Shared UI components
-│   ├── ui/                  # Shadcn UI components
-│   ├── experiment/          # Experiment-related components
-│   ├── trial/               # Trial execution components
-│   └── layout/              # Layout components
-├── features/                # Feature-specific modules
-│   ├── auth/                # Authentication logic
-│   ├── experiments/         # Experiment design
-│   ├── trials/              # Trial execution
-│   └── analysis/            # Data analysis
-├── lib/                     # Utilities and configurations
-│   ├── db/                  # Database setup and schemas
-│   ├── trpc/                # tRPC setup and routers
-│   ├── auth/                # NextAuth configuration
-│   └── plugins/             # Robot plugin system
-├── hooks/                   # Custom React hooks
-└── types/                   # Shared TypeScript types
+├── app/                      # Next.js App Router pages
+│   ├── (auth)/              # Authentication pages (signin, signup)
+│   ├── (dashboard)/         # Main application pages
+│   │   ├── studies/         # Study management pages
+│   │   ├── experiments/     # Experiment design pages
+│   │   ├── participants/    # Participant management
+│   │   ├── trials/          # Trial execution and monitoring
+│   │   └── admin/           # Admin dashboard
+│   └── api/                 # API routes and webhooks
+├── components/              # UI components
+│   ├── ui/                  # shadcn/ui base components
+│   │   ├── entity-form.tsx  # Unified form component (KEY)
+│   │   └── data-table.tsx   # Unified table component (KEY)
+│   ├── studies/             # Study-specific components
+│   ├── experiments/         # Experiment components & designer
+│   ├── participants/        # Participant management components
+│   └── trials/              # Trial execution components
+├── server/                  # Backend code
+│   ├── api/routers/         # tRPC routers (11 total)
+│   │   ├── auth.ts         # Authentication & sessions
+│   │   ├── studies.ts      # Study CRUD & team management
+│   │   ├── experiments.ts  # Protocol design & validation
+│   │   ├── participants.ts # Participant management
+│   │   ├── trials.ts       # Trial execution & monitoring
+│   │   └── admin.ts        # System administration
+│   ├── auth/               # NextAuth.js v5 configuration
+│   └── db/                 # Database schema and setup
+│       └── schema.ts       # Complete Drizzle schema (31 tables)
+├── lib/                    # Utilities and configurations
+└── hooks/                  # Custom React hooks
+```
 
-Database Patterns (Drizzle)
-- Define schemas using Drizzle's PostgreSQL dialect
-- Use UUID primary keys with gen_random_uuid()
-- Implement soft deletes with deleted_at timestamps
-- Add created_at and updated_at to all tables
-- Use JSONB for flexible metadata storage
-- Create database indexes for foreign keys and frequently queried fields
+## Database Schema (Key Tables)
+31 tables total - see `docs/database-schema.md` for complete reference:
+- **users** - Authentication & profiles with role-based access
+- **studies** - Research project containers with team collaboration
+- **experiments** - Protocol templates with visual designer data
+- **participants** - Study participants with demographics & consent
+- **trials** - Experiment instances with execution tracking
+- **trial_events** - Comprehensive event logging for data capture
+- **robots** - Available platforms with plugin integration
+- **study_members** - Team collaboration with role assignments
+
+## Development Environment
+- **Setup**: `bun install` → `bun db:push` → `bun db:seed` → `bun dev`
+- **Default Login**: `sean@soconnor.dev` / `password123` (Administrator)
+- **Seed Data**: 3 studies, 8 participants, 5 experiments, 7 trials (realistic scenarios)
+- **Commands**: Use `bun` exclusively for all operations
+
+## Code Patterns & Standards
+
+### Entity Forms (Unified Pattern)
+ALL entity creators/editors use the unified `EntityForm` component:
+```typescript
+// Standard form implementation pattern
+export function EntityForm({ mode, entityId }: EntityFormProps) {
+  const form = useForm<EntityFormData>({
+    resolver: zodResolver(entitySchema),
+    defaultValues: { /* ... */ }
+  });
+
+  return (
+    <EntityForm
+      mode={mode}
+      entityName="Entity"
+      form={form}
+      onSubmit={handleSubmit}
+      sidebar={<NextSteps />}
+    >
+      {/* Form fields */}
+    </EntityForm>
+  );
+}
+```
+
+### Data Tables (Unified Pattern)
+ALL entity lists use the unified `DataTable` component:
+```typescript
+<DataTable
+  columns={entityColumns}
+  data={entities}
+  searchKey="name"
+  onExport={handleExport}
+  showColumnToggle
+/>
+```
+
+### tRPC API Patterns
+```typescript
+// Router organization by domain
+export const entityRouter = createTRPCRouter({
+  getAll: protectedProcedure
+    .input(z.object({ search: z.string().optional() }))
+    .query(async ({ ctx, input }) => { /* ... */ }),
+
+  create: protectedProcedure
+    .input(createEntitySchema)
+    .mutation(async ({ ctx, input }) => { /* ... */ }),
+});
+```
+
+### Authentication & Authorization
+```typescript
+// Role-based procedure protection
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "administrator") {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+  return next();
+});
+```
+
+## Key Implementation Rules
+
+### Required Patterns
+- Use unified `EntityForm` for ALL entity creators/editors (Studies, Experiments, Participants, Trials)
+- Use unified `DataTable` for ALL entity lists with consistent column patterns
+- All entity operations are full pages, NEVER modals or dialogs
+- Follow the established file naming: PascalCase for components, camelCase for utilities
+- Use Server Components by default, minimize 'use client' directives
+- Implement proper loading states and error boundaries for all async operations
+
+### TypeScript Standards
+- 100% type safety - NO `any` types allowed in production code
+- Use Zod schemas for input validation, infer types from schemas
+- Define explicit return types for all functions
+- Use const assertions for literal types: `const roles = ["admin", "user"] as const`
+- Prefer interfaces over types for component props
+
+### Database Operations
+- Use Drizzle ORM exclusively with type-safe queries
+- Implement soft deletes with `deleted_at` timestamps
+- Add `created_at` and `updated_at` to all tables
 - Use transactions for multi-table operations
+- Create indexes for foreign keys and frequently queried fields
 
-tRPC Patterns
-- Organize routers by domain (auth, studies, experiments, trials, etc.)
-- Use input validation with Zod schemas
-- Implement middleware for authentication and authorization
-- Return consistent error responses with proper error codes
-- Use optimistic updates on the client for better UX
-- Implement proper TypeScript inference throughout
+### Security & Performance
+- Validate ALL inputs on both client and server with Zod
+- Implement role-based authorization at route and resource level
+- Use optimistic updates for better UX with proper error handling
+- Minimize database queries with efficient joins and proper indexing
+- Follow WCAG 2.1 AA accessibility standards throughout
 
-Authentication & Authorization
-- Use NextAuth.js v5 with database sessions
-- Implement role-based middleware in tRPC
-- Check permissions at both route and resource level
-- Store user roles in database with proper relationships
-- Use React context for client-side auth state
-- Implement audit logging for sensitive operations
-
-Component Patterns
-- Create compound components for complex UI (e.g., ExperimentDesigner.Canvas, ExperimentDesigner.Toolbar)
-- Use Radix UI primitives wrapped with Shadcn UI styling
-- Implement proper loading and error states
-- Use Suspense boundaries for async components
-- Create reusable form components with react-hook-form
-- Implement keyboard navigation for accessibility
-- All entity creators and editors must be full pages (e.g., /studies/new, /experiments/[id]/edit)
-- Never use modals or dialogs for creating or editing entities
-- Use dedicated routes for all CRUD operations
-
-Real-time Features
-- Use WebSockets for trial execution updates
-- Implement reconnection logic for connection failures
-- Use event-based patterns for real-time communication
-- Maintain synchronization between server and client state
-- Buffer events during disconnections
-
-State Management
-- Use URL state (nuqs) for shareable application state
-- Leverage React Server Components for initial data fetching
-- Use tRPC's useQuery with proper cache strategies
-- Implement optimistic updates for user actions
-- Keep client state minimal; prefer server state
-
-Performance Optimization
-- Minimize 'use client' directives; favor RSC
-- Implement virtual scrolling for large lists
-- Use dynamic imports for heavy components
-- Optimize images with Next.js Image component
-- Implement proper database query optimization
-- Use React.memo sparingly and only when measured
-
-Security Best Practices
-- Validate all inputs on both client and server
-- Implement rate limiting on sensitive endpoints
-- Use parameterized queries (handled by Drizzle)
-- Encrypt sensitive data in database
-- Implement CSRF protection
-- Use secure HTTP headers via Next.js config
-
-Package Management & Development
-- Use Bun exclusively for all package management operations
-- Run commands with `bun install`, `bun run`, `bun add`, etc.
-- Never use npm, yarn, or pnpm commands
-- Use `bun dev` for development server
-- Use `bun build` for production builds
-
-Testing Approach
-- Write integration tests for tRPC procedures
-- Test authorization logic thoroughly
-- Use MSW for mocking external services
-- Test critical user flows with Playwright
-- Ensure proper error handling in tests
-- Run tests with `bun test`
-
-Specific HRIStudio Patterns
-- Robot plugins must implement the standard interface
-- Trial execution follows strict state machine patterns
-- Maintain audit trail for all experiment modifications
-- Use event sourcing for trial execution history
-- Implement version control for experiment designs
-- Support offline-capable wizard interfaces
-- All entity management (studies, experiments, participants, trials) uses page-based navigation
-- Create/edit flows are full page experiences with proper breadcrumbs and navigation
-- Use Next.js routing for all entity operations (/entity/new, /entity/[id]/edit)
-
-Error Handling
-- Use custom error classes for different error types
-- Implement global error boundary for React
-- Log errors with appropriate context
-- Show user-friendly error messages
-- Implement retry logic for transient failures
-
-Accessibility
-- Follow WCAG 2.1 AA standards
-- Implement proper ARIA labels
-- Ensure keyboard navigation throughout
-- Test with screen readers
-- Provide visual feedback for all actions
-
-Development Commands
+## Development Commands
 - `bun install` - Install dependencies
+- `bun dev` - Start development server (ONLY when actively developing)
 - `bun build` - Build for production
-- `bun start` - Start production server
-- `bun test` - Run tests
-- `bun typecheck` - Run TypeScript checks
-- `bun lint` - Run ESLint
-- `bun db:generate` - Generate database schema
-- `bun db:migrate` - Run database migrations
-- `bun db:push` - Push schema changes
-- `bun db:studio` - Open database studio
+- `bun typecheck` - Run TypeScript validation
+- `bun lint` - Run ESLint with autofix
+- `bun db:push` - Push schema changes (use instead of migrations in dev)
+- `bun db:seed` - Populate database with realistic test data
 
-Development Server Restrictions
-- NEVER run development servers (`bun dev`, `npm run dev`, etc.)
-- NEVER run drizzle studio (`bun db:studio`)
-- Use only build, typecheck, and lint commands for verification
-- Development servers and database studios should not be started in any circumstances
+## Development Restrictions
+- NEVER run `bun dev` or development servers during implementation assistance
+- NEVER run `bun db:studio` during development sessions
+- Use ONLY `bun typecheck`, `bun build`, `bun lint` for verification
+- Use `bun db:push` for schema changes, not migrations in development
 
-Follow Next.js 14 best practices for Data Fetching, Rendering, and Routing.
+## Current Status
+- **Production Ready**: 98% complete, ready for immediate deployment
+- **Current Work**: Experiment designer enhancement with advanced visual programming
+- **Next Phase**: Enhanced step configuration modals and workflow validation
+- **Deployment**: Configured for Vercel with Cloudflare R2 and PostgreSQL
+
+## Robot Integration
+- Plugin-based architecture supporting RESTful APIs, ROS2 (via rosbridge), and custom protocols
+- WebSocket communication for real-time robot control during trials
+- Type-safe action definitions with parameter schemas and validation
+- See `docs/ros2-integration.md` for complete integration guide
+
+Follow Next.js 15 best practices for Data Fetching, Rendering, and Routing. Always reference the comprehensive documentation in the `docs/` folder before implementing new features.

@@ -1,10 +1,12 @@
 "use client";
 
+import { FlaskConical, Plus } from "lucide-react";
 import React from "react";
-import { Plus, FlaskConical } from "lucide-react";
 
+import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
+import { ActionButton, PageHeader } from "~/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -12,11 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { PageHeader, ActionButton } from "~/components/ui/page-header";
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useActiveStudy } from "~/hooks/useActiveStudy";
-import { experimentsColumns, type Experiment } from "./experiments-columns";
 import { api } from "~/trpc/react";
+import { experimentsColumns, type Experiment } from "./experiments-columns";
 
 export function ExperimentsDataTable() {
   const { activeStudy } = useActiveStudy();

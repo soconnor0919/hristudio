@@ -1,13 +1,18 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import { toast } from "sonner";
+import { X, ArrowLeft } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import {
-  ExperimentDesigner,
-  type ExperimentDesign,
-} from "./ExperimentDesigner";
+  FlowDesigner,
+  type FlowDesign,
+  type FlowStep,
+  type StepType,
+} from "./FlowDesigner";
 
 interface ExperimentDesignerClientProps {
   experiment: {
@@ -25,6 +30,28 @@ export function ExperimentDesignerClient({
   experiment,
 }: ExperimentDesignerClientProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Set breadcrumbs for the designer
+  useBreadcrumbsEffect([
+    { label: "Studies", href: "/studies" },
+    {
+      label: experiment.study?.name ?? "Study",
+      href: `/studies/${experiment.studyId}`,
+    },
+    {
+      label: "Experiments",
+      href: `/studies/${experiment.studyId}`,
+    },
+    {
+      label: experiment.name,
+      href: `/experiments/${experiment.id}`,
+    },
+    {
+      label: "Designer",
+      href: `/experiments/${experiment.id}/designer`,
+    },
+  ]);
 
   // Fetch the experiment's design data
   const { data: experimentSteps, isLoading } =
@@ -35,17 +62,33 @@ export function ExperimentDesignerClient({
   const saveDesignMutation = api.experiments.saveDesign.useMutation({
     onSuccess: () => {
       setSaveError(null);
+      toast.success("Experiment design saved successfully");
     },
     onError: (error) => {
       setSaveError(error.message);
+      toast.error(`Failed to save design: ${error.message}`);
     },
   });
 
-  const handleSave = async (design: ExperimentDesign) => {
+  const handleSave = async (design: FlowDesign) => {
     try {
       await saveDesignMutation.mutateAsync({
         experimentId: experiment.id,
-        steps: design.steps,
+        steps: design.steps
+          .filter((step) => step.type !== "start" && step.type !== "end") // Filter out start/end nodes
+          .map((step) => ({
+            id: step.id,
+            type: step.type as "wizard" | "robot" | "parallel" | "conditional",
+            name: step.name,
+            order: Math.floor(step.position.x / 250) + 1, // Calculate order from position
+            parameters: step.parameters,
+            description: step.description,
+            duration: step.duration,
+            actions: step.actions,
+            expanded: false,
+            children: [],
+            parentId: undefined,
+          })),
         version: design.version,
       });
     } catch (error) {
@@ -56,84 +99,105 @@ export function ExperimentDesignerClient({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-[600px] items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-          <p className="text-slate-600">Loading experiment designer...</p>
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground">
+            Loading experiment designer...
+          </p>
         </div>
       </div>
     );
   }
 
-  const initialDesign: ExperimentDesign = {
+  // Convert backend steps to flow format
+  const convertToFlowSteps = (steps: any[]): FlowStep[] => {
+    return steps.map((step, index) => ({
+      id: step.id,
+      type: step.type as StepType,
+      name: step.name,
+      description: step.description ?? undefined,
+      duration: step.duration ?? undefined,
+      actions: [], // Actions will be loaded separately if needed
+      parameters: step.parameters ?? {},
+      position: {
+        x: index * 250 + 100,
+        y: 100,
+      },
+    }));
+  };
+
+  const initialDesign: FlowDesign = {
     id: experiment.id,
     name: experiment.name,
     description: experiment.description,
-    steps:
-      experimentSteps?.map((step) => ({
-        ...step,
-        type: step.type as "wizard" | "robot" | "parallel" | "conditional",
-        description: step.description ?? undefined,
-        duration: step.duration ?? undefined,
-        actions: [], // Initialize with empty actions array
-        parameters: step.parameters || {},
-        expanded: false,
-      })) || [],
+    steps: experimentSteps ? convertToFlowSteps(experimentSteps) : [],
     version: 1,
     lastSaved: new Date(),
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="bg-background flex h-screen flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b bg-white p-4">
-        <div className="flex items-center space-x-4">
-          <Link
-            href={`/experiments/${experiment.id}`}
-            className="flex items-center text-sm text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to Experiment
-          </Link>
-          <div className="h-4 w-px bg-slate-300" />
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900">
-              {experiment.name}
-            </h1>
-            <p className="text-sm text-slate-600">Visual Protocol Designer</p>
+      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 relative border-b backdrop-blur">
+        <div className="from-primary/5 to-accent/5 absolute inset-0 bg-gradient-to-r" />
+        <div className="relative flex items-center justify-between p-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/experiments/${experiment.id}`)}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Experiment
+            </Button>
+            <div className="bg-border h-6 w-px" />
+            <div className="bg-primary flex h-12 w-12 items-center justify-center rounded-xl shadow-lg">
+              <span className="text-primary-foreground text-xl font-bold">
+                F
+              </span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{experiment.name}</h1>
+              <p className="text-muted-foreground">
+                {experiment.description || "Visual Flow Designer"}
+              </p>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-2 text-sm text-slate-500">
-          <span>Study: </span>
-          <Link
-            href={`/studies/${experiment.studyId}`}
-            className="font-medium text-blue-600 hover:text-blue-800"
-          >
-            {experiment.study?.name || "Unknown Study"}
-          </Link>
+          <div className="flex items-center space-x-3">
+            <span className="bg-muted rounded-lg px-3 py-1 text-sm">
+              {experiment.study?.name ?? "Unknown Study"}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/experiments/${experiment.id}`)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Error Display */}
       {saveError && (
-        <div className="border-l-4 border-red-400 bg-red-50 p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                Failed to save experiment: {saveError}
-              </p>
+        <div className="border-destructive/50 bg-destructive/10 mx-6 mt-4 rounded-lg border p-4">
+          <div className="flex items-start">
+            <div className="flex-1">
+              <h4 className="text-destructive font-medium">Save Error</h4>
+              <p className="text-destructive/90 mt-1 text-sm">{saveError}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Designer */}
+      {/* Flow Designer */}
       <div className="flex-1 overflow-hidden">
-        <ExperimentDesigner
+        <FlowDesigner
           experimentId={experiment.id}
           initialDesign={initialDesign}
           onSave={handleSave}
+          isSaving={saveDesignMutation.isPending}
         />
       </div>
     </div>

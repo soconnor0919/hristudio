@@ -1,6 +1,8 @@
 "use client";
 
-import { useStudyContext } from "~/lib/study-context";
+import { AlertTriangle, Building, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Button } from "~/components/ui/button";
-import { Building, AlertTriangle, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { useStudyContext } from "~/lib/study-context";
 
 interface StudyGuardProps {
   children: React.ReactNode;

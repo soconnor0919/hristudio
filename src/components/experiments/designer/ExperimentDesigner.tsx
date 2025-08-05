@@ -4,54 +4,47 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
-  PointerSensor,
-  useSensor,
   useSensors,
-  DragOverlay,
+  useSensor,
+  PointerSensor,
   closestCorners,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
+  arrayMove,
 } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Play,
   Bot,
-  User,
+  Shuffle,
+  GitBranch,
   Plus,
   GripVertical,
   Edit3,
   Trash2,
-  Play,
-  Clock,
-  MessageSquare,
-  ArrowRight,
-  Settings,
   Copy,
+  Settings,
   Eye,
   Save,
-  FileText,
+  Clock,
+  Users,
   Zap,
-  GitBranch,
-  Shuffle,
-  ChevronDown,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
+import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { Label } from "~/components/ui/label";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "~/components/ui/accordion";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Separator } from "~/components/ui/separator";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -64,12 +57,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "~/components/ui/dropdown-menu";
-import { Separator } from "~/components/ui/separator";
-import { ScrollArea } from "~/components/ui/scroll-area";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { toast } from "sonner";
 
-export type StepType = "wizard" | "robot" | "parallel" | "conditional";
-export type ActionType =
+// Types
+type StepType = "wizard" | "robot" | "parallel" | "conditional";
+type ActionType =
   | "speak"
   | "move"
   | "gesture"
@@ -79,120 +76,119 @@ export type ActionType =
   | "question"
   | "observe";
 
-export interface Action {
+interface Action {
   id: string;
   type: ActionType;
   name: string;
-  description?: string;
-  parameters: Record<string, any>;
-  duration?: number;
+  parameters: Record<string, unknown>;
   order: number;
 }
 
-export interface ExperimentStep {
+interface ExperimentStep {
   id: string;
   type: StepType;
   name: string;
   description?: string;
-  order: number;
   duration?: number;
+  order: number;
   actions: Action[];
-  parameters: Record<string, any>;
-  expanded?: boolean;
+  parameters: Record<string, unknown>;
+  expanded: boolean;
 }
 
-export interface ExperimentDesign {
+interface ExperimentDesign {
   id: string;
   name: string;
   description?: string;
   steps: ExperimentStep[];
   version: number;
   lastSaved: Date;
-  robotPlatform?: string;
 }
 
+// Configuration
 const stepTypeConfig = {
   wizard: {
-    label: "Wizard Step",
-    description: "Manual instructions for the wizard operator",
-    icon: User,
-    color: "bg-blue-50 text-blue-700 border-blue-200",
-    allowedActions: ["instruction", "question", "observe"],
+    label: "Wizard Action",
+    icon: Users,
+    description: "Actions performed by the human wizard",
+    color: "bg-blue-500",
+    lightColor: "bg-blue-50 border-blue-200",
   },
   robot: {
-    label: "Robot Step",
-    description: "Automated robot behaviors and actions",
+    label: "Robot Action",
     icon: Bot,
-    color: "bg-green-50 text-green-700 border-green-200",
-    allowedActions: ["speak", "move", "gesture", "look_at", "wait"],
+    description: "Actions performed by the robot",
+    color: "bg-green-500",
+    lightColor: "bg-green-50 border-green-200",
   },
   parallel: {
     label: "Parallel Steps",
-    description: "Execute multiple actions simultaneously",
     icon: Shuffle,
-    color: "bg-purple-50 text-purple-700 border-purple-200",
-    allowedActions: [],
+    description: "Execute multiple steps simultaneously",
+    color: "bg-purple-500",
+    lightColor: "bg-purple-50 border-purple-200",
   },
   conditional: {
     label: "Conditional Branch",
-    description: "Execute steps based on conditions",
     icon: GitBranch,
-    color: "bg-orange-50 text-orange-700 border-orange-200",
-    allowedActions: [],
+    description: "Branching logic based on conditions",
+    color: "bg-orange-500",
+    lightColor: "bg-orange-50 border-orange-200",
   },
-} as const;
+};
 
 const actionTypeConfig = {
   speak: {
     label: "Speak",
-    description: "Robot speaks text or plays audio",
-    icon: MessageSquare,
-    defaultParams: { text: "", voice: "default", speed: 1.0 },
+    icon: Play,
+    description: "Text-to-speech output",
+    defaultParams: { text: "Hello, I'm ready to help!" },
   },
   move: {
     label: "Move",
-    description: "Robot moves to a position or along a path",
-    icon: ArrowRight,
-    defaultParams: { target: "", speed: 0.5, precision: "normal" },
+    icon: Play,
+    description: "Move to location or position",
+    defaultParams: { x: 0, y: 0, speed: 1 },
   },
   gesture: {
     label: "Gesture",
-    description: "Robot performs a predefined gesture",
     icon: Zap,
-    defaultParams: { gesture: "", intensity: 0.5 },
+    description: "Physical gesture or animation",
+    defaultParams: { gesture: "wave", duration: 2 },
   },
   look_at: {
     label: "Look At",
-    description: "Robot looks at a target or direction",
     icon: Eye,
-    defaultParams: { target: "", duration: 2.0 },
+    description: "Orient gaze or camera",
+    defaultParams: { target: "participant" },
   },
   wait: {
     label: "Wait",
-    description: "Wait for a specified duration",
     icon: Clock,
-    defaultParams: { duration: 1.0 },
+    description: "Pause for specified duration",
+    defaultParams: { duration: 3 },
   },
   instruction: {
     label: "Instruction",
+    icon: Settings,
     description: "Display instruction for wizard",
-    icon: FileText,
-    defaultParams: { text: "", allowSkip: true },
+    defaultParams: { text: "Follow the protocol", allowSkip: true },
   },
   question: {
     label: "Question",
-    description: "Wizard asks participant a question",
-    icon: MessageSquare,
-    defaultParams: { question: "", recordResponse: true },
+    icon: Plus,
+    description: "Ask participant a question",
+    defaultParams: { question: "How do you feel?", recordResponse: true },
   },
   observe: {
     label: "Observe",
-    description: "Wizard observes and records behavior",
     icon: Eye,
-    defaultParams: { target: "", duration: 5.0, notes: "" },
+    description: "Observe and record behavior",
+    defaultParams: { target: "participant", duration: 5, notes: "" },
   },
-} as const;
+};
 
+// Step Library Component
 interface StepLibraryProps {
   onStepTypeSelect: (type: StepType) => void;
 }
@@ -202,120 +198,70 @@ function StepLibrary({ onStepTypeSelect }: StepLibraryProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Plus className="h-4 w-4" />
-        <h3 className="font-semibold">Step Library</h3>
+        <h4 className="font-medium">Add Step</h4>
       </div>
 
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="basic-steps">
-          <AccordionTrigger>Basic Steps</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2">
-              {(["wizard", "robot"] as const).map((type) => {
-                const config = stepTypeConfig[type];
-                const Icon = config.icon;
-                return (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    className={`h-auto w-full justify-start gap-2 p-3 ${config.color}`}
-                    onClick={() => onStepTypeSelect(type)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <div className="text-left">
-                      <div className="font-medium">{config.label}</div>
-                      <div className="text-xs opacity-70">
-                        {config.description}
-                      </div>
-                    </div>
-                  </Button>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="advanced-steps">
-          <AccordionTrigger>Advanced Steps</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2">
-              {(["parallel", "conditional"] as const).map((type) => {
-                const config = stepTypeConfig[type];
-                const Icon = config.icon;
-                return (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    className={`h-auto w-full justify-start gap-2 p-3 ${config.color}`}
-                    onClick={() => onStepTypeSelect(type)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <div className="text-left">
-                      <div className="font-medium">{config.label}</div>
-                      <div className="text-xs opacity-70">
-                        {config.description}
-                      </div>
-                    </div>
-                  </Button>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
-  );
-}
-
-interface ActionLibraryProps {
-  stepType: StepType;
-  onActionSelect: (type: ActionType) => void;
-}
-
-function ActionLibrary({ stepType, onActionSelect }: ActionLibraryProps) {
-  const allowedActions = stepTypeConfig[stepType]?.allowedActions || [];
-
-  if (allowedActions.length === 0) {
-    return (
-      <div className="text-muted-foreground py-4 text-center">
-        <p>No actions available for this step type</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4" />
-        <h4 className="font-medium">Available Actions</h4>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2">
-        {allowedActions.map((actionType) => {
-          const config = actionTypeConfig[actionType];
-          const Icon = config.icon;
-          return (
-            <Button
-              key={actionType}
-              variant="ghost"
-              size="sm"
-              className="h-auto justify-start gap-2 p-2"
-              onClick={() => onActionSelect(actionType)}
-            >
-              <Icon className="h-3 w-3" />
-              <div className="text-left">
-                <div className="text-sm font-medium">{config.label}</div>
+      <div className="grid gap-2">
+        {Object.entries(stepTypeConfig).map(([type, config]) => (
+          <Button
+            key={type}
+            variant="outline"
+            className="h-auto justify-start p-3"
+            onClick={() => onStepTypeSelect(type as StepType)}
+          >
+            <div className="flex items-start gap-3 text-left">
+              <div
+                className={`${config.color} flex h-8 w-8 shrink-0 items-center justify-center rounded`}
+              >
+                <config.icon className="h-4 w-4 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{config.label}</div>
                 <div className="text-muted-foreground text-xs">
                   {config.description}
                 </div>
               </div>
-            </Button>
-          );
-        })}
+            </div>
+          </Button>
+        ))}
       </div>
     </div>
   );
 }
 
+// Action Library Component
+interface ActionLibraryProps {
+  stepId: string;
+  onActionAdd: (type: ActionType, stepId: string) => void;
+}
+
+function ActionLibrary({ stepId, onActionAdd }: ActionLibraryProps) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-muted-foreground text-xs font-medium">
+        Add Action
+      </Label>
+      <div className="grid grid-cols-2 gap-1">
+        {Object.entries(actionTypeConfig).map(([type, config]) => (
+          <Button
+            key={type}
+            variant="ghost"
+            size="sm"
+            className="h-auto justify-start p-2"
+            onClick={() => onActionAdd(type as ActionType, stepId)}
+          >
+            <div className="flex items-center gap-2">
+              <config.icon className="h-3 w-3" />
+              <span className="text-xs">{config.label}</span>
+            </div>
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Action Card Component
 interface ActionCardProps {
   action: Action;
   onEdit: (action: Action) => void;
@@ -330,67 +276,46 @@ function ActionCard({
   onDuplicate,
 }: ActionCardProps) {
   const config = actionTypeConfig[action.type];
-  const Icon = config.icon;
 
   return (
-    <Card className="ml-6 border-l-4 border-l-blue-200">
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon className="text-muted-foreground h-4 w-4" />
-            <div>
-              <div className="text-sm font-medium">{action.name}</div>
-              <div className="text-muted-foreground text-xs">
-                {config.label}
-              </div>
-            </div>
-          </div>
+    <div className="bg-background/50 group hover:bg-accent/50 flex items-center gap-2 rounded border p-2">
+      <config.icon className="text-muted-foreground h-3 w-3 shrink-0" />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+        {action.name}
+      </span>
 
-          <div className="flex items-center gap-1">
-            {action.duration && (
-              <Badge variant="outline" className="text-xs">
-                {action.duration}s
-              </Badge>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <Settings className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(action)}>
-                  <Edit3 className="mr-2 h-3 w-3" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDuplicate(action)}>
-                  <Copy className="mr-2 h-3 w-3" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => onDelete(action.id)}
-                  className="text-red-600"
-                >
-                  <Trash2 className="mr-2 h-3 w-3" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {action.description && (
-          <p className="text-muted-foreground mt-2 text-xs">
-            {action.description}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onEdit(action)}
+        >
+          <Edit3 className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onDuplicate(action)}
+        >
+          <Copy className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onDelete(action.id)}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
-interface StepCardProps {
+// Sortable Step Card Component
+interface SortableStepCardProps {
   step: ExperimentStep;
   isSelected: boolean;
   onSelect: (stepId: string) => void;
@@ -401,10 +326,10 @@ interface StepCardProps {
   onActionEdit: (action: Action) => void;
   onActionDelete: (stepId: string, actionId: string) => void;
   onActionDuplicate: (stepId: string, action: Action) => void;
-  onActionAdd: (stepId: string, actionType: ActionType) => void;
+  onActionAdd: (type: ActionType, stepId: string) => void;
 }
 
-function StepCard({
+function SortableStepCard({
   step,
   isSelected,
   onSelect,
@@ -416,7 +341,7 @@ function StepCard({
   onActionDelete,
   onActionDuplicate,
   onActionAdd,
-}: StepCardProps) {
+}: SortableStepCardProps) {
   const {
     attributes,
     listeners,
@@ -432,136 +357,126 @@ function StepCard({
   };
 
   const config = stepTypeConfig[step.type];
-  const Icon = config.icon;
-  const totalDuration = step.actions.reduce(
-    (sum, action) => sum + (action.duration || 0),
-    0,
-  );
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`${isDragging ? "opacity-50" : ""}`}
+      className={`${isDragging ? "opacity-50" : ""} ${isSelected ? "ring-primary ring-2" : ""}`}
     >
-      <Card
-        className={`cursor-pointer transition-all duration-200 ${isSelected ? "shadow-md ring-2 ring-blue-500" : "hover:shadow-sm"} ${config.color} `}
-        onClick={() => onSelect(step.id)}
-      >
+      <Card className="group hover:shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                {...attributes}
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing"
-              >
-                <GripVertical className="text-muted-foreground h-4 w-4" />
-              </div>
+          <div className="flex items-start gap-3">
+            <button
+              {...attributes}
+              {...listeners}
+              className="text-muted-foreground hover:text-foreground mt-1 cursor-grab active:cursor-grabbing"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
 
-              <Icon className="h-5 w-5" />
-
-              <div className="flex-1">
-                <CardTitle className="text-base">{step.name}</CardTitle>
-                {step.description && (
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {step.description}
-                  </p>
-                )}
-              </div>
+            <div
+              className={`${config.color} flex h-8 w-8 shrink-0 items-center justify-center rounded`}
+            >
+              <config.icon className="h-4 w-4 text-white" />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {step.actions.length} action
-                {step.actions.length !== 1 ? "s" : ""}
-              </Badge>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className="min-w-0 flex-1 cursor-pointer"
+                  onClick={() => onSelect(step.id)}
+                >
+                  <h4 className="leading-none font-medium">{step.name}</h4>
+                  {step.description && (
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {step.description}
+                    </p>
+                  )}
+                  <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+                    <Badge variant="secondary" className="text-xs">
+                      {config.label}
+                    </Badge>
+                    {step.actions.length > 0 && (
+                      <span>
+                        {step.actions.length} action
+                        {step.actions.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-              {totalDuration > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  ~{totalDuration}s
-                </Badge>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpanded(step.id);
-                }}
-                className="h-6 w-6 p-0"
-              >
-                {step.expanded ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Settings className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(step)}>
-                    <Edit3 className="mr-2 h-3 w-3" />
-                    Edit Step
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onDuplicate(step)}>
-                    <Copy className="mr-2 h-3 w-3" />
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onDelete(step.id)}
-                    className="text-red-600"
-                  >
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(step)}>
+                      <Edit3 className="mr-2 h-4 w-4" />
+                      Edit Step
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDuplicate(step)}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onDelete(step.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Step
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        {step.expanded && (
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              {step.actions.map((action) => (
-                <ActionCard
-                  key={action.id}
-                  action={action}
-                  onEdit={onActionEdit}
-                  onDelete={(actionId) => onActionDelete(step.id, actionId)}
-                  onDuplicate={(action) => onActionDuplicate(step.id, action)}
-                />
-              ))}
+        <Collapsible
+          open={step.expanded}
+          onOpenChange={() => onToggleExpanded(step.id)}
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-between px-6 py-2"
+            >
+              <span className="text-sm">Actions ({step.actions.length})</span>
+              {step.expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {step.actions.map((action) => (
+                  <ActionCard
+                    key={action.id}
+                    action={action}
+                    onEdit={onActionEdit}
+                    onDelete={(actionId) => onActionDelete(step.id, actionId)}
+                    onDuplicate={(action) => onActionDuplicate(step.id, action)}
+                  />
+                ))}
 
-              <div className="mt-3 ml-6">
-                <ActionLibrary
-                  stepType={step.type}
-                  onActionSelect={(actionType) =>
-                    onActionAdd(step.id, actionType)
-                  }
-                />
+                <ActionLibrary stepId={step.id} onActionAdd={onActionAdd} />
               </div>
-            </div>
-          </CardContent>
-        )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
   );
 }
 
+// Experiment Canvas Component
 interface ExperimentCanvasProps {
   design: ExperimentDesign;
   selectedStepId?: string;
@@ -573,7 +488,7 @@ interface ExperimentCanvasProps {
   onActionEdit: (action: Action) => void;
   onActionDelete: (stepId: string, actionId: string) => void;
   onActionDuplicate: (stepId: string, action: Action) => void;
-  onActionAdd: (stepId: string, actionType: ActionType) => void;
+  onActionAdd: (type: ActionType, stepId: string) => void;
 }
 
 function ExperimentCanvas({
@@ -589,69 +504,45 @@ function ExperimentCanvas({
   onActionDuplicate,
   onActionAdd,
 }: ExperimentCanvasProps) {
-  const sortedSteps = [...design.steps].sort((a, b) => a.order - b.order);
-  const stepIds = sortedSteps.map((step) => step.id);
-
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b p-4">
-        <div>
-          <h2 className="text-lg font-semibold">{design.name}</h2>
-          {design.description && (
-            <p className="text-muted-foreground text-sm">
-              {design.description}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">
-            {design.steps.length} step{design.steps.length !== 1 ? "s" : ""}
-          </Badge>
-          <Badge variant="outline">v{design.version}</Badge>
-        </div>
+      <div className="border-b p-4">
+        <h3 className="font-medium">Experiment Steps</h3>
+        <p className="text-muted-foreground text-sm">
+          Drag to reorder, click to select, expand to edit actions
+        </p>
       </div>
 
       <ScrollArea className="flex-1 p-4">
-        {sortedSteps.length === 0 ? (
+        {design.steps.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center text-center">
-            <div className="bg-muted mb-4 rounded-full p-4">
-              <FileText className="text-muted-foreground h-8 w-8" />
-            </div>
-            <h3 className="mb-2 font-medium">No steps in experiment</h3>
-            <p className="text-muted-foreground mb-4 max-w-sm text-sm">
-              Start building your experiment by dragging step types from the
-              library on the left.
+            <Bot className="text-muted-foreground mb-4 h-12 w-12" />
+            <h3 className="font-medium">No steps yet</h3>
+            <p className="text-muted-foreground text-sm">
+              Add your first step from the library on the left
             </p>
           </div>
         ) : (
           <SortableContext
-            items={stepIds}
+            items={design.steps.map((s) => s.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-4">
-              {sortedSteps.map((step, index) => (
-                <div key={step.id}>
-                  <StepCard
-                    step={step}
-                    isSelected={selectedStepId === step.id}
-                    onSelect={onStepSelect}
-                    onEdit={onStepEdit}
-                    onDelete={onStepDelete}
-                    onDuplicate={onStepDuplicate}
-                    onToggleExpanded={onStepToggleExpanded}
-                    onActionEdit={onActionEdit}
-                    onActionDelete={onActionDelete}
-                    onActionDuplicate={onActionDuplicate}
-                    onActionAdd={onActionAdd}
-                  />
-
-                  {index < sortedSteps.length - 1 && (
-                    <div className="flex justify-center py-2">
-                      <ArrowRight className="text-muted-foreground h-4 w-4" />
-                    </div>
-                  )}
-                </div>
+              {design.steps.map((step) => (
+                <SortableStepCard
+                  key={step.id}
+                  step={step}
+                  isSelected={selectedStepId === step.id}
+                  onSelect={onStepSelect}
+                  onEdit={onStepEdit}
+                  onDelete={onStepDelete}
+                  onDuplicate={onStepDuplicate}
+                  onToggleExpanded={onStepToggleExpanded}
+                  onActionEdit={onActionEdit}
+                  onActionDelete={onActionDelete}
+                  onActionDuplicate={onActionDuplicate}
+                  onActionAdd={onActionAdd}
+                />
               ))}
             </div>
           </SortableContext>
@@ -661,16 +552,19 @@ function ExperimentCanvas({
   );
 }
 
+// Main Designer Component
 interface ExperimentDesignerProps {
   experimentId: string;
-  initialDesign?: ExperimentDesign;
+  initialDesign: ExperimentDesign;
   onSave?: (design: ExperimentDesign) => Promise<void>;
+  isSaving?: boolean;
 }
 
 export function ExperimentDesigner({
   experimentId,
   initialDesign,
   onSave,
+  isSaving = false,
 }: ExperimentDesignerProps) {
   const [design, setDesign] = useState<ExperimentDesign>(
     initialDesign || {
@@ -684,7 +578,6 @@ export function ExperimentDesigner({
 
   const [selectedStepId, setSelectedStepId] = useState<string>();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const sensors = useSensors(
@@ -722,7 +615,7 @@ export function ExperimentDesigner({
       const config = actionTypeConfig[type];
       const step = design.steps.find((s) => s.id === stepId);
       const newOrder =
-        Math.max(...(step?.actions.map((a) => a.order) || [0]), 0) + 1;
+        Math.max(...(step?.actions.map((a) => a.order) ?? [0]), 0) + 1;
 
       return {
         id: `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -750,8 +643,9 @@ export function ExperimentDesigner({
   );
 
   const handleActionAdd = useCallback(
-    (stepId: string, actionType: ActionType) => {
-      const newAction = createAction(actionType, stepId);
+    (type: ActionType, stepId: string) => {
+      const newAction = createAction(type, stepId);
+
       setDesign((prev) => ({
         ...prev,
         steps: prev.steps.map((step) =>
@@ -761,7 +655,7 @@ export function ExperimentDesigner({
         ),
       }));
       setHasUnsavedChanges(true);
-      toast.success(`Added ${actionTypeConfig[actionType].label} action`);
+      toast.success(`Added ${actionTypeConfig[type].label}`);
     },
     [createAction],
   );
@@ -769,16 +663,16 @@ export function ExperimentDesigner({
   const handleStepEdit = useCallback((step: ExperimentStep) => {
     // TODO: Open step edit dialog
     console.log("Edit step:", step);
+    setSelectedStepId(step.id);
   }, []);
 
   const handleStepDelete = useCallback(
     (stepId: string) => {
       setDesign((prev) => ({
         ...prev,
-        steps: prev.steps.filter((s) => s.id !== stepId),
+        steps: prev.steps.filter((step) => step.id !== stepId),
       }));
       setHasUnsavedChanges(true);
-
       if (selectedStepId === stepId) {
         setSelectedStepId(undefined);
       }
@@ -789,7 +683,7 @@ export function ExperimentDesigner({
 
   const handleStepDuplicate = useCallback(
     (step: ExperimentStep) => {
-      const newStep = {
+      const newStep: ExperimentStep = {
         ...step,
         id: `step-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: `${step.name} (Copy)`,
@@ -847,7 +741,7 @@ export function ExperimentDesigner({
           Math.max(
             ...(design.steps
               .find((s) => s.id === stepId)
-              ?.actions.map((a) => a.order) || [0]),
+              ?.actions.map((a) => a.order) ?? [0]),
             0,
           ) + 1,
       };
@@ -882,17 +776,17 @@ export function ExperimentDesigner({
       const overIndex = steps.findIndex((step) => step.id === over.id);
 
       if (activeIndex !== -1 && overIndex !== -1) {
-        // Reorder steps
-        const [movedStep] = steps.splice(activeIndex, 1);
-        steps.splice(overIndex, 0, movedStep!);
+        const reorderedSteps = arrayMove(steps, activeIndex, overIndex);
 
         // Update order numbers
-        steps.forEach((step, index) => {
+        reorderedSteps.forEach((step, index) => {
           step.order = index + 1;
         });
+
+        return { ...prev, steps: reorderedSteps };
       }
 
-      return { ...prev, steps };
+      return prev;
     });
 
     setHasUnsavedChanges(true);
@@ -901,7 +795,6 @@ export function ExperimentDesigner({
   const handleSave = async () => {
     if (!onSave) return;
 
-    setIsSaving(true);
     try {
       const updatedDesign = {
         ...design,
@@ -912,22 +805,18 @@ export function ExperimentDesigner({
       await onSave(updatedDesign);
       setDesign(updatedDesign);
       setHasUnsavedChanges(false);
-      toast.success("Experiment saved successfully");
     } catch (error) {
-      toast.error("Failed to save experiment");
       console.error("Save error:", error);
-    } finally {
-      setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <div className="bg-background border-b p-4">
+    <div className="flex h-full flex-col">
+      {/* Toolbar */}
+      <div className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">Experiment Designer</h1>
+            <h2 className="font-semibold">{design.name}</h2>
             {hasUnsavedChanges && (
               <Badge
                 variant="outline"
@@ -943,7 +832,11 @@ export function ExperimentDesigner({
               <Eye className="mr-2 h-4 w-4" />
               Preview
             </Button>
-            <Button onClick={handleSave} disabled={isSaving} size="sm">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+              size="sm"
+            >
               <Save className="mr-2 h-4 w-4" />
               {isSaving ? "Saving..." : "Save"}
             </Button>
@@ -1064,7 +957,7 @@ export function ExperimentDesigner({
                           <Label htmlFor="step-description">Description</Label>
                           <Textarea
                             id="step-description"
-                            value={selectedStep.description || ""}
+                            value={selectedStep.description ?? ""}
                             onChange={(e) => {
                               setDesign((prev) => ({
                                 ...prev,
@@ -1135,3 +1028,5 @@ export function ExperimentDesigner({
     </div>
   );
 }
+
+export type { ExperimentDesign, ExperimentStep, Action, StepType, ActionType };

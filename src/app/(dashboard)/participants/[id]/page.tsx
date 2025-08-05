@@ -1,6 +1,15 @@
 import { formatDistanceToNow } from "date-fns";
 import {
-    AlertCircle, ArrowLeft, Calendar, Edit, FileText, Mail, Play, Shield, Trash2, Users
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  Edit,
+  FileText,
+  Mail,
+  Play,
+  Shield,
+  Trash2,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,11 +17,11 @@ import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "~/components/ui/card";
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
@@ -42,7 +51,7 @@ export default async function ParticipantDetailPage({
 
     const userRole = session.user.roles?.[0]?.role ?? "observer";
     const canEdit = ["administrator", "researcher"].includes(userRole);
-    const canDelete = ["administrator", "researcher"].includes(userRole);
+    // canDelete removed - not used in component
 
     // Get participant's trials
     const trials = await api.trials.list({
@@ -70,7 +79,7 @@ export default async function ParticipantDetailPage({
               </div>
               <div>
                 <h1 className="text-foreground text-3xl font-bold">
-                  {participant.name || participant.participantCode}
+                  {participant.name ?? participant.participantCode}
                 </h1>
                 <p className="text-muted-foreground text-lg">
                   {participant.name
@@ -151,58 +160,59 @@ export default async function ParticipantDetailPage({
                     </h4>
                     <p className="text-sm">
                       <Link
-                        href={`/studies/${(participant.study as any)?.id}`}
+                        href={`/studies/${participant.study?.id}`}
                         className="text-primary hover:underline"
                       >
-                        {(participant.study as any)?.name}
+                        {participant.study?.name}
                       </Link>
                     </p>
                   </div>
                 </div>
 
                 {participant.demographics &&
-                  typeof participant.demographics === "object" &&
-                  Object.keys(participant.demographics).length > 0 ? (
-                    <div className="border-t pt-4">
-                      <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-                        Demographics
-                      </h4>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {(participant.demographics as Record<string, any>)
-                          ?.age && (
-                          <div>
-                            <span className="text-sm font-medium">Age:</span>{" "}
-                            <span className="text-sm">
-                              {String(
-                                (
-                                  participant.demographics as Record<
-                                    string,
-                                    any
-                                  >
-                                ).age,
-                              )}
-                            </span>
-                          </div>
-                        )}
-                        {(participant.demographics as Record<string, any>)
-                          ?.gender && (
-                          <div>
-                            <span className="text-sm font-medium">Gender:</span>{" "}
-                            <span className="text-sm">
-                              {String(
-                                (
-                                  participant.demographics as Record<
-                                    string,
-                                    any
-                                  >
-                                ).gender,
-                              )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                typeof participant.demographics === "object" &&
+                participant.demographics !== null &&
+                Object.keys(participant.demographics).length > 0 ? (
+                  <div className="border-t pt-4">
+                    <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+                      Demographics
+                    </h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {(() => {
+                        const demo = participant.demographics as Record<
+                          string,
+                          unknown
+                        >;
+                        return (
+                          <>
+                            {demo.age && (
+                              <div>
+                                <span className="text-sm font-medium">
+                                  Age:
+                                </span>{" "}
+                                <span className="text-sm">
+                                  {typeof demo.age === "number"
+                                    ? demo.age.toString()
+                                    : String(demo.age)}
+                                </span>
+                              </div>
+                            )}
+                            {demo.gender && (
+                              <div>
+                                <span className="text-sm font-medium">
+                                  Gender:
+                                </span>{" "}
+                                <span className="text-sm">
+                                  {String(demo.gender)}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
-                  ) : null}
+                  </div>
+                ) : null}
 
                 {/* Notes */}
                 {participant.notes && (
@@ -228,7 +238,9 @@ export default async function ParticipantDetailPage({
                   </CardTitle>
                   {canEdit && (
                     <Button size="sm" asChild>
-                      <Link href={`/trials/new?participantId=${resolvedParams.id}`}>
+                      <Link
+                        href={`/trials/new?participantId=${resolvedParams.id}`}
+                      >
                         Schedule Trial
                       </Link>
                     </Button>
@@ -270,13 +282,10 @@ export default async function ParticipantDetailPage({
                         <div className="text-muted-foreground flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            {(trial as any).scheduledAt
-                              ? formatDistanceToNow(
-                                  (trial as any).scheduledAt,
-                                  {
-                                    addSuffix: true,
-                                  },
-                                )
+                            {trial.createdAt
+                              ? formatDistanceToNow(new Date(trial.createdAt), {
+                                  addSuffix: true,
+                                })
                               : "Not scheduled"}
                           </span>
                           {trial.duration && (
@@ -293,11 +302,13 @@ export default async function ParticipantDetailPage({
                     <Play className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                     <h3 className="mb-2 font-medium">No Trials Yet</h3>
                     <p className="text-muted-foreground mb-4 text-sm">
-                      This participant hasn't been assigned to any trials.
+                      This participant hasn&apos;t been assigned to any trials.
                     </p>
                     {canEdit && (
                       <Button asChild>
-                        <Link href={`/trials/new?participantId=${resolvedParams.id}`}>
+                        <Link
+                          href={`/trials/new?participantId=${resolvedParams.id}`}
+                        >
                           Schedule First Trial
                         </Link>
                       </Button>
@@ -399,7 +410,9 @@ export default async function ParticipantDetailPage({
                     className="w-full justify-start"
                     asChild
                   >
-                    <Link href={`/trials/new?participantId=${resolvedParams.id}`}>
+                    <Link
+                      href={`/trials/new?participantId=${resolvedParams.id}`}
+                    >
                       <Play className="mr-2 h-4 w-4" />
                       Schedule Trial
                     </Link>
@@ -427,7 +440,7 @@ export default async function ParticipantDetailPage({
         </div>
       </div>
     );
-  } catch (_error) {
+  } catch {
     return notFound();
   }
 }

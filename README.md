@@ -1,157 +1,74 @@
-# HRIStudio
+# A Web-Based Wizard-of-Oz Platform for Collaborative and Reproducible Human-Robot Interaction Research
 
-HRIStudio is a comprehensive web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research. It provides researchers with standardized tools for designing experiments, executing trials, and analyzing data while ensuring reproducibility and scientific rigor.
+A markdown-based conference presentation using Marp with a custom mono/minimal theme, featuring ASCII diagrams and professional formatting.
 
-## Features
+## Quick Start
 
-- **Visual Experiment Designer**: Drag-and-drop interface for creating complex interaction scenarios
-- **Real-time Trial Control**: Live robot control with responsive wizard interface during experiments
-- **Hierarchical Study Structure**: Organized workflow from Study → Experiment → Trial → Step → Action
-- **Multi-modal Data Capture**: Synchronized recording of video, audio, logs, and sensor data
-- **Role-based Access Control**: Four distinct roles (Administrator, Researcher, Wizard, Observer)
-- **Robot Platform Integration**: Support for multiple robot platforms via RESTful APIs, ROS, and custom plugins
-- **Collaborative Research**: Team management with secure data sharing and role-based permissions
-
-## Tech Stack
-
-- **Framework**: [Next.js 15](https://nextjs.org) with App Router
-- **Authentication**: [NextAuth.js v5](https://next-auth.js.org)
-- **Database**: [PostgreSQL](https://postgresql.org) with [Drizzle ORM](https://orm.drizzle.team)
-- **Storage**: [MinIO](https://min.io) (S3-compatible) for media files
-- **API**: [tRPC](https://trpc.io) for type-safe client-server communication
-- **UI**: [Tailwind CSS](https://tailwindcss.com) with [shadcn/ui](https://ui.shadcn.com) and [Radix UI](https://radix-ui.com)
-- **Package Manager**: [Bun](https://bun.sh) (exclusively)
-
-## Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh) (latest version)
-- [PostgreSQL](https://postgresql.org) (14+)
-- [Docker](https://docker.com) (optional, for containerized deployment)
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/your-org/hristudio.git
-cd hristudio
-```
-
-2. Install dependencies:
-```bash
+# Install dependencies
 bun install
+# OR
+npm install
+
+# Start live preview (recommended for editing)
+./start-presentation.sh preview
+
+# Build PDF for conference submission
+./start-presentation.sh pdf
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your database credentials and other settings
-```
+## Available Scripts
 
-4. Start the database (using Docker):
-```bash
-bun run docker:up
-```
+- `bun run preview` - Live preview with auto-reload
+- `bun run watch` - Watch mode with browser preview
+- `bun run build:pdf` - Generate PDF for conference
+- `bun run build:html` - Generate HTML version
+- `bun run build:pptx` - Generate PowerPoint format
+- `bun run build:all` - Build all formats
+- `bun run serve` - Start development server
 
-5. Push the database schema:
-```bash
-bun run db:push
-```
+## Files
 
-6. Start the development server:
-```bash
-bun dev
-```
+- `hristudio-presentation.md` - Main presentation content
+- `start-presentation.sh` - Quick start helper script
+- `package.json` - Dependencies and scripts
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+## Design System
 
-## Development Commands
+The presentation uses a mono/minimal aesthetic with:
 
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start development server |
-| `bun build` | Build for production |
-| `bun start` | Start production server |
-| `bun typecheck` | Run TypeScript checks |
-| `bun lint` | Run ESLint |
-| `bun lint --fix` | Fix ESLint issues |
-| `bun test` | Run tests |
-| `bun db:generate` | Generate database schema |
-| `bun db:migrate` | Run database migrations |
-| `bun db:push` | Push schema changes |
-| `bun db:studio` | Open database studio |
+- **Font**: JetBrains Mono (Geist Mono fallback)
+- **Colors**: Matching HRIStudio's oklch color scheme
+- **Layout**: Clean, spacious design with no unnecessary elements
+- **Typography**: Consistent hierarchy with proper spacing
 
-## Project Structure
+## Development Workflow
 
-```
-src/
-├── app/                      # Next.js app router
-│   ├── (auth)/              # Authentication pages
-│   ├── (dashboard)/         # Main application pages
-│   ├── api/                 # API routes
-│   └── layout.tsx
-├── components/              # Shared UI components
-│   ├── ui/                  # shadcn/ui components
-│   ├── dashboard/           # Dashboard-specific components
-│   ├── experiments/         # Experiment-related components
-│   └── studies/             # Study management components
-├── lib/                     # Utilities and configurations
-│   ├── db/                  # Database setup and schemas
-│   ├── trpc/                # tRPC setup and routers
-│   └── auth/                # NextAuth configuration
-└── types/                   # Shared TypeScript types
-```
+1. **Edit**: Modify `hristudio-presentation.md` in your editor
+2. **Preview**: Run `./start-presentation.sh preview` for live reload
+3. **Build**: Generate final PDF with `./start-presentation.sh pdf`
+4. **Version Control**: All files are text-based and git-friendly
 
-## Architecture
+## VS Code Integration
 
-HRIStudio follows a three-layer architecture:
+Install "Marp for VS Code" extension for:
+- Live preview in editor
+- Syntax highlighting
+- Immediate feedback while editing
 
-1. **User Interface Layer**: Browser-based interfaces for experiment design, wizard control, and data analysis
-2. **Data Management Layer**: PostgreSQL database with role-based access control and MinIO for media storage
-3. **Robot Integration Layer**: Platform-agnostic communication supporting RESTful APIs, ROS, and custom plugins
+## Conference Requirements
 
-## Key Concepts
+The generated PDF meets standard conference requirements:
+- 16:9 aspect ratio for projectors
+- High-quality embedded fonts
+- Professional typography
+- Consistent with academic presentation standards
 
-### Hierarchical Study Structure
+## Customization
 
-- **Study**: Top-level container for a research project
-- **Experiment**: Parameterized template specifying experimental protocol
-- **Trial**: Executable instance with specific participant and conditions
-- **Step**: Distinct phase containing wizard or robot instructions
-- **Action**: Specific atomic task (speech, movement, input gathering, etc.)
+- Edit content in `hristudio-presentation.md`
+- Modify colors/fonts in the `<style>` section
+- Add new slides by inserting `---` separators
+- Use custom CSS classes for special formatting
 
-### User Roles
-
-- **Administrator**: Full system access and user management
-- **Researcher**: Study creation, experiment design, data analysis
-- **Wizard**: Trial execution and robot control
-- **Observer**: Read-only access to trials and data
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes following the [project guidelines](./.rules)
-4. Run tests: `bun test`
-5. Run type checking: `bun typecheck`
-6. Run linting: `bun lint`
-7. Commit your changes: `git commit -m 'Add feature'`
-8. Push to the branch: `git push origin feature-name`
-9. Create a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For questions, issues, or contributions:
-
-- Create an [issue](https://github.com/your-org/hristudio/issues)
-- Check the [documentation](./docs/)
-- Review the [project rules](./.rules)
-
-## Acknowledgments
-
-HRIStudio was developed to advance Human-Robot Interaction research by providing standardized, reproducible methodologies for Wizard of Oz studies.
+This setup provides a developer-friendly, version-controlled presentation workflow that maintains design consistency with the HRIStudio platform.

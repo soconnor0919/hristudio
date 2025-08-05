@@ -252,14 +252,14 @@ export default async function StudyDetailPage({
                     >
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                         <span className="text-sm font-medium text-blue-600">
-                          {(member.user.name || member.user.email)
+                          {(member.user.name ?? member.user.email)
                             .charAt(0)
                             .toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-900">
-                          {member.user.name || member.user.email}
+                          {member.user.name ?? member.user.email}
                         </p>
                         <p className="text-xs text-slate-500 capitalize">
                           {member.role}

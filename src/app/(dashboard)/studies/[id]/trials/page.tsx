@@ -2,13 +2,13 @@
 
 import { useParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { ManagementPageLayout } from "~/components/ui/page-layout";
 import { TrialsTable } from "~/components/trials/TrialsTable";
+import { ManagementPageLayout } from "~/components/ui/page-layout";
 import { useActiveStudy } from "~/hooks/useActiveStudy";
 
 export default function StudyTrialsPage() {
   const params = useParams();
-  const studyId = params.id as string;
+  const studyId = typeof params.id === "string" ? params.id : "";
   const { setActiveStudy, activeStudy } = useActiveStudy();
 
   // Set the active study if it doesn't match the current route
@@ -25,7 +25,7 @@ export default function StudyTrialsPage() {
       breadcrumb={[
         { label: "Dashboard", href: "/dashboard" },
         { label: "Studies", href: "/studies" },
-        { label: activeStudy?.title || "Study", href: `/studies/${studyId}` },
+        { label: activeStudy?.title ?? "Study", href: `/studies/${studyId}` },
         { label: "Trials" },
       ]}
       createButton={{
