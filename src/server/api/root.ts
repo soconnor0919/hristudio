@@ -1,14 +1,14 @@
-import { authRouter } from "~/server/api/routers/auth";
-import { usersRouter } from "~/server/api/routers/users";
-import { studiesRouter } from "~/server/api/routers/studies";
-import { experimentsRouter } from "~/server/api/routers/experiments";
-import { participantsRouter } from "~/server/api/routers/participants";
-import { trialsRouter } from "~/server/api/routers/trials";
-import { robotsRouter } from "~/server/api/routers/robots";
-import { mediaRouter } from "~/server/api/routers/media";
-import { analyticsRouter } from "~/server/api/routers/analytics";
-import { collaborationRouter } from "~/server/api/routers/collaboration";
 import { adminRouter } from "~/server/api/routers/admin";
+import { analyticsRouter } from "~/server/api/routers/analytics";
+import { authRouter } from "~/server/api/routers/auth";
+import { collaborationRouter } from "~/server/api/routers/collaboration";
+import { experimentsRouter } from "~/server/api/routers/experiments";
+import { mediaRouter } from "~/server/api/routers/media";
+import { participantsRouter } from "~/server/api/routers/participants";
+import { robotsRouter } from "~/server/api/routers/robots";
+import { studiesRouter } from "~/server/api/routers/studies";
+import { trialsRouter } from "~/server/api/routers/trials";
+import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**

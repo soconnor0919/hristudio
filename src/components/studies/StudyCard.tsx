@@ -5,24 +5,24 @@ import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 
 interface Study {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   status: "draft" | "active" | "completed" | "archived";
-  institution: string;
+  institution: string | null;
   irbProtocolNumber?: string;
   createdAt: Date;
   updatedAt: Date;
-  ownerId: string;
+  ownerId?: string;
   _count?: {
     experiments: number;
     trials: number;

@@ -3,9 +3,9 @@ import { ExperimentDesignerClient } from "~/components/experiments/designer/Expe
 import { api } from "~/trpc/server";
 
 interface ExperimentDesignerPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ExperimentDesignerPage({
@@ -19,7 +19,14 @@ export default async function ExperimentDesignerPage({
       notFound();
     }
 
-    return <ExperimentDesignerClient experiment={experiment} />;
+    return (
+      <ExperimentDesignerClient
+        experiment={{
+          ...experiment,
+          description: experiment.description ?? "",
+        }}
+      />
+    );
   } catch (error) {
     console.error("Error loading experiment:", error);
     notFound();

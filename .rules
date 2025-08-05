@@ -6,6 +6,8 @@ Project Context
 - Implements role-based access control with four primary roles: Administrator, Researcher, Wizard, Observer
 - Features a hierarchical experiment structure: Study > Experiment > Step > Action
 - Requires real-time communication for wizard control during trials
+- Exclusively uses Bun as the package manager and runtime (never npm or yarn)
+- All creators and editors are dedicated pages, not modals or dialogs
 
 Code Style and Structure
 - Write concise, technical TypeScript code with accurate examples
@@ -87,6 +89,9 @@ Component Patterns
 - Use Suspense boundaries for async components
 - Create reusable form components with react-hook-form
 - Implement keyboard navigation for accessibility
+- All entity creators and editors must be full pages (e.g., /studies/new, /experiments/[id]/edit)
+- Never use modals or dialogs for creating or editing entities
+- Use dedicated routes for all CRUD operations
 
 Real-time Features
 - Use WebSockets for trial execution updates
@@ -118,12 +123,20 @@ Security Best Practices
 - Implement CSRF protection
 - Use secure HTTP headers via Next.js config
 
+Package Management & Development
+- Use Bun exclusively for all package management operations
+- Run commands with `bun install`, `bun run`, `bun add`, etc.
+- Never use npm, yarn, or pnpm commands
+- Use `bun dev` for development server
+- Use `bun build` for production builds
+
 Testing Approach
 - Write integration tests for tRPC procedures
 - Test authorization logic thoroughly
 - Use MSW for mocking external services
 - Test critical user flows with Playwright
 - Ensure proper error handling in tests
+- Run tests with `bun test`
 
 Specific HRIStudio Patterns
 - Robot plugins must implement the standard interface
@@ -132,6 +145,9 @@ Specific HRIStudio Patterns
 - Use event sourcing for trial execution history
 - Implement version control for experiment designs
 - Support offline-capable wizard interfaces
+- All entity management (studies, experiments, participants, trials) uses page-based navigation
+- Create/edit flows are full page experiences with proper breadcrumbs and navigation
+- Use Next.js routing for all entity operations (/entity/new, /entity/[id]/edit)
 
 Error Handling
 - Use custom error classes for different error types
@@ -146,5 +162,23 @@ Accessibility
 - Ensure keyboard navigation throughout
 - Test with screen readers
 - Provide visual feedback for all actions
+
+Development Commands
+- `bun install` - Install dependencies
+- `bun build` - Build for production
+- `bun start` - Start production server
+- `bun test` - Run tests
+- `bun typecheck` - Run TypeScript checks
+- `bun lint` - Run ESLint
+- `bun db:generate` - Generate database schema
+- `bun db:migrate` - Run database migrations
+- `bun db:push` - Push schema changes
+- `bun db:studio` - Open database studio
+
+Development Server Restrictions
+- NEVER run development servers (`bun dev`, `npm run dev`, etc.)
+- NEVER run drizzle studio (`bun db:studio`)
+- Use only build, typecheck, and lint commands for verification
+- Development servers and database studios should not be started in any circumstances
 
 Follow Next.js 14 best practices for Data Fetching, Rendering, and Routing.

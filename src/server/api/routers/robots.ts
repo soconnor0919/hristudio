@@ -1,15 +1,10 @@
-import { z } from "zod";
-import { eq, and, desc, inArray, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { and, desc, eq, inArray, type SQL } from "drizzle-orm";
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-  robots,
-  plugins,
-  studyPlugins,
-  studyMembers,
-  communicationProtocolEnum,
-  pluginStatusEnum,
+    communicationProtocolEnum, plugins, pluginStatusEnum, robots, studyMembers, studyPlugins
 } from "~/server/db/schema";
 
 // Helper function to check if user has study access for robot operations

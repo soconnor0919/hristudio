@@ -1,18 +1,18 @@
-import { requireAdmin } from "~/server/auth/utils";
 import Link from "next/link";
+import { AdminUserTable } from "~/components/admin/admin-user-table";
+import { RoleManagement } from "~/components/admin/role-management";
+import { SystemStats } from "~/components/admin/system-stats";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
-import { AdminUserTable } from "~/components/admin/admin-user-table";
-import { SystemStats } from "~/components/admin/system-stats";
-import { RoleManagement } from "~/components/admin/role-management";
+import { requireAdmin } from "~/server/auth/utils";
 
 export default async function AdminPage() {
   const session = await requireAdmin();

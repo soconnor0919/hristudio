@@ -1,6 +1,16 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import {
+  BarChart3,
+  Building,
+  Calendar,
+  FlaskConical,
+  Plus,
+  Settings,
+  Shield,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -11,22 +21,12 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import {
-  Users,
-  FlaskConical,
-  Calendar,
-  Building,
-  Shield,
-  Settings,
-  Plus,
-  BarChart3,
-} from "lucide-react";
 import { api } from "~/trpc/server";
 
 interface StudyDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 const statusConfig = {
@@ -130,14 +130,12 @@ export default async function StudyDetailPage({
                     </label>
                     <p className="text-slate-900">{study.institution}</p>
                   </div>
-                  {study.irbProtocolNumber && (
+                  {study.irbProtocol && (
                     <div>
                       <label className="text-sm font-medium text-slate-700">
                         IRB Protocol
                       </label>
-                      <p className="text-slate-900">
-                        {study.irbProtocolNumber}
-                      </p>
+                      <p className="text-slate-900">{study.irbProtocol}</p>
                     </div>
                   )}
                   <div>

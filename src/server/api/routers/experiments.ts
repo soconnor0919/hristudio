@@ -1,19 +1,19 @@
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc, asc, inArray, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-  experiments,
-  steps,
   actions,
-  studyMembers,
-  robots,
   activityLogs,
+  experiments,
   experimentStatusEnum,
+  robots,
+  steps,
   stepTypeEnum,
+  studyMembers,
 } from "~/server/db/schema";
 
 // Helper function to check study access
@@ -1165,12 +1165,12 @@ export const experimentsRouter = createTRPCRouter({
       // Transform to designer format
       return experimentSteps.map((step) => ({
         id: step.id,
-        type: step.type as "wizard" | "robot" | "parallel" | "conditional",
+        type: step.type,
         name: step.name,
         description: step.description,
         order: step.orderIndex,
         duration: step.durationEstimate,
-        parameters: step.conditions as Record<string, any>,
+        parameters: step.conditions as Record<string, unknown>,
         parentId: undefined, // Not supported in current schema
         children: [], // TODO: implement hierarchical steps if needed
       }));
@@ -1188,7 +1188,30 @@ export const experimentsRouter = createTRPCRouter({
             description: z.string().optional(),
             order: z.number(),
             duration: z.number().optional(),
-            parameters: z.record(z.any()),
+            parameters: z.record(z.string(), z.any()),
+            actions: z
+              .array(
+                z.object({
+                  id: z.string(),
+                  type: z.enum([
+                    "speak",
+                    "move",
+                    "gesture",
+                    "look_at",
+                    "wait",
+                    "instruction",
+                    "question",
+                    "observe",
+                  ]),
+                  name: z.string(),
+                  description: z.string().optional(),
+                  parameters: z.record(z.string(), z.any()),
+                  duration: z.number().optional(),
+                  order: z.number(),
+                }),
+              )
+              .optional(),
+            expanded: z.boolean().optional(),
             parentId: z.string().optional(),
             children: z.array(z.string()).optional(),
           }),

@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "~/components/ui/card";
 
 export default function SignOutPage() {

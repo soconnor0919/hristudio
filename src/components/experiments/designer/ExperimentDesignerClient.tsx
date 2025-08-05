@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { api } from "~/trpc/react";
-import { ExperimentDesigner, ExperimentDesign } from "./ExperimentDesigner";
+import {
+  ExperimentDesigner,
+  type ExperimentDesign,
+} from "./ExperimentDesigner";
 
 interface ExperimentDesignerClientProps {
   experiment: {
@@ -18,13 +21,16 @@ interface ExperimentDesignerClientProps {
   };
 }
 
-export function ExperimentDesignerClient({ experiment }: ExperimentDesignerClientProps) {
+export function ExperimentDesignerClient({
+  experiment,
+}: ExperimentDesignerClientProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Fetch the experiment's design data
-  const { data: experimentSteps, isLoading } = api.experiments.getSteps.useQuery({
-    experimentId: experiment.id,
-  });
+  const { data: experimentSteps, isLoading } =
+    api.experiments.getSteps.useQuery({
+      experimentId: experiment.id,
+    });
 
   const saveDesignMutation = api.experiments.saveDesign.useMutation({
     onSuccess: () => {
@@ -50,9 +56,9 @@ export function ExperimentDesignerClient({ experiment }: ExperimentDesignerClien
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
           <p className="text-slate-600">Loading experiment designer...</p>
         </div>
       </div>
@@ -62,21 +68,31 @@ export function ExperimentDesignerClient({ experiment }: ExperimentDesignerClien
   const initialDesign: ExperimentDesign = {
     id: experiment.id,
     name: experiment.name,
-    steps: experimentSteps || [],
+    description: experiment.description,
+    steps:
+      experimentSteps?.map((step) => ({
+        ...step,
+        type: step.type as "wizard" | "robot" | "parallel" | "conditional",
+        description: step.description ?? undefined,
+        duration: step.duration ?? undefined,
+        actions: [], // Initialize with empty actions array
+        parameters: step.parameters || {},
+        expanded: false,
+      })) || [],
     version: 1,
     lastSaved: new Date(),
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex h-screen flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-white">
+      <div className="flex items-center justify-between border-b bg-white p-4">
         <div className="flex items-center space-x-4">
           <Link
             href={`/experiments/${experiment.id}`}
             className="flex items-center text-sm text-slate-600 hover:text-slate-900"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="mr-1 h-4 w-4" />
             Back to Experiment
           </Link>
           <div className="h-4 w-px bg-slate-300" />
@@ -84,9 +100,7 @@ export function ExperimentDesignerClient({ experiment }: ExperimentDesignerClien
             <h1 className="text-lg font-semibold text-slate-900">
               {experiment.name}
             </h1>
-            <p className="text-sm text-slate-600">
-              Visual Protocol Designer
-            </p>
+            <p className="text-sm text-slate-600">Visual Protocol Designer</p>
           </div>
         </div>
 
@@ -103,7 +117,7 @@ export function ExperimentDesignerClient({ experiment }: ExperimentDesignerClien
 
       {/* Error Display */}
       {saveError && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+        <div className="border-l-4 border-red-400 bg-red-50 p-4">
           <div className="flex">
             <div className="ml-3">
               <p className="text-sm text-red-700">

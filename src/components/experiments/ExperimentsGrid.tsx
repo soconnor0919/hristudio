@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, FlaskConical, Settings, Calendar, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Calendar, FlaskConical, Plus, Settings, Users } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { api } from "~/trpc/react";
@@ -19,13 +19,13 @@ import { api } from "~/trpc/react";
 type ExperimentWithRelations = {
   id: string;
   name: string;
-  description: string;
-  status: "draft" | "active" | "completed" | "archived";
+  description: string | null;
+  status: "draft" | "testing" | "ready" | "deprecated";
   estimatedDuration: number | null;
   createdAt: Date;
   updatedAt: Date;
   studyId: string;
-  createdById: string;
+  createdById?: string;
   study: {
     id: string;
     name: string;
@@ -47,20 +47,20 @@ const statusConfig = {
     className: "bg-gray-100 text-gray-800 hover:bg-gray-200",
     icon: "📝",
   },
-  active: {
-    label: "Active",
-    className: "bg-green-100 text-green-800 hover:bg-green-200",
-    icon: "🟢",
+  testing: {
+    label: "Testing",
+    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+    icon: "🧪",
   },
-  completed: {
-    label: "Completed",
-    className: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+  ready: {
+    label: "Ready",
+    className: "bg-green-100 text-green-800 hover:bg-green-200",
     icon: "✅",
   },
-  archived: {
-    label: "Archived",
-    className: "bg-orange-100 text-orange-800 hover:bg-orange-200",
-    icon: "📦",
+  deprecated: {
+    label: "Deprecated",
+    className: "bg-red-100 text-red-800 hover:bg-red-200",
+    icon: "🗑️",
   },
 };
 
@@ -309,7 +309,17 @@ export function ExperimentsGrid() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Experiments</h1>
+        <p className="text-muted-foreground">
+          Design and manage experimental protocols for your HRI studies
+        </p>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {/* Create New Experiment Card */}
       <Card className="border-2 border-dashed border-slate-300 transition-colors hover:border-slate-400">
         <CardHeader className="text-center">
@@ -356,6 +366,7 @@ export function ExperimentsGrid() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

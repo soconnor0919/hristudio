@@ -4,9 +4,7 @@ import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import {
-  getAvailableRoles,
-  getRolePermissions,
-  getRoleColor,
+    getAvailableRoles, getRoleColor, getRolePermissions
 } from "~/lib/auth-client";
 
 export function RoleManagement() {

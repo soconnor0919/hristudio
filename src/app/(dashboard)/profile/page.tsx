@@ -1,19 +1,19 @@
-import { auth } from "~/server/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { PasswordChangeForm } from "~/components/profile/password-change-form";
+import { ProfileEditForm } from "~/components/profile/profile-edit-form";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { formatRole, getRoleDescription } from "~/lib/auth-client";
-import { ProfileEditForm } from "~/components/profile/profile-edit-form";
-import { PasswordChangeForm } from "~/components/profile/password-change-form";
+import { auth } from "~/server/auth";
 
 export default async function ProfilePage() {
   const session = await auth();

@@ -3,8 +3,8 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
-import { TRPCReactProvider } from "~/trpc/react";
 import { SessionProvider } from "next-auth/react";
+import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
   title: "HRIStudio",

@@ -1,16 +1,11 @@
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, desc, ilike, or, inArray } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-  participants,
-  participantConsents,
-  consentForms,
-  studyMembers,
-  activityLogs,
-  trials,
+    activityLogs, consentForms, participantConsents, participants, studyMembers, trials
 } from "~/server/db/schema";
 
 // Helper function to check study access

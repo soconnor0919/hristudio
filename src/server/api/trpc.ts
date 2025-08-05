@@ -11,10 +11,10 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+import { and, eq } from "drizzle-orm";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { userSystemRoles } from "~/server/db/schema";
-import { and, eq } from "drizzle-orm";
 
 /**
  * 1. CONTEXT

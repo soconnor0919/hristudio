@@ -16,6 +16,13 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    
+    // Minio/S3 Configuration
+    MINIO_ENDPOINT: z.string().optional(),
+    MINIO_REGION: z.string().optional(),
+    MINIO_ACCESS_KEY: z.string().optional(),
+    MINIO_SECRET_KEY: z.string().optional(),
+    MINIO_BUCKET_NAME: z.string().optional(),
   },
 
   /**
@@ -36,6 +43,13 @@ export const env = createEnv({
 
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    
+    // Minio/S3 Configuration
+    MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
+    MINIO_REGION: process.env.MINIO_REGION,
+    MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
+    MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
+    MINIO_BUCKET_NAME: process.env.MINIO_BUCKET_NAME,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

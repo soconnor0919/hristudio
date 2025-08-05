@@ -1,7 +1,7 @@
-import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { type DefaultSession } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
 import { db } from "~/server/db";
@@ -87,13 +87,13 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: ({ token, user }: { token: any; user: any }) => {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    session: async ({ session, token }) => {
+    session: async ({ session, token }: { session: any; token: any }) => {
       if (token.id) {
         // Fetch user roles from database
         const userWithRoles = await db.query.users.findFirst({
@@ -130,4 +130,4 @@ export const authConfig = {
       return session;
     },
   },
-} satisfies NextAuthConfig;
+} as any;

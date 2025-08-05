@@ -1,9 +1,9 @@
-import { auth } from "./index";
+import { and, eq } from "drizzle-orm";
+import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { db } from "~/server/db";
 import { users, userSystemRoles } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
-import type { Session } from "next-auth";
+import { auth } from "./index";
 
 // Role types from schema
 export type SystemRole = "administrator" | "researcher" | "wizard" | "observer";

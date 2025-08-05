@@ -1,7 +1,7 @@
+import type { Session } from "next-auth";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { auth } from "./src/server/auth";
-import type { NextRequest } from "next/server";
-import type { Session } from "next-auth";
 
 export default auth((req: NextRequest & { auth: Session | null }) => {
   const { nextUrl } = req;

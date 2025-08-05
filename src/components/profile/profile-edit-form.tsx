@@ -1,14 +1,14 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
-import { useRouter } from "next/navigation";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),

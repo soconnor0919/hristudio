@@ -4,11 +4,11 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-  experiments,
-  mediaCaptures,
-  sensorData,
-  studyMembers,
-  trials
+    experiments,
+    mediaCaptures,
+    sensorData,
+    studyMembers,
+    trials
 } from "~/server/db/schema";
 
 // Helper function to check if user has access to trial for media operations

@@ -1,12 +1,10 @@
-import { z } from "zod";
-import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 import {
-  createTRPCRouter,
-  publicProcedure,
-  protectedProcedure,
+    createTRPCRouter, protectedProcedure, publicProcedure
 } from "~/server/api/trpc";
 import { users } from "~/server/db/schema";
 

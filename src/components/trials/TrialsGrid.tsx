@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Play, Pause, Square, Clock, Users, Eye, Settings } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { Clock, Eye, Play, Plus, Settings, Square } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -19,30 +19,30 @@ import { api } from "~/trpc/react";
 type TrialWithRelations = {
   id: string;
   experimentId: string;
-  participantId: string;
-  scheduledAt: Date;
+  participantId: string | null;
+  scheduledAt: Date | null;
   startedAt: Date | null;
   completedAt: Date | null;
-  status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  status: "scheduled" | "in_progress" | "completed" | "aborted" | "failed";
   duration: number | null;
   notes: string | null;
   wizardId: string | null;
   createdAt: Date;
-  experiment: {
+  experiment?: {
     id: string;
     name: string;
-    study: {
+    study?: {
       id: string;
       name: string;
     };
   };
-  participant: {
+  participant?: {
     id: string;
     participantCode: string;
     email: string | null;
     name: string | null;
-  };
-  wizard: {
+  } | null;
+  wizard?: {
     id: string;
     name: string | null;
     email: string;
@@ -75,8 +75,15 @@ const statusConfig = {
     action: "Review",
     actionIcon: Eye,
   },
-  cancelled: {
-    label: "Cancelled",
+  aborted: {
+    label: "Aborted",
+    className: "bg-red-100 text-red-800 hover:bg-red-200",
+    icon: Square,
+    action: "View",
+    actionIcon: Eye,
+  },
+  failed: {
+    label: "Failed",
     className: "bg-red-100 text-red-800 hover:bg-red-200",
     icon: Square,
     action: "View",
@@ -95,38 +102,42 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
   const StatusIcon = statusInfo.icon;
   const ActionIcon = statusInfo.actionIcon;
 
-  const isScheduledSoon = trial.status === "scheduled" &&
-    new Date(trial.scheduledAt).getTime() - Date.now() < 60 * 60 * 1000; // Within 1 hour
+  const isScheduledSoon =
+    trial.status === "scheduled" && trial.scheduledAt
+      ? new Date(trial.scheduledAt).getTime() - Date.now() < 60 * 60 * 1000
+      : false; // Within 1 hour
 
-  const canControl = userRole === "wizard" || userRole === "researcher" || userRole === "administrator";
+  const canControl =
+    userRole === "wizard" ||
+    userRole === "researcher" ||
+    userRole === "administrator";
 
   return (
-    <Card className={`group transition-all duration-200 hover:border-slate-300 hover:shadow-md ${
-      trial.status === "in_progress" ? "ring-2 ring-green-500 shadow-md" : ""
-    }`}>
+    <Card
+      className={`group transition-all duration-200 hover:border-slate-300 hover:shadow-md ${
+        trial.status === "in_progress" ? "shadow-md ring-2 ring-green-500" : ""
+      }`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
             <CardTitle className="truncate text-lg font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
-              <Link
-                href={`/trials/${trial.id}`}
-                className="hover:underline"
-              >
-                {trial.experiment.name}
+              <Link href={`/trials/${trial.id}`} className="hover:underline">
+                {trial.experiment?.name ?? "Unknown Experiment"}
               </Link>
             </CardTitle>
             <CardDescription className="mt-1 text-sm text-slate-600">
-              Participant: {trial.participant.participantCode}
+              Participant: {trial.participant?.participantCode ?? "Unknown"}
             </CardDescription>
             <div className="mt-2 flex items-center space-x-4 text-xs text-slate-500">
               <Link
-                href={`/studies/${trial.experiment.study.id}`}
+                href={`/studies/${trial.experiment?.study?.id ?? "unknown"}`}
                 className="font-medium text-blue-600 hover:text-blue-800"
               >
-                {trial.experiment.study.name}
+                {trial.experiment?.study?.name ?? "Unknown Study"}
               </Link>
               {trial.wizard && (
-                <span>Wizard: {trial.wizard.name || trial.wizard.email}</span>
+                <span>Wizard: {trial.wizard.name ?? trial.wizard.email}</span>
               )}
             </div>
           </div>
@@ -136,7 +147,10 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
               {statusInfo.label}
             </Badge>
             {isScheduledSoon && (
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
+              <Badge
+                variant="outline"
+                className="border-orange-600 text-orange-600"
+              >
                 Starting Soon
               </Badge>
             )}
@@ -150,7 +164,9 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-600">Scheduled:</span>
             <span className="font-medium">
-              {format(trial.scheduledAt, "MMM d, yyyy 'at' h:mm a")}
+              {trial.scheduledAt
+                ? format(trial.scheduledAt, "MMM d, yyyy 'at' h:mm a")
+                : "Not scheduled"}
             </span>
           </div>
           {trial.startedAt && (
@@ -172,7 +188,9 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
           {trial.duration && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-600">Duration:</span>
-              <span className="font-medium">{Math.round(trial.duration / 60)} minutes</span>
+              <span className="font-medium">
+                {Math.round(trial.duration / 60)} minutes
+              </span>
             </div>
           )}
         </div>
@@ -188,7 +206,9 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Media:</span>
-                <span className="font-medium">{trial._count.mediaCaptures}</span>
+                <span className="font-medium">
+                  {trial._count.mediaCaptures}
+                </span>
               </div>
             </div>
           </>
@@ -200,7 +220,9 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
             <Separator />
             <div className="text-sm">
               <span className="text-slate-600">Notes: </span>
-              <span className="text-slate-900">{trial.notes.substring(0, 100)}...</span>
+              <span className="text-slate-900">
+                {trial.notes.substring(0, 100)}...
+              </span>
             </div>
           </>
         )}
@@ -260,7 +282,7 @@ export function TrialsGrid() {
     {
       page: 1,
       limit: 50,
-      status: statusFilter === "all" ? undefined : statusFilter as any,
+      status: statusFilter === "all" ? undefined : (statusFilter as any),
     },
     {
       refetchOnWindowFocus: false,
@@ -275,7 +297,7 @@ export function TrialsGrid() {
   });
 
   const trials = trialsData?.trials ?? [];
-  const userRole = userSession?.roles?.[0]?.role || "observer";
+  const userRole = userSession?.roles?.[0] ?? "observer";
 
   const handleTrialAction = async (trialId: string, action: string) => {
     if (action === "start") {
@@ -293,10 +315,10 @@ export function TrialsGrid() {
   };
 
   // Group trials by status for better organization
-  const upcomingTrials = trials.filter(t => t.status === "scheduled");
-  const activeTrials = trials.filter(t => t.status === "in_progress");
-  const completedTrials = trials.filter(t => t.status === "completed");
-  const cancelledTrials = trials.filter(t => t.status === "cancelled");
+  const upcomingTrials = trials.filter((t) => t.status === "scheduled");
+  const activeTrials = trials.filter((t) => t.status === "in_progress");
+  const completedTrials = trials.filter((t) => t.status === "completed");
+  const cancelledTrials = trials.filter((t) => t.status === "aborted");
 
   if (isLoading) {
     return (
@@ -304,7 +326,10 @@ export function TrialsGrid() {
         {/* Status Filter Skeleton */}
         <div className="flex items-center space-x-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-8 w-20 rounded bg-slate-200 animate-pulse"></div>
+            <div
+              key={i}
+              className="h-8 w-20 animate-pulse rounded bg-slate-200"
+            ></div>
           ))}
         </div>
 
@@ -338,7 +363,7 @@ export function TrialsGrid() {
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-red-100">
           <svg
             className="h-8 w-8 text-red-600"
@@ -369,6 +394,15 @@ export function TrialsGrid() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Trials</h1>
+        <p className="text-muted-foreground">
+          Schedule, execute, and monitor HRI experiment trials with real-time
+          wizard control
+        </p>
+      </div>
+
       {/* Quick Actions Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -404,48 +438,54 @@ export function TrialsGrid() {
 
         <Button asChild>
           <Link href="/trials/new">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Schedule Trial
           </Link>
         </Button>
       </div>
 
       {/* Active Trials Section (Priority) */}
-      {activeTrials.length > 0 && (statusFilter === "all" || statusFilter === "in_progress") && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-            <h2 className="text-xl font-semibold text-slate-900">Active Trials</h2>
-            <Badge className="bg-green-100 text-green-800">
-              {activeTrials.length} running
-            </Badge>
+      {activeTrials.length > 0 &&
+        (statusFilter === "all" || statusFilter === "in_progress") && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+              <h2 className="text-xl font-semibold text-slate-900">
+                Active Trials
+              </h2>
+              <Badge className="bg-green-100 text-green-800">
+                {activeTrials.length} running
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeTrials.map((trial) => (
+                <TrialCard
+                  key={trial.id}
+                  trial={trial}
+                  userRole={userRole}
+                  onTrialAction={handleTrialAction}
+                />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activeTrials.map((trial) => (
-              <TrialCard
-                key={trial.id}
-                trial={trial}
-                userRole={userRole}
-                onTrialAction={handleTrialAction}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Main Trials Grid */}
       <div className="space-y-4">
         {statusFilter !== "in_progress" && (
           <h2 className="text-xl font-semibold text-slate-900">
-            {statusFilter === "all" ? "All Trials" :
-             statusFilter === "scheduled" ? "Scheduled Trials" :
-             statusFilter === "completed" ? "Completed Trials" :
-             "Cancelled Trials"}
+            {statusFilter === "all"
+              ? "All Trials"
+              : statusFilter === "scheduled"
+                ? "Scheduled Trials"
+                : statusFilter === "completed"
+                  ? "Completed Trials"
+                  : "Cancelled Trials"}
           </h2>
         )}
 
         {trials.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className="py-12 text-center">
             <CardContent>
               <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-lg bg-slate-100">
                 <Play className="h-12 w-12 text-slate-400" />
@@ -454,8 +494,9 @@ export function TrialsGrid() {
                 No Trials Yet
               </h3>
               <p className="mb-4 text-slate-600">
-                Schedule your first trial to start collecting data with real participants.
-                Trials let you execute your designed experiments with wizard control.
+                Schedule your first trial to start collecting data with real
+                participants. Trials let you execute your designed experiments
+                with wizard control.
               </p>
               <Button asChild>
                 <Link href="/trials/new">Schedule Your First Trial</Link>
@@ -465,10 +506,12 @@ export function TrialsGrid() {
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {trials
-              .filter(trial =>
-                statusFilter === "all" ||
-                trial.status === statusFilter ||
-                (statusFilter === "in_progress" && trial.status === "in_progress")
+              .filter(
+                (trial) =>
+                  statusFilter === "all" ||
+                  trial.status === statusFilter ||
+                  (statusFilter === "in_progress" &&
+                    trial.status === "in_progress"),
               )
               .map((trial) => (
                 <TrialCard

@@ -1,28 +1,28 @@
-import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import {
-  eq,
   and,
-  desc,
   asc,
-  gte,
-  lte,
-  inArray,
   count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  sql,
   type SQL,
 } from "drizzle-orm";
-import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import {
-  trials,
-  trialEvents,
-  wizardInterventions,
-  participants,
-  experiments,
-  studyMembers,
-  trialStatusEnum,
-  mediaCaptures,
-} from "~/server/db/schema";
 import type { db } from "~/server/db";
+import {
+  experiments,
+  participants,
+  studyMembers,
+  trialEvents,
+  trials,
+  trialStatusEnum,
+  wizardInterventions,
+} from "~/server/db/schema";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -164,7 +164,10 @@ export const trialsRouter = createTRPCRouter({
           id: trials.id,
           participantId: trials.participantId,
           experimentId: trials.experimentId,
+          wizardId: trials.wizardId,
+          sessionNumber: trials.sessionNumber,
           status: trials.status,
+          scheduledAt: trials.scheduledAt,
           startedAt: trials.startedAt,
           completedAt: trials.completedAt,
           duration: trials.duration,
@@ -205,6 +208,9 @@ export const trialsRouter = createTRPCRouter({
       z.object({
         participantId: z.string(),
         experimentId: z.string(),
+        scheduledAt: z.date().optional(),
+        wizardId: z.string().optional(),
+        sessionNumber: z.number().optional(),
         notes: z.string().optional(),
         metadata: z.any().optional(),
       }),
@@ -270,6 +276,9 @@ export const trialsRouter = createTRPCRouter({
         .values({
           participantId: input.participantId,
           experimentId: input.experimentId,
+          scheduledAt: input.scheduledAt,
+          wizardId: input.wizardId,
+          sessionNumber: input.sessionNumber ?? 1,
           status: "scheduled",
           notes: input.notes,
           metadata: input.metadata,
@@ -283,6 +292,9 @@ export const trialsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        scheduledAt: z.date().optional(),
+        wizardId: z.string().optional(),
+        sessionNumber: z.number().optional(),
         notes: z.string().optional(),
         metadata: z.any().optional(),
       }),
@@ -296,9 +308,12 @@ export const trialsRouter = createTRPCRouter({
       const [trial] = await db
         .update(trials)
         .set({
+          scheduledAt: input.scheduledAt,
+          wizardId: input.wizardId,
+          sessionNumber: input.sessionNumber,
           notes: input.notes,
           metadata: input.metadata,
-          updatedAt: new Date(),
+          updatedAt: sql`CURRENT_TIMESTAMP`,
         })
         .where(eq(trials.id, input.id))
         .returning();
@@ -552,10 +567,11 @@ export const trialsRouter = createTRPCRouter({
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(100).default(20),
         status: z.enum(trialStatusEnum.enumValues).optional(),
+        studyId: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { page, limit, status } = input;
+      const { page, limit, status, studyId } = input;
       const offset = (page - 1) * limit;
       const userId = ctx.session.user.id;
 
@@ -567,7 +583,18 @@ export const trialsRouter = createTRPCRouter({
         },
       });
 
-      const studyIds = userStudies.map((membership) => membership.studyId);
+      let studyIds = userStudies.map((membership) => membership.studyId);
+
+      // If studyId is provided, filter to just that study (if user has access)
+      if (studyId) {
+        if (!studyIds.includes(studyId)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have access to this study",
+          });
+        }
+        studyIds = [studyId];
+      }
 
       if (studyIds.length === 0) {
         return {
@@ -581,81 +608,99 @@ export const trialsRouter = createTRPCRouter({
         };
       }
 
-      // Build where conditions
+      // Build where conditions with study filtering
       const conditions = [];
 
       if (status) {
         conditions.push(eq(trials.status, status));
       }
 
-      // Get trials from experiments in user's studies
-      const userTrials = await ctx.db.query.trials.findMany({
-        where: status ? and(...conditions) : undefined,
-        with: {
+      // Get trials from experiments in user's studies using SQL join
+      const userTrials = await ctx.db
+        .select({
+          trial: trials,
           experiment: {
-            where: inArray(experiments.studyId, studyIds),
-            with: {
-              study: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-            columns: {
-              id: true,
-              name: true,
-              studyId: true,
-            },
+            id: experiments.id,
+            name: experiments.name,
+            studyId: experiments.studyId,
           },
-          participant: {
-            columns: {
-              id: true,
-              participantCode: true,
-              email: true,
-              name: true,
-            },
-          },
-          wizard: {
-            columns: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          events: {
-            columns: {
-              id: true,
-            },
-          },
-          mediaCaptures: {
-            columns: {
-              id: true,
-            },
-          },
-        },
-        limit,
-        offset,
-        orderBy: [desc(trials.scheduledAt)],
-      });
-
-      // Filter out trials from experiments not in user's studies
-      const filteredTrials = userTrials.filter(
-        (trial) =>
-          trial.experiment && studyIds.includes(trial.experiment.studyId),
-      );
-
-      // Get total count
-      const totalCountResult = await ctx.db
-        .select({ count: count() })
+        })
         .from(trials)
         .innerJoin(experiments, eq(trials.experimentId, experiments.id))
         .where(
           and(
             inArray(experiments.studyId, studyIds),
-            status ? eq(trials.status, status) : undefined,
-          ).filter(Boolean),
-        );
+            ...(conditions.length > 0 ? conditions : []),
+          ),
+        )
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(trials.scheduledAt));
+
+      // Get full trial data with relations for the filtered trials
+      const trialIds = userTrials.map((row) => row.trial.id);
+
+      const filteredTrials =
+        trialIds.length > 0
+          ? await ctx.db.query.trials.findMany({
+              where: inArray(trials.id, trialIds),
+              with: {
+                experiment: {
+                  with: {
+                    study: {
+                      columns: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                  columns: {
+                    id: true,
+                    name: true,
+                    studyId: true,
+                  },
+                },
+                participant: {
+                  columns: {
+                    id: true,
+                    participantCode: true,
+                    email: true,
+                    name: true,
+                  },
+                },
+                wizard: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+                events: {
+                  columns: {
+                    id: true,
+                  },
+                },
+                mediaCaptures: {
+                  columns: {
+                    id: true,
+                  },
+                },
+              },
+              orderBy: [desc(trials.scheduledAt)],
+            })
+          : [];
+
+      // Get total count
+      const whereConditions = [inArray(experiments.studyId, studyIds)];
+      if (status) {
+        whereConditions.push(eq(trials.status, status));
+      }
+
+      const totalCountResult = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(and(...whereConditions));
 
       const totalCount = totalCountResult[0]?.count ?? 0;
 
@@ -663,8 +708,8 @@ export const trialsRouter = createTRPCRouter({
       const transformedTrials = filteredTrials.map((trial) => ({
         ...trial,
         _count: {
-          events: trial.events.length,
-          mediaCaptures: trial.mediaCaptures.length,
+          events: trial.events?.length ?? 0,
+          mediaCaptures: trial.mediaCaptures?.length ?? 0,
         },
       }));
 

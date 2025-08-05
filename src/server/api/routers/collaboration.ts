@@ -1,16 +1,11 @@
-import { z } from "zod";
-import { eq, and, desc, inArray, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import {
-  comments,
-  attachments,
-  sharedResources,
-  experiments,
-  trials,
-  studyMembers,
-} from "~/server/db/schema";
 import type { db } from "~/server/db";
+import {
+    attachments, comments, experiments, sharedResources, studyMembers, trials
+} from "~/server/db/schema";
 
 // Helper function to check if user has access to a resource
 async function checkResourceAccess(

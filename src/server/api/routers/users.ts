@@ -1,14 +1,19 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, ilike, or, type SQL } from "drizzle-orm";
-import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { and, count, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { z } from "zod";
 
 import {
   adminProcedure,
   createTRPCRouter,
   protectedProcedure,
 } from "~/server/api/trpc";
-import { systemRoleEnum, users, userSystemRoles } from "~/server/db/schema";
+import {
+  systemRoleEnum,
+  users,
+  userSystemRoles,
+  studyMembers,
+} from "~/server/db/schema";
 
 export const usersRouter = createTRPCRouter({
   list: adminProcedure
