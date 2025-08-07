@@ -32,9 +32,16 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 ### 2. Visual Experiment Designer (EDE)
 - Drag-and-drop interface for creating experiment workflows
 - No-code solution for experiment design
+- **Repository-based block system** with 26+ core blocks across 4 categories
+- **Plugin architecture** for both core functionality and robot actions
 - Context-sensitive help and best practice guidance
 - Automatic generation of robot-specific action components
 - Parameter configuration with validation
+- **Core Block Categories**:
+  - Events (4): Trial triggers, speech detection, timers, key presses
+  - Wizard Actions (6): Speech, gestures, object handling, rating, notes
+  - Control Flow (8): Loops, conditionals, parallel execution, error handling
+  - Observation (8): Behavioral coding, timing, recording, surveys, sensors
 
 ### 3. Adaptive Wizard Interface
 - Real-time experiment execution dashboard
@@ -45,9 +52,10 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 - Customizable per-experiment controls
 
 ### 4. Robot Platform Integration
-- Plugin-based architecture for robot support
+- **Unified plugin architecture** for both core blocks and robot actions
 - Abstract action definitions with platform-specific translations
 - Support for RESTful APIs, ROS2, and custom protocols
+- **Repository system** for plugin distribution and management
 - Plugin Store with trust levels (Official, Verified, Community)
 - Version tracking for reproducibility
 
@@ -72,7 +80,8 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 ### Three-Layer Architecture
 
 #### 1. User Interface Layer
-- **Experiment Designer**: Visual programming interface for creating experiments
+- **Experiment Designer**: Visual programming interface with repository-based blocks
+- **Core Blocks System**: 26 essential blocks for events, wizard actions, control flow, and observation
 - **Wizard Interface**: Real-time control and monitoring during trials
 - **Playback & Analysis**: Data exploration and visualization tools
 - **Administration Panel**: System configuration and user management

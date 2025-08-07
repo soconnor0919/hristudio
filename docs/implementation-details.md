@@ -471,6 +471,44 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 ### **Plugin System Design**
 
+**Unified Plugin Architecture**: HRIStudio uses a consistent plugin system for both core blocks and robot actions, providing complete architectural consistency.
+
+#### **Core Blocks System**
+
+**Repository Structure**:
+```
+public/hristudio-core/
+├── repository.json           # Repository metadata
+├── plugins/
+│   ├── index.json           # Plugin index (26 total blocks)
+│   ├── events.json          # Event trigger blocks (4 blocks)
+│   ├── wizard-actions.json  # Wizard action blocks (6 blocks)
+│   ├── control-flow.json    # Control flow blocks (8 blocks)
+│   └── observation.json     # Observation blocks (8 blocks)
+└── assets/                  # Repository assets
+```
+
+**Block Loading Architecture**:
+```typescript
+class BlockRegistry {
+  async loadCoreBlocks() {
+    // Fetch from /hristudio-core/plugins/*.json
+    // Parse and validate JSON structures
+    // Convert to PluginBlockDefinition format
+    // Register with unified block system
+    // Fallback to minimal blocks if loading fails
+  }
+}
+```
+
+**Core Block Categories**:
+- **Events (4)**: `when_trial_starts`, `when_participant_speaks`, `when_timer_expires`, `when_key_pressed`
+- **Wizard Actions (6)**: `wizard_say`, `wizard_gesture`, `wizard_show_object`, `wizard_record_note`, `wizard_wait_for_response`, `wizard_rate_interaction`
+- **Control Flow (8)**: `wait`, `repeat`, `if_condition`, `parallel`, `sequence`, `random_choice`, `try_catch`, `break`
+- **Observation (8)**: `observe_behavior`, `measure_response_time`, `count_events`, `record_audio`, `capture_video`, `log_event`, `survey_question`, `physiological_measure`
+
+#### **Robot Plugin Interface**
+
 **Plugin Interface**:
 ```typescript
 interface RobotPlugin {

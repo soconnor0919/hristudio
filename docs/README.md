@@ -45,14 +45,28 @@ This documentation suite provides everything needed to understand, build, deploy
    - WebSocket events
    - Rate limiting and error handling
 
-5. **[Implementation Guide](./implementation-guide.md)**
+5. **[Core Blocks System](./core-blocks-system.md)**
+   - Repository-based plugin architecture
+   - 26 essential blocks across 4 categories
+   - Event triggers, wizard actions, control flow, observation
+   - Block loading and validation system
+   - Integration with experiment designer
+
+6. **[Plugin System Implementation](./plugin-system-implementation-guide.md)**
+   - Robot plugin architecture and development
+   - Repository management and trust levels
+   - Plugin installation and configuration
+   - Action definitions and parameter schemas
+   - ROS2 integration patterns
+
+7. **[Implementation Guide](./implementation-guide.md)**
    - Step-by-step technical implementation
    - Code examples and patterns
    - Frontend and backend architecture
    - Real-time features implementation
    - Testing strategies
 
-6. **[Implementation Details](./implementation-details.md)**
+8. **[Implementation Details](./implementation-details.md)**
    - Architecture decisions and rationale
    - Unified editor experiences (significant code reduction)
    - DataTable migration achievements
@@ -60,47 +74,47 @@ This documentation suite provides everything needed to understand, build, deploy
    - Performance optimization strategies
 
 #### **Operations & Deployment**
-7. **[Deployment & Operations](./deployment-operations.md)**
+9. **[Deployment & Operations](./deployment-operations.md)**
    - Infrastructure requirements
    - Vercel deployment strategies
    - Monitoring and observability
    - Backup and recovery procedures
    - Security operations
 
-8. **[ROS2 Integration](./ros2-integration.md)**
-   - rosbridge WebSocket architecture
-   - Client-side ROS connection management
-   - Message type definitions
-   - Robot plugin implementation
-   - Security considerations for robot communication
+10. **[ROS2 Integration](./ros2-integration.md)**
+    - rosbridge WebSocket architecture
+    - Client-side ROS connection management
+    - Message type definitions
+    - Robot plugin implementation
+    - Security considerations for robot communication
 
 ### **📊 Project Status**
 
-9. **[Project Status](./project-status.md)**
-   - Overall completion status (complete)
-   - Implementation progress by feature
-   - Sprint planning and development velocity
-   - Production readiness assessment
-   - Current work
-: Experiment designer revamp
+11. **[Project Status](./project-status.md)**
+    - Overall completion status (complete)
+    - Implementation progress by feature
+    - Sprint planning and development velocity
+    - Production readiness assessment
+    - Core blocks system completion
 
-10. **[Quick Reference](./quick-reference.md)**
+12. **[Quick Reference](./quick-reference.md)**
     - 5-minute setup guide
     - Essential commands and patterns
     - API reference and common workflows
-    - Troubleshooting guide
+    - Core blocks system overview
     - Key concepts and architecture overview
 
-11. **[Work in Progress](./work_in_progress.md)**
+13. **[Work in Progress](./work_in_progress.md)**
     - Recent changes and improvements
-    - Implementation tracking
+    - Core blocks system implementation
+    - Plugin architecture enhancements
     - Technical debt resolution
     - UI/UX enhancements
 
 ### **📖 Academic References**
 
-12. **[Research Paper](./root.tex)** - Academic LaTeX document
-13. **[Bibliography](./refs.bib)** - Research references
+14. **[Research Paper](./root.tex)** - Academic LaTeX document
+15. **[Bibliography](./refs.bib)** - Research references
 
 ---
 
@@ -183,7 +197,8 @@ bun dev
 
 ### **Research Workflow Support**
 - **Hierarchical Structure**: Study → Experiment → Trial → Step → Action
-- **Visual Experiment Designer**: Drag-and-drop protocol creation
+- **Visual Experiment Designer**: Repository-based plugin architecture with 26 core blocks
+- **Core Block Categories**: Events, wizard actions, control flow, observation blocks
 - **Real-time Trial Execution**: Live wizard control with data capture
 - **Multi-role Collaboration**: Administrator, Researcher, Wizard, Observer
 - **Comprehensive Data Management**: Synchronized multi-modal capture
@@ -215,7 +230,9 @@ bun dev
 - ✅ **Type Safety** - Zero TypeScript errors in production code
 - ✅ **Database Schema** - 31 tables with comprehensive relationships
 - ✅ **Authentication** - Role-based access control system
-- ✅ **Visual Designer** - Drag-and-drop experiment creation
+- ✅ **Visual Designer** - Repository-based plugin architecture
+- ✅ **Core Blocks System** - 26 blocks across events, wizard, control, observation
+- ✅ **Plugin Architecture** - Unified system for core blocks and robot actions
 - ✅ **Development Environment** - Realistic test data and scenarios
 
 ---

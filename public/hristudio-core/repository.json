@@ -1,0 +1,66 @@
+{
+  "id": "hristudio-core",
+  "name": "HRIStudio Core Blocks",
+  "description": "Essential system blocks for experiment design including control flow, wizard actions, and basic functionality",
+  "urls": {
+    "git": "https://github.com/soconnor0919/hristudio-core",
+    "repository": "https://core.hristudio.com"
+  },
+  "official": true,
+  "trust": "official",
+  "apiVersion": "1.0",
+  "pluginApiVersion": "1.0",
+  "author": {
+    "name": "HRIStudio Team",
+    "email": "support@hristudio.com",
+    "url": "https://hristudio.com",
+    "organization": "HRIStudio"
+  },
+  "maintainers": [
+    {
+      "name": "Sean O'Connor",
+      "url": "https://github.com/soconnor0919"
+    }
+  ],
+  "homepage": "https://hristudio.org/core",
+  "license": "MIT",
+  "defaultBranch": "main",
+  "lastUpdated": "2025-02-13T00:00:00Z",
+  "categories": [
+    {
+      "id": "events",
+      "name": "Event Triggers",
+      "description": "Blocks that initiate experiment sequences"
+    },
+    {
+      "id": "wizard-actions",
+      "name": "Wizard Actions",
+      "description": "Actions performed by the human wizard"
+    },
+    {
+      "id": "control-flow",
+      "name": "Control Flow",
+      "description": "Logic blocks for conditionals, loops, and timing"
+    },
+    {
+      "id": "sensors",
+      "name": "Observation & Sensing",
+      "description": "Data collection and behavioral observation blocks"
+    }
+  ],
+  "compatibility": {
+    "hristudio": {
+      "min": "0.1.0",
+      "recommended": "0.1.0"
+    }
+  },
+  "assets": {
+    "icon": "assets/core-icon.png",
+    "logo": "assets/core-logo.png",
+    "banner": "assets/core-banner.png"
+  },
+  "tags": ["official", "core", "essential", "wizard-of-oz"],
+  "stats": {
+    "plugins": 4
+  }
+}

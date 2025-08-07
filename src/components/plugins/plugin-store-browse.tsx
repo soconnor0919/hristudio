@@ -50,6 +50,7 @@ interface PluginStoreItem {
   status: "active" | "deprecated" | "disabled";
   createdAt: Date;
   updatedAt: Date;
+  metadata: unknown;
 }
 
 const trustLevelConfig = {
@@ -77,10 +78,12 @@ function PluginCard({
   plugin,
   onInstall,
   repositoryName,
+  isInstalled,
 }: {
   plugin: PluginStoreItem;
   onInstall: (pluginId: string) => void;
   repositoryName?: string;
+  isInstalled?: boolean;
 }) {
   const trustLevel = plugin.trustLevel;
   const trustConfig = trustLevel ? trustLevelConfig[trustLevel] : null;
@@ -149,10 +152,10 @@ function PluginCard({
           <Button
             size="sm"
             onClick={() => onInstall(plugin.id)}
-            disabled={plugin.status !== "active"}
+            disabled={plugin.status !== "active" || isInstalled}
           >
             <Download className="mr-2 h-3 w-3" />
-            Install
+            {isInstalled ? "Installed" : "Install"}
           </Button>
           {plugin.repositoryUrl && (
             <Button variant="outline" size="sm" asChild>
@@ -191,7 +194,19 @@ export function PluginStoreBrowse() {
     {
       refetchOnWindowFocus: false,
     },
-  ) as { data: Array<{ url: string; name: string }> | undefined };
+  ) as { data: Array<{ id: string; url: string; name: string }> | undefined };
+
+  // Get installed plugins for current study
+  const { data: installedPlugins } =
+    api.robots.plugins.getStudyPlugins.useQuery(
+      {
+        studyId: selectedStudyId!,
+      },
+      {
+        enabled: !!selectedStudyId,
+        refetchOnWindowFocus: false,
+      },
+    );
 
   const {
     data: availablePlugins,
@@ -278,6 +293,12 @@ export function PluginStoreBrowse() {
       return matchesSearch && matchesStatus && matchesTrustLevel;
     });
   }, [availablePlugins, searchTerm, statusFilter, trustLevelFilter]);
+
+  // Create a set of installed plugin IDs for quick lookup
+  const installedPluginIds = React.useMemo(() => {
+    if (!installedPlugins) return new Set<string>();
+    return new Set(installedPlugins.map((p) => p.plugin.id));
+  }, [installedPlugins]);
 
   // Status filter options
   const statusOptions = [
@@ -430,10 +451,18 @@ export function PluginStoreBrowse() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlugins.map((plugin) => {
-                // Find repository for this plugin (this would need to be enhanced with actual repository mapping)
-                const repository = repositories?.find((repo) =>
-                  plugin.repositoryUrl?.includes(repo.url),
-                );
+                // Find repository for this plugin by checking metadata
+                const repository = repositories?.find((repo) => {
+                  // First try to match by URL
+                  if (plugin.repositoryUrl?.includes(repo.url)) {
+                    return true;
+                  }
+                  // Then try to match by repository ID in metadata if available
+                  const metadata = plugin.metadata as {
+                    repositoryId?: string;
+                  } | null;
+                  return metadata?.repositoryId === repo.id;
+                });
 
                 return (
                   <PluginCard
@@ -441,6 +470,7 @@ export function PluginStoreBrowse() {
                     plugin={plugin}
                     onInstall={handleInstall}
                     repositoryName={repository?.name}
+                    isInstalled={installedPluginIds.has(plugin.id)}
                   />
                 );
               })}

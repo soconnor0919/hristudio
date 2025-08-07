@@ -1,74 +1,276 @@
-# A Web-Based Wizard-of-Oz Platform for Collaborative and Reproducible Human-Robot Interaction Research
+# HRIStudio: A Web-Based Wizard-of-Oz Platform for Human-Robot Interaction Research
 
-A markdown-based conference presentation using Marp with a custom mono/minimal theme, featuring ASCII diagrams and professional formatting.
+A comprehensive platform designed to standardize and improve the reproducibility of Wizard of Oz (WoZ) studies in Human-Robot Interaction research. HRIStudio provides researchers with standardized tools for designing experiments, executing trials, and analyzing data while ensuring reproducibility and scientific rigor.
+
+## Overview
+
+HRIStudio addresses critical challenges in HRI research by providing a comprehensive experimental workflow management system with standardized terminology, visual experiment design tools, real-time wizard control interfaces, and comprehensive data capture capabilities.
+
+### Key Problems Solved
+
+- **Lack of standardized terminology** in WoZ studies
+- **Poor documentation practices** leading to unreproducible experiments
+- **Technical barriers** preventing non-programmers from conducting HRI research
+- **Inconsistent wizard behavior** across trials
+- **Limited data capture** and analysis capabilities in existing tools
+
+### Core Features
+
+- **Hierarchical Structure**: Study → Experiment → Trial → Step → Action
+- **Visual Experiment Designer**: Drag-and-drop protocol creation with 26+ core blocks
+- **Plugin System**: Extensible robot platform integration (RESTful, ROS2, custom)
+- **Real-time Trial Execution**: Live wizard control with comprehensive data capture
+- **Role-Based Access**: Administrator, Researcher, Wizard, Observer (4 distinct roles)
+- **Unified Form Experiences**: 73% code reduction through standardized patterns
+- **Enterprise DataTables**: Advanced filtering, pagination, export capabilities
 
 ## Quick Start
 
+### Prerequisites
+- [Bun](https://bun.sh) (package manager)
+- [PostgreSQL](https://postgresql.org) 14+
+- [Docker](https://docker.com) (recommended)
+
+### Installation
+
 ```bash
+# Clone the repository
+git clone <repo-url> hristudio
+cd hristudio
+
 # Install dependencies
 bun install
-# OR
-npm install
 
-# Start live preview (recommended for editing)
-./start-presentation.sh preview
+# Start database (Docker)
+bun run docker:up
 
-# Build PDF for conference submission
-./start-presentation.sh pdf
+# Setup database schema and seed data
+bun db:push
+bun db:seed
+
+# Start development server
+bun dev
 ```
 
-## Available Scripts
+### Default Login Credentials
 
-- `bun run preview` - Live preview with auto-reload
-- `bun run watch` - Watch mode with browser preview
-- `bun run build:pdf` - Generate PDF for conference
-- `bun run build:html` - Generate HTML version
-- `bun run build:pptx` - Generate PowerPoint format
-- `bun run build:all` - Build all formats
-- `bun run serve` - Start development server
+- **Administrator**: `sean@soconnor.dev` / `password123`
+- **Researcher**: `alice.rodriguez@university.edu` / `password123`
+- **Wizard**: `emily.watson@lab.edu` / `password123`
+- **Observer**: `maria.santos@tech.edu` / `password123`
 
-## Files
+## Technology Stack
 
-- `hristudio-presentation.md` - Main presentation content
-- `start-presentation.sh` - Quick start helper script
-- `package.json` - Dependencies and scripts
+- **Framework**: Next.js 15 with App Router and React 19 RC
+- **Language**: TypeScript (strict mode) - 100% type safety throughout
+- **Database**: PostgreSQL with Drizzle ORM for type-safe operations
+- **Authentication**: NextAuth.js v5 with database sessions and JWT
+- **API**: tRPC for end-to-end type-safe client-server communication
+- **UI**: Tailwind CSS + shadcn/ui (built on Radix UI primitives)
+- **Storage**: Cloudflare R2 (S3-compatible) for media files
+- **Deployment**: Vercel serverless platform with Edge Runtime
+- **Package Manager**: Bun exclusively
+- **Real-time**: WebSocket with Edge Runtime compatibility
 
-## Design System
+## Architecture
 
-The presentation uses a mono/minimal aesthetic with:
+### Core Components
 
-- **Font**: JetBrains Mono (Geist Mono fallback)
-- **Colors**: Matching HRIStudio's oklch color scheme
-- **Layout**: Clean, spacious design with no unnecessary elements
-- **Typography**: Consistent hierarchy with proper spacing
+#### 1. Visual Experiment Designer
+- **Repository-based block system** with 26+ core blocks across 4 categories
+- **Plugin architecture** for both core functionality and robot actions
+- Context-sensitive help and best practice guidance
+- **Core Block Categories**:
+  - **Events (4)**: Trial triggers, speech detection, timers, key presses
+  - **Wizard Actions (6)**: Speech, gestures, object handling, rating, notes
+  - **Control Flow (8)**: Loops, conditionals, parallel execution, error handling
+  - **Observation (8)**: Behavioral coding, timing, recording, surveys, sensors
 
-## Development Workflow
+#### 2. Robot Platform Integration
+- **Unified plugin architecture** for both core blocks and robot actions
+- Abstract action definitions with platform-specific translations
+- Support for RESTful APIs, ROS2, and custom protocols
+- **Repository system** for plugin distribution and management
+- Plugin Store with trust levels (Official, Verified, Community)
 
-1. **Edit**: Modify `hristudio-presentation.md` in your editor
-2. **Preview**: Run `./start-presentation.sh preview` for live reload
-3. **Build**: Generate final PDF with `./start-presentation.sh pdf`
-4. **Version Control**: All files are text-based and git-friendly
+#### 3. Adaptive Wizard Interface
+- Real-time experiment execution dashboard
+- Step-by-step guidance for consistent execution
+- Quick actions for unscripted interventions
+- Live video feed integration
+- Timestamped event logging
 
-## VS Code Integration
+#### 4. Comprehensive Data Management
+- Automatic capture of all experimental data
+- Synchronized multi-modal data streams
+- Encrypted storage for sensitive participant data
+- Role-based access control for data security
 
-Install "Marp for VS Code" extension for:
-- Live preview in editor
-- Syntax highlighting
-- Immediate feedback while editing
+## User Roles
 
-## Conference Requirements
+- **Administrator**: Full system access, user management, plugin installation
+- **Researcher**: Create studies, design experiments, manage teams, analyze data
+- **Wizard**: Execute trials, control robots, make real-time decisions
+- **Observer**: Read-only access, monitor trials, add annotations
 
-The generated PDF meets standard conference requirements:
-- 16:9 aspect ratio for projectors
-- High-quality embedded fonts
-- Professional typography
-- Consistent with academic presentation standards
+## Development
 
-## Customization
+### Available Scripts
 
-- Edit content in `hristudio-presentation.md`
-- Modify colors/fonts in the `<style>` section
-- Add new slides by inserting `---` separators
-- Use custom CSS classes for special formatting
+```bash
+# Development
+bun dev                    # Start development server
+bun build                  # Build for production
+bun start                  # Start production server
 
-This setup provides a developer-friendly, version-controlled presentation workflow that maintains design consistency with the HRIStudio platform.
+# Database
+bun db:push               # Push schema changes
+bun db:studio             # Open database GUI
+bun db:seed               # Seed with comprehensive test data
+bun db:seed:simple        # Seed with minimal test data
+bun db:seed:plugins       # Seed plugin repositories and plugins
+bun db:seed:core-blocks   # Seed core block system
+
+# Code Quality
+bun typecheck             # TypeScript validation
+bun lint                  # ESLint with autofix
+bun format:check          # Prettier formatting check
+bun format:write          # Apply Prettier formatting
+
+# Docker
+bun run docker:up         # Start PostgreSQL container
+bun run docker:down       # Stop PostgreSQL container
+```
+
+### Project Structure
+
+```
+src/
+├── app/                      # Next.js App Router pages
+│   ├── (auth)/              # Authentication pages
+│   ├── (dashboard)/         # Main application pages
+│   │   ├── studies/         # Study management
+│   │   ├── experiments/     # Experiment design & designer
+│   │   ├── participants/    # Participant management
+│   │   ├── trials/          # Trial execution and monitoring
+│   │   ├── plugins/         # Plugin management
+│   │   └── admin/           # System administration
+│   └── api/                 # API routes and webhooks
+├── components/              # UI components
+│   ├── ui/                  # shadcn/ui base components
+│   ├── experiments/         # Experiment designer components
+│   ├── plugins/             # Plugin management components
+│   └── [entity]/            # Entity-specific components
+├── server/                  # Backend code
+│   ├── api/routers/         # tRPC routers (11 total)
+│   ├── auth/               # NextAuth.js v5 configuration
+│   └── db/                 # Database schema and setup
+├── lib/                    # Utilities and configurations
+└── hooks/                  # Custom React hooks
+```
+
+### Database Schema
+
+31 tables with comprehensive relationships:
+- **Core Entities**: users, studies, experiments, participants, trials
+- **Execution**: trial_events, steps, actions
+- **Integration**: robots, plugins, plugin_repositories
+- **Collaboration**: study_members, comments, attachments
+- **System**: roles, permissions, audit_logs
+
+## Core Concepts
+
+### Experiment Lifecycle
+1. **Design Phase**: Visual experiment creation using block-based designer
+2. **Configuration Phase**: Parameter setup and team assignment
+3. **Execution Phase**: Real-time trial execution with wizard control
+4. **Analysis Phase**: Data review and insight generation
+5. **Sharing Phase**: Export and collaboration features
+
+### Plugin Architecture
+- **Action Definitions**: Abstract robot capabilities
+- **Parameter Schemas**: Type-safe configuration with validation
+- **Communication Adapters**: Platform-specific implementations
+- **Repository System**: Centralized plugin distribution
+
+## Documentation
+
+Comprehensive documentation available in the `docs/` folder:
+
+- **[Quick Reference](docs/quick-reference.md)**: 5-minute setup guide and essential commands
+- **[Project Overview](docs/project-overview.md)**: Complete feature overview and architecture
+- **[Implementation Details](docs/implementation-details.md)**: Architecture decisions and patterns
+- **[Database Schema](docs/database-schema.md)**: Complete PostgreSQL schema documentation
+- **[API Routes](docs/api-routes.md)**: Comprehensive tRPC API reference
+- **[Core Blocks System](docs/core-blocks-system.md)**: Repository-based block architecture
+- **[Plugin System](docs/plugin-system-implementation-guide.md)**: Robot integration guide
+- **[Project Status](docs/project-status.md)**: Current completion status (98% complete)
+
+## Research Paper
+
+This platform is described in our research paper: **"A Web-Based Wizard-of-Oz Platform for Collaborative and Reproducible Human-Robot Interaction Research"**
+
+Key contributions:
+- Assessment of state-of-the-art in WoZ study tools
+- Identification of reproducibility challenges in HRI research
+- Novel architectural approach with hierarchical experiment structure
+- Repository-based plugin system for robot integration
+- Comprehensive evaluation of platform effectiveness
+
+Full paper available at: [docs/paper.md](docs/paper.md)
+
+## Current Status
+
+- **98% Complete**: Production-ready platform
+- **31 Database Tables**: Comprehensive data model
+- **11 tRPC Routers**: Complete API coverage
+- **26+ Core Blocks**: Repository-based experiment building blocks
+- **4 User Roles**: Complete role-based access control
+- **Plugin System**: Extensible robot integration architecture
+
+## Deployment
+
+### Vercel (Recommended)
+```bash
+# Install Vercel CLI
+bun add -g vercel
+
+# Deploy
+vercel --prod
+```
+
+### Environment Variables
+```bash
+DATABASE_URL=postgresql://...
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=your-secret
+CLOUDFLARE_R2_ACCOUNT_ID=...
+CLOUDFLARE_R2_ACCESS_KEY_ID=...
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=...
+CLOUDFLARE_R2_BUCKET_NAME=hristudio-files
+```
+
+## Contributing
+
+1. Read the project documentation in `docs/`
+2. Follow the established patterns in `.rules`
+3. Use TypeScript strict mode throughout
+4. Implement proper error handling and loading states
+5. Test with multiple user roles
+6. Use `bun` exclusively for package management
+
+## License
+
+[License information to be added]
+
+## Citation
+
+If you use HRIStudio in your research, please cite our paper:
+
+```bibtex
+[Citation to be added once published]
+```
+
+---
+
+**HRIStudio**: Advancing the reproducibility and accessibility of Human-Robot Interaction research through standardized, collaborative tools.

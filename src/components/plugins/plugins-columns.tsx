@@ -179,7 +179,8 @@ export const pluginsColumns: ColumnDef<Plugin>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "plugin.name",
+    id: "name",
+    accessorFn: (row) => row.plugin.name,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Plugin Name" />
     ),

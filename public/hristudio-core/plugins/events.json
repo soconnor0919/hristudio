@@ -1,0 +1,115 @@
+{
+  "blockSetId": "events",
+  "name": "Event Triggers",
+  "description": "Blocks that initiate and respond to experiment events",
+  "version": "1.0.0",
+  "pluginApiVersion": "1.0",
+  "hriStudioVersion": ">=0.1.0",
+  "trustLevel": "official",
+  "category": "events",
+
+  "author": {
+    "name": "HRIStudio Team",
+    "email": "support@hristudio.com",
+    "organization": "HRIStudio"
+  },
+
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.org/blocks/events",
+    "description": "Event blocks are the starting points for experiment sequences. They respond to trial states, participant actions, and system events."
+  },
+
+  "blocks": [
+    {
+      "id": "when_trial_starts",
+      "name": "when trial starts",
+      "description": "Triggered when the trial begins execution",
+      "category": "event",
+      "shape": "hat",
+      "icon": "Play",
+      "color": "#22c55e",
+      "nestable": false,
+      "parameters": [],
+      "execution": {
+        "trigger": "trial_start",
+        "blocking": false
+      }
+    },
+    {
+      "id": "when_participant_speaks",
+      "name": "when participant speaks",
+      "description": "Triggered when participant speech is detected",
+      "category": "event",
+      "shape": "hat",
+      "icon": "Mic",
+      "color": "#22c55e",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "duration_threshold",
+          "name": "Min Duration (s)",
+          "type": "number",
+          "value": 0.5,
+          "min": 0.1,
+          "max": 10,
+          "step": 0.1,
+          "description": "Minimum speech duration to trigger event"
+        }
+      ],
+      "execution": {
+        "trigger": "speech_detected",
+        "blocking": false
+      }
+    },
+    {
+      "id": "when_timer_expires",
+      "name": "when timer expires",
+      "description": "Triggered after a specified time delay",
+      "category": "event",
+      "shape": "hat",
+      "icon": "Timer",
+      "color": "#22c55e",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "delay",
+          "name": "Delay (s)",
+          "type": "number",
+          "value": 5,
+          "min": 0.1,
+          "max": 300,
+          "step": 0.1,
+          "description": "Time delay before triggering"
+        }
+      ],
+      "execution": {
+        "trigger": "timer",
+        "blocking": false
+      }
+    },
+    {
+      "id": "when_key_pressed",
+      "name": "when key pressed",
+      "description": "Triggered when wizard presses a specific key",
+      "category": "event",
+      "shape": "hat",
+      "icon": "Keyboard",
+      "color": "#22c55e",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "key",
+          "name": "Key",
+          "type": "select",
+          "value": "space",
+          "options": ["space", "enter", "1", "2", "3", "4", "5", "escape"],
+          "description": "Key that triggers the event"
+        }
+      ],
+      "execution": {
+        "trigger": "keypress",
+        "blocking": false
+      }
+    }
+  ]
+}

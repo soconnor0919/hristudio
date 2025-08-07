@@ -263,6 +263,7 @@ export const robotsRouter = createTRPCRouter({
             status: plugins.status,
             createdAt: plugins.createdAt,
             updatedAt: plugins.updatedAt,
+            metadata: plugins.metadata,
           })
           .from(plugins);
 

@@ -61,6 +61,7 @@ import {
   Clock,
   Palette,
 } from "lucide-react";
+// import { useParams } from "next/navigation"; // Unused
 
 // Types
 type BlockShape = "action" | "control" | "hat" | "cap" | "boolean" | "value";
@@ -112,18 +113,116 @@ export interface BlockDesign {
 class BlockRegistry {
   private static instance: BlockRegistry;
   private blocks = new Map<string, PluginBlockDefinition>();
+  private coreBlocksLoaded = false;
+  private pluginActionsLoaded = false;
 
   static getInstance(): BlockRegistry {
     if (!BlockRegistry.instance) {
       BlockRegistry.instance = new BlockRegistry();
-      BlockRegistry.instance.initializeCoreBlocks();
     }
     return BlockRegistry.instance;
   }
 
-  private initializeCoreBlocks() {
-    const coreBlocks: PluginBlockDefinition[] = [
-      // Events
+  async loadCoreBlocks() {
+    if (this.coreBlocksLoaded) return;
+
+    try {
+      console.log("Loading core blocks from hristudio-core repository...");
+
+      // Load core blocks from the hristudio-core repository
+      const coreBlockSets = [
+        "events",
+        "wizard-actions",
+        "control-flow",
+        "observation",
+      ];
+
+      let blocksLoaded = 0;
+
+      for (const blockSetId of coreBlockSets) {
+        try {
+          const response = await fetch(
+            `/hristudio-core/plugins/${blockSetId}.json`,
+          );
+
+          if (!response.ok) {
+            console.warn(
+              `Failed to load ${blockSetId}: ${response.status} ${response.statusText}`,
+            );
+            continue;
+          }
+
+          const blockSet = (await response.json()) as {
+            blocks?: Array<{
+              id: string;
+              name: string;
+              description?: string;
+              category: string;
+              shape?: string;
+              icon?: string;
+              color?: string;
+              parameters?: BlockParameter[];
+              nestable?: boolean;
+            }>;
+          };
+
+          if (!blockSet.blocks || !Array.isArray(blockSet.blocks)) {
+            console.warn(`Invalid block set structure for ${blockSetId}`);
+            continue;
+          }
+
+          blockSet.blocks.forEach((block) => {
+            if (!block.id || !block.name || !block.category) {
+              console.warn(`Skipping invalid block in ${blockSetId}:`, block);
+              return;
+            }
+
+            const blockDef: PluginBlockDefinition = {
+              type: block.id,
+              shape: (block.shape ?? "action") as BlockShape,
+              category: block.category as BlockCategory,
+              displayName: block.name,
+              description: block.description ?? "",
+              icon: block.icon ?? "Square",
+              color: block.color ?? "#6b7280",
+              parameters: block.parameters ?? [],
+              nestable: block.nestable ?? false,
+            };
+
+            this.blocks.set(blockDef.type, blockDef);
+            blocksLoaded++;
+          });
+
+          console.log(
+            `Loaded ${blockSet.blocks.length} blocks from ${blockSetId}`,
+          );
+        } catch (blockSetError) {
+          console.error(
+            `Error loading block set ${blockSetId}:`,
+            blockSetError,
+          );
+        }
+      }
+
+      if (blocksLoaded > 0) {
+        console.log(`Successfully loaded ${blocksLoaded} core blocks`);
+        this.coreBlocksLoaded = true;
+      } else {
+        throw new Error("No core blocks could be loaded from repository");
+      }
+    } catch (error) {
+      console.error("Failed to load core blocks:", error);
+      // Fallback to minimal core blocks if loading fails
+      this.loadFallbackCoreBlocks();
+    }
+  }
+
+  private loadFallbackCoreBlocks() {
+    console.warn(
+      "Loading minimal fallback blocks due to core repository loading failure",
+    );
+
+    const fallbackBlocks: PluginBlockDefinition[] = [
       {
         type: "when_trial_starts",
         shape: "hat",
@@ -133,112 +232,8 @@ class BlockRegistry {
         icon: "Play",
         color: "#22c55e",
         parameters: [],
+        nestable: false,
       },
-
-      // Wizard Actions
-      {
-        type: "wizard_say",
-        shape: "action",
-        category: "wizard",
-        displayName: "say",
-        description: "Wizard speaks to participant",
-        icon: "Users",
-        color: "#a855f7",
-        parameters: [
-          {
-            id: "message",
-            name: "Message",
-            type: "text",
-            value: "",
-            placeholder: "What should the wizard say?",
-          },
-        ],
-      },
-      {
-        type: "wizard_gesture",
-        shape: "action",
-        category: "wizard",
-        displayName: "gesture",
-        description: "Wizard performs a gesture",
-        icon: "Users",
-        color: "#a855f7",
-        parameters: [
-          {
-            id: "type",
-            name: "Gesture",
-            type: "select",
-            value: "wave",
-            options: ["wave", "point", "nod", "thumbs_up"],
-          },
-        ],
-      },
-
-      // Robot Actions
-      {
-        type: "robot_say",
-        shape: "action",
-        category: "robot",
-        displayName: "say",
-        description: "Robot speaks using text-to-speech",
-        icon: "Bot",
-        color: "#3b82f6",
-        parameters: [
-          {
-            id: "text",
-            name: "Text",
-            type: "text",
-            value: "",
-            placeholder: "What should the robot say?",
-          },
-        ],
-      },
-      {
-        type: "robot_move",
-        shape: "action",
-        category: "robot",
-        displayName: "move",
-        description: "Robot moves in specified direction",
-        icon: "Bot",
-        color: "#3b82f6",
-        parameters: [
-          {
-            id: "direction",
-            name: "Direction",
-            type: "select",
-            value: "forward",
-            options: ["forward", "backward", "left", "right"],
-          },
-          {
-            id: "distance",
-            name: "Distance (m)",
-            type: "number",
-            value: 1,
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-          },
-        ],
-      },
-      {
-        type: "robot_look_at",
-        shape: "action",
-        category: "robot",
-        displayName: "look at",
-        description: "Robot looks at target",
-        icon: "Bot",
-        color: "#3b82f6",
-        parameters: [
-          {
-            id: "target",
-            name: "Target",
-            type: "select",
-            value: "participant",
-            options: ["participant", "object", "door"],
-          },
-        ],
-      },
-
-      // Control Flow
       {
         type: "wait",
         shape: "action",
@@ -258,77 +253,12 @@ class BlockRegistry {
             step: 0.1,
           },
         ],
-      },
-      {
-        type: "repeat",
-        shape: "control",
-        category: "control",
-        displayName: "repeat",
-        description: "Execute contained blocks multiple times",
-        icon: "GitBranch",
-        color: "#f97316",
-        parameters: [
-          {
-            id: "times",
-            name: "Times",
-            type: "number",
-            value: 3,
-            min: 1,
-            max: 20,
-          },
-        ],
-        nestable: true,
-      },
-      {
-        type: "if",
-        shape: "control",
-        category: "control",
-        displayName: "if",
-        description: "Conditional execution",
-        icon: "GitBranch",
-        color: "#f97316",
-        parameters: [
-          {
-            id: "condition",
-            name: "Condition",
-            type: "select",
-            value: "participant_speaks",
-            options: ["participant_speaks", "object_detected", "timer_expired"],
-          },
-        ],
-        nestable: true,
-      },
-
-      // Sensors
-      {
-        type: "observe",
-        shape: "action",
-        category: "sensor",
-        displayName: "observe",
-        description: "Record behavioral observations",
-        icon: "Activity",
-        color: "#16a34a",
-        parameters: [
-          {
-            id: "what",
-            name: "What to observe",
-            type: "text",
-            value: "",
-            placeholder: "e.g., participant engagement",
-          },
-          {
-            id: "duration",
-            name: "Duration (s)",
-            type: "number",
-            value: 5,
-            min: 1,
-            max: 60,
-          },
-        ],
+        nestable: false,
       },
     ];
 
-    coreBlocks.forEach((block) => this.blocks.set(block.type, block));
+    fallbackBlocks.forEach((block) => this.blocks.set(block.type, block));
+    this.coreBlocksLoaded = true;
   }
 
   registerBlock(blockDef: PluginBlockDefinition) {
@@ -345,6 +275,123 @@ class BlockRegistry {
     );
   }
 
+  getAllBlocks(): PluginBlockDefinition[] {
+    return Array.from(this.blocks.values());
+  }
+
+  loadPluginActions(
+    studyId: string,
+    studyPlugins: Array<{
+      plugin: {
+        robotId: string | null;
+        actionDefinitions?: Array<{
+          id: string;
+          name: string;
+          description?: string;
+          category: string;
+          icon?: string;
+          parameterSchema?: Record<string, unknown>;
+        }>;
+      };
+    }>,
+  ) {
+    if (this.pluginActionsLoaded) return;
+
+    studyPlugins.forEach((studyPlugin) => {
+      const { plugin } = studyPlugin;
+      if (
+        plugin.robotId &&
+        plugin.actionDefinitions &&
+        Array.isArray(plugin.actionDefinitions)
+      ) {
+        plugin.actionDefinitions.forEach((action) => {
+          const blockDef: PluginBlockDefinition = {
+            type: `plugin_${plugin.robotId}_${action.id}`,
+            shape: "action",
+            category: this.mapActionCategoryToBlockCategory(action.category),
+            displayName: action.name,
+            description: action.description ?? "",
+            icon: action.icon ?? "Bot",
+            color: "#3b82f6", // Robot blue
+            parameters: this.convertActionParametersToBlockParameters(
+              action.parameterSchema ?? {},
+            ),
+            nestable: false,
+          };
+          this.registerBlock(blockDef);
+        });
+      }
+    });
+
+    this.pluginActionsLoaded = true;
+  }
+
+  private mapActionCategoryToBlockCategory(
+    actionCategory: string,
+  ): BlockCategory {
+    switch (actionCategory) {
+      case "movement":
+        return "robot";
+      case "interaction":
+        return "robot";
+      case "sensors":
+        return "sensor";
+      case "logic":
+        return "logic";
+      default:
+        return "robot";
+    }
+  }
+
+  private convertActionParametersToBlockParameters(parameterSchema: {
+    properties?: Record<
+      string,
+      {
+        type?: string;
+        enum?: string[];
+        title?: string;
+        default?: string | number | boolean;
+        description?: string;
+        minimum?: number;
+        maximum?: number;
+      }
+    >;
+  }): BlockParameter[] {
+    if (!parameterSchema?.properties) return [];
+
+    return Object.entries(parameterSchema.properties).map(([key, paramDef]) => {
+      let type: "text" | "number" | "select" | "boolean" = "text";
+
+      if (paramDef.type === "number") {
+        type = "number";
+      } else if (paramDef.type === "boolean") {
+        type = "boolean";
+      } else if (paramDef.enum && Array.isArray(paramDef.enum)) {
+        type = "select";
+      }
+
+      return {
+        id: key,
+        name: paramDef.title ?? key.charAt(0).toUpperCase() + key.slice(1),
+        type,
+        value: paramDef.default,
+        placeholder: paramDef.description,
+        options: paramDef.enum,
+        min: paramDef.minimum,
+        max: paramDef.maximum,
+        step: paramDef.type === "number" ? 0.1 : undefined,
+      };
+    });
+  }
+
+  resetPluginActions() {
+    this.pluginActionsLoaded = false;
+    // Remove plugin blocks
+    const pluginBlockTypes = Array.from(this.blocks.keys()).filter((type) =>
+      type.startsWith("plugin_"),
+    );
+    pluginBlockTypes.forEach((type) => this.blocks.delete(type));
+  }
   createBlock(type: string, order: number): ExperimentBlock {
     const blockDef = this.blocks.get(type);
     if (!blockDef) {
@@ -857,11 +904,37 @@ export function EnhancedBlockDesigner({
     },
   });
 
+  // Load experiment data to get study ID
+  const { data: experiment } = api.experiments.get.useQuery({
+    id: experimentId,
+  });
+
+  // Load study plugins for this experiment's study
+  const { data: studyPlugins } = api.robots.plugins.getStudyPlugins.useQuery(
+    { studyId: experiment?.studyId ?? "" },
+    { enabled: !!experiment?.studyId },
+  );
+
+  // Load core blocks on component mount
+  useEffect(() => {
+    registry.loadCoreBlocks().catch((error) => {
+      console.error("Failed to initialize core blocks:", error);
+      toast.error("Failed to load core blocks. Using fallback blocks.");
+    });
+  }, [registry]);
+
+  // Load plugin actions into registry when study plugins are available
+  useEffect(() => {
+    if (experiment?.studyId && studyPlugins) {
+      registry.loadPluginActions(experiment.studyId, studyPlugins);
+    }
+  }, [experiment?.studyId, studyPlugins, registry]);
+
   // Set breadcrumbs
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
     { label: "Experiments", href: "/experiments" },
-    { label: design.name, href: `/experiments/${experimentId}` },
+    { label: design.name, href: `/experiments/${design.id}` },
     { label: "Designer" },
   ]);
 

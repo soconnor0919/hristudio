@@ -21,12 +21,14 @@ import {
   mediaCaptures,
   participants,
   pluginRepositories,
+  plugins,
+  robots,
   studies,
   systemSettings,
   trials,
   trustLevelEnum,
-  users,
   userSystemRoles,
+  users,
 } from "~/server/db/schema";
 
 // Helper function to check if user has system admin access
@@ -838,20 +840,203 @@ export const adminRouter = createTRPCRouter({
           })
           .where(eq(pluginRepositories.id, input.id));
 
-        // TODO: Implement actual repository synchronization
-        // This would fetch plugins from the repository URL and update the plugins table
+        try {
+          // Fetch repository metadata
+          const repoResponse = await fetch(
+            `${repository[0].url}/repository.json`,
+          );
+          if (!repoResponse.ok) {
+            throw new Error(
+              `Failed to fetch repository metadata: ${repoResponse.status}`,
+            );
+          }
+          const repoMetadata = (await repoResponse.json()) as {
+            name?: string;
+            trust?: string;
+            author?: { name?: string };
+            urls?: { git?: string };
+          };
 
-        // For now, just mark as completed
-        await db
-          .update(pluginRepositories)
-          .set({
-            syncStatus: "completed",
-            lastSyncAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(pluginRepositories.id, input.id));
+          // Fetch plugin index
+          const indexResponse = await fetch(
+            `${repository[0].url}/plugins/index.json`,
+          );
+          if (!indexResponse.ok) {
+            throw new Error(
+              `Failed to fetch plugin index: ${indexResponse.status}`,
+            );
+          }
+          const pluginFiles = (await indexResponse.json()) as string[];
 
-        return { success: true };
+          // Fetch and process each plugin
+          const syncedPlugins = [];
+          for (const pluginFile of pluginFiles) {
+            try {
+              const pluginResponse = await fetch(
+                `${repository[0].url}/plugins/${pluginFile}`,
+              );
+              if (!pluginResponse.ok) {
+                console.warn(
+                  `Failed to fetch plugin ${pluginFile}: ${pluginResponse.status}`,
+                );
+                continue;
+              }
+              const pluginData = (await pluginResponse.json()) as {
+                name?: string;
+                version?: string;
+                description?: string;
+                manufacturer?: { name?: string };
+                trustLevel?: string;
+                actions?: unknown[];
+                platform?: string;
+                category?: string;
+                specs?: unknown;
+                ros2Config?: unknown;
+                assets?: unknown;
+                documentation?: { mainUrl?: string };
+              };
+
+              // Find matching robot by name/manufacturer
+              const matchingRobots = await db
+                .select()
+                .from(robots)
+                .where(
+                  or(
+                    ilike(robots.name, `%${pluginData.name ?? ""}%`),
+                    ilike(robots.model, `%${pluginData.name ?? ""}%`),
+                    ilike(
+                      robots.manufacturer,
+                      `%${pluginData.manufacturer?.name ?? ""}%`,
+                    ),
+                  ),
+                );
+
+              const robotId = matchingRobots[0]?.id ?? null;
+
+              // Check if plugin already exists
+              const existingPlugin = await db
+                .select()
+                .from(plugins)
+                .where(
+                  and(
+                    eq(plugins.name, pluginData.name ?? ""),
+                    eq(plugins.version, pluginData.version ?? ""),
+                  ),
+                )
+                .limit(1);
+
+              if (existingPlugin.length === 0) {
+                // Create new plugin
+                const newPlugin = await db
+                  .insert(plugins)
+                  .values({
+                    robotId,
+                    name: pluginData.name ?? "",
+                    version: pluginData.version ?? "",
+                    description: pluginData.description,
+                    author:
+                      pluginData.manufacturer?.name ??
+                      repoMetadata.author?.name,
+                    repositoryUrl:
+                      pluginData.documentation?.mainUrl ??
+                      repoMetadata.urls?.git,
+                    trustLevel: (pluginData.trustLevel ??
+                      repoMetadata.trust) as
+                      | "official"
+                      | "verified"
+                      | "community"
+                      | null,
+                    status: "active",
+                    actionDefinitions: pluginData.actions ?? [],
+                    metadata: {
+                      platform: pluginData.platform,
+                      category: pluginData.category,
+                      specs: pluginData.specs,
+                      ros2Config: pluginData.ros2Config,
+                      assets: pluginData.assets,
+                      documentation: pluginData.documentation,
+                      repositoryId: repository[0].id,
+                    },
+                  })
+                  .returning();
+
+                syncedPlugins.push(newPlugin[0]);
+              } else {
+                // Update existing plugin
+                const updatedPlugin = await db
+                  .update(plugins)
+                  .set({
+                    description: pluginData.description,
+                    author:
+                      pluginData.manufacturer?.name ??
+                      repoMetadata.author?.name,
+                    repositoryUrl:
+                      pluginData.documentation?.mainUrl ??
+                      repoMetadata.urls?.git,
+                    trustLevel: (pluginData.trustLevel ??
+                      repoMetadata.trust) as
+                      | "official"
+                      | "verified"
+                      | "community"
+                      | null,
+                    actionDefinitions: pluginData.actions ?? [],
+                    metadata: {
+                      platform: pluginData.platform,
+                      category: pluginData.category,
+                      specs: pluginData.specs,
+                      ros2Config: pluginData.ros2Config,
+                      assets: pluginData.assets,
+                      documentation: pluginData.documentation,
+                      repositoryId: repository[0].id,
+                    },
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(plugins.id, existingPlugin[0]!.id))
+                  .returning();
+
+                syncedPlugins.push(updatedPlugin[0]);
+              }
+            } catch (pluginError) {
+              console.warn(
+                `Failed to process plugin ${pluginFile}:`,
+                pluginError,
+              );
+            }
+          }
+
+          // Mark sync as completed
+          await db
+            .update(pluginRepositories)
+            .set({
+              syncStatus: "completed",
+              lastSyncAt: new Date(),
+              updatedAt: new Date(),
+              syncError: null,
+            })
+            .where(eq(pluginRepositories.id, input.id));
+
+          return {
+            success: true,
+            syncedPlugins: syncedPlugins.length,
+            message: `Successfully synced ${syncedPlugins.length} plugins from ${repository[0].name}`,
+          };
+        } catch (error) {
+          // Mark sync as failed
+          await db
+            .update(pluginRepositories)
+            .set({
+              syncStatus: "failed",
+              syncError:
+                error instanceof Error ? error.message : "Unknown sync error",
+              updatedAt: new Date(),
+            })
+            .where(eq(pluginRepositories.id, input.id));
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Repository sync failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          });
+        }
       }),
   }),
 });

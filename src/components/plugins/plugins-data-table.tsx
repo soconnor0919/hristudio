@@ -235,7 +235,7 @@ export function PluginsDataTable() {
         <DataTable
           columns={pluginsColumns}
           data={filteredPlugins}
-          searchKey="plugin.name"
+          searchKey="name"
           searchPlaceholder="Search plugins..."
           isLoading={isLoading}
           loadingRowCount={5}

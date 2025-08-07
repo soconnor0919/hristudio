@@ -1,0 +1,51 @@
+{
+  "plugins": [
+    {
+      "id": "events",
+      "name": "Event Triggers",
+      "description": "Blocks that initiate and respond to experiment events",
+      "version": "1.0.0",
+      "category": "events",
+      "file": "events.json",
+      "blockCount": 4,
+      "lastUpdated": "2025-02-13T00:00:00Z",
+      "tags": ["events", "triggers", "trial-start", "participant-interaction"]
+    },
+    {
+      "id": "wizard-actions",
+      "name": "Wizard Actions",
+      "description": "Actions performed by the human wizard during experiment execution",
+      "version": "1.0.0",
+      "category": "wizard-actions",
+      "file": "wizard-actions.json",
+      "blockCount": 6,
+      "lastUpdated": "2025-02-13T00:00:00Z",
+      "tags": ["wizard", "human", "speech", "gestures", "observation"]
+    },
+    {
+      "id": "control-flow",
+      "name": "Control Flow",
+      "description": "Logic blocks for conditionals, loops, timing, and experiment flow control",
+      "version": "1.0.0",
+      "category": "control-flow",
+      "file": "control-flow.json",
+      "blockCount": 8,
+      "lastUpdated": "2025-02-13T00:00:00Z",
+      "tags": ["logic", "conditionals", "loops", "timing", "flow-control"]
+    },
+    {
+      "id": "observation",
+      "name": "Observation & Sensing",
+      "description": "Data collection and behavioral observation blocks for capturing experiment metrics",
+      "version": "1.0.0",
+      "category": "sensors",
+      "file": "observation.json",
+      "blockCount": 9,
+      "lastUpdated": "2025-02-13T00:00:00Z",
+      "tags": ["observation", "data-collection", "sensors", "measurement", "recording"]
+    }
+  ],
+  "total": 4,
+  "version": "1.0.0",
+  "lastUpdated": "2025-02-13T00:00:00Z"
+}

@@ -1,7 +1,7 @@
 You are an expert in TypeScript, Node.js, Next.js 15 App Router, React 19 RC, Shadcn UI, Radix UI, Tailwind CSS, tRPC, Drizzle ORM, NextAuth.js v5, and the HRIStudio platform architecture.
 
 ## Project Overview
-HRIStudio is a production-ready web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research. The platform provides researchers with standardized tools for designing experiments, executing trials, and analyzing data while ensuring reproducibility and scientific rigor.
+HRIStudio is a web-based platform for managing Wizard of Oz (WoZ) studies in Human-Robot Interaction research. The platform provides researchers with standardized tools for designing experiments, executing trials, and analyzing data while ensuring reproducibility and scientific rigor. It's specification and related paper can be found at docs/paper.md (READ THIS), as well as the docs folder.
 
 ## Technology Stack
 - **Framework**: Next.js 15 with App Router and React 19 RC
@@ -216,6 +216,23 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - See `docs/ros2-integration.md` for complete integration guide
 
 Follow Next.js 15 best practices for Data Fetching, Rendering, and Routing. Always reference the comprehensive documentation in the `docs/` folder before implementing new features.
+
+## Documentation Guidelines
+- **Location**: ALL documentation must be in `docs/` folder - NEVER create markdown files in root
+- **Structure**: Use existing documentation organization and file naming conventions
+- **Cross-References**: Always link to related documentation files using relative paths
+- **Updates**: When adding features, update relevant docs files (don't create new ones unless necessary)
+- **Completeness**: Document all new features, APIs, components, and architectural changes
+- **Format**: Use consistent markdown formatting with proper headers, code blocks, and lists
+- **Status Tracking**: Update `docs/work_in_progress.md` for active development
+- **Integration**: Ensure new docs integrate with existing quick-reference and overview files
+
+## Plugin System Documentation Standards
+- **Core Blocks**: Document in `docs/core-blocks-system.md` (to be created)
+- **Robot Plugins**: Use existing `docs/plugin-system-implementation-guide.md`
+- **Repository Structure**: Document all plugin repositories in dedicated sections
+- **Block Definitions**: Include JSON schema examples and validation rules
+- **Loading Process**: Document async loading, error handling, and fallback systems
 
 ## Response Guidelines
 - Keep responses concise and minimal

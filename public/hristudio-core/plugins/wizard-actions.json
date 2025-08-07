@@ -1,0 +1,240 @@
+{
+  "blockSetId": "wizard-actions",
+  "name": "Wizard Actions",
+  "description": "Actions performed by the human wizard during experiment execution",
+  "version": "1.0.0",
+  "pluginApiVersion": "1.0",
+  "hriStudioVersion": ">=0.1.0",
+  "trustLevel": "official",
+  "category": "wizard-actions",
+
+  "author": {
+    "name": "HRIStudio Team",
+    "email": "support@hristudio.com",
+    "organization": "HRIStudio"
+  },
+
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.org/blocks/wizard-actions",
+    "description": "Wizard action blocks define behaviors that the human experimenter performs during trials. These create prompts and interfaces for the wizard to follow the experimental protocol."
+  },
+
+  "blocks": [
+    {
+      "id": "wizard_say",
+      "name": "say",
+      "description": "Wizard speaks to the participant",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "MessageSquare",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "message",
+          "name": "Message",
+          "type": "text",
+          "value": "",
+          "placeholder": "What should the wizard say?",
+          "description": "Text that the wizard will speak to the participant"
+        },
+        {
+          "id": "tone",
+          "name": "Tone",
+          "type": "select",
+          "value": "neutral",
+          "options": ["neutral", "friendly", "encouraging", "instructional", "questioning"],
+          "description": "Suggested tone for delivery"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 30000
+      }
+    },
+    {
+      "id": "wizard_gesture",
+      "name": "gesture",
+      "description": "Wizard performs a physical gesture",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "Hand",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "type",
+          "name": "Gesture",
+          "type": "select",
+          "value": "wave",
+          "options": ["wave", "point", "nod", "thumbs_up", "beckon", "stop_hand", "applaud"],
+          "description": "Type of gesture to perform"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "type": "select",
+          "value": "forward",
+          "options": ["forward", "left", "right", "up", "down", "participant", "robot"],
+          "description": "Direction or target of the gesture"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 15000
+      }
+    },
+    {
+      "id": "wizard_show_object",
+      "name": "show object",
+      "description": "Wizard presents or demonstrates an object",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "Package",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "object",
+          "name": "Object",
+          "type": "text",
+          "value": "",
+          "placeholder": "Name of object to show",
+          "description": "Description of the object to present"
+        },
+        {
+          "id": "action",
+          "name": "Action",
+          "type": "select",
+          "value": "hold_up",
+          "options": ["hold_up", "demonstrate", "point_to", "place_on_table", "hand_to_participant"],
+          "description": "How to present the object"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 20000
+      }
+    },
+    {
+      "id": "wizard_record_note",
+      "name": "record note",
+      "description": "Wizard records an observation or note",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "PenTool",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "note_type",
+          "name": "Note Type",
+          "type": "select",
+          "value": "observation",
+          "options": ["observation", "participant_response", "technical_issue", "protocol_deviation", "other"],
+          "description": "Category of note being recorded"
+        },
+        {
+          "id": "prompt",
+          "name": "Prompt",
+          "type": "text",
+          "value": "",
+          "placeholder": "What should the wizard note?",
+          "description": "Guidance for what to observe or record"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 60000
+      }
+    },
+    {
+      "id": "wizard_wait_for_response",
+      "name": "wait for response",
+      "description": "Wizard waits for participant to respond",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "Clock",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "response_type",
+          "name": "Response Type",
+          "type": "select",
+          "value": "verbal",
+          "options": ["verbal", "gesture", "action", "button_press", "any"],
+          "description": "Type of response to wait for"
+        },
+        {
+          "id": "timeout",
+          "name": "Timeout (s)",
+          "type": "number",
+          "value": 30,
+          "min": 1,
+          "max": 300,
+          "step": 1,
+          "description": "Maximum time to wait for response"
+        },
+        {
+          "id": "prompt_text",
+          "name": "Prompt",
+          "type": "text",
+          "value": "",
+          "placeholder": "Optional prompt for participant",
+          "description": "Text to display to guide participant response"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 300000
+      }
+    },
+    {
+      "id": "wizard_rate_interaction",
+      "name": "rate interaction",
+      "description": "Wizard provides a subjective rating",
+      "category": "wizard",
+      "shape": "action",
+      "icon": "Star",
+      "color": "#a855f7",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "rating_type",
+          "name": "Rating Type",
+          "type": "select",
+          "value": "engagement",
+          "options": ["engagement", "comprehension", "comfort", "success", "naturalness", "custom"],
+          "description": "Aspect being rated"
+        },
+        {
+          "id": "scale",
+          "name": "Scale",
+          "type": "select",
+          "value": "1-5",
+          "options": ["1-5", "1-7", "1-10", "0-100"],
+          "description": "Rating scale to use"
+        },
+        {
+          "id": "custom_label",
+          "name": "Custom Label",
+          "type": "text",
+          "value": "",
+          "placeholder": "Label for custom rating type",
+          "description": "Description for custom rating (if selected)"
+        }
+      ],
+      "execution": {
+        "type": "wizard_prompt",
+        "blocking": true,
+        "timeout": 30000
+      }
+    }
+  ]
+}

@@ -1,0 +1,298 @@
+{
+  "blockSetId": "control-flow",
+  "name": "Control Flow",
+  "description": "Logic blocks for conditionals, loops, timing, and experiment flow control",
+  "version": "1.0.0",
+  "pluginApiVersion": "1.0",
+  "hriStudioVersion": ">=0.1.0",
+  "trustLevel": "official",
+  "category": "control-flow",
+
+  "author": {
+    "name": "HRIStudio Team",
+    "email": "support@hristudio.com",
+    "organization": "HRIStudio"
+  },
+
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.org/blocks/control-flow",
+    "description": "Control flow blocks manage the execution sequence of experiments. They provide timing, conditionals, loops, and logical operations to create sophisticated experimental protocols."
+  },
+
+  "blocks": [
+    {
+      "id": "wait",
+      "name": "wait",
+      "description": "Pause execution for a specified duration",
+      "category": "control",
+      "shape": "action",
+      "icon": "Clock",
+      "color": "#f97316",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "seconds",
+          "name": "Duration (s)",
+          "type": "number",
+          "value": 1,
+          "min": 0.1,
+          "max": 300,
+          "step": 0.1,
+          "description": "Time to wait in seconds"
+        },
+        {
+          "id": "show_countdown",
+          "name": "Show Countdown",
+          "type": "boolean",
+          "value": false,
+          "description": "Display countdown timer to wizard"
+        }
+      ],
+      "execution": {
+        "type": "delay",
+        "blocking": true
+      }
+    },
+    {
+      "id": "repeat",
+      "name": "repeat",
+      "description": "Execute contained blocks multiple times",
+      "category": "control",
+      "shape": "control",
+      "icon": "RotateCcw",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "times",
+          "name": "Repeat Count",
+          "type": "number",
+          "value": 3,
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "description": "Number of times to repeat"
+        },
+        {
+          "id": "delay_between",
+          "name": "Delay Between (s)",
+          "type": "number",
+          "value": 0,
+          "min": 0,
+          "max": 60,
+          "step": 0.1,
+          "description": "Optional delay between repetitions"
+        }
+      ],
+      "execution": {
+        "type": "loop",
+        "blocking": true
+      }
+    },
+    {
+      "id": "if_condition",
+      "name": "if",
+      "description": "Execute blocks conditionally based on a condition",
+      "category": "control",
+      "shape": "control",
+      "icon": "GitBranch",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "condition_type",
+          "name": "Condition",
+          "type": "select",
+          "value": "participant_speaks",
+          "options": [
+            "participant_speaks",
+            "participant_silent",
+            "object_detected",
+            "timer_elapsed",
+            "wizard_input",
+            "random_chance",
+            "custom"
+          ],
+          "description": "Type of condition to evaluate"
+        },
+        {
+          "id": "condition_value",
+          "name": "Condition Value",
+          "type": "text",
+          "value": "",
+          "placeholder": "Enter condition details",
+          "description": "Additional parameters for the condition"
+        },
+        {
+          "id": "probability",
+          "name": "Probability (%)",
+          "type": "number",
+          "value": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "description": "Probability for random chance condition"
+        }
+      ],
+      "execution": {
+        "type": "conditional",
+        "blocking": true
+      }
+    },
+    {
+      "id": "parallel",
+      "name": "run in parallel",
+      "description": "Execute multiple blocks simultaneously",
+      "category": "control",
+      "shape": "control",
+      "icon": "Zap",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "wait_for_all",
+          "name": "Wait for All",
+          "type": "boolean",
+          "value": true,
+          "description": "Wait for all parallel blocks to complete"
+        },
+        {
+          "id": "timeout",
+          "name": "Timeout (s)",
+          "type": "number",
+          "value": 60,
+          "min": 1,
+          "max": 600,
+          "step": 1,
+          "description": "Maximum time to wait for completion"
+        }
+      ],
+      "execution": {
+        "type": "parallel",
+        "blocking": true
+      }
+    },
+    {
+      "id": "sequence",
+      "name": "sequence",
+      "description": "Execute blocks in strict sequential order",
+      "category": "control",
+      "shape": "control",
+      "icon": "List",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "stop_on_error",
+          "name": "Stop on Error",
+          "type": "boolean",
+          "value": true,
+          "description": "Stop sequence if any block fails"
+        },
+        {
+          "id": "delay_between",
+          "name": "Delay Between (s)",
+          "type": "number",
+          "value": 0,
+          "min": 0,
+          "max": 10,
+          "step": 0.1,
+          "description": "Optional delay between blocks"
+        }
+      ],
+      "execution": {
+        "type": "sequence",
+        "blocking": true
+      }
+    },
+    {
+      "id": "random_choice",
+      "name": "random choice",
+      "description": "Randomly select one path from multiple options",
+      "category": "control",
+      "shape": "control",
+      "icon": "Shuffle",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "seed",
+          "name": "Random Seed",
+          "type": "text",
+          "value": "",
+          "placeholder": "Optional seed for reproducibility",
+          "description": "Seed for reproducible randomization"
+        },
+        {
+          "id": "weights",
+          "name": "Weights",
+          "type": "text",
+          "value": "1,1",
+          "placeholder": "1,1,1 (comma-separated)",
+          "description": "Relative weights for each choice"
+        }
+      ],
+      "execution": {
+        "type": "random_branch",
+        "blocking": true
+      }
+    },
+    {
+      "id": "try_catch",
+      "name": "try / catch",
+      "description": "Execute blocks with error handling",
+      "category": "control",
+      "shape": "control",
+      "icon": "Shield",
+      "color": "#f97316",
+      "nestable": true,
+      "parameters": [
+        {
+          "id": "retry_count",
+          "name": "Retry Count",
+          "type": "number",
+          "value": 0,
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "description": "Number of times to retry on failure"
+        },
+        {
+          "id": "continue_on_error",
+          "name": "Continue on Error",
+          "type": "boolean",
+          "value": false,
+          "description": "Continue execution even if all retries fail"
+        }
+      ],
+      "execution": {
+        "type": "error_handling",
+        "blocking": true
+      }
+    },
+    {
+      "id": "break",
+      "name": "break",
+      "description": "Exit from the current loop or sequence",
+      "category": "control",
+      "shape": "action",
+      "icon": "Square",
+      "color": "#f97316",
+      "nestable": false,
+      "parameters": [
+        {
+          "id": "break_type",
+          "name": "Break Type",
+          "type": "select",
+          "value": "loop",
+          "options": ["loop", "sequence", "trial", "experiment"],
+          "description": "Scope of the break operation"
+        }
+      ],
+      "execution": {
+        "type": "break",
+        "blocking": false
+      }
+    }
+  ]
+}

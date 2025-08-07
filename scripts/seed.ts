@@ -8,6 +8,7 @@
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import * as schema from "../src/server/db/schema";
 
@@ -23,17 +24,21 @@ console.log("🌱 Starting HRIStudio database seeding...");
 async function clearDatabase() {
   console.log("🧹 Clearing existing data...");
 
-  // Delete in reverse dependency order
-  await db.delete(schema.trialEvents);
-  await db.delete(schema.actions);
-  await db.delete(schema.steps);
-  await db.delete(schema.trials);
-  await db.delete(schema.participants);
-  await db.delete(schema.experiments);
-  await db.delete(schema.studyMembers);
-  await db.delete(schema.studies);
-  await db.delete(schema.userSystemRoles);
-  await db.delete(schema.users);
+  // Delete in reverse dependency order using TRUNCATE for safety
+  await db.execute(sql`TRUNCATE TABLE hs_trial_event CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_action CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_step CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_trial CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_participant CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_experiment CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_study_member CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_study CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_user_system_role CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_user CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_robot CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_plugin_repository CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_plugin CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE hs_study_plugin CASCADE`);
 
   console.log("✅ Database cleared");
 }
@@ -43,7 +48,15 @@ async function seedUsers() {
 
   const users = [
     {
-      id: "user-admin-1",
+      id: "01234567-89ab-cdef-0123-456789abcde0",
+      name: "Sean O'Connor",
+      email: "sean@soconnor.dev",
+      emailVerified: new Date(),
+      institution: "HRIStudio",
+      activeStudyId: null,
+    },
+    {
+      id: "01234567-89ab-cdef-0123-456789abcde1",
       name: "Dr. Sarah Chen",
       email: "sarah.chen@university.edu",
       emailVerified: new Date(),
@@ -51,7 +64,7 @@ async function seedUsers() {
       activeStudyId: null,
     },
     {
-      id: "user-researcher-1",
+      id: "01234567-89ab-cdef-0123-456789abcde2",
       name: "Dr. Michael Rodriguez",
       email: "m.rodriguez@research.org",
       emailVerified: new Date(),
@@ -59,7 +72,7 @@ async function seedUsers() {
       activeStudyId: null,
     },
     {
-      id: "user-wizard-1",
+      id: "01234567-89ab-cdef-0123-456789abcde3",
       name: "Emma Thompson",
       email: "emma.thompson@university.edu",
       emailVerified: new Date(),
@@ -67,7 +80,7 @@ async function seedUsers() {
       activeStudyId: null,
     },
     {
-      id: "user-observer-1",
+      id: "01234567-89ab-cdef-0123-456789abcde4",
       name: "Dr. James Wilson",
       email: "james.wilson@university.edu",
       emailVerified: new Date(),
@@ -81,28 +94,34 @@ async function seedUsers() {
   // Add user roles
   const userRoles = [
     {
-      userId: "user-admin-1",
+      userId: "01234567-89ab-cdef-0123-456789abcde0",
       role: "administrator" as const,
       assignedAt: new Date(),
-      assignedBy: "user-admin-1", // Self-assigned for bootstrap
+      assignedBy: "01234567-89ab-cdef-0123-456789abcde0", // Sean as admin
     },
     {
-      userId: "user-researcher-1",
+      userId: "01234567-89ab-cdef-0123-456789abcde1",
       role: "researcher" as const,
       assignedAt: new Date(),
-      assignedBy: "user-admin-1",
+      assignedBy: "01234567-89ab-cdef-0123-456789abcde0",
     },
     {
-      userId: "user-wizard-1",
+      userId: "01234567-89ab-cdef-0123-456789abcde2",
+      role: "researcher" as const,
+      assignedAt: new Date(),
+      assignedBy: "01234567-89ab-cdef-0123-456789abcde0",
+    },
+    {
+      userId: "01234567-89ab-cdef-0123-456789abcde3",
       role: "wizard" as const,
       assignedAt: new Date(),
-      assignedBy: "user-admin-1",
+      assignedBy: "01234567-89ab-cdef-0123-456789abcde0",
     },
     {
-      userId: "user-observer-1",
+      userId: "01234567-89ab-cdef-0123-456789abcde4",
       role: "observer" as const,
       assignedAt: new Date(),
-      assignedBy: "user-admin-1",
+      assignedBy: "01234567-89ab-cdef-0123-456789abcde0",
     },
   ];
 
@@ -116,14 +135,14 @@ async function seedStudies() {
 
   const studies = [
     {
-      id: "study-hri-navigation",
+      id: "11234567-89ab-cdef-0123-456789abcde1",
       name: "Robot Navigation Assistance Study",
       description:
         "Investigating how robots can effectively assist humans with indoor navigation tasks using multimodal interaction.",
       institution: "MIT Computer Science",
       irbProtocolNumber: "IRB-2024-001",
       status: "active" as const,
-      createdBy: "user-researcher-1",
+      createdBy: "01234567-89ab-cdef-0123-456789abcde0",
       metadata: {
         duration: "6 months",
         targetParticipants: 50,
@@ -132,14 +151,14 @@ async function seedStudies() {
       },
     },
     {
-      id: "study-social-robots",
+      id: "11234567-89ab-cdef-0123-456789abcde2",
       name: "Social Robot Interaction Patterns",
       description:
         "Exploring how different personality traits in robots affect human-robot collaboration in workplace settings.",
       institution: "Stanford HCI Lab",
       irbProtocolNumber: "IRB-2024-002",
       status: "draft" as const,
-      createdBy: "user-researcher-1",
+      createdBy: "01234567-89ab-cdef-0123-456789abcde0",
       metadata: {
         duration: "4 months",
         targetParticipants: 30,
@@ -148,18 +167,18 @@ async function seedStudies() {
       },
     },
     {
-      id: "study-elderly-assistance",
-      name: "Elderly Care Assistant Robot Study",
+      id: "11234567-89ab-cdef-0123-456789abcde3",
+      name: "Assistive Robotics for Elderly Care",
       description:
-        "Evaluating the effectiveness of companion robots in assisted living facilities for elderly residents.",
-      institution: "MIT Computer Science",
+        "Evaluating the effectiveness of companion robots in assisted living facilities for improving quality of life.",
+      institution: "University of Washington",
       irbProtocolNumber: "IRB-2024-003",
       status: "completed" as const,
-      createdBy: "user-admin-1",
+      createdBy: "01234567-89ab-cdef-0123-456789abcde0",
       metadata: {
-        duration: "8 months",
-        targetParticipants: 25,
-        robotPlatform: "NAO",
+        duration: "12 months",
+        targetParticipants: 40,
+        robotPlatform: "Companion Robot",
         environment: "Assisted living facility",
       },
     },
@@ -169,52 +188,76 @@ async function seedStudies() {
 
   // Add study members
   const studyMembers = [
+    // Sean as admin/owner of all studies
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde1",
+      userId: "01234567-89ab-cdef-0123-456789abcde0",
+      role: "owner" as const,
+      joinedAt: new Date(),
+      invitedBy: null,
+    },
     // Navigation Study Team
     {
-      studyId: "study-hri-navigation",
-      userId: "user-researcher-1",
-      role: "owner" as const,
-      joinedAt: new Date(),
-      invitedBy: null,
-    },
-    {
-      studyId: "study-hri-navigation",
-      userId: "user-wizard-1",
-      role: "wizard" as const,
-      joinedAt: new Date(),
-      invitedBy: "user-researcher-1",
-    },
-    {
-      studyId: "study-hri-navigation",
-      userId: "user-observer-1",
-      role: "observer" as const,
-      joinedAt: new Date(),
-      invitedBy: "user-researcher-1",
-    },
-
-    // Social Robots Study Team
-    {
-      studyId: "study-social-robots",
-      userId: "user-researcher-1",
-      role: "owner" as const,
-      joinedAt: new Date(),
-      invitedBy: null,
-    },
-    {
-      studyId: "study-social-robots",
-      userId: "user-admin-1",
+      studyId: "11234567-89ab-cdef-0123-456789abcde1",
+      userId: "01234567-89ab-cdef-0123-456789abcde2",
       role: "researcher" as const,
       joinedAt: new Date(),
-      invitedBy: "user-researcher-1",
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
+    },
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde1",
+      userId: "01234567-89ab-cdef-0123-456789abcde3",
+      role: "wizard" as const,
+      joinedAt: new Date(),
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
+    },
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde1",
+      userId: "01234567-89ab-cdef-0123-456789abcde4",
+      role: "observer" as const,
+      joinedAt: new Date(),
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
     },
 
-    // Elderly Care Study Team
+    // Sean as admin/owner of Social Robots Study
     {
-      studyId: "study-elderly-assistance",
-      userId: "user-admin-1",
+      studyId: "11234567-89ab-cdef-0123-456789abcde2",
+      userId: "01234567-89ab-cdef-0123-456789abcde0",
       role: "owner" as const,
       joinedAt: new Date(),
       invitedBy: null,
+    },
+    // Social Robots Study Team
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde2",
+      userId: "01234567-89ab-cdef-0123-456789abcde2",
+      role: "researcher" as const,
+      joinedAt: new Date(),
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
+    },
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde2",
+      userId: "01234567-89ab-cdef-0123-456789abcde1",
+      role: "researcher" as const,
+      joinedAt: new Date(),
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
+    },
+
+    // Sean as admin/owner of Elderly Care Study
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde3",
+      userId: "01234567-89ab-cdef-0123-456789abcde0",
+      role: "owner" as const,
+      joinedAt: new Date(),
+      invitedBy: null,
+    },
+    // Elderly Care Study Team
+    {
+      studyId: "11234567-89ab-cdef-0123-456789abcde3",
+      userId: "01234567-89ab-cdef-0123-456789abcde1",
+      role: "researcher" as const,
+      joinedAt: new Date(),
+      invitedBy: "01234567-89ab-cdef-0123-456789abcde0",
     },
   ];
 
@@ -938,6 +981,54 @@ async function seedTrialEvents() {
   console.log(`✅ Created ${trialEvents.length} trial events`);
 }
 
+async function seedRobots() {
+  console.log("🤖 Seeding robots...");
+
+  const robots = [
+    {
+      id: "31234567-89ab-cdef-0123-456789abcde1",
+      name: "TurtleBot3 Burger",
+      manufacturer: "ROBOTIS",
+      model: "TurtleBot3 Burger",
+      description:
+        "A compact, affordable, programmable, ROS2-based mobile robot for education and research",
+      capabilities: [
+        "differential_drive",
+        "lidar",
+        "imu",
+        "odometry",
+        "autonomous_navigation",
+      ],
+      communicationProtocol: "ros2" as const,
+      createdAt: new Date("2024-01-01T00:00:00"),
+      updatedAt: new Date("2024-01-01T00:00:00"),
+    },
+    {
+      id: "31234567-89ab-cdef-0123-456789abcde2",
+      name: "NAO Humanoid Robot",
+      manufacturer: "SoftBank Robotics",
+      model: "NAO v6",
+      description:
+        "Autonomous, programmable humanoid robot designed for education, research, and human-robot interaction studies",
+      capabilities: [
+        "bipedal_walking",
+        "speech_synthesis",
+        "speech_recognition",
+        "computer_vision",
+        "gestures",
+        "led_control",
+        "touch_sensors",
+      ],
+      communicationProtocol: "custom" as const,
+      createdAt: new Date("2024-01-01T00:00:00"),
+      updatedAt: new Date("2024-01-01T00:00:00"),
+    },
+  ];
+
+  await db.insert(schema.robots).values(robots);
+  console.log(`✅ Created ${robots.length} robots`);
+}
+
 async function main() {
   try {
     console.log("🚀 HRIStudio Database Seeding Started");
@@ -946,6 +1037,7 @@ async function main() {
     await clearDatabase();
     await seedUsers();
     await seedStudies();
+    await seedRobots();
     await seedExperiments();
     await seedStepsAndActions();
     await seedParticipants();
@@ -956,6 +1048,7 @@ async function main() {
     console.log("\n📋 Summary:");
     console.log("   👥 Users: 4 (admin, researcher, wizard, observer)");
     console.log("   📚 Studies: 3 (navigation, social robots, elderly care)");
+    console.log("   🤖 Robots: 2 (TurtleBot3, NAO)");
     console.log("   🧪 Experiments: 4 (with comprehensive test scenarios)");
     console.log("   📋 Steps: 10 (covering all experiment types)");
     console.log("   ⚡ Actions: 12 (detailed robot and wizard actions)");

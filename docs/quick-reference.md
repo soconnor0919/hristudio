@@ -21,6 +21,10 @@ bun run docker:up
 bun db:push
 bun db:seed
 
+# Sync plugin repositories (admin only)
+# This populates the plugin store with robot plugins
+# from https://repo.hristudio.com
+
 # Start development
 bun dev
 ```
@@ -103,7 +107,8 @@ http://localhost:3000/api/trpc/
 - **`experiments`**: Design, configuration, validation
 - **`participants`**: Registration, consent, demographics
 - **`trials`**: Execution, monitoring, data capture
-- **`robots`**: Integration, communication, actions
+- **`robots`**: Integration, communication, actions, plugins
+- **`admin`**: Repository management, system settings
 
 ### Example Usage
 ```typescript
@@ -218,30 +223,56 @@ const hasRole = (role: string) => session?.user.role === role;
 
 ## 🤖 **Robot Integration**
 
+### Core Blocks System
+```typescript
+// Core blocks loaded from hristudio-core repository
+await registry.loadCoreBlocks();
+
+// Block categories:
+// - Events (4): when_trial_starts, when_participant_speaks, etc.
+// - Wizard Actions (6): wizard_say, wizard_gesture, etc.  
+// - Control Flow (8): wait, repeat, if_condition, etc.
+// - Observation (8): observe_behavior, record_audio, etc.
+```
+
+### Plugin Repository System
+```typescript
+// Repository sync (admin only)
+await api.admin.repositories.sync.mutate({ id: repoId });
+
+// Plugin installation
+await api.robots.plugins.install.mutate({
+  studyId: 'study-id',
+  pluginId: 'plugin-id'
+});
+
+// Get study plugins
+const plugins = api.robots.plugins.getStudyPlugins.useQuery({
+  studyId: selectedStudyId
+});
+```
+
 ### Plugin Structure
 ```typescript
-interface RobotPlugin {
+interface Plugin {
   id: string;
   name: string;
   version: string;
-  actions: RobotAction[];
-  communicate: (action: Action) => Promise<void>;
+  trustLevel: 'official' | 'verified' | 'community';
+  actionDefinitions: RobotAction[];
+  metadata: {
+    platform: string;
+    category: string;
+    repositoryId: string;
+  };
 }
 ```
 
-### Communication Patterns
-```typescript
-// RESTful API
-await fetch(`${robot.endpoint}/api/move`, {
-  method: 'POST',
-  body: JSON.stringify({ x: 1, y: 0 })
-});
-
-// ROS2 via WebSocket
-const ros = new ROSLIB.Ros({
-  url: 'ws://robot.local:9090'
-});
-```
+### Repository Integration
+- **Live Repository**: `https://repo.hristudio.com`
+- **Core Repository**: `https://core.hristudio.com` 
+- **Auto-sync**: Admin dashboard → Repositories → Sync
+- **Plugin Store**: Browse → Install → Use in experiments
 
 ---
 
@@ -349,12 +380,15 @@ bun typecheck
 ---
 
 ## 📚 **Further Reading**
+### Further Reading
 
 ### Documentation Files
 - **[Project Overview](./project-overview.md)**: Complete feature overview
-- **[Implementation Guide](./implementation-guide.md)**: Step-by-step technical guide
+- **[Implementation Details](./implementation-details.md)**: Architecture decisions and patterns
 - **[Database Schema](./database-schema.md)**: Complete database documentation
 - **[API Routes](./api-routes.md)**: Comprehensive API reference
+- **[Core Blocks System](./core-blocks-system.md)**: Repository-based block architecture
+- **[Plugin System Guide](./plugin-system-implementation-guide.md)**: Robot integration guide
 - **[Project Status](./project-status.md)**: Current development status
 
 ### External Resources
@@ -366,6 +400,7 @@ bun typecheck
 ---
 
 ## 🎯 **Quick Tips**
+### Quick Tips
 
 ### Development Workflow
 1. Always run `bun typecheck` before commits
@@ -373,6 +408,7 @@ bun typecheck
 3. Follow the established component patterns
 4. Add proper error boundaries for new features
 5. Test with multiple user roles
+6. Sync plugin repositories after setup for full functionality
 
 ### Code Standards
 - Use TypeScript strict mode
@@ -387,6 +423,8 @@ bun typecheck
 - Implement proper RBAC for new features
 - Add comprehensive logging for debugging
 - Follow accessibility guidelines (WCAG 2.1 AA)
+- Use repository-based plugins instead of hardcoded robot actions
+- Test plugin installation/uninstallation in different studies
 
 ---
 

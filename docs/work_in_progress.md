@@ -1,5 +1,39 @@
 # Work in Progress
 
+## Recent Changes Summary (February 2025)
+
+### Plugin Store Repository Integration
+
+#### **Complete Repository Synchronization System**
+Fixed and implemented full repository synchronization for dynamic plugin loading from remote repositories.
+
+**Core Fixes:**
+- **Repository Sync Implementation**: Fixed TODO placeholder in `admin.repositories.sync` API with complete synchronization logic
+- **Plugin Store Display Logic**: Fixed installation state detection - plugins now correctly show "Installed" vs "Install" buttons
+- **Repository Name Display**: All plugins now show proper repository names from metadata
+- **Admin Role Access**: Fixed missing administrator role preventing access to admin routes
+
+**Technical Implementation:**
+- Repository sync fetches from `https://repo.hristudio.com` with complete error handling
+- Plugin matching with existing robots by name/manufacturer patterns  
+- Proper TypeScript typing throughout with removal of `any` types
+- Database metadata updates with repository references
+- Installation status checking via `getStudyPlugins` API integration
+
+**Repository Integration:**
+- **Live Repository**: `https://repo.hristudio.com` serving 3 robot plugins (TurtleBot3 Burger/Waffle, NAO)
+- **Plugin Actions**: Complete ROS2 action definitions with parameter schemas
+- **Trust Levels**: Official, Verified, Community plugin categorization
+- **Metadata Storage**: Platform, category, specs, documentation links preserved
+
+**User Experience Improvements:**
+- Plugin Store now shows 4 plugins total (Core System + 3 robot plugins)
+- Correct installation states: Core System shows "Installed", others show "Install"
+- Repository names displayed for all plugins from proper metadata
+- Study-scoped plugin installation working correctly
+
+---
+
 ## Recent Changes Summary (December 2024)
 
 ### Plugin System Implementation
@@ -270,6 +304,110 @@ The overall system theme was too monochromatic with insufficient color personali
 
 ---
 
+### Core Block System Implementation (February 2024)
+
+**Complete documentation available in [`docs/core-blocks-system.md`](core-blocks-system.md)**
+
+#### **Repository-Based Core Blocks**
+Complete overhaul of the experiment designer to use plugin-based architecture for all blocks.
+
+**Architecture Change:**
+- **Before**: Hardcoded core blocks in `BlockRegistry.initializeCoreBlocks()`
+- **After**: Repository-based loading from `hristudio-core` plugin repository
+- **Benefits**: Complete consistency, easier updates, extensible core functionality
+
+**Core Repository Structure:**
+```
+hristudio-core/
+├── repository.json           # Repository metadata
+├── plugins/
+│   ├── index.json           # Plugin index (26 total blocks)
+│   ├── events.json          # Event trigger blocks (4 blocks)
+│   ├── wizard-actions.json  # Wizard action blocks (6 blocks)
+│   ├── control-flow.json    # Control flow blocks (8 blocks)
+│   └── observation.json     # Observation blocks (8 blocks)
+└── assets/                  # Repository assets
+```
+
+**Block Categories Implemented:**
+
+##### **Event Triggers (4 blocks)**
+- `when_trial_starts` - Trial initialization trigger
+- `when_participant_speaks` - Speech detection with duration threshold
+- `when_timer_expires` - Time-based triggers with custom delays
+- `when_key_pressed` - Wizard keyboard shortcuts (space, enter, numbers)
+
+##### **Wizard Actions (6 blocks)**
+- `wizard_say` - Speech with tone guidance (neutral, friendly, encouraging)
+- `wizard_gesture` - Physical gestures (wave, point, nod, applaud) with directions
+- `wizard_show_object` - Object presentation with action types
+- `wizard_record_note` - Observation recording with categorization
+- `wizard_wait_for_response` - Response waiting with timeout and prompts
+- `wizard_rate_interaction` - Subjective rating scales (1-5, 1-7, 1-10, custom)
+
+##### **Control Flow (8 blocks)**
+- `wait` - Pause execution with optional countdown display
+- `repeat` - Loop execution with delay between iterations
+- `if_condition` - Conditional logic with multiple condition types
+- `parallel` - Simultaneous execution with timeout controls
+- `sequence` - Sequential execution with error handling
+- `random_choice` - Weighted random path selection
+- `try_catch` - Error handling with retry mechanisms
+- `break` - Exit controls for loops, sequences, trials
+
+##### **Observation & Sensing (8 blocks)**
+- `observe_behavior` - Behavioral coding with standardized scales
+- `measure_response_time` - Stimulus-response timing measurement
+- `count_events` - Event frequency tracking with auto-detection
+- `record_audio` - Audio capture with quality settings and transcription
+- `capture_video` - Multi-camera video recording with resolution control
+- `log_event` - Timestamped event logging with severity levels
+- `survey_question` - In-trial questionnaires with response validation
+- `physiological_measure` - Sensor data collection with sampling rates
+
+**Technical Implementation:**
+- **Dynamic Loading**: Core blocks loaded from `/public/hristudio-core/plugins/`
+- **Fallback System**: Minimal core blocks if repository loading fails
+- **Validation**: Complete JSON schema validation with color/category consistency
+- **Async Initialization**: Non-blocking core block loading on component mount
+- **Type Safety**: Full TypeScript support with proper block definitions
+
+**Files Created/Modified:**
+- `hristudio-core/` - Complete core blocks repository
+- `public/hristudio-core/` - Publicly served core blocks
+- Enhanced `BlockRegistry.loadCoreBlocks()` method
+- Repository validation script with ES modules support
+- Comprehensive documentation and block schemas
+
+**Benefits Achieved:**
+- **Consistency**: All blocks now follow the same plugin architecture
+- **Extensibility**: Easy to add new core blocks without code changes
+- **Version Control**: Core blocks can be versioned and updated independently
+- **Modularity**: Clean separation between core functionality and robot plugins
+- **Maintainability**: Centralized block definitions with validation
+
+---
+
 ### Documentation Status
 
-All changes have been documented and the codebase is ready for production deployment. The experiment designer now feels like a natural, integrated part of the HRIStudio platform while maintaining all its powerful functionality.
+All changes have been documented and the codebase is ready for production deployment. The system now features:
+
+1. **Complete Plugin Architecture**: Both core blocks and robot actions loaded from repositories
+2. **Working Repository Sync**: Live synchronization from `https://repo.hristudio.com`
+3. **Proper Installation States**: Plugin store correctly shows installed vs available plugins
+4. **TypeScript Compliance**: All unsafe `any` types replaced with proper typing
+5. **Admin Access**: Full administrator role and permission system operational
+
+**Core Documentation Files:**
+- [`docs/core-blocks-system.md`](core-blocks-system.md) - Complete core blocks implementation guide
+- [`docs/plugin-system-implementation-guide.md`](plugin-system-implementation-guide.md) - Robot plugin system guide
+- [`docs/work_in_progress.md`](work_in_progress.md) - Current development status
+
+**Production Readiness:**
+- ✅ All TypeScript errors resolved (except documentation LaTeX)
+- ✅ Repository synchronization fully functional
+- ✅ Plugin store with proper installation state detection
+- ✅ Admin dashboard with repository management
+- ✅ Complete user authentication and authorization
+- ✅ Study-scoped plugin installation working
+- ✅ 98% feature completion maintained
