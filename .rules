@@ -183,7 +183,7 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - Follow WCAG 2.1 AA accessibility standards throughout
 
 ## UI/UX Standards
-- **Icons**: Use Lucide icons exclusively - NO emojis anywhere in the codebase
+- **Icons**: Use Lucide icons exclusively - NO emojis in codebase or responses
 - **Reusability**: Maximize component reuse through shared patterns and abstractions
 - **Entity Views**: All entity view pages (studies, experiments, participants, trials) must follow consistent patterns
 - **Page Structure**: Use global page headers, breadcrumbs, and consistent layout patterns
@@ -205,7 +205,6 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - Use `bun db:push` for schema changes, not migrations in development
 
 ## Current Status
-- **Production Ready**: 98% complete, ready for immediate deployment
 - **Current Work**: Experiment designer enhancement with advanced visual programming
 - **Next Phase**: Enhanced step configuration modals and workflow validation
 - **Deployment**: Configured for Vercel with Cloudflare R2 and PostgreSQL
@@ -217,3 +216,12 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 - See `docs/ros2-integration.md` for complete integration guide
 
 Follow Next.js 15 best practices for Data Fetching, Rendering, and Routing. Always reference the comprehensive documentation in the `docs/` folder before implementing new features.
+
+## Response Guidelines
+- Keep responses concise and minimal
+- No emojis or excessive formatting
+- Focus on essential information only
+- Prioritize code fixes over explanations
+- Use bullet points for lists, not checkmarks
+- Respond with requested format (edits, diagnostics, etc.)
+- Avoid verbose summaries unless explicitly requested

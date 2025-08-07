@@ -234,8 +234,8 @@ export const studiesColumns: ColumnDef<Study>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as keyof typeof statusConfig;
-      const config = statusConfig[status];
+      const status = row.getValue("status");
+      const config = statusConfig[status as keyof typeof statusConfig];
 
       return (
         <Badge
@@ -248,7 +248,7 @@ export const studiesColumns: ColumnDef<Study>[] = [
       );
     },
     filterFn: (row, id, value: string[]) => {
-      return value.includes(row.getValue(id) as string);
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -257,7 +257,7 @@ export const studiesColumns: ColumnDef<Study>[] = [
       <DataTableColumnHeader column={column} title="Institution" />
     ),
     cell: ({ row }) => {
-      const institution = row.getValue("institution") as string | null;
+      const institution = row.original.institution;
       return (
         <span
           className="block max-w-[120px] truncate text-sm"
@@ -274,20 +274,23 @@ export const studiesColumns: ColumnDef<Study>[] = [
       <DataTableColumnHeader column={column} title="Owner" />
     ),
     cell: ({ row }) => {
-      const owner = row.getValue("owner") as Study["owner"];
+      const owner = row.original.owner;
+      if (!owner) {
+        return <span className="text-muted-foreground">No owner</span>;
+      }
       return (
         <div className="max-w-[140px] space-y-1">
           <div
             className="truncate text-sm font-medium"
-            title={owner?.name ?? "Unknown"}
+            title={owner.name ?? "Unknown"}
           >
-            {owner?.name ?? "Unknown"}
+            {owner.name ?? "Unknown"}
           </div>
           <div
             className="text-muted-foreground truncate text-xs"
-            title={owner?.email}
+            title={owner.email ?? ""}
           >
-            {owner?.email}
+            {owner.email ?? ""}
           </div>
         </div>
       );
@@ -342,7 +345,7 @@ export const studiesColumns: ColumnDef<Study>[] = [
       );
     },
     filterFn: (row, id, value: string[]) => {
-      return value.includes(row.getValue(id) as string);
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -351,10 +354,10 @@ export const studiesColumns: ColumnDef<Study>[] = [
       <DataTableColumnHeader column={column} title="Created" />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("createdAt") as Date;
+      const date = row.original.createdAt;
       return (
         <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date, { addSuffix: true })}
+          {formatDistanceToNow(date ?? new Date(), { addSuffix: true })}
         </div>
       );
     },
@@ -365,10 +368,10 @@ export const studiesColumns: ColumnDef<Study>[] = [
       <DataTableColumnHeader column={column} title="Updated" />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("updatedAt") as Date;
+      const date = row.original.updatedAt;
       return (
         <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date, { addSuffix: true })}
+          {formatDistanceToNow(date ?? new Date(), { addSuffix: true })}
         </div>
       );
     },

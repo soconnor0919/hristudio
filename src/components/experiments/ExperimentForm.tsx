@@ -63,7 +63,7 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
     resolver: zodResolver(experimentSchema),
     defaultValues: {
       status: "draft" as const,
-      studyId: selectedStudyId || "",
+      studyId: selectedStudyId ?? "",
     },
   });
 
@@ -84,13 +84,36 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
   // Set breadcrumbs
   const breadcrumbs = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Experiments", href: "/experiments" },
-    ...(mode === "edit" && experiment
+    { label: "Studies", href: "/studies" },
+    ...(selectedStudyId
       ? [
-          { label: experiment.name, href: `/experiments/${experiment.id}` },
-          { label: "Edit" },
+          {
+            label: experiment?.study?.name ?? "Study",
+            href: `/studies/${selectedStudyId}`,
+          },
+          { label: "Experiments", href: "/experiments" },
+          ...(mode === "edit" && experiment
+            ? [
+                {
+                  label: experiment.name,
+                  href: `/experiments/${experiment.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Experiment" }]),
         ]
-      : [{ label: "New Experiment" }]),
+      : [
+          { label: "Experiments", href: "/experiments" },
+          ...(mode === "edit" && experiment
+            ? [
+                {
+                  label: experiment.name,
+                  href: `/experiments/${experiment.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Experiment" }]),
+        ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -128,14 +151,14 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
       if (mode === "create") {
         const newExperiment = await createExperimentMutation.mutateAsync({
           ...data,
-          estimatedDuration: data.estimatedDuration || undefined,
+          estimatedDuration: data.estimatedDuration ?? undefined,
         });
         router.push(`/experiments/${newExperiment.id}/designer`);
       } else {
         const updatedExperiment = await updateExperimentMutation.mutateAsync({
           id: experimentId!,
           ...data,
-          estimatedDuration: data.estimatedDuration || undefined,
+          estimatedDuration: data.estimatedDuration ?? undefined,
         });
         router.push(`/experiments/${updatedExperiment.id}`);
       }

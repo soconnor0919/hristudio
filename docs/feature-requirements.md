@@ -351,7 +351,7 @@ This document provides detailed feature requirements for HRIStudio, organized by
 
 **Acceptance Criteria**:
 - [ ] All data streams captured
-- [ ] < 5% frame drop rate
+- [ ] Minimal frame drop rate
 - [ ] Uploads complete within 5 min
 - [ ] Data encrypted at rest
 - [ ] Can verify data integrity
@@ -588,7 +588,7 @@ This document provides detailed feature requirements for HRIStudio, organized by
 - Multi-region deployment support
 
 ### Reliability
-- 99.9% uptime SLA
+- High uptime SLA
 - Automated backups every 4 hours
 - Disaster recovery plan
 - Data replication
@@ -602,7 +602,7 @@ This document provides detailed feature requirements for HRIStudio, organized by
 - Context-sensitive help
 
 ### Maintainability
-- Comprehensive test coverage (>80%)
+- Comprehensive test coverage
 - Automated deployment pipeline
 - Monitoring and alerting
 - Clear error messages

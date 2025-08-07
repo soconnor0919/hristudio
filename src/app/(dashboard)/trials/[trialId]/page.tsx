@@ -1,56 +1,36 @@
 "use client";
 
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowLeft,
-  BarChart3,
-  Bot,
+  AlertCircle,
+  Calendar,
   CheckCircle,
-  Clock,
-  Download,
-  Edit,
   Eye,
-  FileText,
+  Info,
   Play,
-  Settings,
-  Share,
-  Target,
-  Timer,
-  User,
-  Users,
-  XCircle,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Badge } from "~/components/ui/badge";
+import { useSession } from "next-auth/react";
+
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
   EntityView,
   EntityViewHeader,
   EntityViewSection,
-  EntityViewSidebar,
   EmptyState,
   InfoGrid,
   QuickActions,
   StatsGrid,
 } from "~/components/ui/entity-view";
-import { Progress } from "~/components/ui/progress";
-import { Separator } from "~/components/ui/separator";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
-import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 
 interface TrialDetailPageProps {
-  params: Promise<{
-    trialId: string;
-  }>;
-  searchParams: Promise<{
-    error?: string;
-  }>;
+  params: Promise<{ trialId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
 const statusConfig = {
@@ -72,13 +52,48 @@ const statusConfig = {
   failed: {
     label: "Failed",
     variant: "destructive" as const,
-    icon: "XCircle" as const,
+    icon: "AlertCircle" as const,
   },
   cancelled: {
     label: "Cancelled",
-    variant: "destructive" as const,
-    icon: "XCircle" as const,
+    variant: "outline" as const,
+    icon: "AlertCircle" as const,
   },
+};
+
+type Trial = {
+  id: string;
+  participantId: string | null;
+  experimentId: string;
+  wizardId?: string | null;
+  sessionNumber?: number;
+  status: string;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  duration: number | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  experiment: {
+    id: string;
+    name: string;
+    studyId: string;
+  } | null;
+  participant: {
+    id: string;
+    participantCode: string;
+    name?: string | null;
+  } | null;
+};
+
+type TrialEvent = {
+  id: string;
+  trialId: string;
+  eventType: string;
+  actionId: string | null;
+  timestamp: Date;
+  data: unknown;
+  createdBy: string | null;
 };
 
 export default function TrialDetailPage({
@@ -86,8 +101,8 @@ export default function TrialDetailPage({
   searchParams,
 }: TrialDetailPageProps) {
   const { data: session } = useSession();
-  const [trial, setTrial] = useState<any>(null);
-  const [events, setEvents] = useState<any[]>([]);
+  const [trial, setTrial] = useState<Trial | null>(null);
+  const [events, setEvents] = useState<TrialEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{
     trialId: string;
@@ -97,90 +112,110 @@ export default function TrialDetailPage({
   } | null>(null);
 
   useEffect(() => {
-    async function resolveParams() {
-      const resolvedP = await params;
-      const resolvedSP = await searchParams;
-      setResolvedParams(resolvedP);
-      setResolvedSearchParams(resolvedSP);
-    }
-    resolveParams();
-  }, [params, searchParams]);
+    const resolveParams = async () => {
+      const resolved = await params;
+      setResolvedParams(resolved);
+    };
+    void resolveParams();
+  }, [params]);
 
-  const { data: trialData } = api.trials.get.useQuery(
+  useEffect(() => {
+    const resolveSearchParams = async () => {
+      const resolved = await searchParams;
+      setResolvedSearchParams(resolved);
+    };
+    void resolveSearchParams();
+  }, [searchParams]);
+
+  const trialQuery = api.trials.get.useQuery(
     { id: resolvedParams?.trialId ?? "" },
     { enabled: !!resolvedParams?.trialId },
   );
 
-  const { data: eventsData } = api.trials.getEvents.useQuery(
+  const eventsQuery = api.trials.getEvents.useQuery(
     { trialId: resolvedParams?.trialId ?? "" },
     { enabled: !!resolvedParams?.trialId },
   );
 
   useEffect(() => {
-    if (trialData) {
-      setTrial(trialData);
+    if (trialQuery.data) {
+      setTrial(trialQuery.data as Trial);
     }
-    if (eventsData) {
-      setEvents(eventsData);
+  }, [trialQuery.data]);
+
+  useEffect(() => {
+    if (eventsQuery.data) {
+      setEvents(eventsQuery.data as TrialEvent[]);
     }
-    if (trialData !== undefined) {
+  }, [eventsQuery.data]);
+
+  useEffect(() => {
+    if (trialQuery.isLoading || eventsQuery.isLoading) {
+      setLoading(true);
+    } else {
       setLoading(false);
     }
-  }, [trialData, eventsData]);
+  }, [trialQuery.isLoading, eventsQuery.isLoading]);
 
   // Set breadcrumbs
   useBreadcrumbsEffect([
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Trials", href: "/trials" },
-    { label: trial ? `Trial #${trial.id.slice(-6)}` : "Trial" },
+    {
+      label: "Dashboard",
+      href: "/",
+    },
+    {
+      label: "Studies",
+      href: "/studies",
+    },
+    {
+      label: "Study",
+      href: trial?.experiment?.studyId
+        ? `/studies/${trial.experiment.studyId}`
+        : "/studies",
+    },
+    {
+      label: "Trials",
+      href: trial?.experiment?.studyId
+        ? `/studies/${trial.experiment.studyId}/trials`
+        : "/trials",
+    },
+    {
+      label: `Trial #${resolvedParams?.trialId?.slice(-6) ?? "Unknown"}`,
+    },
   ]);
 
-  if (!session?.user) {
-    redirect("/auth/signin");
-  }
+  if (loading) return <div>Loading...</div>;
+  if (trialQuery.error || !trial) return <div>Trial not found</div>;
 
-  if (loading || !trial) {
-    return <div>Loading...</div>;
-  }
+  const statusInfo = statusConfig[trial.status as keyof typeof statusConfig];
+  const userRoles = session?.user?.roles?.map((r) => r.role) ?? [];
+  const canControl =
+    userRoles.includes("wizard") || userRoles.includes("researcher");
 
-  const userRole = session.user.roles?.[0]?.role ?? "observer";
-  const canEdit = ["administrator", "researcher"].includes(userRole);
-  const canControl = ["administrator", "researcher", "wizard"].includes(
-    userRole,
-  );
-
-  const statusInfo = statusConfig[trial.status];
-
-  // Calculate trial stats
-  const totalEvents = events.length;
-  const errorEvents = events.filter((e) => e.eventType === "error").length;
-  const completedSteps = events.filter(
-    (e) => e.eventType === "step_completed",
-  ).length;
-  const progress = trial.experiment
-    ? (completedSteps / (trial.experiment._count?.steps || 1)) * 100
-    : 0;
+  const displayName = `Trial #${trial.id.slice(-6)}`;
+  const experimentName = trial.experiment?.name ?? "Unknown Experiment";
 
   return (
     <EntityView>
-      {/* Error Alert */}
-      {resolvedSearchParams.error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+      {resolvedSearchParams?.error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
           <AlertDescription>{resolvedSearchParams.error}</AlertDescription>
         </Alert>
       )}
 
-      {/* Header */}
       <EntityViewHeader
-        title={`Trial #${trial.id.slice(-6)}`}
-        subtitle={trial.experiment?.name || "No experiment assigned"}
-        icon="Target"
-        status={{
-          label: statusInfo.label,
-          variant: statusInfo.variant,
-          icon: statusInfo.icon,
-        }}
+        title={displayName}
+        subtitle={`${experimentName} - ${trial.participant?.participantCode ?? "Unknown Participant"}`}
+        icon="Play"
+        status={
+          statusInfo && {
+            label: statusInfo.label,
+            variant: statusInfo.variant,
+            icon: statusInfo.icon,
+          }
+        }
         actions={
           <>
             {canControl && trial.status === "scheduled" && (
@@ -199,19 +234,11 @@ export default function TrialDetailPage({
                 </Link>
               </Button>
             )}
-            {canEdit && (
-              <Button asChild variant="outline">
-                <Link href={`/trials/${trial.id}/edit`}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Link>
-              </Button>
-            )}
             {trial.status === "completed" && (
               <Button asChild variant="outline">
                 <Link href={`/trials/${trial.id}/analysis`}>
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Analysis
+                  <Info className="mr-2 h-4 w-4" />
+                  View Analysis
                 </Link>
               </Button>
             )}
@@ -219,12 +246,12 @@ export default function TrialDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="space-y-8 lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           {/* Trial Information */}
-          <EntityViewSection title="Trial Information" icon="FileText">
+          <EntityViewSection title="Trial Information" icon="Info">
             <InfoGrid
+              columns={2}
               items={[
                 {
                   label: "Experiment",
@@ -236,7 +263,7 @@ export default function TrialDetailPage({
                       {trial.experiment.name}
                     </Link>
                   ) : (
-                    "No experiment assigned"
+                    "Unknown"
                   ),
                 },
                 {
@@ -246,34 +273,34 @@ export default function TrialDetailPage({
                       href={`/participants/${trial.participant.id}`}
                       className="text-primary hover:underline"
                     >
-                      {trial.participant.name ||
+                      {trial.participant.name ??
                         trial.participant.participantCode}
                     </Link>
                   ) : (
-                    "No participant assigned"
+                    "Unknown"
                   ),
                 },
                 {
                   label: "Study",
-                  value: trial.study ? (
+                  value: trial.experiment?.studyId ? (
                     <Link
-                      href={`/studies/${trial.study.id}`}
+                      href={`/studies/${trial.experiment.studyId}`}
                       className="text-primary hover:underline"
                     >
-                      {trial.study.name}
+                      Study
                     </Link>
                   ) : (
-                    "No study assigned"
+                    "Unknown"
                   ),
                 },
                 {
-                  label: "Robot Platform",
-                  value: trial.experiment?.robot?.name || "Not specified",
+                  label: "Status",
+                  value: statusInfo?.label ?? trial.status,
                 },
                 {
                   label: "Scheduled",
-                  value: trial.scheduledAt
-                    ? format(trial.scheduledAt, "PPp")
+                  value: trial.createdAt
+                    ? formatDistanceToNow(trial.createdAt, { addSuffix: true })
                     : "Not scheduled",
                 },
                 {
@@ -281,100 +308,59 @@ export default function TrialDetailPage({
                   value: trial.duration
                     ? `${Math.round(trial.duration / 60)} minutes`
                     : trial.status === "in_progress"
-                      ? "In progress..."
-                      : "Not started",
+                      ? "Ongoing"
+                      : "Not available",
                 },
               ]}
             />
-
-            {/* Progress Bar for In-Progress Trials */}
-            {trial.status === "in_progress" && trial.experiment && (
-              <div className="border-t pt-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium">Progress</span>
-                  <span className="text-muted-foreground text-sm">
-                    {completedSteps} of {trial.experiment._count?.steps || 0}{" "}
-                    steps
-                  </span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </div>
-            )}
-
-            {/* Trial Notes */}
-            {trial.notes && (
-              <div className="border-t pt-4">
-                <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-                  Notes
-                </h4>
-                <div className="bg-muted rounded p-3 text-sm whitespace-pre-wrap">
-                  {trial.notes}
-                </div>
-              </div>
-            )}
           </EntityViewSection>
 
-          {/* Trial Timeline */}
+          {/* Trial Notes */}
+          {trial.notes && (
+            <EntityViewSection title="Notes" icon="FileText">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-muted-foreground">{trial.notes}</p>
+              </div>
+            </EntityViewSection>
+          )}
+
+          {/* Event Timeline */}
           <EntityViewSection
-            title="Trial Timeline"
+            title="Event Timeline"
             icon="Activity"
-            description="Real-time events and interactions"
-            actions={
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/trials/${trial.id}/events`}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View All Events
-                </Link>
-              </Button>
-            }
+            description={`${events.length} events recorded`}
           >
             {events.length > 0 ? (
-              <div className="space-y-3">
-                {events.slice(-10).map((event, index) => (
-                  <div
-                    key={event.id}
-                    className="flex items-start gap-3 rounded-lg border p-3"
-                  >
-                    <div className="flex-shrink-0">
-                      {event.eventType === "error" ? (
-                        <div className="rounded-full bg-red-100 p-1">
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        </div>
-                      ) : event.eventType === "step_completed" ? (
-                        <div className="rounded-full bg-green-100 p-1">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        </div>
-                      ) : (
-                        <div className="rounded-full bg-blue-100 p-1">
-                          <Activity className="h-4 w-4 text-blue-600" />
-                        </div>
-                      )}
+              <div className="space-y-4">
+                {events.slice(0, 10).map((event) => (
+                  <div key={event.id} className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-medium">
+                        {event.eventType
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {formatDistanceToNow(event.timestamp, {
+                          addSuffix: true,
+                        })}
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">
-                          {event.eventType.replace("_", " ")}
-                        </p>
-                        <time className="text-muted-foreground text-xs">
-                          {format(event.timestamp, "HH:mm:ss")}
-                        </time>
+                    {event.data ? (
+                      <div className="text-muted-foreground text-sm">
+                        <pre className="text-xs">
+                          {typeof event.data === "object" && event.data !== null
+                            ? JSON.stringify(event.data, null, 2)
+                            : String(event.data as string | number | boolean)}
+                        </pre>
                       </div>
-                      {event.eventData && (
-                        <p className="text-muted-foreground text-xs">
-                          {typeof event.eventData === "string"
-                            ? event.eventData
-                            : JSON.stringify(event.eventData)}
-                        </p>
-                      )}
-                    </div>
+                    ) : null}
                   </div>
                 ))}
                 {events.length > 10 && (
-                  <div className="pt-2 text-center">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/trials/${trial.id}/events`}>
-                        View All {events.length} Events
-                      </Link>
+                  <div className="text-center">
+                    <Button variant="outline" size="sm">
+                      View All Events ({events.length})
                     </Button>
                   </div>
                 )}
@@ -382,47 +368,22 @@ export default function TrialDetailPage({
             ) : (
               <EmptyState
                 icon="Activity"
-                title="No Events Yet"
-                description="Trial events will appear here once the trial begins"
+                title="No events recorded"
+                description="Events will appear here as the trial progresses"
               />
             )}
           </EntityViewSection>
         </div>
 
-        {/* Sidebar */}
-        <EntityViewSidebar>
-          {/* Trial Stats */}
-          <EntityViewSection title="Statistics" icon="BarChart3">
+        <div className="space-y-6">
+          {/* Statistics */}
+          <EntityViewSection title="Statistics" icon="BarChart">
             <StatsGrid
               stats={[
                 {
-                  label: "Total Events",
-                  value: totalEvents,
+                  label: "Events",
+                  value: events.length,
                 },
-                {
-                  label: "Completed Steps",
-                  value: completedSteps,
-                  color: "success",
-                },
-                {
-                  label: "Error Events",
-                  value: errorEvents,
-                  color: errorEvents > 0 ? "error" : "default",
-                },
-                {
-                  label: "Progress",
-                  value: `${Math.round(progress)}%`,
-                  color: progress === 100 ? "success" : "default",
-                },
-              ]}
-            />
-          </EntityViewSection>
-
-          {/* Session Details */}
-          <EntityViewSection title="Session Details" icon="Clock">
-            <InfoGrid
-              columns={1}
-              items={[
                 {
                   label: "Created",
                   value: formatDistanceToNow(trial.createdAt, {
@@ -432,35 +393,34 @@ export default function TrialDetailPage({
                 {
                   label: "Started",
                   value: trial.startedAt
-                    ? format(trial.startedAt, "PPp")
+                    ? formatDistanceToNow(trial.startedAt, { addSuffix: true })
                     : "Not started",
                 },
                 {
                   label: "Completed",
                   value: trial.completedAt
-                    ? format(trial.completedAt, "PPp")
+                    ? formatDistanceToNow(trial.completedAt, {
+                        addSuffix: true,
+                      })
                     : "Not completed",
                 },
                 {
                   label: "Created By",
-                  value:
-                    trial.createdBy?.name ||
-                    trial.createdBy?.email ||
-                    "Unknown",
+                  value: "System",
                 },
               ]}
             />
           </EntityViewSection>
 
           {/* Quick Actions */}
-          <EntityViewSection title="Quick Actions" icon="Settings">
+          <EntityViewSection title="Quick Actions" icon="Zap">
             <QuickActions
               actions={[
                 ...(canControl && trial.status === "scheduled"
                   ? [
                       {
                         label: "Start Trial",
-                        icon: "Play",
+                        icon: "Play" as const,
                         href: `/trials/${trial.id}/wizard`,
                         variant: "default" as const,
                       },
@@ -470,7 +430,7 @@ export default function TrialDetailPage({
                   ? [
                       {
                         label: "Monitor Trial",
-                        icon: "Eye",
+                        icon: "Eye" as const,
                         href: `/trials/${trial.id}/wizard`,
                       },
                     ]
@@ -479,29 +439,25 @@ export default function TrialDetailPage({
                   ? [
                       {
                         label: "View Analysis",
-                        icon: "BarChart3",
+                        icon: "BarChart" as const,
                         href: `/trials/${trial.id}/analysis`,
                       },
                       {
                         label: "Export Data",
-                        icon: "Download",
+                        icon: "Download" as const,
                         href: `/trials/${trial.id}/export`,
                       },
                     ]
                   : []),
-                ...(canEdit
-                  ? [
-                      {
-                        label: "Edit Trial",
-                        icon: "Edit",
-                        href: `/trials/${trial.id}/edit`,
-                      },
-                    ]
-                  : []),
                 {
-                  label: "Share Results",
-                  icon: "Share",
-                  href: `/trials/${trial.id}/share`,
+                  label: "View Events",
+                  icon: "Activity" as const,
+                  href: `/trials/${trial.id}/events`,
+                },
+                {
+                  label: "Export Report",
+                  icon: "FileText" as const,
+                  href: `/trials/${trial.id}/report`,
                 },
               ]}
             />
@@ -510,32 +466,22 @@ export default function TrialDetailPage({
           {/* Participant Info */}
           {trial.participant && (
             <EntityViewSection title="Participant" icon="User">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {trial.participant.name ||
-                        trial.participant.participantCode}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {trial.participant.name
-                        ? trial.participant.participantCode
-                        : "Participant"}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href={`/participants/${trial.participant.id}`}>
-                    View Profile
-                  </Link>
-                </Button>
-              </div>
+              <InfoGrid
+                columns={1}
+                items={[
+                  {
+                    label: "Code",
+                    value: trial.participant.participantCode,
+                  },
+                  {
+                    label: "Name",
+                    value: trial.participant.name ?? "Not provided",
+                  },
+                ]}
+              />
             </EntityViewSection>
           )}
-        </EntityViewSidebar>
+        </div>
       </div>
     </EntityView>
   );

@@ -27,6 +27,20 @@ import {
 import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 
+type DemographicsData = {
+  age?: number;
+  gender?: string;
+  occupation?: string;
+  education?: string;
+  primaryLanguage?: string;
+  language?: string;
+  location?: string;
+  city?: string;
+  robotExperience?: string;
+  experience?: string;
+  grade?: number;
+};
+
 const participantSchema = z.object({
   participantCode: z
     .string()
@@ -67,7 +81,7 @@ export function ParticipantForm({
 }: ParticipantFormProps) {
   const router = useRouter();
   const { selectedStudyId } = useStudyContext();
-  const contextStudyId = studyId || selectedStudyId;
+  const contextStudyId = studyId ?? selectedStudyId;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +90,7 @@ export function ParticipantForm({
     resolver: zodResolver(participantSchema),
     defaultValues: {
       consentGiven: false,
-      studyId: contextStudyId || "",
+      studyId: contextStudyId ?? "",
     },
   });
 
@@ -97,16 +111,39 @@ export function ParticipantForm({
   // Set breadcrumbs
   const breadcrumbs = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Participants", href: "/participants" },
-    ...(mode === "edit" && participant
+    { label: "Studies", href: "/studies" },
+    ...(contextStudyId
       ? [
           {
-            label: participant.name || participant.participantCode,
-            href: `/participants/${participant.id}`,
+            label: participant?.study?.name ?? "Study",
+            href: `/studies/${contextStudyId}`,
           },
-          { label: "Edit" },
+          {
+            label: "Participants",
+            href: `/studies/${contextStudyId}/participants`,
+          },
+          ...(mode === "edit" && participant
+            ? [
+                {
+                  label: participant.name ?? participant.participantCode,
+                  href: `/participants/${participant.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Participant" }]),
         ]
-      : [{ label: "New Participant" }]),
+      : [
+          { label: "Participants", href: "/participants" },
+          ...(mode === "edit" && participant
+            ? [
+                {
+                  label: participant.name ?? participant.participantCode,
+                  href: `/participants/${participant.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Participant" }]),
+        ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -116,11 +153,18 @@ export function ParticipantForm({
     if (mode === "edit" && participant) {
       form.reset({
         participantCode: participant.participantCode,
-        name: participant.name || "",
-        email: participant.email || "",
+        name: participant.name ?? "",
+        email: participant.email ?? "",
         studyId: participant.studyId,
-        age: (participant.demographics as any)?.age || undefined,
-        gender: (participant.demographics as any)?.gender || undefined,
+        age: (participant.demographics as DemographicsData)?.age ?? undefined,
+        gender:
+          ((participant.demographics as DemographicsData)?.gender as
+            | "male"
+            | "female"
+            | "non_binary"
+            | "prefer_not_to_say"
+            | "other"
+            | undefined) ?? undefined,
         consentGiven: true, // Assume consent was given if participant exists
       });
     }
@@ -144,16 +188,16 @@ export function ParticipantForm({
 
     try {
       const demographics = {
-        age: data.age || null,
-        gender: data.gender || null,
+        age: data.age ?? null,
+        gender: data.gender ?? null,
       };
 
       if (mode === "create") {
         const newParticipant = await createParticipantMutation.mutateAsync({
           studyId: data.studyId,
           participantCode: data.participantCode,
-          name: data.name || undefined,
-          email: data.email || undefined,
+          name: data.name ?? undefined,
+          email: data.email ?? undefined,
           demographics,
         });
         router.push(`/participants/${newParticipant.id}`);
@@ -161,8 +205,8 @@ export function ParticipantForm({
         const updatedParticipant = await updateParticipantMutation.mutateAsync({
           id: participantId!,
           participantCode: data.participantCode,
-          name: data.name || undefined,
-          email: data.email || undefined,
+          name: data.name ?? undefined,
+          email: data.email ?? undefined,
           demographics,
         });
         router.push(`/participants/${updatedParticipant.id}`);
@@ -333,7 +377,7 @@ export function ParticipantForm({
         <FormField>
           <Label htmlFor="gender">Gender</Label>
           <Select
-            value={form.watch("gender") || ""}
+            value={form.watch("gender") ?? ""}
             onValueChange={(value) =>
               form.setValue(
                 "gender",
@@ -444,7 +488,7 @@ export function ParticipantForm({
       title={
         mode === "create"
           ? "Register New Participant"
-          : `Edit ${participant?.name || participant?.participantCode || "Participant"}`
+          : `Edit ${participant?.name ?? participant?.participantCode ?? "Participant"}`
       }
       description={
         mode === "create"

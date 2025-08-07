@@ -58,6 +58,7 @@ export type Trial = {
     id: string;
     name: string;
     email: string;
+    participantCode?: string;
   };
   wizard: {
     id: string;
@@ -119,7 +120,7 @@ function TrialActionsCell({ trial }: { trial: Trial }) {
   };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(trial.id);
+    void navigator.clipboard.writeText(trial.id);
     toast.success("Trial ID copied to clipboard");
   };
 
@@ -301,7 +302,7 @@ export const trialsColumns: ColumnDef<Trial>[] = [
               <Badge
                 variant="outline"
                 className="ml-auto shrink-0 border-amber-200 bg-amber-50 text-amber-700"
-                title={`Access restricted - You are an ${trial.userRole || "observer"} on this study`}
+                title={`Access restricted - You are an ${trial.userRole ?? "observer"} on this study`}
               >
                 {trial.userRole === "observer" ? "View Only" : "Restricted"}
               </Badge>
@@ -317,9 +318,9 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as Trial["status"];
+      const status = row.getValue("status");
       const trial = row.original;
-      const config = statusConfig[status];
+      const config = statusConfig[status as keyof typeof statusConfig];
 
       return (
         <div className="flex flex-col gap-1">
@@ -343,7 +344,7 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       );
     },
     filterFn: (row, id, value: string[]) => {
-      const status = row.getValue(id) as string;
+      const status = row.getValue(id) as string; // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
       return value.includes(status);
     },
   },
@@ -353,16 +354,22 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Participant" />
     ),
     cell: ({ row }) => {
-      const participant = row.getValue("participant") as Trial["participant"];
+      const participant = row.original.participant;
       return (
         <div className="max-w-[120px]">
           <div className="flex items-center space-x-1">
             <User className="text-muted-foreground h-3 w-3 flex-shrink-0" />
             <span
               className="truncate text-sm font-medium"
-              title={participant.name || "Unnamed Participant"}
+              title={
+                participant?.name ??
+                participant?.participantCode ??
+                "Unnamed Participant"
+              }
             >
-              {participant.name || "Unnamed Participant"}
+              {participant?.name ??
+                participant?.participantCode ??
+                "Unnamed Participant"}
             </span>
           </div>
         </div>
@@ -376,16 +383,16 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Experiment" />
     ),
     cell: ({ row }) => {
-      const experiment = row.getValue("experiment") as Trial["experiment"];
+      const experiment = row.original.experiment;
       return (
         <div className="flex max-w-[140px] items-center space-x-2">
           <FlaskConical className="text-muted-foreground h-3 w-3 flex-shrink-0" />
           <Link
-            href={`/experiments/${experiment.id}`}
+            href={`/experiments/${experiment?.id ?? ""}`}
             className="truncate text-sm hover:underline"
-            title={experiment.name || "Unnamed Experiment"}
+            title={experiment?.name ?? "Unnamed Experiment"}
           >
-            {experiment.name || "Unnamed Experiment"}
+            {experiment?.name ?? "Unnamed Experiment"}
           </Link>
         </div>
       );
@@ -402,7 +409,7 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Wizard" />
     ),
     cell: ({ row }) => {
-      const wizard = row.getValue("wizard") as Trial["wizard"];
+      const wizard = row.original.wizard;
       if (!wizard) {
         return (
           <span className="text-muted-foreground text-sm">Not assigned</span>
@@ -418,9 +425,9 @@ export const trialsColumns: ColumnDef<Trial>[] = [
           </div>
           <div
             className="text-muted-foreground truncate text-xs"
-            title={wizard.email}
+            title={wizard.email ?? ""}
           >
-            {wizard.email}
+            {wizard.email ?? ""}
           </div>
         </div>
       );
@@ -437,7 +444,7 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Scheduled" />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("scheduledAt") as Date | null;
+      const date = row.getValue("scheduledAt") as Date | null; // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
       if (!date) {
         return (
           <span className="text-muted-foreground text-sm">Not scheduled</span>
@@ -527,7 +534,7 @@ export const trialsColumns: ColumnDef<Trial>[] = [
       <DataTableColumnHeader column={column} title="Created" />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("createdAt") as Date;
+      const date = row.getValue("createdAt") as Date; // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
       return (
         <div className="text-sm whitespace-nowrap">
           {formatDistanceToNow(date, { addSuffix: true })}

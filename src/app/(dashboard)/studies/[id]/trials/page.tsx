@@ -8,7 +8,7 @@ import { useActiveStudy } from "~/hooks/useActiveStudy";
 
 export default function StudyTrialsPage() {
   const params = useParams();
-  const studyId = typeof params.id === "string" ? params.id : "";
+  const studyId: string = typeof params.id === "string" ? params.id : "";
   const { setActiveStudy, activeStudy } = useActiveStudy();
 
   // Set the active study if it doesn't match the current route

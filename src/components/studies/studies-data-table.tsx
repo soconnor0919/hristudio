@@ -94,7 +94,7 @@ export function StudiesDataTable() {
   const filters = (
     <div className="flex items-center space-x-2">
       <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -107,7 +107,7 @@ export function StudiesDataTable() {
       </Select>
 
       <Select value={roleFilter} onValueChange={setRoleFilter}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="Role" />
         </SelectTrigger>
         <SelectContent>

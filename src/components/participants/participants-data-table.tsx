@@ -15,11 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 import { participantsColumns, type Participant } from "./participants-columns";
 
 export function ParticipantsDataTable() {
   const [consentFilter, setConsentFilter] = React.useState("all");
+  const { selectedStudyId } = useStudyContext();
 
   const {
     data: participantsData,
@@ -45,10 +47,22 @@ export function ParticipantsDataTable() {
     return () => clearInterval(interval);
   }, [refetch]);
 
+  // Get study data for breadcrumbs
+  const { data: studyData } = api.studies.get.useQuery(
+    { id: selectedStudyId! },
+    { enabled: !!selectedStudyId },
+  );
+
   // Set breadcrumbs
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Participants" },
+    { label: "Studies", href: "/studies" },
+    ...(selectedStudyId && studyData
+      ? [
+          { label: studyData.name, href: `/studies/${selectedStudyId}` },
+          { label: "Participants" },
+        ]
+      : [{ label: "Participants" }]),
   ]);
 
   // Transform participants data to match the Participant type expected by columns
@@ -60,12 +74,18 @@ export function ParticipantsDataTable() {
       participantCode: p.participantCode,
       email: p.email,
       name: p.name,
-      consentGiven: (p as any).hasConsent || false,
-      consentDate: (p as any).latestConsent?.signedAt
-        ? new Date((p as any).latestConsent.signedAt as unknown as string)
+      consentGiven:
+        (p as unknown as { hasConsent?: boolean }).hasConsent ?? false,
+      consentDate: (p as unknown as { latestConsent?: { signedAt: string } })
+        .latestConsent?.signedAt
+        ? new Date(
+            (
+              p as unknown as { latestConsent: { signedAt: string } }
+            ).latestConsent.signedAt,
+          )
         : null,
       createdAt: p.createdAt,
-      trialCount: (p as any).trialCount || 0,
+      trialCount: (p as unknown as { trialCount?: number }).trialCount ?? 0,
       userRole: undefined,
       canEdit: true,
       canDelete: true,
@@ -92,7 +112,7 @@ export function ParticipantsDataTable() {
   const filters = (
     <div className="flex items-center space-x-2">
       <Select value={consentFilter} onValueChange={setConsentFilter}>
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="h-8 w-[160px]">
           <SelectValue placeholder="Consent Status" />
         </SelectTrigger>
         <SelectContent>

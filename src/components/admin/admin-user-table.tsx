@@ -4,21 +4,21 @@ import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui/select";
 import type { SystemRole } from "~/lib/auth-client";
 import { formatRole, getAvailableRoles } from "~/lib/auth-client";
@@ -35,7 +35,7 @@ interface UserWithRoles {
 
 export function AdminUserTable() {
   const [search, setSearch] = useState("");
-  const [selectedRole, setSelectedRole] = useState<SystemRole | "">("");
+  const [selectedRole, setSelectedRole] = useState<SystemRole | "all">("all");
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [roleToAssign, setRoleToAssign] = useState<SystemRole | "">("");
@@ -48,7 +48,7 @@ export function AdminUserTable() {
     page,
     limit: 10,
     search: search || undefined,
-    role: selectedRole || undefined,
+    role: selectedRole === "all" ? undefined : selectedRole,
   });
 
   const assignRole = api.users.assignRole.useMutation({
@@ -108,13 +108,15 @@ export function AdminUserTable() {
           <Label htmlFor="role-filter">Filter by Role</Label>
           <Select
             value={selectedRole}
-            onValueChange={(value) => setSelectedRole(value as SystemRole | "")}
+            onValueChange={(value) =>
+              setSelectedRole(value as SystemRole | "all")
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="All roles" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All roles</SelectItem>
+              <SelectItem value="all">All roles</SelectItem>
               {availableRoles.map((role) => (
                 <SelectItem key={role.value} value={role.value}>
                   {role.label}

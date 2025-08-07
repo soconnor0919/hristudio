@@ -1,23 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import {
-  ArrowLeft,
-  BarChart3,
-  Bot,
-  Calendar,
-  CheckCircle,
-  Edit,
-  FileText,
-  FlaskConical,
-  Play,
-  Settings,
-  Share,
-  Target,
-  Users,
-  AlertTriangle,
-  XCircle,
-} from "lucide-react";
+import { Calendar, Clock, Edit, Play, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -27,20 +11,17 @@ import {
   EntityView,
   EntityViewHeader,
   EntityViewSection,
-  EntityViewSidebar,
   EmptyState,
   InfoGrid,
   QuickActions,
   StatsGrid,
 } from "~/components/ui/entity-view";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
-import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
+import { useSession } from "next-auth/react";
 
 interface ExperimentDetailPageProps {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
 const statusConfig = {
@@ -52,7 +33,7 @@ const statusConfig = {
   testing: {
     label: "Testing",
     variant: "outline" as const,
-    icon: "FlaskConical" as const,
+    icon: "TestTube" as const,
   },
   ready: {
     label: "Ready",
@@ -66,89 +47,141 @@ const statusConfig = {
   },
 };
 
+type Experiment = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  study: { id: string; name: string };
+  robot: { id: string; name: string; description: string | null } | null;
+  protocol?: { blocks: unknown[] } | null;
+  visualDesign?: unknown;
+  studyId: string;
+  createdBy: string;
+  robotId: string | null;
+  version: number;
+};
+
+type Trial = {
+  id: string;
+  status: string;
+  createdAt: Date;
+  duration: number | null;
+  participant: {
+    id: string;
+    participantCode: string;
+    name?: string | null;
+  } | null;
+  experiment: { name: string } | null;
+  participantId: string | null;
+  experimentId: string;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  notes: string | null;
+  updatedAt: Date;
+  canAccess: boolean;
+  userRole: string;
+};
+
 export default function ExperimentDetailPage({
   params,
 }: ExperimentDetailPageProps) {
   const { data: session } = useSession();
-  const [experiment, setExperiment] = useState<any>(null);
-  const [trials, setTrials] = useState<any[]>([]);
+  const [experiment, setExperiment] = useState<Experiment | null>(null);
+  const [trials, setTrials] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null,
   );
 
   useEffect(() => {
-    async function resolveParams() {
+    const resolveParams = async () => {
       const resolved = await params;
       setResolvedParams(resolved);
-    }
-    resolveParams();
+    };
+    void resolveParams();
   }, [params]);
 
-  const { data: experimentData } = api.experiments.get.useQuery(
+  const experimentQuery = api.experiments.get.useQuery(
     { id: resolvedParams?.id ?? "" },
     { enabled: !!resolvedParams?.id },
   );
 
-  const { data: trialsData } = api.trials.list.useQuery(
-    { experimentId: resolvedParams?.id ?? "", limit: 10 },
+  const trialsQuery = api.trials.list.useQuery(
+    { experimentId: resolvedParams?.id ?? "" },
     { enabled: !!resolvedParams?.id },
   );
 
   useEffect(() => {
-    if (experimentData) {
-      setExperiment(experimentData);
+    if (experimentQuery.data) {
+      setExperiment(experimentQuery.data);
     }
-    if (trialsData) {
-      setTrials(trialsData);
+  }, [experimentQuery.data]);
+
+  useEffect(() => {
+    if (trialsQuery.data) {
+      setTrials(trialsQuery.data);
     }
-    if (experimentData !== undefined) {
+  }, [trialsQuery.data]);
+
+  useEffect(() => {
+    if (experimentQuery.isLoading || trialsQuery.isLoading) {
+      setLoading(true);
+    } else {
       setLoading(false);
     }
-  }, [experimentData, trialsData]);
+  }, [experimentQuery.isLoading, trialsQuery.isLoading]);
 
   // Set breadcrumbs
   useBreadcrumbsEffect([
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Experiments", href: "/experiments" },
-    { label: experiment?.name || "Experiment" },
+    {
+      label: "Dashboard",
+      href: "/",
+    },
+    {
+      label: "Studies",
+      href: "/studies",
+    },
+    {
+      label: experiment?.study?.name ?? "Unknown Study",
+      href: `/studies/${experiment?.study?.id}`,
+    },
+    {
+      label: "Experiments",
+      href: `/studies/${experiment?.study?.id}/experiments`,
+    },
+    {
+      label: experiment?.name ?? "Experiment",
+    },
   ]);
 
-  if (!session?.user) {
-    return notFound();
-  }
+  if (loading) return <div>Loading...</div>;
+  if (experimentQuery.error) return notFound();
+  if (!experiment) return notFound();
 
-  if (loading || !experiment) {
-    return <div>Loading...</div>;
-  }
+  const displayName = experiment.name ?? "Untitled Experiment";
+  const description = experiment.description;
 
-  const userRole = session.user.roles?.[0]?.role ?? "observer";
-  const canEdit = ["administrator", "researcher"].includes(userRole);
+  // Check if user can edit this experiment
+  const userRoles = session?.user?.roles?.map((r) => r.role) ?? [];
+  const canEdit =
+    userRoles.includes("administrator") || userRoles.includes("researcher");
 
-  const statusInfo = statusConfig[experiment.status];
-
-  // TODO: Get actual stats from API
-  const mockStats = {
-    totalTrials: trials.length,
-    completedTrials: trials.filter((t) => t.status === "completed").length,
-    averageDuration: "—",
-    successRate:
-      trials.length > 0
-        ? `${Math.round((trials.filter((t) => t.status === "completed").length / trials.length) * 100)}%`
-        : "—",
-  };
+  const statusInfo =
+    statusConfig[experiment.status as keyof typeof statusConfig];
 
   return (
     <EntityView>
-      {/* Header */}
       <EntityViewHeader
-        title={experiment.name}
-        subtitle={experiment.description}
-        icon="FlaskConical"
+        title={displayName}
+        subtitle={description ?? undefined}
+        icon="TestTube"
         status={{
-          label: statusInfo.label,
-          variant: statusInfo.variant,
-          icon: statusInfo.icon,
+          label: statusInfo?.label ?? "Unknown",
+          variant: statusInfo?.variant ?? "secondary",
+          icon: statusInfo?.icon ?? "TestTube",
         }}
         actions={
           canEdit ? (
@@ -172,23 +205,16 @@ export default function ExperimentDetailPage({
                 </Link>
               </Button>
             </>
-          ) : (
-            <Button asChild>
-              <Link href={`/trials/new?experimentId=${experiment.id}`}>
-                <Play className="mr-2 h-4 w-4" />
-                Start Trial
-              </Link>
-            </Button>
-          )
+          ) : undefined
         }
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="space-y-8 lg:col-span-2">
-          {/* Experiment Information */}
-          <EntityViewSection title="Experiment Information" icon="FlaskConical">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Basic Information */}
+          <EntityViewSection title="Information" icon="Info">
             <InfoGrid
+              columns={2}
               items={[
                 {
                   label: "Study",
@@ -204,8 +230,8 @@ export default function ExperimentDetailPage({
                   ),
                 },
                 {
-                  label: "Robot Platform",
-                  value: experiment.robot?.name || "Not specified",
+                  label: "Status",
+                  value: statusInfo?.label ?? "Unknown",
                 },
                 {
                   label: "Created",
@@ -223,10 +249,10 @@ export default function ExperimentDetailPage({
             />
           </EntityViewSection>
 
-          {/* Protocol Overview */}
+          {/* Protocol Section */}
           <EntityViewSection
-            title="Protocol Overview"
-            icon="Target"
+            title="Experiment Protocol"
+            icon="FileText"
             actions={
               canEdit && (
                 <Button asChild variant="outline" size="sm">
@@ -242,22 +268,22 @@ export default function ExperimentDetailPage({
             typeof experiment.protocol === "object" &&
             experiment.protocol !== null ? (
               <div className="space-y-3">
-                <div className="bg-muted rounded-lg p-4">
-                  <h4 className="mb-2 font-medium">Protocol Structure</h4>
-                  <p className="text-muted-foreground text-sm">
-                    Visual protocol designed with{" "}
-                    {Array.isArray((experiment.protocol as any).blocks)
-                      ? (experiment.protocol as any).blocks.length
-                      : 0}{" "}
-                    blocks
-                  </p>
+                <div className="text-muted-foreground text-sm">
+                  Protocol contains{" "}
+                  {Array.isArray(
+                    (experiment.protocol as { blocks: unknown[] }).blocks,
+                  )
+                    ? (experiment.protocol as { blocks: unknown[] }).blocks
+                        .length
+                    : 0}{" "}
+                  blocks
                 </div>
               </div>
             ) : (
               <EmptyState
-                icon="Target"
-                title="No Protocol Defined"
-                description="Use the experiment designer to create your protocol"
+                icon="FileText"
+                title="No protocol defined"
+                description="Create an experiment protocol using the visual designer"
                 action={
                   canEdit && (
                     <Button asChild>
@@ -275,12 +301,10 @@ export default function ExperimentDetailPage({
           <EntityViewSection
             title="Recent Trials"
             icon="Play"
-            description="Latest experimental sessions"
             actions={
               <Button asChild variant="outline" size="sm">
-                <Link href={`/trials/new?experimentId=${experiment.id}`}>
-                  <Play className="mr-2 h-4 w-4" />
-                  Start Trial
+                <Link href={`/studies/${experiment.study?.id}/trials`}>
+                  View All
                 </Link>
               </Button>
             }
@@ -310,78 +334,70 @@ export default function ExperimentDetailPage({
                                 : "outline"
                         }
                       >
-                        {trial.status.replace("_", " ")}
+                        {trial.status.charAt(0).toUpperCase() +
+                          trial.status.slice(1).replace("_", " ")}
                       </Badge>
                     </div>
                     <div className="text-muted-foreground flex items-center gap-4 text-sm">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {trial.createdAt
-                          ? formatDistanceToNow(new Date(trial.createdAt), {
-                              addSuffix: true,
-                            })
-                          : "Not scheduled"}
+                        {formatDistanceToNow(trial.createdAt, {
+                          addSuffix: true,
+                        })}
                       </span>
+                      {trial.duration && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {Math.round(trial.duration / 60)} min
+                        </span>
+                      )}
                       {trial.participant && (
                         <span className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          {trial.participant.name ||
+                          {trial.participant.name ??
                             trial.participant.participantCode}
                         </span>
                       )}
                     </div>
                   </div>
                 ))}
-                {trials.length > 5 && (
-                  <div className="pt-2 text-center">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/trials?experimentId=${experiment.id}`}>
-                        View All Trials ({trials.length})
-                      </Link>
-                    </Button>
-                  </div>
-                )}
               </div>
             ) : (
               <EmptyState
                 icon="Play"
-                title="No Trials Yet"
-                description="Start your first trial to begin collecting data"
+                title="No trials yet"
+                description="Start your first trial to collect data"
                 action={
-                  <Button asChild>
-                    <Link href={`/trials/new?experimentId=${experiment.id}`}>
-                      Start First Trial
-                    </Link>
-                  </Button>
+                  canEdit && (
+                    <Button asChild>
+                      <Link href={`/trials/new?experimentId=${experiment.id}`}>
+                        Start Trial
+                      </Link>
+                    </Button>
+                  )
                 }
               />
             )}
           </EntityViewSection>
         </div>
 
-        {/* Sidebar */}
-        <EntityViewSidebar>
-          {/* Quick Stats */}
-          <EntityViewSection title="Statistics" icon="BarChart3">
+        <div className="space-y-6">
+          {/* Statistics */}
+          <EntityViewSection title="Statistics" icon="BarChart">
             <StatsGrid
               stats={[
                 {
                   label: "Total Trials",
-                  value: mockStats.totalTrials,
+                  value: trials.length,
                 },
                 {
                   label: "Completed",
-                  value: mockStats.completedTrials,
-                  color: "success",
+                  value: trials.filter((t) => t.status === "completed").length,
                 },
                 {
-                  label: "Success Rate",
-                  value: mockStats.successRate,
-                  color: "success",
-                },
-                {
-                  label: "Avg. Duration",
-                  value: mockStats.averageDuration,
+                  label: "In Progress",
+                  value: trials.filter((t) => t.status === "in_progress")
+                    .length,
                 },
               ]}
             />
@@ -399,11 +415,7 @@ export default function ExperimentDetailPage({
                   },
                   {
                     label: "Type",
-                    value: experiment.robot.type || "Not specified",
-                  },
-                  {
-                    label: "Connection",
-                    value: experiment.robot.connectionType || "Not configured",
+                    value: experiment.robot.description ?? "Not specified",
                   },
                 ]}
               />
@@ -411,29 +423,24 @@ export default function ExperimentDetailPage({
           )}
 
           {/* Quick Actions */}
-          <EntityViewSection title="Quick Actions" icon="Settings">
+          <EntityViewSection title="Quick Actions" icon="Zap">
             <QuickActions
               actions={[
                 {
-                  label: "View All Trials",
-                  icon: "Play",
-                  href: `/trials?experimentId=${experiment.id}`,
-                },
-                {
                   label: "Export Data",
-                  icon: "Share",
+                  icon: "Download" as const,
                   href: `/experiments/${experiment.id}/export`,
                 },
                 ...(canEdit
                   ? [
                       {
                         label: "Edit Experiment",
-                        icon: "Edit",
+                        icon: "Edit" as const,
                         href: `/experiments/${experiment.id}/edit`,
                       },
                       {
-                        label: "Protocol Designer",
-                        icon: "Settings",
+                        label: "Open Designer",
+                        icon: "Palette" as const,
                         href: `/experiments/${experiment.id}/designer`,
                       },
                     ]
@@ -441,7 +448,7 @@ export default function ExperimentDetailPage({
               ]}
             />
           </EntityViewSection>
-        </EntityViewSidebar>
+        </div>
       </div>
     </EntityView>
   );

@@ -177,7 +177,7 @@ export const participantsColumns: ColumnDef<Participant>[] = [
       <DataTableColumnHeader column={column} title="Name" />
     ),
     cell: ({ row }) => {
-      const name = row.getValue("name") as string | null;
+      const name = row.original.name;
       const email = row.original.email;
       return (
         <div className="max-w-[160px] space-y-1">
@@ -193,8 +193,8 @@ export const participantsColumns: ColumnDef<Participant>[] = [
           {email && (
             <div className="text-muted-foreground flex items-center space-x-1 text-xs">
               <Mail className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate" title={email}>
-                {email}
+              <span className="truncate" title={email ?? ""}>
+                {email ?? ""}
               </span>
             </div>
           )}
@@ -237,7 +237,7 @@ export const participantsColumns: ColumnDef<Participant>[] = [
       );
     },
     filterFn: (row, id, value) => {
-      const consentGiven = row.getValue(id) as boolean;
+      const consentGiven = row.getValue(id);
       if (value === "consented") return !!consentGiven;
       if (value === "pending") return !consentGiven;
       return true;
@@ -249,12 +249,12 @@ export const participantsColumns: ColumnDef<Participant>[] = [
       <DataTableColumnHeader column={column} title="Trials" />
     ),
     cell: ({ row }) => {
-      const trialCount = row.getValue("trialCount") as number;
+      const trialCount = row.original.trialCount;
 
       return (
         <div className="flex items-center space-x-1 text-sm whitespace-nowrap">
           <TestTube className="text-muted-foreground h-3 w-3" />
-          <span>{trialCount as number}</span>
+          <span>{trialCount ?? 0}</span>
         </div>
       );
     },
@@ -265,10 +265,10 @@ export const participantsColumns: ColumnDef<Participant>[] = [
       <DataTableColumnHeader column={column} title="Created" />
     ),
     cell: ({ row }) => {
-      const date = row.getValue("createdAt") as Date;
+      const date = row.original.createdAt;
       return (
         <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date, { addSuffix: true })}
+          {formatDistanceToNow(date ?? new Date(), { addSuffix: true })}
         </div>
       );
     },

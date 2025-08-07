@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { EnhancedBlockDesigner } from "~/components/experiments/designer/EnhancedBlockDesigner";
+import type { ExperimentBlock } from "~/components/experiments/designer/EnhancedBlockDesigner";
 import { api } from "~/trpc/server";
 
 interface ExperimentDesignerPageProps {
@@ -19,17 +20,33 @@ export default async function ExperimentDesignerPage({
       notFound();
     }
 
+    // Parse existing visual design if available
+    const existingDesign = experiment.visualDesign as {
+      blocks?: unknown[];
+      version?: number;
+      lastSaved?: string;
+    } | null;
+
+    // Only pass initialDesign if there's existing visual design data
+    const initialDesign =
+      existingDesign?.blocks && existingDesign.blocks.length > 0
+        ? {
+            id: experiment.id,
+            name: experiment.name,
+            description: experiment.description ?? "",
+            blocks: existingDesign.blocks as ExperimentBlock[],
+            version: existingDesign.version ?? 1,
+            lastSaved:
+              typeof existingDesign.lastSaved === "string"
+                ? new Date(existingDesign.lastSaved)
+                : new Date(),
+          }
+        : undefined;
+
     return (
       <EnhancedBlockDesigner
         experimentId={experiment.id}
-        initialDesign={{
-          id: experiment.id,
-          name: experiment.name,
-          description: experiment.description ?? "",
-          blocks: [],
-          version: 1,
-          lastSaved: new Date(),
-        }}
+        initialDesign={initialDesign}
       />
     );
   } catch (error) {
@@ -40,7 +57,10 @@ export default async function ExperimentDesignerPage({
 
 export async function generateMetadata({
   params,
-}: ExperimentDesignerPageProps) {
+}: ExperimentDesignerPageProps): Promise<{
+  title: string;
+  description: string;
+}> {
   try {
     const resolvedParams = await params;
     const experiment = await api.experiments.get({ id: resolvedParams.id });

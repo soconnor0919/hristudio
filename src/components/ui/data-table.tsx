@@ -115,8 +115,10 @@ export function DataTable<TData, TValue>({
       // Initialize with defaultHidden columns set to false
       const initialVisibility: VisibilityState = {};
       safeColumns.forEach((column) => {
-        if ((column.meta as any)?.defaultHidden) {
-          const columnKey = column.id || (column as any).accessorKey;
+        const meta = column.meta as { defaultHidden?: boolean } | undefined;
+        if (meta?.defaultHidden) {
+          const columnKey =
+            column.id ?? (column as { accessorKey?: string }).accessorKey;
           if (columnKey) {
             initialVisibility[columnKey] = false;
           }
@@ -183,7 +185,7 @@ export function DataTable<TData, TValue>({
         <div className="flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-2">
+              <Button variant="outline" className="h-8">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

@@ -183,14 +183,16 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
           table.getIsAllPageRowsSelected() ||
           (table.getIsSomePageRowsSelected() && "indeterminate")
         }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        onCheckedChange={(value: boolean) =>
+          table.toggleAllPageRowsSelected(!!value)
+        }
         aria-label="Select all"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        onCheckedChange={(value: boolean) => row.toggleSelected(!!value)}
         aria-label="Select row"
       />
     ),
@@ -231,12 +233,13 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
       <DataTableColumnHeader column={column} title="Study" />
     ),
     cell: ({ row }) => {
-      const study = row.getValue("study") as Experiment["study"];
+      const study = row.original.study;
+      if (!study?.id || !study?.name)
+        return <span className="text-muted-foreground">No study</span>;
       return (
         <Link
           href={`/studies/${study.id}`}
-          className="block max-w-[140px] truncate text-sm hover:underline"
-          title={study.name}
+          className="text-primary hover:underline"
         >
           {study.name}
         </Link>
@@ -250,8 +253,8 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as keyof typeof statusConfig;
-      const config = statusConfig[status];
+      const status = row.getValue("status");
+      const config = statusConfig[status as keyof typeof statusConfig];
 
       return (
         <Badge
@@ -264,7 +267,7 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
       );
     },
     filterFn: (row, id, value: string[]) => {
-      return value.includes(row.getValue(id) as string);
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -296,20 +299,23 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
       <DataTableColumnHeader column={column} title="Owner" />
     ),
     cell: ({ row }) => {
-      const owner = row.getValue("owner") as Experiment["owner"];
+      const owner = row.original.owner;
+      if (!owner) {
+        return <span className="text-muted-foreground">No owner</span>;
+      }
       return (
         <div className="max-w-[140px] space-y-1">
           <div
             className="truncate text-sm font-medium"
-            title={owner?.name ?? "Unknown"}
+            title={owner.name ?? "Unknown"}
           >
-            {owner?.name ?? "Unknown"}
+            {owner.name ?? "Unknown"}
           </div>
           <div
             className="text-muted-foreground truncate text-xs"
-            title={owner?.email}
+            title={owner.email ?? ""}
           >
-            {owner?.email}
+            {owner.email ?? ""}
           </div>
         </div>
       );

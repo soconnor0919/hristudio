@@ -77,9 +77,9 @@ export function useActiveStudy() {
     localStorage.setItem(ACTIVE_STUDY_KEY, studyId);
 
     // Invalidate all related queries when study changes
-    utils.participants.invalidate();
-    utils.trials.invalidate();
-    utils.experiments.invalidate();
+    void utils.participants.invalidate();
+    void utils.trials.invalidate();
+    void utils.experiments.invalidate();
 
     toast.success("Active study updated");
 
@@ -95,9 +95,9 @@ export function useActiveStudy() {
     localStorage.removeItem(ACTIVE_STUDY_KEY);
 
     // Invalidate all related queries when clearing study
-    utils.participants.invalidate();
-    utils.trials.invalidate();
-    utils.experiments.invalidate();
+    void utils.participants.invalidate();
+    void utils.trials.invalidate();
+    void utils.experiments.invalidate();
 
     toast.success("Active study cleared");
 
@@ -116,15 +116,18 @@ export function useActiveStudy() {
       activeStudy && typeof activeStudy === "object"
         ? {
             id: activeStudy.id,
-            title: (activeStudy as any).name || "",
-            description: (activeStudy as any).description || "",
+            title: (activeStudy as { name?: string }).name ?? "",
+            description:
+              (activeStudy as { description?: string }).description ?? "",
           }
         : null,
-    userStudies: userStudies.map((study: any) => ({
-      id: study.id as string,
-      title: study.name as string,
-      description: (study.description as string) || "",
-    })),
+    userStudies: userStudies.map(
+      (study: { id: string; name: string; description?: string | null }) => ({
+        id: study.id,
+        title: study.name,
+        description: study.description ?? "",
+      }),
+    ),
 
     // Loading states
     isLoadingActiveStudy,

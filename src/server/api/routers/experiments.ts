@@ -14,15 +14,29 @@ import {
   steps,
   stepTypeEnum,
   studyMembers,
+  userSystemRoles,
 } from "~/server/db/schema";
 
-// Helper function to check study access
+// Helper function to check study access (with admin bypass)
 async function checkStudyAccess(
   database: typeof db,
   userId: string,
   studyId: string,
   requiredRole?: string[],
 ) {
+  // Check if user is system administrator (bypass study permissions)
+  const adminRole = await database.query.userSystemRoles.findFirst({
+    where: and(
+      eq(userSystemRoles.userId, userId),
+      eq(userSystemRoles.role, "administrator"),
+    ),
+  });
+
+  if (adminRole) {
+    return { role: "administrator", studyId, userId, joinedAt: new Date() };
+  }
+
+  // Check study membership
   const membership = await database.query.studyMembers.findFirst({
     where: and(
       eq(studyMembers.studyId, studyId),
@@ -332,6 +346,7 @@ export const experimentsRouter = createTRPCRouter({
         status: z.enum(experimentStatusEnum.enumValues).optional(),
         estimatedDuration: z.number().int().min(1).optional(),
         metadata: z.record(z.string(), z.any()).optional(),
+        visualDesign: z.record(z.string(), z.any()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

@@ -14,15 +14,27 @@ async function main() {
   try {
     // Clean existing data (in reverse order of dependencies)
     console.log("🧹 Cleaning existing data...");
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.trialEvents);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.trials);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.steps);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.experiments);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.participants);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.studyMembers);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.userSystemRoles);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.studies);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.users);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
+    await db.delete(schema.pluginRepositories);
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
     await db.delete(schema.robots);
 
     // Create robots first
@@ -444,14 +456,8 @@ async function main() {
     const experiment1 = insertedExperiments.find(
       (e) => e.name === "Math Tutoring Session",
     )!;
-    const experiment2 = insertedExperiments.find(
-      (e) => e.name === "Reading Comprehension Support",
-    )!;
     const experiment3 = insertedExperiments.find(
       (e) => e.name === "Daily Companion Interaction",
-    )!;
-    const experiment4 = insertedExperiments.find(
-      (e) => e.name === "Medication Reminder Protocol",
     )!;
     const experiment5 = insertedExperiments.find(
       (e) => e.name === "Campus Navigation Assistance",

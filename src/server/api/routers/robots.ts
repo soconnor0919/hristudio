@@ -4,7 +4,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    communicationProtocolEnum, plugins, pluginStatusEnum, robots, studyMembers, studyPlugins
+  communicationProtocolEnum,
+  plugins,
+  pluginStatusEnum,
+  robots,
+  studyMembers,
+  studyPlugins,
 } from "~/server/db/schema";
 
 // Helper function to check if user has study access for robot operations
@@ -21,7 +26,12 @@ async function checkStudyAccess(
       and(
         eq(studyMembers.studyId, studyId),
         eq(studyMembers.userId, userId),
-        inArray(studyMembers.role, requiredRoles as Array<"owner" | "researcher" | "wizard" | "observer">),
+        inArray(
+          studyMembers.role,
+          requiredRoles as Array<
+            "owner" | "researcher" | "wizard" | "observer"
+          >,
+        ),
       ),
     )
     .limit(1);
@@ -67,9 +77,7 @@ export const robotsRouter = createTRPCRouter({
         .from(robots);
 
       const results = await (
-        conditions.length > 0
-          ? query.where(and(...conditions))
-          : query
+        conditions.length > 0 ? query.where(and(...conditions)) : query
       )
         .orderBy(desc(robots.updatedAt))
         .limit(input.limit)
@@ -428,6 +436,53 @@ export const robotsRouter = createTRPCRouter({
         }
 
         return plugin[0].actionDefinitions ?? [];
+      }),
+
+    getStudyPlugins: protectedProcedure
+      .input(
+        z.object({
+          studyId: z.string(),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        const { db } = ctx;
+        const userId = ctx.session.user.id;
+
+        await checkStudyAccess(db, userId, input.studyId, [
+          "owner",
+          "researcher",
+          "wizard",
+          "observer",
+        ]);
+
+        const installedPlugins = await db
+          .select({
+            plugin: {
+              id: plugins.id,
+              robotId: plugins.robotId,
+              name: plugins.name,
+              version: plugins.version,
+              description: plugins.description,
+              author: plugins.author,
+              repositoryUrl: plugins.repositoryUrl,
+              trustLevel: plugins.trustLevel,
+              status: plugins.status,
+              createdAt: plugins.createdAt,
+              updatedAt: plugins.updatedAt,
+            },
+            installation: {
+              id: studyPlugins.id,
+              configuration: studyPlugins.configuration,
+              installedAt: studyPlugins.installedAt,
+              installedBy: studyPlugins.installedBy,
+            },
+          })
+          .from(studyPlugins)
+          .innerJoin(plugins, eq(studyPlugins.pluginId, plugins.id))
+          .where(eq(studyPlugins.studyId, input.studyId))
+          .orderBy(desc(studyPlugins.installedAt));
+
+        return installedPlugins;
       }),
   }),
 });

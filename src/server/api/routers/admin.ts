@@ -1,10 +1,32 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, inArray, lte, type SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lte,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    annotations, auditLogs, experiments, mediaCaptures, participants, studies, systemSettings, trials, users, userSystemRoles
+  annotations,
+  auditLogs,
+  experiments,
+  mediaCaptures,
+  participants,
+  pluginRepositories,
+  studies,
+  systemSettings,
+  trials,
+  trustLevelEnum,
+  users,
+  userSystemRoles,
 } from "~/server/db/schema";
 
 // Helper function to check if user has system admin access
@@ -27,6 +49,12 @@ async function checkSystemAdminAccess(database: typeof db, userId: string) {
     });
   }
 }
+
+// Admin procedure with system admin access check
+const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  await checkSystemAdminAccess(ctx.db, ctx.session.user.id);
+  return next();
+});
 
 export const adminRouter = createTRPCRouter({
   getSystemStats: protectedProcedure
@@ -306,8 +334,8 @@ export const adminRouter = createTRPCRouter({
       }
       if (input.dateRange) {
         conditions.push(
-                  gte(auditLogs.createdAt, input.dateRange.startDate),
-        lte(auditLogs.createdAt, input.dateRange.endDate),
+          gte(auditLogs.createdAt, input.dateRange.startDate),
+          lte(auditLogs.createdAt, input.dateRange.endDate),
         );
       }
 
@@ -539,4 +567,291 @@ export const adminRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  // Repository management
+  repositories: createTRPCRouter({
+    list: adminProcedure
+      .input(
+        z.object({
+          search: z.string().optional(),
+          trustLevel: z.enum(trustLevelEnum.enumValues).optional(),
+          isEnabled: z.boolean().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        const { db } = ctx;
+
+        const conditions = [];
+
+        if (input.search) {
+          conditions.push(
+            or(
+              ilike(pluginRepositories.name, `%${input.search}%`),
+              ilike(pluginRepositories.description, `%${input.search}%`),
+              ilike(pluginRepositories.url, `%${input.search}%`),
+            ),
+          );
+        }
+
+        if (input.trustLevel) {
+          conditions.push(eq(pluginRepositories.trustLevel, input.trustLevel));
+        }
+
+        if (input.isEnabled !== undefined) {
+          conditions.push(eq(pluginRepositories.isEnabled, input.isEnabled));
+        }
+
+        const query = db
+          .select({
+            id: pluginRepositories.id,
+            name: pluginRepositories.name,
+            url: pluginRepositories.url,
+            description: pluginRepositories.description,
+            trustLevel: pluginRepositories.trustLevel,
+            isEnabled: pluginRepositories.isEnabled,
+            isOfficial: pluginRepositories.isOfficial,
+            lastSyncAt: pluginRepositories.lastSyncAt,
+            syncStatus: pluginRepositories.syncStatus,
+            syncError: pluginRepositories.syncError,
+            createdAt: pluginRepositories.createdAt,
+            updatedAt: pluginRepositories.updatedAt,
+          })
+          .from(pluginRepositories);
+
+        const results = await (
+          conditions.length > 0 ? query.where(and(...conditions)) : query
+        )
+          .orderBy(desc(pluginRepositories.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        return results;
+      }),
+
+    get: adminProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const { db } = ctx;
+
+        const repository = await db
+          .select()
+          .from(pluginRepositories)
+          .where(eq(pluginRepositories.id, input.id))
+          .limit(1);
+
+        if (!repository[0]) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Repository not found",
+          });
+        }
+
+        return repository[0];
+      }),
+
+    create: adminProcedure
+      .input(
+        z.object({
+          name: z.string().min(1).max(255),
+          url: z.string().url(),
+          description: z.string().optional(),
+          trustLevel: z.enum(trustLevelEnum.enumValues).default("community"),
+          isEnabled: z.boolean().default(true),
+          isOfficial: z.boolean().default(false),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { db } = ctx;
+        const userId = ctx.session.user.id;
+
+        // Check if repository URL already exists
+        const existing = await db
+          .select()
+          .from(pluginRepositories)
+          .where(eq(pluginRepositories.url, input.url))
+          .limit(1);
+
+        if (existing[0]) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Repository URL already exists",
+          });
+        }
+
+        const repositories = await db
+          .insert(pluginRepositories)
+          .values({
+            name: input.name,
+            url: input.url,
+            description: input.description,
+            trustLevel: input.trustLevel,
+            isEnabled: input.isEnabled,
+            isOfficial: input.isOfficial,
+            createdBy: userId,
+          })
+          .returning();
+
+        const repository = repositories[0];
+        if (!repository) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create repository",
+          });
+        }
+
+        return repository;
+      }),
+
+    update: adminProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          name: z.string().min(1).max(255).optional(),
+          url: z.string().url().optional(),
+          description: z.string().optional(),
+          trustLevel: z.enum(trustLevelEnum.enumValues).optional(),
+          isEnabled: z.boolean().optional(),
+          isOfficial: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { db } = ctx;
+
+        // Check if repository exists
+        const existing = await db
+          .select()
+          .from(pluginRepositories)
+          .where(eq(pluginRepositories.id, input.id))
+          .limit(1);
+
+        if (!existing[0]) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Repository not found",
+          });
+        }
+
+        // If updating URL, check for conflicts
+        if (input.url && input.url !== existing[0].url) {
+          const urlExists = await db
+            .select()
+            .from(pluginRepositories)
+            .where(eq(pluginRepositories.url, input.url))
+            .limit(1);
+
+          if (urlExists[0]) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Repository URL already exists",
+            });
+          }
+        }
+
+        const updateData: {
+          updatedAt: Date;
+          name?: string;
+          url?: string;
+          description?: string;
+          trustLevel?: "official" | "verified" | "community";
+          isEnabled?: boolean;
+          isOfficial?: boolean;
+        } = {
+          updatedAt: new Date(),
+        };
+
+        if (input.name !== undefined) updateData.name = input.name;
+        if (input.url !== undefined) updateData.url = input.url;
+        if (input.description !== undefined)
+          updateData.description = input.description;
+        if (input.trustLevel !== undefined)
+          updateData.trustLevel = input.trustLevel;
+        if (input.isEnabled !== undefined)
+          updateData.isEnabled = input.isEnabled;
+        if (input.isOfficial !== undefined)
+          updateData.isOfficial = input.isOfficial;
+
+        const repositories = await db
+          .update(pluginRepositories)
+          .set(updateData)
+          .where(eq(pluginRepositories.id, input.id))
+          .returning();
+
+        const repository = repositories[0];
+        if (!repository) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to update repository",
+          });
+        }
+
+        return repository;
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { db } = ctx;
+
+        const deletedRepositories = await db
+          .delete(pluginRepositories)
+          .where(eq(pluginRepositories.id, input.id))
+          .returning();
+
+        if (!deletedRepositories[0]) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Repository not found",
+          });
+        }
+
+        return { success: true };
+      }),
+
+    sync: adminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { db } = ctx;
+
+        // Check if repository exists
+        const repository = await db
+          .select()
+          .from(pluginRepositories)
+          .where(eq(pluginRepositories.id, input.id))
+          .limit(1);
+
+        if (!repository[0]) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Repository not found",
+          });
+        }
+
+        // Update sync status to in_progress
+        await db
+          .update(pluginRepositories)
+          .set({
+            syncStatus: "syncing",
+            syncError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(pluginRepositories.id, input.id));
+
+        // TODO: Implement actual repository synchronization
+        // This would fetch plugins from the repository URL and update the plugins table
+
+        // For now, just mark as completed
+        await db
+          .update(pluginRepositories)
+          .set({
+            syncStatus: "completed",
+            lastSyncAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(pluginRepositories.id, input.id));
+
+        return { success: true };
+      }),
+  }),
 });

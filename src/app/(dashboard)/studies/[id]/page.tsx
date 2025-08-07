@@ -1,26 +1,10 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import {
-  ArrowLeft,
-  BarChart3,
-  Building,
-  Calendar,
-  CheckCircle,
-  Clock,
-  Edit,
-  FileText,
-  FlaskConical,
-  Plus,
-  Settings,
-  Shield,
-  Users,
-  XCircle,
-} from "lucide-react";
+import { Plus, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   EntityView,
@@ -32,7 +16,6 @@ import {
   QuickActions,
   StatsGrid,
 } from "~/components/ui/entity-view";
-import { Separator } from "~/components/ui/separator";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
@@ -66,21 +49,40 @@ const statusConfig = {
   },
 };
 
+type Study = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  institution: string | null;
+  irbProtocol: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type Member = {
+  role: string;
+  user: {
+    name: string | null;
+    email: string;
+  };
+};
+
 export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   const { data: session } = useSession();
-  const [study, setStudy] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
+  const [study, setStudy] = useState<Study | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null,
   );
 
   useEffect(() => {
-    async function resolveParams() {
+    const resolveParams = async () => {
       const resolved = await params;
       setResolvedParams(resolved);
-    }
-    resolveParams();
+    };
+    void resolveParams();
   }, [params]);
 
   const { data: studyData } = api.studies.get.useQuery(
@@ -109,7 +111,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
     { label: "Studies", href: "/studies" },
-    { label: study?.name || "Study" },
+    { label: study?.name ?? "Study" },
   ]);
 
   if (!session?.user) {
@@ -120,7 +122,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
     return <div>Loading...</div>;
   }
 
-  const statusInfo = statusConfig[study.status];
+  const statusInfo = statusConfig[study.status as keyof typeof statusConfig];
 
   // TODO: Get actual stats from API
   const mockStats = {
@@ -135,12 +137,12 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
       {/* Header */}
       <EntityViewHeader
         title={study.name}
-        subtitle={study.description}
+        subtitle={study.description ?? undefined}
         icon="Building"
         status={{
-          label: statusInfo.label,
-          variant: statusInfo.variant,
-          icon: statusInfo.icon,
+          label: statusInfo?.label ?? "Unknown",
+          variant: statusInfo?.variant ?? "secondary",
+          icon: statusInfo?.icon ?? "FileText",
         }}
         actions={
           <>
@@ -169,11 +171,11 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
               items={[
                 {
                   label: "Institution",
-                  value: study.institution,
+                  value: study.institution ?? "Not specified",
                 },
                 {
                   label: "IRB Protocol",
-                  value: study.irbProtocol || "Not specified",
+                  value: study.irbProtocol ?? "Not required",
                 },
                 {
                   label: "Created",
@@ -244,9 +246,9 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
             }
           >
             <div className="space-y-3">
-              {members.map((member) => (
+              {members.map((member, index) => (
                 <div
-                  key={member.user.id}
+                  key={`${member.user.email}-${index}`}
                   className="flex items-center space-x-3"
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">

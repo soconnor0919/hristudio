@@ -200,9 +200,9 @@ export function EntityForm({ mode, entityId }: EntityFormProps) {
 ```
 
 ### **Achievement Metrics**
-- **73% Code Reduction**: Eliminated form duplication across entities
-- **100% Consistency**: Uniform experience across all entity types
-- **Developer Velocity**: 60% faster implementation of new forms
+- **Significant Code Reduction**: Eliminated form duplication across entities
+- **Complete Consistency**: Uniform experience across all entity types
+- **Developer Velocity**: Much faster implementation of new forms
 - **Maintainability**: Single component for all form improvements
 
 ---
@@ -267,10 +267,10 @@ const handleExport = async () => {
 ```
 
 ### **Performance Improvements**
-- **45% Faster**: Initial page load times
-- **60% Reduction**: Unnecessary API calls
-- **30% Lower**: Client-side memory usage
-- **50% Better**: Mobile responsiveness
+- **Much Faster**: Initial page load times
+- **Significant Reduction**: Unnecessary API calls
+- **Lower**: Client-side memory usage
+- **Much Better**: Mobile responsiveness
 
 ### **Critical Fixes Applied**
 

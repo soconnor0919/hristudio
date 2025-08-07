@@ -3,16 +3,11 @@
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CheckCircle,
   Edit,
-  FileText,
   Mail,
-  Play,
-  Shield,
   Trash2,
-  Users,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,8 +39,31 @@ export default function ParticipantDetailPage({
   params,
 }: ParticipantDetailPageProps) {
   const { data: session } = useSession();
-  const [participant, setParticipant] = useState<any>(null);
-  const [trials, setTrials] = useState<any[]>([]);
+  const [participant, setParticipant] = useState<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    participantCode: string;
+    study: { id: string; name: string } | null;
+    demographics: unknown;
+    notes: string | null;
+    consentGiven: boolean;
+    consentDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    studyId: string;
+    trials: unknown[];
+    consents: unknown[];
+  } | null>(null);
+  const [trials, setTrials] = useState<
+    {
+      id: string;
+      status: string;
+      createdAt: Date;
+      duration: number | null;
+      experiment: { name: string } | null;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null,
@@ -56,7 +74,7 @@ export default function ParticipantDetailPage({
       const resolved = await params;
       setResolvedParams(resolved);
     }
-    resolveParams();
+    void resolveParams();
   }, [params]);
 
   const { data: participantData } = api.participants.get.useQuery(
@@ -86,7 +104,7 @@ export default function ParticipantDetailPage({
     { label: "Dashboard", href: "/dashboard" },
     { label: "Participants", href: "/participants" },
     {
-      label: participant?.name || participant?.participantCode || "Participant",
+      label: participant?.name ?? participant?.participantCode ?? "Participant",
     },
   ]);
 
@@ -116,7 +134,7 @@ export default function ParticipantDetailPage({
           canEdit && (
             <>
               <Button variant="outline" asChild>
-                <Link href={`/participants/${resolvedParams.id}/edit`}>
+                <Link href={`/participants/${resolvedParams?.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </Link>
@@ -147,16 +165,16 @@ export default function ParticipantDetailPage({
                 },
                 {
                   label: "Name",
-                  value: participant.name || "Not provided",
+                  value: participant?.name ?? "Not provided",
                 },
                 {
                   label: "Email",
-                  value: participant.email ? (
+                  value: participant?.email ? (
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4" />
                       <a
                         href={`mailto:${participant.email}`}
-                        className="hover:underline"
+                        className="text-primary hover:underline"
                       >
                         {participant.email}
                       </a>
@@ -167,7 +185,7 @@ export default function ParticipantDetailPage({
                 },
                 {
                   label: "Study",
-                  value: participant.study ? (
+                  value: participant?.study ? (
                     <Link
                       href={`/studies/${participant.study.id}`}
                       className="text-primary hover:underline"
@@ -182,43 +200,53 @@ export default function ParticipantDetailPage({
             />
 
             {/* Demographics */}
-            {participant.demographics &&
-              typeof participant.demographics === "object" &&
-              participant.demographics !== null &&
-              Object.keys(participant.demographics).length > 0 && (
-                <div className="border-t pt-4">
-                  <h4 className="text-muted-foreground mb-3 text-sm font-medium">
-                    Demographics
-                  </h4>
-                  <InfoGrid
-                    items={(() => {
-                      const demo = participant.demographics as Record<
-                        string,
-                        unknown
-                      >;
-                      return [
-                        demo.age && {
-                          label: "Age",
-                          value:
-                            typeof demo.age === "number"
-                              ? demo.age.toString()
-                              : String(demo.age),
-                        },
-                        demo.gender && {
-                          label: "Gender",
-                          value: String(demo.gender),
-                        },
-                      ].filter(Boolean) as Array<{
-                        label: string;
-                        value: string;
-                      }>;
-                    })()}
-                  />
-                </div>
-              )}
+            {participant?.demographics &&
+            typeof participant.demographics === "object" &&
+            participant.demographics !== null &&
+            Object.keys(participant.demographics as Record<string, unknown>)
+              .length > 0 ? (
+              <div className="border-t pt-4">
+                <h4 className="text-muted-foreground mb-3 text-sm font-medium">
+                  Demographics
+                </h4>
+                <InfoGrid
+                  items={(() => {
+                    const demo = participant.demographics as Record<
+                      string,
+                      unknown
+                    >;
+                    const items: Array<{ label: string; value: string }> = [];
+
+                    if (demo.age) {
+                      items.push({
+                        label: "Age",
+                        value:
+                          typeof demo.age === "number"
+                            ? demo.age.toString()
+                            : typeof demo.age === "string"
+                              ? demo.age
+                              : "Unknown",
+                      });
+                    }
+
+                    if (demo.gender) {
+                      items.push({
+                        label: "Gender",
+                        value:
+                          typeof demo.gender === "string"
+                            ? demo.gender
+                            : "Unknown",
+                      });
+                    }
+
+                    return items;
+                  })()}
+                />
+              </div>
+            ) : null}
 
             {/* Notes */}
-            {participant.notes && (
+            {participant?.notes && (
               <div className="border-t pt-4">
                 <h4 className="text-muted-foreground mb-2 text-sm font-medium">
                   Notes
@@ -238,7 +266,9 @@ export default function ParticipantDetailPage({
             actions={
               canEdit && (
                 <Button size="sm" asChild>
-                  <Link href={`/trials/new?participantId=${resolvedParams.id}`}>
+                  <Link
+                    href={`/trials/new?participantId=${resolvedParams?.id}`}
+                  >
                     Schedule Trial
                   </Link>
                 </Button>
@@ -257,7 +287,7 @@ export default function ParticipantDetailPage({
                         href={`/trials/${trial.id}`}
                         className="font-medium hover:underline"
                       >
-                        {trial.experiment?.name || "Trial"}
+                        {trial.experiment?.name ?? "Trial"}
                       </Link>
                       <Badge
                         variant={
@@ -283,7 +313,7 @@ export default function ParticipantDetailPage({
                           : "Not scheduled"}
                       </span>
                       {trial.duration && (
-                        <span>{Math.round(trial.duration / 60)} minutes</span>
+                        <span>{Math.round(trial.duration / 60)} min</span>
                       )}
                     </div>
                   </div>
@@ -298,7 +328,7 @@ export default function ParticipantDetailPage({
                   canEdit && (
                     <Button asChild>
                       <Link
-                        href={`/trials/new?participantId=${resolvedParams.id}`}
+                        href={`/trials/new?participantId=${resolvedParams?.id}`}
                       >
                         Schedule First Trial
                       </Link>
@@ -318,9 +348,11 @@ export default function ParticipantDetailPage({
               <div className="flex items-center justify-between">
                 <span className="text-sm">Informed Consent</span>
                 <Badge
-                  variant={participant.consentGiven ? "default" : "destructive"}
+                  variant={
+                    participant?.consentGiven ? "default" : "destructive"
+                  }
                 >
-                  {participant.consentGiven ? (
+                  {participant?.consentGiven ? (
                     <>
                       <CheckCircle className="mr-1 h-3 w-3" />
                       Given
@@ -334,10 +366,10 @@ export default function ParticipantDetailPage({
                 </Badge>
               </div>
 
-              {participant.consentDate && (
+              {participant?.consentDate && (
                 <div className="text-muted-foreground text-sm">
                   Consented:{" "}
-                  {formatDistanceToNow(participant.consentDate, {
+                  {formatDistanceToNow(new Date(participant.consentDate), {
                     addSuffix: true,
                   })}
                 </div>
@@ -361,7 +393,7 @@ export default function ParticipantDetailPage({
               items={[
                 {
                   label: "Registered",
-                  value: formatDistanceToNow(participant.createdAt, {
+                  value: formatDistanceToNow(participant?.createdAt, {
                     addSuffix: true,
                   }),
                 },
@@ -388,17 +420,17 @@ export default function ParticipantDetailPage({
                   {
                     label: "Schedule Trial",
                     icon: "Play",
-                    href: `/trials/new?participantId=${resolvedParams.id}`,
+                    href: `/trials/new?participantId=${resolvedParams?.id}`,
                   },
                   {
                     label: "Edit Information",
                     icon: "Edit",
-                    href: `/participants/${resolvedParams.id}/edit`,
+                    href: `/participants/${resolvedParams?.id}/edit`,
                   },
                   {
                     label: "Export Data",
                     icon: "FileText",
-                    href: `/participants/${resolvedParams.id}/export`,
+                    href: `/participants/${resolvedParams?.id}/export`,
                   },
                 ]}
               />

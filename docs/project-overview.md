@@ -210,15 +210,15 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 ### Technical Metrics
 - Page load time < 2 seconds
 - API response time < 200ms (p95)
-- 99.9% uptime for critical services
+- High uptime for critical services
 - Zero data loss incidents
 - Support for 100+ concurrent users
 
 ### User Success Metrics
 - Time to create first experiment < 30 minutes
-- Trial execution consistency > 95%
-- Data capture completeness 100%
-- User satisfaction score > 4.5/5
+- High trial execution consistency
+- Complete data capture
+- High user satisfaction score
 - Active monthly users growth
 
 ## Future Considerations

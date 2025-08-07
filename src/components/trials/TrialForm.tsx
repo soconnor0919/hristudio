@@ -50,9 +50,9 @@ interface TrialFormProps {
 export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
   const router = useRouter();
   const { selectedStudyId } = useStudyContext();
-  const contextStudyId = studyId || selectedStudyId;
+  const contextStudyId = studyId ?? selectedStudyId;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<TrialFormData>({
@@ -93,16 +93,36 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
   // Set breadcrumbs
   const breadcrumbs = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Trials", href: "/trials" },
-    ...(mode === "edit" && trial
+    { label: "Studies", href: "/studies" },
+    ...(contextStudyId
       ? [
           {
-            label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-            href: `/trials/${trial.id}`,
+            label: "Study",
+            href: `/studies/${contextStudyId}`,
           },
-          { label: "Edit" },
+          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
+          ...(mode === "edit" && trial
+            ? [
+                {
+                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+                  href: `/trials/${trial.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Trial" }]),
         ]
-      : [{ label: "New Trial" }]),
+      : [
+          { label: "Trials", href: "/trials" },
+          ...(mode === "edit" && trial
+            ? [
+                {
+                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+                  href: `/trials/${trial.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Trial" }]),
+        ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -112,13 +132,13 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     if (mode === "edit" && trial) {
       form.reset({
         experimentId: trial.experimentId,
-        participantId: trial.participantId || "",
+        participantId: trial?.participantId ?? "",
         scheduledAt: trial.scheduledAt
           ? new Date(trial.scheduledAt).toISOString().slice(0, 16)
           : "",
-        wizardId: trial.wizardId || undefined,
-        notes: trial.notes || "",
-        sessionNumber: trial.sessionNumber || 1,
+        wizardId: trial.wizardId ?? undefined,
+        notes: trial.notes ?? "",
+        sessionNumber: trial.sessionNumber ?? 1,
       });
     }
   }, [trial, mode, form]);
@@ -138,8 +158,8 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
           participantId: data.participantId,
           scheduledAt: new Date(data.scheduledAt),
           wizardId: data.wizardId,
-          sessionNumber: data.sessionNumber || 1,
-          notes: data.notes || undefined,
+          sessionNumber: data.sessionNumber ?? 1,
+          notes: data.notes ?? undefined,
         });
         router.push(`/trials/${newTrial!.id}`);
       } else {
@@ -147,8 +167,8 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
           id: trialId!,
           scheduledAt: new Date(data.scheduledAt),
           wizardId: data.wizardId,
-          sessionNumber: data.sessionNumber || 1,
-          notes: data.notes || undefined,
+          sessionNumber: data.sessionNumber ?? 1,
+          notes: data.notes ?? undefined,
         });
         router.push(`/trials/${updatedTrial!.id}`);
       }
@@ -244,7 +264,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             <SelectContent>
               {participantsData?.participants?.map((participant) => (
                 <SelectItem key={participant.id} value={participant.id}>
-                  {participant.name || participant.participantCode} (
+                  {participant.name ?? participant.participantCode} (
                   {participant.participantCode})
                 </SelectItem>
               ))}
@@ -312,7 +332,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
         <FormField>
           <Label htmlFor="wizardId">Assigned Wizard</Label>
           <Select
-            value={form.watch("wizardId") || "none"}
+            value={form.watch("wizardId") ?? "none"}
             onValueChange={(value) =>
               form.setValue("wizardId", value === "none" ? undefined : value)
             }
@@ -329,11 +349,13 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No wizard assigned</SelectItem>
-              {usersData?.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </SelectItem>
-              ))}
+              {usersData?.map(
+                (user: { id: string; name: string; email: string }) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">

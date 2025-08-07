@@ -12,6 +12,7 @@ import {
   Home,
   LogOut,
   MoreHorizontal,
+  Puzzle,
   Settings,
   Users,
   UserCheck,
@@ -70,6 +71,11 @@ const navigationItems = [
     title: "Trials",
     url: "/trials",
     icon: TestTube,
+  },
+  {
+    title: "Plugins",
+    url: "/plugins",
+    icon: Puzzle,
   },
   {
     title: "Analytics",

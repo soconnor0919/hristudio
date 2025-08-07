@@ -59,10 +59,22 @@ export function TrialsDataTable() {
     return () => clearInterval(interval);
   }, [refetch]);
 
+  // Get study data for breadcrumbs
+  const { data: studyData } = api.studies.get.useQuery(
+    { id: selectedStudyId! },
+    { enabled: !!selectedStudyId },
+  );
+
   // Set breadcrumbs
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Trials" },
+    { label: "Studies", href: "/studies" },
+    ...(selectedStudyId && studyData
+      ? [
+          { label: studyData.name, href: `/studies/${selectedStudyId}` },
+          { label: "Trials" },
+        ]
+      : [{ label: "Trials" }]),
   ]);
 
   // Transform trials data to match the Trial type expected by columns
@@ -149,7 +161,7 @@ export function TrialsDataTable() {
   const filters = (
     <div className="flex items-center space-x-2">
       <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -222,10 +234,10 @@ export function TrialsDataTable() {
                   Limited Trial Access
                 </h3>
                 <p className="mt-1 text-sm text-amber-700">
-                  Some trials are marked as "View Only" or "Restricted" because
-                  you have observer-level access to their studies. Only
-                  researchers, wizards, and study owners can view detailed trial
-                  information.
+                  Some trials are marked as &ldquo;View Only&rdquo; or
+                  &ldquo;Restricted&rdquo; because you have observer-level
+                  access to their studies. Only researchers, wizards, and study
+                  owners can view detailed trial information.
                 </p>
               </div>
             </div>

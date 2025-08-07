@@ -617,6 +617,35 @@ export const studyPlugins = createTable(
   }),
 );
 
+export const pluginRepositories = createTable(
+  "plugin_repository",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    url: text("url").notNull(),
+    description: text("description"),
+    trustLevel: trustLevelEnum("trust_level").default("community").notNull(),
+    isEnabled: boolean("is_enabled").default(true).notNull(),
+    isOfficial: boolean("is_official").default(false).notNull(),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    syncStatus: varchar("sync_status", { length: 50 }).default("pending"),
+    syncError: text("sync_error"),
+    metadata: jsonb("metadata").default({}),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => ({
+    urlUnique: unique().on(table.url),
+  }),
+);
+
 // Experiment Execution and Data Capture
 export const trialEvents = createTable(
   "trial_event",

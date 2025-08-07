@@ -46,10 +46,16 @@ export function ExperimentsDataTable() {
   // Set breadcrumbs
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Studies", href: "/studies" },
     ...(activeStudy
-      ? [{ label: activeStudy.title, href: `/studies/${activeStudy.id}` }]
-      : []),
-    { label: "Experiments" },
+      ? [
+          {
+            label: (activeStudy as { title: string; id: string }).title,
+            href: `/studies/${(activeStudy as { id: string }).id}`,
+          },
+          { label: "Experiments" },
+        ]
+      : [{ label: "Experiments" }]),
   ]);
 
   // Transform experiments data to match the Experiment type expected by columns
@@ -101,7 +107,7 @@ export function ExperimentsDataTable() {
   const filters = (
     <div className="flex items-center space-x-2">
       <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
