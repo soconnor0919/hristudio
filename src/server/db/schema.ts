@@ -393,6 +393,7 @@ export const experiments = createTable(
     visualDesign: jsonb("visual_design"),
     executionGraph: jsonb("execution_graph"),
     pluginDependencies: text("plugin_dependencies").array(),
+    integrityHash: varchar("integrity_hash", { length: 128 }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => ({
@@ -496,12 +497,24 @@ export const actions = createTable(
       .references(() => steps.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    type: varchar("type", { length: 100 }).notNull(), // e.g., 'speak', 'move', 'wait', 'collect_data'
+    type: varchar("type", { length: 100 }).notNull(), // e.g., 'speak', 'move', 'wait', 'collect_data' or pluginId.actionId
     orderIndex: integer("order_index").notNull(),
     parameters: jsonb("parameters").default({}),
     validationSchema: jsonb("validation_schema"),
     timeout: integer("timeout"), // in seconds
     retryCount: integer("retry_count").default(0).notNull(),
+    // Provenance & execution metadata
+    sourceKind: varchar("source_kind", { length: 20 }), // 'core' | 'plugin'
+    pluginId: varchar("plugin_id", { length: 255 }),
+    pluginVersion: varchar("plugin_version", { length: 50 }),
+    robotId: varchar("robot_id", { length: 255 }),
+    baseActionId: varchar("base_action_id", { length: 255 }),
+    category: varchar("category", { length: 50 }),
+    transport: varchar("transport", { length: 20 }), // 'ros2' | 'rest' | 'internal'
+    ros2: jsonb("ros2_config"),
+    rest: jsonb("rest_config"),
+    retryable: boolean("retryable"),
+    parameterSchemaRaw: jsonb("parameter_schema_raw"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

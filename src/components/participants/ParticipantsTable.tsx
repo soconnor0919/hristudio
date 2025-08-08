@@ -15,12 +15,12 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useActiveStudy } from "~/hooks/useActiveStudy";
 import { api } from "~/trpc/react";
@@ -164,7 +164,9 @@ export const columns: ColumnDef<Participant>[] = [
       const date = row.getValue("createdAt");
       return (
         <div className="text-muted-foreground text-sm">
-          {formatDistanceToNow(new Date(date as string | number | Date), { addSuffix: true })}
+          {formatDistanceToNow(new Date(date as string | number | Date), {
+            addSuffix: true,
+          })}
         </div>
       );
     },
@@ -238,25 +240,27 @@ export function ParticipantsTable({ studyId }: ParticipantsTableProps = {}) {
   // Refetch when active study changes
   useEffect(() => {
     if (activeStudy?.id || studyId) {
-      refetch();
+      void refetch();
     }
   }, [activeStudy?.id, studyId, refetch]);
 
   const data: Participant[] = React.useMemo(() => {
     if (!participantsData?.participants) return [];
 
-    return participantsData.participants.map((p) => ({
-      id: p.id,
-      participantCode: p.participantCode,
-      email: p.email,
-      name: p.name,
-      consentGiven: p.hasConsent,
-      consentDate: p.latestConsent?.signedAt
-        ? new Date(p.latestConsent.signedAt as unknown as string)
-        : null,
-      createdAt: p.createdAt,
-      trialCount: p.trialCount,
-    }));
+    return participantsData.participants.map(
+      (p): Participant => ({
+        id: p.id,
+        participantCode: p.participantCode,
+        email: p.email,
+        name: p.name,
+        consentGiven: p.hasConsent,
+        consentDate: p.latestConsent?.signedAt
+          ? new Date(p.latestConsent.signedAt as unknown as string)
+          : null,
+        createdAt: p.createdAt,
+        trialCount: p.trialCount,
+      }),
+    );
   }, [participantsData]);
 
   if (!studyId && !activeStudy) {

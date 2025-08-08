@@ -21,9 +21,9 @@ bun run docker:up
 bun db:push
 bun db:seed
 
-# Sync plugin repositories (admin only)
-# This populates the plugin store with robot plugins
-# from https://repo.hristudio.com
+# Single command now syncs all repositories:
+# - Core blocks from localhost:3000/hristudio-core
+# - Robot plugins from https://repo.hristudio.com
 
 # Start development
 bun dev
@@ -89,7 +89,7 @@ Study → Experiment → Trial → Step → Action
 | `bun typecheck` | TypeScript validation |
 | `bun lint` | Code quality checks |
 | `bun db:push` | Push schema changes |
-| `bun db:seed` | Seed test data |
+| `bun db:seed` | Seed data & sync repositories |
 | `bun db:studio` | Open database GUI |
 
 ---
@@ -223,16 +223,16 @@ const hasRole = (role: string) => session?.user.role === role;
 
 ## 🤖 **Robot Integration**
 
-### Core Blocks System
+### Core Block System
 ```typescript
-// Core blocks loaded from hristudio-core repository
-await registry.loadCoreBlocks();
+// Core blocks loaded from local repository during development
+// Repository sync: localhost:3000/hristudio-core → database
 
-// Block categories:
+// Block categories (27 total blocks in 4 groups):
 // - Events (4): when_trial_starts, when_participant_speaks, etc.
 // - Wizard Actions (6): wizard_say, wizard_gesture, etc.  
 // - Control Flow (8): wait, repeat, if_condition, etc.
-// - Observation (8): observe_behavior, record_audio, etc.
+// - Observation (9): observe_behavior, record_audio, etc.
 ```
 
 ### Plugin Repository System
@@ -269,9 +269,9 @@ interface Plugin {
 ```
 
 ### Repository Integration
-- **Live Repository**: `https://repo.hristudio.com`
-- **Core Repository**: `https://core.hristudio.com` 
-- **Auto-sync**: Admin dashboard → Repositories → Sync
+- **Robot Plugins**: `https://repo.hristudio.com` (live)
+- **Core Blocks**: `localhost:3000/hristudio-core` (development)
+- **Auto-sync**: Integrated into `bun db:seed` command
 - **Plugin Store**: Browse → Install → Use in experiments
 
 ---
@@ -408,7 +408,7 @@ bun typecheck
 3. Follow the established component patterns
 4. Add proper error boundaries for new features
 5. Test with multiple user roles
-6. Sync plugin repositories after setup for full functionality
+6. Use single `bun db:seed` for complete setup
 
 ### Code Standards
 - Use TypeScript strict mode

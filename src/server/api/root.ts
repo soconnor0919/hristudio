@@ -2,6 +2,7 @@ import { adminRouter } from "~/server/api/routers/admin";
 import { analyticsRouter } from "~/server/api/routers/analytics";
 import { authRouter } from "~/server/api/routers/auth";
 import { collaborationRouter } from "~/server/api/routers/collaboration";
+import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { experimentsRouter } from "~/server/api/routers/experiments";
 import { mediaRouter } from "~/server/api/routers/media";
 import { participantsRouter } from "~/server/api/routers/participants";
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   analytics: analyticsRouter,
   collaboration: collaborationRouter,
   admin: adminRouter,
+  dashboard: dashboardRouter,
 });
 
 // export type definition of API

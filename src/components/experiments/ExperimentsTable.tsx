@@ -14,12 +14,12 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useActiveStudy } from "~/hooks/useActiveStudy";
 import { api } from "~/trpc/react";
@@ -228,7 +228,9 @@ export const columns: ColumnDef<Experiment>[] = [
       const date = row.getValue("createdAt");
       return (
         <div className="text-muted-foreground text-sm">
-          {formatDistanceToNow(new Date(date as string | number | Date), { addSuffix: true })}
+          {formatDistanceToNow(new Date(date as string | number | Date), {
+            addSuffix: true,
+          })}
         </div>
       );
     },
@@ -306,20 +308,37 @@ export function ExperimentsTable() {
   const data: Experiment[] = React.useMemo(() => {
     if (!experimentsData) return [];
 
-    return experimentsData.map((exp: any) => ({
+    interface RawExperiment {
+      id: string;
+      name: string;
+      description?: string | null;
+      status: Experiment["status"];
+      version: number;
+      estimatedDuration?: number | null;
+      createdAt: string | Date;
+      studyId: string;
+      createdBy?: { name?: string | null; email?: string | null } | null;
+      trialCount?: number | null;
+      stepCount?: number | null;
+    }
+
+    const adapt = (exp: RawExperiment): Experiment => ({
       id: exp.id,
       name: exp.name,
-      description: exp.description,
+      description: exp.description ?? "",
       status: exp.status,
       version: exp.version,
-      estimatedDuration: exp.estimatedDuration,
-      createdAt: exp.createdAt,
+      estimatedDuration: exp.estimatedDuration ?? 0,
+      createdAt:
+        exp.createdAt instanceof Date ? exp.createdAt : new Date(exp.createdAt),
       studyId: exp.studyId,
-      studyName: activeStudy?.title || "Unknown Study",
-      createdByName: exp.createdBy?.name || exp.createdBy?.email || "Unknown",
-      trialCount: exp.trialCount || 0,
-      stepCount: exp.stepCount || 0,
-    }));
+      studyName: activeStudy?.title ?? "Unknown Study",
+      createdByName: exp.createdBy?.name ?? exp.createdBy?.email ?? "Unknown",
+      trialCount: exp.trialCount ?? 0,
+      stepCount: exp.stepCount ?? 0,
+    });
+
+    return experimentsData.map((e) => adapt(e as unknown as RawExperiment));
   }, [experimentsData, activeStudy]);
 
   if (!activeStudy) {

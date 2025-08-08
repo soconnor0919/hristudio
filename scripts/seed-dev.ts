@@ -1,91 +1,207 @@
 import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq, sql } from "drizzle-orm";
 import postgres from "postgres";
 import * as schema from "../src/server/db/schema";
 
 // Database connection
 const connectionString = process.env.DATABASE_URL!;
-const sql = postgres(connectionString);
-const db = drizzle(sql, { schema });
+const connection = postgres(connectionString);
+const db = drizzle(connection, { schema });
+
+// Repository sync helper
+async function syncRepository(
+  repoId: string,
+  repoUrl: string,
+): Promise<number> {
+  try {
+    console.log(`🔄 Syncing repository: ${repoUrl}`);
+
+    // Use localhost for development
+    const devUrl = repoUrl.includes("core.hristudio.com")
+      ? "http://localhost:3000/hristudio-core"
+      : repoUrl;
+
+    // Fetch repository metadata
+    const repoResponse = await fetch(`${devUrl}/repository.json`);
+    if (!repoResponse.ok) {
+      throw new Error(
+        `Failed to fetch repository metadata: ${repoResponse.status}`,
+      );
+    }
+    const repoMetadata = (await repoResponse.json()) as {
+      description?: string;
+      author?: { name?: string };
+      urls?: { git?: string };
+      trust?: string;
+    };
+
+    // For core repository, create a single plugin with all block groups
+    if (repoUrl.includes("core.hristudio.com")) {
+      const indexResponse = await fetch(`${devUrl}/plugins/index.json`);
+      if (!indexResponse.ok) {
+        throw new Error(
+          `Failed to fetch plugin index: ${indexResponse.status}`,
+        );
+      }
+      const indexData = (await indexResponse.json()) as {
+        plugins?: Array<{ blockCount?: number }>;
+      };
+
+      // Create core system plugin
+      await db.insert(schema.plugins).values({
+        robotId: null,
+        name: "HRIStudio Core System",
+        version: "1.0.0",
+        description: repoMetadata.description ?? "",
+        author: repoMetadata.author?.name ?? "Unknown",
+        repositoryUrl: repoMetadata.urls?.git ?? "",
+        trustLevel:
+          (repoMetadata.trust as "official" | "verified" | "community") ??
+          "community",
+        status: "active",
+        actionDefinitions: [],
+        metadata: {
+          platform: "Core",
+          category: "system",
+          repositoryId: repoId,
+          blockGroups: indexData.plugins ?? [],
+          totalBlocks:
+            indexData.plugins?.reduce(
+              (sum: number, p: { blockCount?: number }) =>
+                sum + (p.blockCount ?? 0),
+              0,
+            ) ?? 0,
+        },
+      });
+
+      console.log(
+        `✅ Synced core system with ${indexData.plugins?.length ?? 0} block groups`,
+      );
+      return 1;
+    }
+
+    // For robot repositories, sync individual plugins
+    const pluginIndexResponse = await fetch(`${devUrl}/plugins/index.json`);
+    if (!pluginIndexResponse.ok) {
+      throw new Error(
+        `Failed to fetch plugin index: ${pluginIndexResponse.status}`,
+      );
+    }
+    const pluginFiles = (await pluginIndexResponse.json()) as string[];
+
+    let syncedCount = 0;
+    for (const pluginFile of pluginFiles) {
+      try {
+        const pluginResponse = await fetch(`${devUrl}/plugins/${pluginFile}`);
+        if (!pluginResponse.ok) {
+          console.warn(
+            `Failed to fetch ${pluginFile}: ${pluginResponse.status}`,
+          );
+          continue;
+        }
+        const pluginData = (await pluginResponse.json()) as {
+          name?: string;
+          version?: string;
+          description?: string;
+          manufacturer?: { name?: string };
+          documentation?: { mainUrl?: string };
+          trustLevel?: string;
+          actions?: unknown[];
+          platform?: string;
+          category?: string;
+          specs?: unknown;
+          ros2Config?: unknown;
+        };
+
+        await db.insert(schema.plugins).values({
+          robotId: null, // Will be matched later if needed
+          name: pluginData.name ?? pluginFile.replace(".json", ""),
+          version: pluginData.version ?? "1.0.0",
+          description: pluginData.description ?? "",
+          author:
+            pluginData.manufacturer?.name ??
+            repoMetadata.author?.name ??
+            "Unknown",
+          repositoryUrl:
+            pluginData.documentation?.mainUrl ?? repoMetadata.urls?.git ?? "",
+          trustLevel:
+            (pluginData.trustLevel as "official" | "verified" | "community") ??
+            (repoMetadata.trust as "official" | "verified" | "community") ??
+            "community",
+          status: "active",
+          actionDefinitions: pluginData.actions ?? [],
+          metadata: {
+            platform: pluginData.platform,
+            category: pluginData.category,
+            repositoryId: repoId,
+            specs: pluginData.specs,
+            ros2Config: pluginData.ros2Config,
+          },
+        });
+
+        console.log(`✅ Synced plugin: ${pluginData.name}`);
+        syncedCount++;
+      } catch (error) {
+        console.warn(`Failed to process ${pluginFile}:`, error);
+      }
+    }
+
+    return syncedCount;
+  } catch (error) {
+    console.error(`Failed to sync repository ${repoUrl}:`, error);
+    return 0;
+  }
+}
 
 async function main() {
-  console.log("🌱 Starting seed script...");
+  console.log("🌱 Starting simplified seed script...");
 
   try {
     // Clean existing data (in reverse order of dependencies)
     console.log("🧹 Cleaning existing data...");
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.trialEvents);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.trials);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.steps);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.experiments);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.participants);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.studyMembers);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.userSystemRoles);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.studies);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.users);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.pluginRepositories);
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    await db.delete(schema.robots);
+    await db.delete(schema.studyPlugins).where(sql`1=1`);
+    await db.delete(schema.plugins).where(sql`1=1`);
+    await db.delete(schema.pluginRepositories).where(sql`1=1`);
+    await db.delete(schema.trialEvents).where(sql`1=1`);
+    await db.delete(schema.trials).where(sql`1=1`);
+    await db.delete(schema.steps).where(sql`1=1`);
+    await db.delete(schema.experiments).where(sql`1=1`);
+    await db.delete(schema.participants).where(sql`1=1`);
+    await db.delete(schema.studyMembers).where(sql`1=1`);
+    await db.delete(schema.userSystemRoles).where(sql`1=1`);
+    await db.delete(schema.studies).where(sql`1=1`);
+    await db.delete(schema.users).where(sql`1=1`);
+    await db.delete(schema.robots).where(sql`1=1`);
 
-    // Create robots first
+    // Create robots
     console.log("🤖 Creating robots...");
     const robots = [
       {
-        name: "NAO Robot",
+        name: "TurtleBot3 Burger",
+        manufacturer: "ROBOTIS",
+        model: "TurtleBot3 Burger",
+        description:
+          "A compact, affordable, programmable, ROS2-based mobile robot for education and research",
+        capabilities: ["differential_drive", "lidar", "imu", "odometry"],
+        communicationProtocol: "ros2" as const,
+      },
+      {
+        name: "NAO Humanoid Robot",
         manufacturer: "SoftBank Robotics",
         model: "NAO V6",
-        version: "2.8",
-        capabilities: {
-          speech: true,
-          movement: true,
-          vision: true,
-          touch: true,
-          leds: true,
-        },
-        connectionType: "wifi",
-        status: "available",
-      },
-      {
-        name: "Pepper Robot",
-        manufacturer: "SoftBank Robotics",
-        model: "Pepper",
-        version: "2.9",
-        capabilities: {
-          speech: true,
-          movement: true,
-          vision: true,
-          touch: true,
-          tablet: true,
-        },
-        connectionType: "wifi",
-        status: "available",
-      },
-      {
-        name: "TurtleBot3",
-        manufacturer: "ROBOTIS",
-        model: "Burger",
-        version: "1.0",
-        capabilities: {
-          movement: true,
-          vision: true,
-          lidar: true,
-        },
-        connectionType: "ros2",
-        status: "maintenance",
+        description:
+          "Humanoid robot designed for education, research, and social interaction",
+        capabilities: ["speech", "vision", "walking", "gestures"],
+        communicationProtocol: "rest" as const,
       },
     ];
 
-    await db.insert(schema.robots).values(robots);
+    const insertedRobots = await db
+      .insert(schema.robots)
+      .values(robots)
+      .returning();
+    console.log(`✅ Created ${insertedRobots.length} robots`);
 
     // Create users
     console.log("👥 Creating users...");
@@ -129,749 +245,406 @@ async function main() {
       },
     ];
 
-    await db.insert(schema.users).values(users);
+    const insertedUsers = await db
+      .insert(schema.users)
+      .values(users)
+      .returning();
+    console.log(`✅ Created ${insertedUsers.length} users`);
 
     // Assign system roles
     console.log("🎭 Assigning system roles...");
-    // Get user IDs after insertion
-    const insertedUsers = await db.select().from(schema.users);
-    const seanUser = insertedUsers.find(
-      (u) => u.email === "sean@soconnor.dev",
-    )!;
-    const aliceUser = insertedUsers.find(
-      (u) => u.email === "alice.rodriguez@university.edu",
-    )!;
-    const bobUser = insertedUsers.find(
-      (u) => u.email === "bob.chen@research.org",
-    )!;
-    const emilyUser = insertedUsers.find(
-      (u) => u.email === "emily.watson@lab.edu",
-    )!;
-    const mariaUser = insertedUsers.find(
-      (u) => u.email === "maria.santos@tech.edu",
-    )!;
+    const seanUser = insertedUsers.find((u) => u.email === "sean@soconnor.dev");
 
-    const systemRoles = [
+    if (!seanUser) {
+      throw new Error("Sean user not found after creation");
+    }
+
+    await db.insert(schema.userSystemRoles).values({
+      userId: seanUser.id,
+      role: "administrator",
+    });
+
+    console.log(`✅ Assigned administrator role to Sean`);
+
+    // Create plugin repositories
+    console.log("📦 Creating plugin repositories...");
+    const repositories = [
       {
-        userId: seanUser.id, // Sean O'Connor
-        role: "administrator" as const,
-        grantedBy: seanUser.id,
+        name: "HRIStudio Core System Blocks",
+        url: "https://core.hristudio.com",
+        description:
+          "Essential system blocks for experiment design including events, control flow, wizard actions, and logic operations",
+        trustLevel: "official" as const,
+        isEnabled: true,
+        isOfficial: true,
+        syncStatus: "pending" as const,
+        createdBy: seanUser.id,
       },
       {
-        userId: aliceUser.id, // Alice Rodriguez
-        role: "researcher" as const,
-        grantedBy: seanUser.id,
-      },
-      {
-        userId: bobUser.id, // Bob Chen
-        role: "researcher" as const,
-        grantedBy: seanUser.id,
-      },
-      {
-        userId: emilyUser.id, // Emily Watson
-        role: "wizard" as const,
-        grantedBy: seanUser.id,
-      },
-      {
-        userId: mariaUser.id, // Maria Santos
-        role: "researcher" as const,
-        grantedBy: seanUser.id,
+        name: "HRIStudio Official Robot Plugins",
+        url: "https://repo.hristudio.com",
+        description:
+          "Official collection of robot plugins maintained by the HRIStudio team",
+        trustLevel: "official" as const,
+        isEnabled: true,
+        isOfficial: true,
+        syncStatus: "pending" as const,
+        createdBy: seanUser.id,
       },
     ];
 
-    await db.insert(schema.userSystemRoles).values(systemRoles);
+    const insertedRepos = await db
+      .insert(schema.pluginRepositories)
+      .values(repositories)
+      .returning();
+    console.log(`✅ Created ${insertedRepos.length} plugin repositories`);
+
+    // Sync repositories to populate plugins
+    console.log("🔄 Syncing plugin repositories...");
+    let totalPlugins = 0;
+
+    for (const repo of insertedRepos) {
+      const syncedCount = await syncRepository(repo.id, repo.url);
+      totalPlugins += syncedCount;
+
+      // Update sync status
+      await db
+        .update(schema.pluginRepositories)
+        .set({
+          syncStatus: syncedCount > 0 ? "completed" : "failed",
+          lastSyncAt: new Date(),
+        })
+        .where(eq(schema.pluginRepositories.id, repo.id));
+    }
 
     // Create studies
     console.log("📚 Creating studies...");
     const studies = [
       {
-        name: "Robot-Assisted Learning in Elementary Education",
+        name: "Human-Robot Collaboration Study",
         description:
-          "Investigating the effectiveness of social robots in supporting mathematics learning for elementary school students. This study examines how children interact with robotic tutors and measures learning outcomes.",
-        institution: "University of Technology",
+          "Investigating collaborative tasks between humans and robots in shared workspace environments",
+        institution: "MIT Computer Science",
         irbProtocol: "IRB-2024-001",
         status: "active" as const,
-        createdBy: aliceUser.id, // Alice Rodriguez
+        createdBy: seanUser.id,
       },
       {
-        name: "Elderly Care Robot Acceptance Study",
+        name: "Robot Navigation Study",
         description:
-          "Exploring the acceptance and usability of companion robots among elderly populations in assisted living facilities. Focus on emotional responses and daily interaction patterns.",
-        institution: "Research Institute for Aging",
+          "A comprehensive study on robot navigation and obstacle avoidance in dynamic environments",
+        institution: "Stanford HCI Lab",
         irbProtocol: "IRB-2024-002",
-        status: "active" as const,
-        createdBy: bobUser.id, // Bob Chen
+        status: "draft" as const,
+        createdBy: seanUser.id,
       },
       {
-        name: "Navigation Robot Trust Study",
+        name: "Social Robot Interaction Study",
         description:
-          "Examining human trust in autonomous navigation robots in public spaces. Measuring behavioral indicators of trust and comfort levels during robot-guided navigation tasks.",
-        institution: "Tech University",
+          "Examining social dynamics between humans and humanoid robots in educational settings",
+        institution: "Carnegie Mellon",
         irbProtocol: "IRB-2024-003",
-        status: "draft" as const,
-        createdBy: mariaUser.id, // Maria Santos
+        status: "active" as const,
+        createdBy: seanUser.id,
       },
     ];
 
-    await db.insert(schema.studies).values(studies);
-
-    // Get study IDs after insertion
-    const insertedStudies = await db.select().from(schema.studies);
-    const study1 = insertedStudies.find(
-      (s) => s.name === "Robot-Assisted Learning in Elementary Education",
-    )!;
-    const study2 = insertedStudies.find(
-      (s) => s.name === "Elderly Care Robot Acceptance Study",
-    )!;
-    const study3 = insertedStudies.find(
-      (s) => s.name === "Navigation Robot Trust Study",
-    )!;
+    const insertedStudies = await db
+      .insert(schema.studies)
+      .values(studies)
+      .returning();
+    console.log(`✅ Created ${insertedStudies.length} studies`);
 
     // Create study memberships
     console.log("👥 Creating study memberships...");
-    const studyMemberships = [
-      // Study 1 members
-      {
-        studyId: study1.id,
-        userId: aliceUser.id, // Alice (owner)
-        role: "owner" as const,
-        joinedAt: new Date(),
-      },
-      {
-        studyId: study1.id,
-        userId: emilyUser.id, // Emily (wizard)
-        role: "wizard" as const,
-        joinedAt: new Date(),
-      },
-      {
-        studyId: study1.id,
-        userId: seanUser.id, // Sean (researcher)
-        role: "researcher" as const,
-        joinedAt: new Date(),
-      },
+    const studyMemberships = [];
 
-      // Study 2 members
-      {
-        studyId: study2.id,
-        userId: bobUser.id, // Bob (owner)
+    // Sean as owner of all studies
+    for (const study of insertedStudies) {
+      studyMemberships.push({
+        studyId: study.id,
+        userId: seanUser.id,
         role: "owner" as const,
-        joinedAt: new Date(),
-      },
-      {
-        studyId: study2.id,
-        userId: aliceUser.id, // Alice (researcher)
-        role: "researcher" as const,
-        joinedAt: new Date(),
-      },
-      {
-        studyId: study2.id,
-        userId: emilyUser.id, // Emily (wizard)
-        role: "wizard" as const,
-        joinedAt: new Date(),
-      },
+      });
+    }
 
-      // Study 3 members
-      {
-        studyId: study3.id,
-        userId: mariaUser.id, // Maria (owner)
-        role: "owner" as const,
-        joinedAt: new Date(),
-      },
-      {
-        studyId: study3.id,
-        userId: seanUser.id, // Sean (researcher)
+    // Add other users as researchers/wizards
+    const otherUsers = insertedUsers.filter((u) => u.id !== seanUser.id);
+    if (otherUsers.length > 0 && insertedStudies[0]) {
+      studyMemberships.push({
+        studyId: insertedStudies[0].id,
+        userId: otherUsers[0]!.id,
         role: "researcher" as const,
-        joinedAt: new Date(),
-      },
-    ];
+      });
+
+      if (otherUsers.length > 1 && insertedStudies[1]) {
+        studyMemberships.push({
+          studyId: insertedStudies[1].id,
+          userId: otherUsers[1]!.id,
+          role: "wizard" as const,
+        });
+      }
+    }
 
     await db.insert(schema.studyMembers).values(studyMemberships);
+    console.log(`✅ Created ${studyMemberships.length} study memberships`);
 
-    // Create participants
+    // Install core plugin in all studies
+    console.log("🔌 Installing core plugin in all studies...");
+    const corePlugin = await db
+      .select()
+      .from(schema.plugins)
+      .where(eq(schema.plugins.name, "HRIStudio Core System"))
+      .limit(1);
+
+    if (corePlugin.length > 0) {
+      const coreInstallations = insertedStudies.map((study) => ({
+        studyId: study.id,
+        pluginId: corePlugin[0]!.id,
+        configuration: {},
+        installedBy: seanUser.id,
+      }));
+
+      await db.insert(schema.studyPlugins).values(coreInstallations);
+      console.log(
+        `✅ Installed core plugin in ${insertedStudies.length} studies`,
+      );
+    }
+
+    // Create some participants
     console.log("👤 Creating participants...");
-    const participants = [
-      // Study 1 participants (children)
-      {
-        studyId: study1.id,
-        participantCode: "CHILD_001",
-        name: "Alex Johnson",
-        email: "parent1@email.com",
-        demographics: { age: 8, gender: "male", grade: 3 },
-        consentGiven: true,
-        consentDate: new Date("2024-01-15"),
-      },
-      {
-        studyId: study1.id,
-        participantCode: "CHILD_002",
-        name: "Emma Davis",
-        email: "parent2@email.com",
-        demographics: { age: 9, gender: "female", grade: 4 },
-        consentGiven: true,
-        consentDate: new Date("2024-01-16"),
-      },
-      {
-        studyId: study1.id,
-        participantCode: "CHILD_003",
-        name: "Oliver Smith",
-        email: "parent3@email.com",
-        demographics: { age: 7, gender: "male", grade: 2 },
-        consentGiven: true,
-        consentDate: new Date("2024-01-17"),
-      },
+    const participants = [];
 
-      // Study 2 participants (elderly)
-      {
-        studyId: study2.id,
-        participantCode: "ELDERLY_001",
-        name: "Margaret Thompson",
-        email: "mthompson@email.com",
-        demographics: {
-          age: 78,
-          gender: "female",
-          living_situation: "assisted_living",
-        },
-        consentGiven: true,
-        consentDate: new Date("2024-01-20"),
-      },
-      {
-        studyId: study2.id,
-        participantCode: "ELDERLY_002",
-        name: "Robert Wilson",
-        email: "rwilson@email.com",
-        demographics: {
-          age: 82,
-          gender: "male",
-          living_situation: "independent",
-        },
-        consentGiven: true,
-        consentDate: new Date("2024-01-21"),
-      },
-      {
-        studyId: study2.id,
-        participantCode: "ELDERLY_003",
-        name: "Dorothy Garcia",
-        email: "dgarcia@email.com",
-        demographics: {
-          age: 75,
-          gender: "female",
-          living_situation: "assisted_living",
-        },
-        consentGiven: true,
-        consentDate: new Date("2024-01-22"),
-      },
+    for (let i = 0; i < insertedStudies.length; i++) {
+      const study = insertedStudies[i];
+      if (study) {
+        participants.push(
+          {
+            studyId: study.id,
+            participantCode: `P${String(i * 2 + 1).padStart(3, "0")}`,
+            name: `Participant ${i * 2 + 1}`,
+            email: `participant${i * 2 + 1}@example.com`,
+            demographics: { age: 25 + i, gender: "prefer not to say" },
+            consentGiven: true,
+            consentGivenAt: new Date(),
+          },
+          {
+            studyId: study.id,
+            participantCode: `P${String(i * 2 + 2).padStart(3, "0")}`,
+            name: `Participant ${i * 2 + 2}`,
+            email: `participant${i * 2 + 2}@example.com`,
+            demographics: { age: 30 + i, gender: "prefer not to say" },
+            consentGiven: true,
+            consentGivenAt: new Date(),
+          },
+        );
+      }
+    }
 
-      // Study 3 participants (adults)
-      {
-        studyId: study3.id,
-        participantCode: "ADULT_001",
-        name: "James Miller",
-        email: "jmiller@email.com",
-        demographics: { age: 28, gender: "male", occupation: "engineer" },
-        consentGiven: true,
-        consentDate: new Date("2024-01-25"),
-      },
-      {
-        studyId: study3.id,
-        participantCode: "ADULT_002",
-        name: "Sarah Brown",
-        email: "sbrown@email.com",
-        demographics: { age: 34, gender: "female", occupation: "teacher" },
-        consentGiven: true,
-        consentDate: new Date("2024-01-26"),
-      },
-    ];
+    const insertedParticipants = await db
+      .insert(schema.participants)
+      .values(participants)
+      .returning();
+    console.log(`✅ Created ${insertedParticipants.length} participants`);
 
-    await db.insert(schema.participants).values(participants);
-
-    // Get inserted robot and participant IDs
-    const insertedRobots = await db.select().from(schema.robots);
-    const naoRobot = insertedRobots.find((r) => r.name === "NAO Robot")!;
-    const pepperRobot = insertedRobots.find((r) => r.name === "Pepper Robot")!;
-
-    const insertedParticipants = await db.select().from(schema.participants);
-
-    // Create experiments
+    // Create basic experiments
     console.log("🧪 Creating experiments...");
-    const experiments = [
-      {
-        studyId: study1.id,
-        name: "Math Tutoring Session",
-        description:
-          "Robot provides personalized math instruction and encouragement",
-        version: 1,
-        robotId: naoRobot.id, // NAO Robot
-        status: "ready" as const,
-        estimatedDuration: 30,
-        createdBy: aliceUser.id,
-      },
-      {
-        studyId: study1.id,
-        name: "Reading Comprehension Support",
-        description:
-          "Robot assists with reading exercises and comprehension questions",
-        version: 1,
-        robotId: naoRobot.id, // NAO Robot
-        status: "testing" as const,
-        estimatedDuration: 25,
-        createdBy: aliceUser.id,
-      },
-      {
-        studyId: study2.id,
-        name: "Daily Companion Interaction",
-        description:
-          "Robot engages in conversation and provides daily reminders",
-        version: 1,
-        robotId: pepperRobot.id, // Pepper Robot
-        status: "ready" as const,
-        estimatedDuration: 45,
-        createdBy: bobUser.id,
-      },
-      {
-        studyId: study2.id,
-        name: "Medication Reminder Protocol",
-        description: "Robot provides medication reminders and health check-ins",
-        version: 1,
-        robotId: pepperRobot.id, // Pepper Robot
-        status: "draft" as const,
-        estimatedDuration: 15,
-        createdBy: bobUser.id,
-      },
-      {
-        studyId: study3.id,
-        name: "Campus Navigation Assistance",
-        description:
-          "Robot guides participants through campus navigation tasks",
-        version: 1,
-        robotId: insertedRobots.find((r) => r.name === "TurtleBot3")!.id, // TurtleBot3
-        status: "ready" as const,
-        estimatedDuration: 20,
-        createdBy: mariaUser.id,
-      },
-    ];
+    const experiments = insertedStudies.map((study, i) => ({
+      studyId: study.id,
+      name: `Basic Interaction Protocol ${i + 1}`,
+      description: `A simple human-robot interaction experiment for ${study.name}`,
+      version: 1,
+      status: "ready" as const,
+      estimatedDuration: 30 + i * 10,
+      createdBy: seanUser.id,
+    }));
 
-    await db.insert(schema.experiments).values(experiments);
+    const insertedExperiments = await db
+      .insert(schema.experiments)
+      .values(experiments)
+      .returning();
+    console.log(`✅ Created ${insertedExperiments.length} experiments`);
 
-    // Get inserted experiment IDs
-    const insertedExperiments = await db.select().from(schema.experiments);
-    const experiment1 = insertedExperiments.find(
-      (e) => e.name === "Math Tutoring Session",
-    )!;
-    const experiment3 = insertedExperiments.find(
-      (e) => e.name === "Daily Companion Interaction",
-    )!;
-    const experiment5 = insertedExperiments.find(
-      (e) => e.name === "Campus Navigation Assistance",
-    )!;
+    // Create some trials for dashboard demo
+    console.log("🧪 Creating sample trials...");
+    const trials = [];
 
-    // Create experiment steps
-    console.log("📋 Creating experiment steps...");
-    const steps = [
-      // Math Tutoring Session steps
-      {
-        experimentId: experiment1.id,
-        name: "Welcome and Introduction",
-        description: "Robot introduces itself and explains the session",
-        type: "wizard" as const,
-        orderIndex: 1,
-        durationEstimate: 300, // 5 minutes
-        required: true,
-      },
-      {
-        experimentId: experiment1.id,
-        name: "Math Problem Presentation",
-        description: "Robot presents age-appropriate math problems",
-        type: "robot" as const,
-        orderIndex: 2,
-        durationEstimate: 1200, // 20 minutes
-        required: true,
-      },
-      {
-        experimentId: experiment1.id,
-        name: "Encouragement and Feedback",
-        description: "Robot provides positive feedback and encouragement",
-        type: "wizard" as const,
-        orderIndex: 3,
-        durationEstimate: 300, // 5 minutes
-        required: true,
-      },
+    for (const experiment of insertedExperiments) {
+      if (!experiment) continue;
 
-      // Daily Companion Interaction steps
-      {
-        experimentId: experiment3.id,
-        name: "Morning Greeting",
-        description: "Robot greets participant and asks about their day",
-        type: "wizard" as const,
-        orderIndex: 1,
-        durationEstimate: 600, // 10 minutes
-        required: true,
-      },
-      {
-        experimentId: experiment3.id,
-        name: "Health Check-in",
-        description: "Robot asks about health and well-being",
-        type: "wizard" as const,
-        orderIndex: 2,
-        durationEstimate: 900, // 15 minutes
-        required: true,
-      },
-      {
-        experimentId: experiment3.id,
-        name: "Activity Planning",
-        description: "Robot helps plan daily activities",
-        type: "robot" as const,
-        orderIndex: 3,
-        durationEstimate: 1200, // 20 minutes
-        required: true,
-      },
+      const studyParticipants = insertedParticipants.filter(
+        (p) => p.studyId === experiment.studyId,
+      );
 
-      // Campus Navigation steps
-      {
-        experimentId: experiment5.id,
-        name: "Navigation Instructions",
-        description: "Robot explains navigation task and safety protocols",
-        type: "wizard" as const,
-        orderIndex: 1,
-        durationEstimate: 300, // 5 minutes
-        required: true,
-      },
-      {
-        experimentId: experiment5.id,
-        name: "Guided Navigation",
-        description: "Robot guides participant to designated location",
-        type: "robot" as const,
-        orderIndex: 2,
-        durationEstimate: 900, // 15 minutes
-        required: true,
-      },
-    ];
+      if (studyParticipants.length > 0) {
+        // Create 2-3 trials per experiment
+        const trialCount = Math.min(studyParticipants.length, 3);
+        for (let j = 0; j < trialCount; j++) {
+          const participant = studyParticipants[j];
+          if (participant) {
+            const scheduledAt = new Date(
+              Date.now() - Math.random() * 2 * 24 * 60 * 60 * 1000,
+            );
+            const startedAt = new Date(scheduledAt.getTime() + 30 * 60 * 1000); // 30 minutes after scheduled
+            const completedAt = new Date(startedAt.getTime() + 45 * 60 * 1000); // 45 minutes after started
 
-    await db.insert(schema.steps).values(steps);
+            // Vary the status: some completed, some in progress, some scheduled
+            let status: "scheduled" | "in_progress" | "completed" | "aborted";
+            let actualStartedAt = null;
+            let actualCompletedAt = null;
 
-    // Get inserted step IDs
-    const insertedSteps = await db.select().from(schema.steps);
+            if (j === 0) {
+              status = "completed";
+              actualStartedAt = startedAt;
+              actualCompletedAt = completedAt;
+            } else if (j === 1 && trialCount > 2) {
+              status = "in_progress";
+              actualStartedAt = startedAt;
+            } else {
+              status = "scheduled";
+            }
 
-    // Create trials
-    console.log("🏃 Creating trials...");
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            trials.push({
+              participantId: participant.id,
+              experimentId: experiment.id,
+              sessionNumber: j + 1,
+              status,
+              scheduledAt,
+              startedAt: actualStartedAt,
+              completedAt: actualCompletedAt,
+              notes: `Trial session ${j + 1} for ${experiment.name}`,
+              createdBy: seanUser.id,
+            });
+          }
+        }
+      }
+    }
 
-    const trials = [
-      // Completed trials
-      {
-        experimentId: experiment1.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "CHILD_001",
-        )!.id, // Alex Johnson
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "completed" as const,
-        scheduledAt: new Date("2024-02-01T10:00:00Z"),
-        startedAt: new Date("2024-02-01T10:05:00Z"),
-        completedAt: new Date("2024-02-01T10:32:00Z"),
-        duration: 27 * 60, // 27 minutes
-        notes: "Participant was very engaged and showed good comprehension",
-      },
-      {
-        experimentId: experiment1.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "CHILD_002",
-        )!.id, // Emma Davis
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "completed" as const,
-        scheduledAt: new Date("2024-02-01T11:00:00Z"),
-        startedAt: new Date("2024-02-01T11:02:00Z"),
-        completedAt: new Date("2024-02-01T11:28:00Z"),
-        duration: 26 * 60, // 26 minutes
-        notes:
-          "Excellent performance, participant seemed to enjoy the interaction",
-      },
-      {
-        experimentId: experiment3.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "ELDERLY_001",
-        )!.id, // Margaret Thompson
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "completed" as const,
-        scheduledAt: new Date("2024-02-02T14:00:00Z"),
-        startedAt: new Date("2024-02-02T14:03:00Z"),
-        completedAt: new Date("2024-02-02T14:48:00Z"),
-        duration: 45 * 60, // 45 minutes
-        notes: "Participant was initially hesitant but warmed up to the robot",
-      },
+    const insertedTrials = await db
+      .insert(schema.trials)
+      .values(trials)
+      .returning();
+    console.log(`✅ Created ${insertedTrials.length} trials`);
 
-      // In progress trial
-      {
-        experimentId: experiment1.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "CHILD_003",
-        )!.id, // Sophia Martinez
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "in_progress" as const,
-        scheduledAt: now,
-        startedAt: new Date(now.getTime() - 10 * 60 * 1000), // Started 10 minutes ago
-        completedAt: null,
-        duration: null,
-        notes: "Session in progress",
-      },
+    // Create some activity logs for dashboard demo
+    console.log("📝 Creating activity logs...");
+    const activityEntries = [];
 
-      // Scheduled trials
-      {
-        experimentId: experiment3.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "ELDERLY_002",
-        )!.id, // Robert Wilson
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "scheduled" as const,
-        scheduledAt: tomorrow,
-        startedAt: null,
-        completedAt: null,
-        duration: null,
-        notes: null,
-      },
-      {
-        experimentId: experiment5.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "ADULT_001",
-        )!.id, // James Miller
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 1,
-        status: "scheduled" as const,
-        scheduledAt: nextWeek,
-        startedAt: null,
-        completedAt: null,
-        duration: null,
-        notes: null,
-      },
-      {
-        experimentId: experiment1.id,
-        participantId: insertedParticipants.find(
-          (p) => p.participantCode === "CHILD_001",
-        )!.id, // Alex Johnson
-        wizardId: emilyUser.id, // Emily Watson
-        sessionNumber: 2,
-        status: "scheduled" as const,
-        scheduledAt: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000),
-        startedAt: null,
-        completedAt: null,
-        duration: null,
-        notes: null,
-      },
-    ];
+    // Study creation activities
+    for (const study of insertedStudies) {
+      activityEntries.push({
+        studyId: study.id,
+        userId: seanUser.id,
+        action: "study_created",
+        description: `Created study "${study.name}"`,
+        createdAt: new Date(
+          Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000,
+        ), // Random time in last week
+      });
+    }
 
-    await db.insert(schema.trials).values(trials);
+    // Experiment creation activities
+    for (const experiment of insertedExperiments) {
+      activityEntries.push({
+        studyId: experiment.studyId,
+        userId: seanUser.id,
+        action: "experiment_created",
+        description: `Created experiment protocol "${experiment.name}"`,
+        createdAt: new Date(
+          Date.now() - Math.random() * 5 * 24 * 60 * 60 * 1000,
+        ), // Random time in last 5 days
+      });
+    }
 
-    // Get inserted trial IDs
-    const insertedTrials = await db.select().from(schema.trials);
+    // Participant enrollment activities
+    for (const participant of insertedParticipants) {
+      activityEntries.push({
+        studyId: participant.studyId,
+        userId: seanUser.id,
+        action: "participant_enrolled",
+        description: `Enrolled participant ${participant.participantCode}`,
+        createdAt: new Date(
+          Date.now() - Math.random() * 3 * 24 * 60 * 60 * 1000,
+        ), // Random time in last 3 days
+      });
+    }
 
-    // Create trial events for completed trials
-    console.log("📝 Creating trial events...");
-    const trialEvents = [
-      // Events for Alex Johnson's completed trial
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "trial_started" as const,
-        timestamp: new Date("2024-02-01T10:05:00Z"),
-        data: {
-          experimentId: experiment1.id,
-          participantId: insertedParticipants.find(
-            (p) => p.participantCode === "CHILD_001",
-          )!.id,
+    // Plugin installation activities
+    for (const study of insertedStudies) {
+      activityEntries.push({
+        studyId: study.id,
+        userId: seanUser.id,
+        action: "plugin_installed",
+        description: "Installed HRIStudio Core System plugin",
+        createdAt: new Date(
+          Date.now() - Math.random() * 2 * 24 * 60 * 60 * 1000,
+        ), // Random time in last 2 days
+      });
+    }
+
+    // Add some recent activities
+    const firstStudy = insertedStudies[0];
+    if (firstStudy) {
+      activityEntries.push(
+        {
+          studyId: firstStudy.id,
+          userId: seanUser.id,
+          action: "trial_scheduled",
+          description: "Scheduled new trial session",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
         },
-      },
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date("2024-02-01T10:05:30Z"),
-        data: {
-          stepId: insertedSteps[0]!.id,
-          stepName: "Welcome and Introduction",
+        {
+          studyId: firstStudy.id,
+          userId: seanUser.id,
+          action: "experiment_updated",
+          description: "Updated experiment parameters",
+          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
         },
-      },
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "robot_action" as const,
-        timestamp: new Date("2024-02-01T10:06:00Z"),
-        data: {
-          action: "speak",
-          content: "Hello Alex! I'm excited to work on math with you today.",
-        },
-      },
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "step_completed" as const,
-        timestamp: new Date("2024-02-01T10:10:30Z"),
-        data: { stepId: insertedSteps[0]!.id, duration: 300 },
-      },
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date("2024-02-01T10:10:45Z"),
-        data: {
-          stepId: insertedSteps[1]!.id,
-          stepName: "Math Problem Presentation",
-        },
-      },
-      {
-        trialId: insertedTrials[0]!.id,
-        eventType: "trial_completed" as const,
-        timestamp: new Date("2024-02-01T10:32:00Z"),
-        data: { totalDuration: 27 * 60, outcome: "successful" },
-      },
+      );
+    }
 
-      // Events for Emma Davis's completed trial
-      {
-        trialId: insertedTrials[1]!.id,
-        eventType: "trial_started" as const,
-        timestamp: new Date("2024-02-01T11:02:00Z"),
-        data: {
-          experimentId: experiment1.id,
-          participantId: insertedParticipants.find(
-            (p) => p.participantCode === "CHILD_002",
-          )!.id,
-        },
-      },
-      {
-        trialId: insertedTrials[1]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date("2024-02-01T11:02:30Z"),
-        data: {
-          stepId: insertedSteps[0]!.id,
-          stepName: "Welcome and Introduction",
-        },
-      },
-      {
-        trialId: insertedTrials[1]!.id,
-        eventType: "robot_action" as const,
-        timestamp: new Date("2024-02-01T11:03:00Z"),
-        data: {
-          action: "speak",
-          content: "Hi Emma! Are you ready for some fun math problems?",
-        },
-      },
-      {
-        trialId: insertedTrials[1]!.id,
-        eventType: "trial_completed" as const,
-        timestamp: new Date("2024-02-01T11:28:00Z"),
-        data: { totalDuration: 26 * 60, outcome: "successful" },
-      },
+    const insertedActivity = await db
+      .insert(schema.activityLogs)
+      .values(activityEntries)
+      .returning();
+    console.log(`✅ Created ${insertedActivity.length} activity log entries`);
 
-      // Events for Margaret Thompson's completed trial
-      {
-        trialId: insertedTrials[2]!.id,
-        eventType: "trial_started" as const,
-        timestamp: new Date("2024-02-02T14:03:00Z"),
-        data: {
-          experimentId: experiment3.id,
-          participantId: insertedParticipants.find(
-            (p) => p.participantCode === "ELDERLY_001",
-          )!.id,
-        },
-      },
-      {
-        trialId: insertedTrials[2]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date("2024-02-02T14:03:30Z"),
-        data: { stepId: insertedSteps[3]!.id, stepName: "Morning Greeting" },
-      },
-      {
-        trialId: insertedTrials[2]!.id,
-        eventType: "robot_action" as const,
-        timestamp: new Date("2024-02-02T14:04:00Z"),
-        data: {
-          action: "speak",
-          content: "Good afternoon, Margaret. How are you feeling today?",
-        },
-      },
-      {
-        trialId: insertedTrials[2]!.id,
-        eventType: "trial_completed" as const,
-        timestamp: new Date("2024-02-02T14:48:00Z"),
-        data: { totalDuration: 45 * 60, outcome: "successful" },
-      },
-
-      // Events for in-progress trial
-      {
-        trialId: insertedTrials[3]!.id,
-        eventType: "trial_started" as const,
-        timestamp: new Date(now.getTime() - 10 * 60 * 1000),
-        data: {
-          experimentId: experiment1.id,
-          participantId: insertedParticipants.find(
-            (p) => p.participantCode === "CHILD_003",
-          )!.id,
-        },
-      },
-      {
-        trialId: insertedTrials[3]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date(now.getTime() - 9 * 60 * 1000),
-        data: {
-          stepId: insertedSteps[0]!.id,
-          stepName: "Welcome and Introduction",
-        },
-      },
-      {
-        trialId: insertedTrials[3]!.id,
-        eventType: "step_completed" as const,
-        timestamp: new Date(now.getTime() - 5 * 60 * 1000),
-        data: { stepId: insertedSteps[0]!.id, duration: 240 },
-      },
-      {
-        trialId: insertedTrials[3]!.id,
-        eventType: "step_started" as const,
-        timestamp: new Date(now.getTime() - 5 * 60 * 1000),
-        data: {
-          stepId: insertedSteps[1]!.id,
-          stepName: "Math Problem Presentation",
-        },
-      },
-    ];
-
-    await db.insert(schema.trialEvents).values(trialEvents);
-
-    console.log("✅ Seed script completed successfully!");
+    console.log("\n✅ Seed script completed successfully!");
     console.log("\n📊 Created:");
     console.log(`  • ${insertedRobots.length} robots`);
     console.log(`  • ${insertedUsers.length} users`);
-    console.log(`  • ${systemRoles.length} system roles`);
+    console.log(`  • ${insertedRepos.length} plugin repositories`);
+    console.log(`  • ${totalPlugins} plugins (via repository sync)`);
     console.log(`  • ${insertedStudies.length} studies`);
     console.log(`  • ${studyMemberships.length} study memberships`);
     console.log(`  • ${insertedParticipants.length} participants`);
     console.log(`  • ${insertedExperiments.length} experiments`);
-    console.log(`  • ${insertedSteps.length} experiment steps`);
     console.log(`  • ${insertedTrials.length} trials`);
-    console.log(`  • ${trialEvents.length} trial events`);
 
     console.log("\n👤 Login credentials:");
     console.log("  Email: sean@soconnor.dev");
     console.log("  Password: password123");
     console.log("  Role: Administrator");
 
-    console.log("\n🎭 Other test users:");
-    console.log("  • alice.rodriguez@university.edu (Researcher)");
-    console.log("  • bob.chen@research.org (Researcher)");
-    console.log("  • emily.watson@lab.edu (Wizard)");
-    console.log("  • maria.santos@tech.edu (Researcher)");
-    console.log("  All users have the same password: password123");
+    console.log("\n🔄 Plugin repositories synced:");
+    for (const repo of insertedRepos) {
+      console.log(`  • ${repo.name}: ${repo.url}`);
+    }
+
+    console.log("\n🎯 Next steps:");
+    console.log("  1. Start the development server: bun dev");
+    console.log("  2. Access admin dashboard to manage repositories");
+    console.log("  3. Browse plugin store to see synced plugins");
   } catch (error) {
     console.error("❌ Error running seed script:", error);
     throw error;
   } finally {
-    await sql.end();
+    await connection.end();
   }
 }
 
-main()
-  .then(() => {
-    console.log("🎉 Seed script finished successfully");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("💥 Seed script failed:", error);
-    process.exit(1);
-  });
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void main();
+}
+
+export default main;

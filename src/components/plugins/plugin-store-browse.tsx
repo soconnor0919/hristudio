@@ -212,7 +212,6 @@ export function PluginStoreBrowse() {
     data: availablePlugins,
     isLoading,
     error,
-    refetch,
   } = api.robots.plugins.list.useQuery(
     {
       status:
@@ -227,10 +226,14 @@ export function PluginStoreBrowse() {
     },
   );
 
+  const utils = api.useUtils();
+
   const installPluginMutation = api.robots.plugins.install.useMutation({
     onSuccess: () => {
       toast.success("Plugin installed successfully!");
-      void refetch();
+      // Invalidate both plugin queries to refresh the UI
+      void utils.robots.plugins.list.invalidate();
+      void utils.robots.plugins.getStudyPlugins.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to install plugin");
@@ -426,7 +429,10 @@ export function PluginStoreBrowse() {
               {error.message ||
                 "An error occurred while loading the plugin store."}
             </p>
-            <Button onClick={() => refetch()} variant="outline">
+            <Button
+              onClick={() => void utils.robots.plugins.list.refetch()}
+              variant="outline"
+            >
               Try Again
             </Button>
           </div>

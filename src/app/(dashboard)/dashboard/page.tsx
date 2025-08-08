@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -28,55 +29,20 @@ import { api } from "~/trpc/react";
 
 // Dashboard Overview Cards
 function OverviewCards() {
-  const utils = api.useUtils();
-
-  // Auto-refresh overview data when component mounts to catch external changes
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      void utils.studies.list.invalidate();
-      void utils.experiments.getUserExperiments.invalidate();
-      void utils.trials.getUserTrials.invalidate();
-    }, 60000); // Refresh every minute
-
-    return () => clearInterval(interval);
-  }, [utils]);
-
-  const { data: studiesData } = api.studies.list.useQuery(
-    { page: 1, limit: 1 },
-    {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      refetchOnWindowFocus: true,
-    },
-  );
-  const { data: experimentsData } = api.experiments.getUserExperiments.useQuery(
-    { page: 1, limit: 1 },
-    {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      refetchOnWindowFocus: true,
-    },
-  );
-  const { data: trialsData } = api.trials.getUserTrials.useQuery(
-    { page: 1, limit: 1 },
-    {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      refetchOnWindowFocus: true,
-    },
-  );
-  // TODO: Fix participants API call - needs actual study ID
-  const participantsData = { pagination: { total: 0 } };
+  const { data: stats, isLoading } = api.dashboard.getStats.useQuery();
 
   const cards = [
     {
       title: "Active Studies",
-      value: studiesData?.pagination?.total ?? 0,
-      description: "Research studies in progress",
+      value: stats?.totalStudies ?? 0,
+      description: "Research studies you have access to",
       icon: Building,
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
       title: "Experiments",
-      value: experimentsData?.pagination?.total ?? 0,
+      value: stats?.totalExperiments ?? 0,
       description: "Experiment protocols designed",
       icon: FlaskConical,
       color: "text-green-600",
@@ -84,7 +50,7 @@ function OverviewCards() {
     },
     {
       title: "Participants",
-      value: participantsData?.pagination?.total ?? 0,
+      value: stats?.totalParticipants ?? 0,
       description: "Enrolled participants",
       icon: Users,
       color: "text-purple-600",
@@ -92,13 +58,32 @@ function OverviewCards() {
     },
     {
       title: "Trials",
-      value: trialsData?.pagination?.total ?? 0,
-      description: "Completed trials",
+      value: stats?.totalTrials ?? 0,
+      description: "Total trials conducted",
       icon: TestTube,
       color: "text-orange-600",
       bg: "bg-orange-50",
     },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="bg-muted h-4 w-20 animate-pulse rounded" />
+              <div className="bg-muted h-8 w-8 animate-pulse rounded" />
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted h-8 w-12 animate-pulse rounded" />
+              <div className="bg-muted mt-2 h-3 w-24 animate-pulse rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -122,41 +107,10 @@ function OverviewCards() {
 
 // Recent Activity Component
 function RecentActivity() {
-  // Mock data - replace with actual API calls
-  const activities = [
-    {
-      id: "1",
-      type: "trial_completed",
-      title: "Trial #142 completed",
-      description: "Memory retention study - Participant P001",
-      time: "2 hours ago",
-      status: "success",
-    },
-    {
-      id: "2",
-      type: "experiment_created",
-      title: "New experiment protocol",
-      description: "Social interaction study v2.1",
-      time: "4 hours ago",
-      status: "info",
-    },
-    {
-      id: "3",
-      type: "participant_enrolled",
-      title: "New participant enrolled",
-      description: "P045 added to cognitive study",
-      time: "6 hours ago",
-      status: "success",
-    },
-    {
-      id: "4",
-      type: "trial_started",
-      title: "Trial #143 started",
-      description: "Attention span experiment",
-      time: "8 hours ago",
-      status: "pending",
-    },
-  ];
+  const { data: activities = [], isLoading } =
+    api.dashboard.getRecentActivity.useQuery({
+      limit: 8,
+    });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -180,24 +134,46 @@ function RecentActivity() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-center space-x-4">
-              {getStatusIcon(activity.status)}
-              <div className="flex-1 space-y-1">
-                <p className="text-sm leading-none font-medium">
-                  {activity.title}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {activity.description}
-                </p>
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <div className="bg-muted h-4 w-4 animate-pulse rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="bg-muted h-4 w-3/4 animate-pulse rounded" />
+                  <div className="bg-muted h-3 w-1/2 animate-pulse rounded" />
+                </div>
+                <div className="bg-muted h-3 w-16 animate-pulse rounded" />
               </div>
-              <div className="text-muted-foreground text-sm">
-                {activity.time}
+            ))}
+          </div>
+        ) : activities.length === 0 ? (
+          <div className="py-8 text-center">
+            <AlertCircle className="text-muted-foreground mx-auto h-8 w-8" />
+            <p className="text-muted-foreground mt-2 text-sm">
+              No recent activity
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activities.map((activity) => (
+              <div key={activity.id} className="flex items-center space-x-4">
+                {getStatusIcon(activity.status)}
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm leading-none font-medium">
+                    {activity.title}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {activity.description}
+                  </p>
+                </div>
+                <div className="text-muted-foreground text-sm">
+                  {formatDistanceToNow(activity.time, { addSuffix: true })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -262,33 +238,10 @@ function QuickActions() {
 
 // Study Progress Component
 function StudyProgress() {
-  // Mock data - replace with actual API calls
-  const studies = [
-    {
-      id: "1",
-      name: "Cognitive Load Study",
-      progress: 75,
-      participants: 24,
-      totalParticipants: 30,
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Social Interaction Research",
-      progress: 45,
-      participants: 18,
-      totalParticipants: 40,
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "Memory Retention Analysis",
-      progress: 90,
-      participants: 45,
-      totalParticipants: 50,
-      status: "completing",
-    },
-  ];
+  const { data: studies = [], isLoading } =
+    api.dashboard.getStudyProgress.useQuery({
+      limit: 5,
+    });
 
   return (
     <Card className="col-span-3">
@@ -299,31 +252,62 @@ function StudyProgress() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {studies.map((study) => (
-            <div key={study.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm leading-none font-medium">
-                    {study.name}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {study.participants}/{study.totalParticipants} participants
-                  </p>
+        {isLoading ? (
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="bg-muted h-4 w-32 animate-pulse rounded" />
+                    <div className="bg-muted h-3 w-24 animate-pulse rounded" />
+                  </div>
+                  <div className="bg-muted h-5 w-16 animate-pulse rounded" />
                 </div>
-                <Badge
-                  variant={study.status === "active" ? "default" : "secondary"}
-                >
-                  {study.status}
-                </Badge>
+                <div className="bg-muted h-2 w-full animate-pulse rounded" />
+                <div className="bg-muted h-3 w-16 animate-pulse rounded" />
               </div>
-              <Progress value={study.progress} className="h-2" />
-              <p className="text-muted-foreground text-xs">
-                {study.progress}% complete
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : studies.length === 0 ? (
+          <div className="py-8 text-center">
+            <Building className="text-muted-foreground mx-auto h-8 w-8" />
+            <p className="text-muted-foreground mt-2 text-sm">
+              No active studies found
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Create a study to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {studies.map((study) => (
+              <div key={study.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm leading-none font-medium">
+                      {study.name}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {study.participants}/{study.totalParticipants} completed
+                      trials
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      study.status === "active" ? "default" : "secondary"
+                    }
+                  >
+                    {study.status}
+                  </Badge>
+                </div>
+                <Progress value={study.progress} className="h-2" />
+                <p className="text-muted-foreground text-xs">
+                  {study.progress}% complete
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

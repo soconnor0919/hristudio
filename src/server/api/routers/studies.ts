@@ -4,8 +4,15 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
-    activityLogs, studies, studyMemberRoleEnum, studyMembers,
-    studyStatusEnum, users, userSystemRoles
+  activityLogs,
+  plugins,
+  studies,
+  studyMemberRoleEnum,
+  studyMembers,
+  studyPlugins,
+  studyStatusEnum,
+  users,
+  userSystemRoles,
 } from "~/server/db/schema";
 
 export const studiesRouter = createTRPCRouter({
@@ -274,6 +281,20 @@ export const studiesRouter = createTRPCRouter({
         role: "owner",
       });
 
+      // Auto-install core plugin in new study
+      const corePlugin = await ctx.db.query.plugins.findFirst({
+        where: eq(plugins.name, "HRIStudio Core System"),
+      });
+
+      if (corePlugin) {
+        await ctx.db.insert(studyPlugins).values({
+          studyId: newStudy.id,
+          pluginId: corePlugin.id,
+          configuration: {},
+          installedBy: userId,
+        });
+      }
+
       // Log activity
       await ctx.db.insert(activityLogs).values({
         studyId: newStudy.id,
@@ -534,7 +555,7 @@ export const studiesRouter = createTRPCRouter({
         studyId,
         userId,
         action: "member_removed",
-        description: `Removed ${memberToRemove.user?.name ?? memberToRemove.user?.email ?? 'Unknown user'}`,
+        description: `Removed ${memberToRemove.user?.name ?? memberToRemove.user?.email ?? "Unknown user"}`,
       });
 
       return { success: true };

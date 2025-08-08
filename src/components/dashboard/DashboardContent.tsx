@@ -12,7 +12,7 @@ interface DashboardContentProps {
   completedToday: number;
   canControl: boolean;
   canManage: boolean;
-  recentTrials: any[];
+  _recentTrials: unknown[];
 }
 
 export function DashboardContent({
@@ -24,7 +24,7 @@ export function DashboardContent({
   completedToday,
   canControl,
   canManage,
-  recentTrials,
+  _recentTrials,
 }: DashboardContentProps) {
   const getWelcomeMessage = () => {
     switch (userRole) {
@@ -105,7 +105,7 @@ export function DashboardContent({
     },
   ];
 
-  const alerts: any[] = [];
+  const alerts: never[] = [];
 
   const recentActivity = null;
 

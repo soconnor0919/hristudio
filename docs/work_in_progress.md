@@ -2,6 +2,94 @@
 
 ## Recent Changes Summary (February 2025)
 
+### Experiment Designer Iteration (February 2025)
+
+#### **Current Focus: Modularized Designer (ActionLibrary / StepFlow / PropertiesPanel / Registry) & Validation Drift Handling**
+**Status**: In active iteration (not stable)
+
+The experiment designer has been refactored into modular components (registry + library + flow + properties panel). Active iteration now targets validation drift visibility, richer parameter controls, and continued provenance/compilation integrity.
+
+**Implemented (baseline):**
+- Step-first container model (steps hold ordered actions) (stable)
+- Drag-and-drop of actions into steps and reordering within steps (stable)
+- Conversion utility to DB step/action structures (provenance & execution metadata flattening) (stable)
+- Plugin action loading with namespaced IDs (pluginId.actionId) and provenance retention (stable)
+- Execution compilation pipeline (deterministic graph + integrity hash) integrated in update mutation (stable)
+
+**UI State (updated):**
+- Compact spacing (h-6/7 inputs) and category coloring
+- Dark mode variants applied (will audit accessibility)
+- Category color system (may refine semantic tokens; now reused across extracted components)
+- Step containers with colored left borders for type (moved into `StepFlow`)
+- Drag overlays + hover states (keyboard reordering & provenance badge a11y still pending)
+
+**Interaction Features (present / modularized):**
+- Multi-level drag & drop (steps + actions) via `StepFlow`
+- Direct action selection for inline parameter editing (now inside `PropertiesPanel`)
+- Action tooltip (plugin/source details; provenance badges present; enrichment still planned)
+- Drop zone highlighting
+- Pointer sensor activation threshold (mobile/touch review pending)
+
+**Plugin Integration (status):**
+- Registry loads core + study plugin actions (version stored; pin drift resolution still pending; designer now guarantees installed study plugin actions appear once experiment + study resolved)
+- Fallback actions present (unchanged)
+- Param schema → UI field mapping (primitive only; now enhanced for boolean + ranged number)
+- Provenance & execution metadata embedded in action instances (server persists) (stable)
+- Structured error surfaces for plugin load/validation failures still TODO
+
+**Technical Notes (updated):**
+- Types expanded: provenance, execution descriptors, integrity hashing structures (stable)
+- Acceptable performance; profiling after slider & drift logic integration still pending
+- Accessibility review pending (keyboard reorder, focus indicators, slider a11y labels)
+- Monolith split complete: `ActionRegistry.ts`, `ActionLibrary.tsx`, `StepFlow.tsx`, `PropertiesPanel.tsx`
+- Need unit tests for registry + conversion + compiler + drift serializer; none present
+
+**Key Files (current iteration - post modularization):**
+- `~/components/experiments/designer/BlockDesigner.tsx` - Orchestrator (state, validation, drift)
+- `~/components/experiments/designer/ActionRegistry.ts` - Registry (core + plugin + fallback)
+- `~/components/experiments/designer/ActionLibrary.tsx` - Categorized draggables
+- `~/components/experiments/designer/StepFlow.tsx` - Sortable steps & actions
+
+- `~/components/experiments/designer/PropertiesPanel.tsx` - Parameter & metadata editor
+**Current State Summary:**
+Functional baseline with modular extraction complete. Parameter UI upgraded (boolean → Switch, ranged number → Slider). Hash drift indicator implemented (Validated / Drift / Unvalidated). Still pending: enum grouping polish, keyboard DnD accessibility, version pin drift resolution, structured plugin load error surfaces.
+
+### Seed Script Simplification & Repository Integration (stable)
+
+#### **Unified Repository-Based Plugin Loading**
+Simplified and unified the seed scripts to load all plugins (core and robot) through the same repository sync mechanism.
+
+**Seed Script Consolidation:**
+- **Before**: 5 separate seed scripts (`seed.ts`, `seed-dev.ts`, `seed-simple.ts`, `seed-plugins.ts`, `seed-core-blocks.ts`)
+- **After**: Single `seed-dev.ts` script with integrated repository sync
+- **Benefits**: Consistent plugin loading, easier maintenance, real repository testing
+
+**Core Repository Integration:**
+- Core blocks now loaded from `http://localhost:3000/hristudio-core` during development
+- Same repository sync logic as robot plugins from `https://repo.hristudio.com`
+- Eliminates hardcoded core blocks - everything comes from repositories
+- Local core repository served from `public/hristudio-core/` directory
+
+**Simplified Setup Process:**
+```bash
+docker compose up -d
+bun db:push  
+bun db:seed  # Single command loads everything
+```
+
+**Repository Sync Integration:**
+- Core system blocks loaded as single plugin with 4 block groups (27 total blocks)
+- Robot plugins loaded individually (TurtleBot3 Burger/Waffle, NAO) 
+- All repositories use same sync validation and error handling
+- Proper metadata storage with repository references
+
+**Package.json Cleanup:**
+- Removed `db:seed:simple`, `db:seed:plugins`, `db:seed:core-blocks`, `db:seed:full`
+- Single `db:seed` command for all seeding needs
+- Simplified development workflow with fewer script options
+
+---
+
 ### Plugin Store Repository Integration
 
 #### **Complete Repository Synchronization System**
@@ -32,9 +120,7 @@ Fixed and implemented full repository synchronization for dynamic plugin loading
 - Repository names displayed for all plugins from proper metadata
 - Study-scoped plugin installation working correctly
 
----
-
-## Recent Changes Summary (December 2024)
+## Recent Changes Summary (December 2024) (historical reference)
 
 ### Plugin System Implementation
 
@@ -171,7 +257,7 @@ The experiment designer was completely redesigned to integrate seamlessly with t
 ```
 
 #### **Files Modified**
-- `src/components/experiments/designer/EnhancedBlockDesigner.tsx` - Complete redesign
+- `src/components/experiments/designer/BlockDesigner.tsx` - Current iterative version
 - `src/components/ui/data-table.tsx` - Fixed control heights
 - `src/components/experiments/experiments-data-table.tsx` - Fixed select styling
 - `src/components/participants/participants-data-table.tsx` - Fixed select styling
@@ -279,24 +365,24 @@ The overall system theme was too monochromatic with insufficient color personali
 
 ---
 
-### Current Status
+### Current Status (Deprecated Section - To Be Rewritten)
 
 #### **Completed**
-- Complete experiment designer redesign with unified components
+- (Remove) Designer not yet in a stable/complete state
 - All data table control styling standardized
 - System theme enhanced with better colors
 - Breadcrumb navigation completely fixed
 - Technical debt resolved
 
 #### **Production Ready**
-- All TypeScript errors resolved
+- TypeScript surface improving; more types to add for provenance/execution
 - Consistent styling throughout application
 - Proper error handling and user feedback
 - Excellent dark mode support
 - Mobile/tablet friendly drag and drop
 
 #### **Improvements Achieved**
-- **Visual Consistency**: Complete - All components now use unified design system
+- Visual consistency improved; still refactoring designer component size
 - **User Experience**: Significant improvement in navigation and usability
 - **Code Quality**: Clean, maintainable code with proper patterns
 - **Performance**: Optimized drag and drop with better collision detection
@@ -304,7 +390,7 @@ The overall system theme was too monochromatic with insufficient color personali
 
 ---
 
-### Core Block System Implementation (February 2024)
+### Core Block System Implementation (February 2024) (archived)
 
 **Complete documentation available in [`docs/core-blocks-system.md`](core-blocks-system.md)**
 
@@ -388,26 +474,37 @@ hristudio-core/
 
 ---
 
-### Documentation Status
+### Documentation Status (Updated With Provenance, Compilation, Pending Modularization)
 
 All changes have been documented and the codebase is ready for production deployment. The system now features:
 
-1. **Complete Plugin Architecture**: Both core blocks and robot actions loaded from repositories
-2. **Working Repository Sync**: Live synchronization from `https://repo.hristudio.com`
-3. **Proper Installation States**: Plugin store correctly shows installed vs available plugins
-4. **TypeScript Compliance**: All unsafe `any` types replaced with proper typing
-5. **Admin Access**: Full administrator role and permission system operational
+1. Unified repository loading in place (integrity hash now captured; version drift alerts pending)
+2. **Simplified Seed Scripts**: Single command setup with automatic repository synchronization  
+3. **Local Core Repository**: Core blocks served from `public/hristudio-core/` during development
+4. **Working Repository Sync**: Live synchronization from `https://repo.hristudio.com` for robot plugins
+5. **Proper Installation States**: Plugin store correctly shows installed vs available plugins
+6. **TypeScript Compliance**: All unsafe `any` types replaced with proper typing
+7. **Admin Access**: Full administrator role and permission system operational
 
-**Core Documentation Files:**
+**Core Documentation Files (Pending Updates):**
 - [`docs/core-blocks-system.md`](core-blocks-system.md) - Complete core blocks implementation guide
 - [`docs/plugin-system-implementation-guide.md`](plugin-system-implementation-guide.md) - Robot plugin system guide
-- [`docs/work_in_progress.md`](work_in_progress.md) - Current development status
+- [`docs/work_in_progress.md`](work_in_progress.md) - Current development status (now includes provenance & compiler updates)
 
-**Production Readiness:**
-- ✅ All TypeScript errors resolved (except documentation LaTeX)
-- ✅ Repository synchronization fully functional
+**Readiness Caveats:**
+- Pending UI: provenance badges (partially done), re-validation triggers (implemented), drift indicator (TODO), modular split (TODO), parameter control upgrades (TODO), version drift resolution (TODO)
+- ✅ Simplified seed scripts with unified repository loading
+- ✅ Core repository integration via localhost during development
+- ✅ Repository synchronization fully functional for both core and robot plugins
 - ✅ Plugin store with proper installation state detection
 - ✅ Admin dashboard with repository management
 - ✅ Complete user authentication and authorization
 - ✅ Study-scoped plugin installation working
 - ✅ 98% feature completion maintained
+
+**Development Workflow (Stable Pieces):**
+- ✅ Single `bun db:seed` command for complete setup
+- ✅ Core blocks loaded from local repository structure  
+- ✅ Robot plugins synchronized from live repository
+- ✅ Consistent plugin architecture across all block types
+- ✅ Real repository testing during development

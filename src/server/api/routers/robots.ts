@@ -468,6 +468,7 @@ export const robotsRouter = createTRPCRouter({
               repositoryUrl: plugins.repositoryUrl,
               trustLevel: plugins.trustLevel,
               status: plugins.status,
+              actionDefinitions: plugins.actionDefinitions,
               createdAt: plugins.createdAt,
               updatedAt: plugins.updatedAt,
             },

@@ -25,6 +25,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { useStudyContext } from "~/lib/study-context";
+import { api } from "~/trpc/react";
 
 export type Plugin = {
   plugin: {
@@ -85,18 +87,45 @@ const statusConfig = {
 };
 
 function PluginActionsCell({ plugin }: { plugin: Plugin }) {
+  const { selectedStudyId } = useStudyContext();
+  const utils = api.useUtils();
+
+  const uninstallMutation = api.robots.plugins.uninstall.useMutation({
+    onSuccess: () => {
+      toast.success("Plugin uninstalled successfully");
+      // Invalidate plugin queries to refresh the UI
+      void utils.robots.plugins.getStudyPlugins.invalidate();
+      void utils.robots.plugins.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to uninstall plugin");
+    },
+  });
+
+  const isCorePlugin = plugin.plugin.name === "HRIStudio Core System";
+
   const handleUninstall = async () => {
+    if (isCorePlugin) {
+      toast.error(
+        "Cannot uninstall the core system plugin - it's required for experiment design",
+      );
+      return;
+    }
+
     if (
       window.confirm(
-        `Are you sure you want to uninstall "${plugin.plugin.name}"?`,
+        `Are you sure you want to uninstall "${plugin.plugin.name}"? This will remove all plugin blocks from experiments in this study.`,
       )
     ) {
-      try {
-        // TODO: Implement uninstall mutation
-        toast.success("Plugin uninstalled successfully");
-      } catch {
-        toast.error("Failed to uninstall plugin");
+      if (!selectedStudyId) {
+        toast.error("No study selected");
+        return;
       }
+
+      uninstallMutation.mutate({
+        studyId: selectedStudyId,
+        pluginId: plugin.plugin.id,
+      });
     }
   };
 
@@ -145,10 +174,17 @@ function PluginActionsCell({ plugin }: { plugin: Plugin }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleUninstall}
-          className="text-red-600 focus:text-red-600"
+          disabled={uninstallMutation.isPending || isCorePlugin}
+          className={
+            isCorePlugin ? "text-gray-400" : "text-red-600 focus:text-red-600"
+          }
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Uninstall
+          {isCorePlugin
+            ? "Core Plugin"
+            : uninstallMutation.isPending
+              ? "Uninstalling..."
+              : "Uninstall"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

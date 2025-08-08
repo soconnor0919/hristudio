@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { EnhancedBlockDesigner } from "~/components/experiments/designer/EnhancedBlockDesigner";
-import type { ExperimentBlock } from "~/components/experiments/designer/EnhancedBlockDesigner";
+import { BlockDesigner } from "~/components/experiments/designer/BlockDesigner";
+import type { ExperimentStep } from "~/lib/experiment-designer/types";
 import { api } from "~/trpc/server";
 
 interface ExperimentDesignerPageProps {
@@ -22,19 +22,19 @@ export default async function ExperimentDesignerPage({
 
     // Parse existing visual design if available
     const existingDesign = experiment.visualDesign as {
-      blocks?: unknown[];
+      steps?: unknown[];
       version?: number;
       lastSaved?: string;
     } | null;
 
     // Only pass initialDesign if there's existing visual design data
     const initialDesign =
-      existingDesign?.blocks && existingDesign.blocks.length > 0
+      existingDesign?.steps && existingDesign.steps.length > 0
         ? {
             id: experiment.id,
             name: experiment.name,
             description: experiment.description ?? "",
-            blocks: existingDesign.blocks as ExperimentBlock[],
+            steps: existingDesign.steps as ExperimentStep[],
             version: existingDesign.version ?? 1,
             lastSaved:
               typeof existingDesign.lastSaved === "string"
@@ -44,7 +44,7 @@ export default async function ExperimentDesignerPage({
         : undefined;
 
     return (
-      <EnhancedBlockDesigner
+      <BlockDesigner
         experimentId={experiment.id}
         initialDesign={initialDesign}
       />
@@ -66,13 +66,13 @@ export async function generateMetadata({
     const experiment = await api.experiments.get({ id: resolvedParams.id });
 
     return {
-      title: `${experiment?.name} - Flow Designer | HRIStudio`,
-      description: `Design experiment protocol for ${experiment?.name} using visual flow editor`,
+      title: `${experiment?.name} - Designer | HRIStudio`,
+      description: `Design experiment protocol for ${experiment?.name} using step-based editor`,
     };
   } catch {
     return {
-      title: "Experiment Flow Designer | HRIStudio",
-      description: "Immersive visual experiment protocol designer",
+      title: "Experiment Designer | HRIStudio",
+      description: "Step-based experiment protocol designer",
     };
   }
 }

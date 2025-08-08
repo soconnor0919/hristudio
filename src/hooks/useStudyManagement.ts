@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
+import { handleAuthError, isAuthError } from "~/lib/auth-error-handler";
 
 /**
  * Custom hook for centralized study management across the platform.
@@ -52,6 +53,15 @@ export function useStudyManagement() {
 
         return newStudy;
       } catch (error) {
+        console.error("Failed to create study:", error);
+        // Handle auth errors
+        if (isAuthError(error)) {
+          await handleAuthError(
+            error,
+            "Authentication failed while creating study",
+          );
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "Failed to create study";
         toast.error(message);
@@ -90,6 +100,15 @@ export function useStudyManagement() {
 
         return updatedStudy;
       } catch (error) {
+        console.error("Failed to update study:", error);
+        // Handle auth errors
+        if (isAuthError(error)) {
+          await handleAuthError(
+            error,
+            "Authentication failed while updating study",
+          );
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "Failed to update study";
         toast.error(message);
@@ -121,6 +140,15 @@ export function useStudyManagement() {
         // Navigate to studies list
         router.push("/studies");
       } catch (error) {
+        console.error("Failed to delete study:", error);
+        // Handle auth errors
+        if (isAuthError(error)) {
+          await handleAuthError(
+            error,
+            "Authentication failed while deleting study",
+          );
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "Failed to delete study";
         toast.error(message);
@@ -253,6 +281,12 @@ export function useStudyManagement() {
       enabled: !!selectedStudyId,
       staleTime: 1000 * 60 * 2, // 2 minutes
       retry: (failureCount, error) => {
+        console.log("Selected study query error:", error);
+        // Handle auth errors first
+        if (isAuthError(error)) {
+          void handleAuthError(error, "Session expired while loading study");
+          return false;
+        }
         // Don't retry if study not found (404-like errors)
         if (
           error.message?.includes("not found") ||
@@ -290,6 +324,15 @@ export function useStudyManagement() {
     {
       staleTime: 1000 * 60 * 2, // 2 minutes
       refetchOnWindowFocus: true,
+      retry: (failureCount, error) => {
+        console.log("Studies query error:", error);
+        // Handle auth errors
+        if (isAuthError(error)) {
+          void handleAuthError(error, "Session expired while loading studies");
+          return false;
+        }
+        return failureCount < 2;
+      },
     },
   );
 
