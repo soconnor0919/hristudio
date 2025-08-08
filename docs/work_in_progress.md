@@ -4,7 +4,7 @@
 
 ### Experiment Designer Iteration (February 2025)
 
-#### **Current Focus: Modularized Designer (ActionLibrary / StepFlow / PropertiesPanel / Registry) & Validation Drift Handling**
+#### **Current Focus: Experiment Designer Redesign (Hashing / Drift / Action Library / Properties / DnD / Save & Export)**
 **Status**: In active iteration (not stable)
 
 The experiment designer has been refactored into modular components (registry + library + flow + properties panel). Active iteration now targets validation drift visibility, richer parameter controls, and continued provenance/compilation integrity.
@@ -54,9 +54,9 @@ The experiment designer has been refactored into modular components (registry + 
 **Current State Summary:**
 Functional baseline with modular extraction complete. Parameter UI upgraded (boolean → Switch, ranged number → Slider). Hash drift indicator implemented (Validated / Drift / Unvalidated). Still pending: enum grouping polish, keyboard DnD accessibility, version pin drift resolution, structured plugin load error surfaces.
 
-### Seed Script Simplification & Repository Integration (stable)
+### Experiment Designer Redesign Implementation (in progress)
 
-#### **Unified Repository-Based Plugin Loading**
+#### **Status Snapshot**
 Simplified and unified the seed scripts to load all plugins (core and robot) through the same repository sync mechanism.
 
 **Seed Script Consolidation:**
@@ -90,9 +90,20 @@ bun db:seed  # Single command loads everything
 
 ---
 
-### Plugin Store Repository Integration
+- Spec Document: `docs/experiment-designer-redesign.md` (completed)
+- Hashing Model: Implementing (canonical + incremental planned)
+- State Store: Planned (Zustand-based)
+- Action Library: Pending rebuild (categorization + search + drift markers)
+- Step Flow: Existing structure to be replaced with new DnD + keyboard support
+- Properties Panel: To adopt dynamic ParameterFieldFactory (Switch / Slider / etc.)
+- Validation Layer: Rule set drafting (structural + param + plugin)
+- Drift Detection: Planned (design vs last validated hash + plugin signature drift)
+- Save / Versioning: Pending (auto-save + manual + conflict detection)
+- Export / Import: Export bundle utility planned
+- Removal of legacy naming (“enhanced” / transitional) in progress
+- Docs Cross-linking: Partially updated
 
-#### **Complete Repository Synchronization System**
+#### **Next Milestones**
 Fixed and implemented full repository synchronization for dynamic plugin loading from remote repositories.
 
 **Core Fixes:**
