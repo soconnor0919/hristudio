@@ -2,10 +2,20 @@
 
 import { format, formatDistanceToNow } from "date-fns";
 import {
-    AlertCircle,
-    CheckCircle,
-    Clock, Download, Eye, MoreHorizontal, Plus,
-    Search, Shield, Target, Trash2, Upload, Users, UserX
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Download,
+  Eye,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Shield,
+  Target,
+  Trash2,
+  Upload,
+  Users,
+  UserX,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -14,37 +24,37 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "~/components/ui/dialog";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "~/components/ui/table";
 import { Textarea } from "~/components/ui/textarea";
 import { api } from "~/trpc/react";
@@ -54,13 +64,14 @@ interface Participant {
   participantCode: string;
   email: string | null;
   name: string | null;
-  demographics: any;
+  demographics: Record<string, unknown>;
   consentGiven: boolean;
   consentDate: Date | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
   studyId: string;
+  trialCount: number;
   _count?: {
     trials: number;
   };
@@ -78,7 +89,14 @@ export function ParticipantsView() {
   const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [selectedParticipant, setSelectedParticipant] =
     useState<Participant | null>(null);
-  const [newParticipant, setNewParticipant] = useState({
+  const [newParticipant, setNewParticipant] = useState<{
+    participantCode: string;
+    email: string;
+    name: string;
+    studyId: string;
+    demographics: Record<string, unknown>;
+    notes: string;
+  }>({
     participantCode: "",
     email: "",
     name: "",
@@ -102,12 +120,10 @@ export function ParticipantsView() {
     {
       studyId:
         studyFilter === "all"
-          ? userStudies?.studies?.[0]?.id || ""
+          ? (userStudies?.studies?.[0]?.id ?? "")
           : studyFilter,
-      search: searchQuery || undefined,
+      search: searchQuery ?? undefined,
       limit: 100,
-
-
     },
     {
       enabled: !!userStudies?.studies?.length,
@@ -117,7 +133,7 @@ export function ParticipantsView() {
   // Mutations
   const createParticipantMutation = api.participants.create.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       setShowNewParticipantDialog(false);
       resetNewParticipantForm();
     },
@@ -125,7 +141,7 @@ export function ParticipantsView() {
 
   const updateConsentMutation = api.participants.update.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       setShowConsentDialog(false);
       setSelectedParticipant(null);
     },
@@ -133,7 +149,7 @@ export function ParticipantsView() {
 
   const deleteParticipantMutation = api.participants.delete.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
     },
   });
 
@@ -155,31 +171,25 @@ export function ParticipantsView() {
       await createParticipantMutation.mutateAsync({
         participantCode: newParticipant.participantCode,
         studyId: newParticipant.studyId,
-        email: newParticipant.email || undefined,
-        name: newParticipant.name || undefined,
+        email: newParticipant.email ? newParticipant.email : undefined,
+        name: newParticipant.name ? newParticipant.name : undefined,
         demographics: newParticipant.demographics,
-
       });
     } catch (_error) {
       console.error("Failed to create participant:", _error);
     }
-  }, [newParticipant, createParticipantMutation]);
+  }, [createParticipantMutation, newParticipant]);
 
-  const handleUpdateConsent = useCallback(
-    async (consentGiven: boolean) => {
-      if (!selectedParticipant) return;
-
-      try {
-        await updateConsentMutation.mutateAsync({
-          id: selectedParticipant.id,
-
-        });
-      } catch (_error) {
-        console.error("Failed to update consent:", _error);
-      }
-    },
-    [selectedParticipant, updateConsentMutation],
-  );
+  const handleUpdateConsent = useCallback(async () => {
+    if (!selectedParticipant) return;
+    try {
+      await updateConsentMutation.mutateAsync({
+        id: selectedParticipant.id,
+      });
+    } catch (_error) {
+      console.error("Failed to update consent:", _error);
+    }
+  }, [selectedParticipant, updateConsentMutation]);
 
   const handleDeleteParticipant = useCallback(
     async (participantId: string) => {
@@ -230,13 +240,16 @@ export function ParticipantsView() {
     }
   };
 
-  const filteredParticipants =
-    participantsData?.participants?.filter((participant) => {
-      if (consentFilter === "consented" && !participant.consentGiven)
+  const filteredParticipants: Participant[] =
+    (participantsData?.participants?.filter((participant) => {
+      if (consentFilter === "consented" && !participant.consentGiven) {
         return false;
-      if (consentFilter === "pending" && participant.consentGiven) return false;
+      }
+      if (consentFilter === "pending" && participant.consentGiven) {
+        return false;
+      }
       return true;
-    }) || [];
+    }) as Participant[] | undefined) ?? [];
 
   return (
     <div className="space-y-6">
@@ -296,7 +309,7 @@ export function ParticipantsView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Studies</SelectItem>
-                {userStudies?.studies?.map((study: any) => (
+                {userStudies?.studies?.map((study) => (
                   <SelectItem key={study.id} value={study.id}>
                     {study.name}
                   </SelectItem>
@@ -317,7 +330,7 @@ export function ParticipantsView() {
               value={`${sortBy}-${sortOrder}`}
               onValueChange={(value) => {
                 const [field, order] = value.split("-");
-                setSortBy(field || "createdAt");
+                setSortBy(field ?? "createdAt");
                 setSortOrder(order as "asc" | "desc");
               }}
             >
@@ -345,7 +358,7 @@ export function ParticipantsView() {
               <Users className="h-8 w-8 text-blue-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {participantsData?.pagination?.total || 0}
+                  {participantsData?.pagination?.total ?? 0}
                 </p>
                 <p className="text-xs text-slate-600">Total Participants</p>
               </div>
@@ -358,7 +371,11 @@ export function ParticipantsView() {
               <CheckCircle className="h-8 w-8 text-green-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {filteredParticipants.filter((p) => p.consentGiven).length}
+                  {
+                    filteredParticipants.filter(
+                      (p: Participant) => p.consentGiven,
+                    ).length
+                  }
                 </p>
                 <p className="text-xs text-slate-600">Consented</p>
               </div>
@@ -371,7 +388,11 @@ export function ParticipantsView() {
               <Clock className="h-8 w-8 text-yellow-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {filteredParticipants.filter((p) => !p.consentGiven).length}
+                  {
+                    filteredParticipants.filter(
+                      (p: Participant) => !p.consentGiven,
+                    ).length
+                  }
                 </p>
                 <p className="text-xs text-slate-600">Pending Consent</p>
               </div>
@@ -385,7 +406,7 @@ export function ParticipantsView() {
               <div>
                 <p className="text-2xl font-bold">
                   {filteredParticipants.reduce(
-                    (sum, p) => sum + (p.trialCount || 0),
+                    (sum: number, p: Participant) => sum + (p.trialCount ?? 0),
                     0,
                   )}
                 </p>
@@ -469,11 +490,11 @@ export function ParticipantsView() {
                       <div className="text-sm">
                         {userStudies?.studies?.find(
                           (s) => s.id === participant.studyId,
-                        )?.name || "Unknown Study"}
+                        )?.name ?? "Unknown Study"}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getConsentStatusBadge({...participant, demographics: null, notes: null})}
+                      {getConsentStatusBadge(participant)}
                       {participant.consentDate && (
                         <p className="mt-1 text-xs text-slate-500">
                           {format(
@@ -484,7 +505,7 @@ export function ParticipantsView() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {getTrialsBadge(participant.trialCount || 0)}
+                      {getTrialsBadge(participant.trialCount ?? 0)}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-slate-600">
@@ -512,7 +533,7 @@ export function ParticipantsView() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              setSelectedParticipant({...participant, demographics: null, notes: null});
+                              setSelectedParticipant(participant);
                               setShowConsentDialog(true);
                             }}
                           >
@@ -696,7 +717,7 @@ export function ParticipantsView() {
 
               <div className="flex space-x-2">
                 <Button
-                  onClick={() => handleUpdateConsent(true)}
+                  onClick={() => void handleUpdateConsent()}
                   disabled={
                     selectedParticipant.consentGiven ||
                     updateConsentMutation.isPending
@@ -708,7 +729,7 @@ export function ParticipantsView() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => handleUpdateConsent(false)}
+                  onClick={() => void handleUpdateConsent()}
                   disabled={
                     !selectedParticipant.consentGiven ||
                     updateConsentMutation.isPending

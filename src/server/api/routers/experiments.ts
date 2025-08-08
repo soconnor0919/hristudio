@@ -16,6 +16,13 @@ import {
   studyMembers,
   userSystemRoles,
 } from "~/server/db/schema";
+import { convertStepsToDatabase } from "~/lib/experiment-designer/block-converter";
+import type {
+  ExperimentStep,
+  ExperimentDesign,
+} from "~/lib/experiment-designer/types";
+import { validateAndCompile } from "~/lib/experiment-designer/execution-compiler";
+import { estimateDesignDurationSeconds } from "~/lib/experiment-designer/visual-design-guard";
 
 // Helper function to check study access (with admin bypass)
 async function checkStudyAccess(
@@ -272,7 +279,59 @@ export const experimentsRouter = createTRPCRouter({
       // Check study access
       await checkStudyAccess(ctx.db, userId, experiment.studyId);
 
-      return experiment;
+      // Narrow executionGraph shape defensively before summarizing with explicit typing
+      interface ExecActionSummary {
+        actions?: unknown[];
+      }
+      interface ExecStepSummary {
+        id?: string;
+        name?: string;
+        actions?: ExecActionSummary[];
+      }
+      interface ExecutionGraphShape {
+        steps?: ExecStepSummary[];
+        generatedAt?: string;
+        version?: number;
+      }
+
+      const egRaw: unknown = experiment.executionGraph;
+      const eg: ExecutionGraphShape | null =
+        egRaw && typeof egRaw === "object" && !Array.isArray(egRaw)
+          ? (egRaw as ExecutionGraphShape)
+          : null;
+
+      const stepsArray: ExecStepSummary[] | null = Array.isArray(eg?.steps)
+        ? eg.steps
+        : null;
+
+      const executionGraphSummary = stepsArray
+        ? {
+            steps: stepsArray.length,
+            actions: stepsArray.reduce((total, step) => {
+              const acts = step.actions;
+              return (
+                total +
+                (Array.isArray(acts)
+                  ? acts.reduce(
+                      (aTotal, a) =>
+                        aTotal +
+                        (Array.isArray(a?.actions) ? a.actions.length : 0),
+                      0,
+                    )
+                  : 0)
+              );
+            }, 0),
+            generatedAt: eg?.generatedAt ?? null,
+            version: eg?.version ?? null,
+          }
+        : null;
+
+      return {
+        ...experiment,
+        integrityHash: experiment.integrityHash,
+        executionGraphSummary,
+        pluginDependencies: experiment.pluginDependencies ?? [],
+      };
     }),
 
   create: protectedProcedure
@@ -337,6 +396,108 @@ export const experimentsRouter = createTRPCRouter({
       return newExperiment;
     }),
 
+  validateDesign: protectedProcedure
+    .input(
+      z.object({
+        experimentId: z.string().uuid(),
+        visualDesign: z.record(z.string(), z.any()),
+        compileExecution: z.boolean().default(true),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { experimentId, visualDesign, compileExecution } = input;
+      const userId = ctx.session.user.id;
+
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, experimentId),
+      });
+
+      if (!experiment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Experiment not found",
+        });
+      }
+
+      await checkStudyAccess(ctx.db, userId, experiment.studyId, [
+        "owner",
+        "researcher",
+      ]);
+
+      const { parseVisualDesignSteps } = await import(
+        "~/lib/experiment-designer/visual-design-guard"
+      );
+      const { steps: guardedSteps, issues } = parseVisualDesignSteps(
+        visualDesign.steps,
+      );
+
+      if (issues.length) {
+        return {
+          valid: false,
+          issues,
+          pluginDependencies: [] as string[],
+          integrityHash: null as string | null,
+          compiled: null as unknown,
+        };
+      }
+
+      let compiledGraph: ReturnType<typeof validateAndCompile> | null = null;
+      if (compileExecution) {
+        try {
+          const designForCompile: ExperimentDesign = {
+            id: experiment.id,
+            name: experiment.name,
+            description: experiment.description ?? "",
+            version: experiment.version,
+            steps: guardedSteps,
+            lastSaved: new Date(),
+          };
+          compiledGraph = validateAndCompile(designForCompile);
+        } catch (err) {
+          return {
+            valid: false,
+            issues: [
+              `Compilation failed: ${
+                err instanceof Error ? err.message : "Unknown error"
+              }`,
+            ],
+            pluginDependencies: [],
+            integrityHash: null,
+            compiled: null,
+          };
+        }
+      }
+
+      const pluginDeps = new Set<string>();
+      for (const step of guardedSteps) {
+        for (const action of step.actions) {
+          if (action.source.kind === "plugin" && action.source.pluginId) {
+            const versionPart = action.source.pluginVersion
+              ? `@${action.source.pluginVersion}`
+              : "";
+            pluginDeps.add(`${action.source.pluginId}${versionPart}`);
+          }
+        }
+      }
+
+      return {
+        valid: true,
+        issues: [] as string[],
+        pluginDependencies: Array.from(pluginDeps).sort(),
+        integrityHash: compiledGraph?.hash ?? null,
+        compiled: compiledGraph
+          ? {
+              steps: compiledGraph.steps.length,
+              actions: compiledGraph.steps.reduce(
+                (acc, s) => acc + s.actions.length,
+                0,
+              ),
+              transportSummary: summarizeTransports(compiledGraph.steps),
+            }
+          : null,
+      };
+    }),
+
   update: protectedProcedure
     .input(
       z.object({
@@ -347,10 +508,13 @@ export const experimentsRouter = createTRPCRouter({
         estimatedDuration: z.number().int().min(1).optional(),
         metadata: z.record(z.string(), z.any()).optional(),
         visualDesign: z.record(z.string(), z.any()).optional(),
+        pluginDependencies: z.array(z.string()).optional(),
+        createSteps: z.boolean().default(true),
+        compileExecution: z.boolean().default(true),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updateData } = input;
+      const { id, createSteps, compileExecution, ...updateData } = input;
       const userId = ctx.session.user.id;
 
       // Get experiment to check study access
@@ -371,10 +535,145 @@ export const experimentsRouter = createTRPCRouter({
         "researcher",
       ]);
 
+      // Handle step creation from visual design
+      const pluginDependencySet = new Set<string>();
+      let compiledGraph: ReturnType<typeof validateAndCompile> | null = null;
+      let integrityHash: string | undefined;
+      let normalizedSteps: ExperimentStep[] = [];
+
+      if (createSteps && updateData.visualDesign?.steps) {
+        try {
+          // Parse & normalize steps using visual design guard
+          const { parseVisualDesignSteps } = await import(
+            "~/lib/experiment-designer/visual-design-guard"
+          );
+          const { steps: guardedSteps, issues } = parseVisualDesignSteps(
+            updateData.visualDesign.steps,
+          );
+          if (issues.length) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Visual design validation failed:\n- ${issues.join("\n- ")}`,
+            });
+          }
+          normalizedSteps = guardedSteps;
+          // Auto-estimate duration if not provided
+          updateData.estimatedDuration ??= Math.max(
+            1,
+            Math.round(estimateDesignDurationSeconds(normalizedSteps) / 60),
+          );
+          const convertedSteps = convertStepsToDatabase(normalizedSteps);
+          // Compile execution graph & integrity hash if requested
+          if (compileExecution) {
+            try {
+              // Compile from normalized steps (no synthetic unsafe casting)
+              const designForCompile = {
+                id: experiment.id,
+                name: experiment.name,
+                description: experiment.description ?? "",
+                version: experiment.version,
+                steps: normalizedSteps,
+                lastSaved: new Date(),
+              } as ExperimentDesign;
+              compiledGraph = validateAndCompile(designForCompile);
+              integrityHash ??= compiledGraph.hash;
+              for (const dep of compiledGraph.pluginDependencies) {
+                pluginDependencySet.add(dep);
+              }
+            } catch (compileErr) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Execution graph compilation failed: ${
+                  compileErr instanceof Error
+                    ? compileErr.message
+                    : "Unknown error"
+                }`,
+              });
+            }
+          }
+          // Collect plugin dependencies from converted actions
+          for (const step of convertedSteps) {
+            for (const action of step.actions) {
+              if (action.pluginId) {
+                const versionPart = action.pluginVersion
+                  ? `@${action.pluginVersion}`
+                  : "";
+                pluginDependencySet.add(`${action.pluginId}${versionPart}`);
+              }
+            }
+          }
+
+          // Delete existing steps and actions for this experiment
+          await ctx.db.delete(steps).where(eq(steps.experimentId, id));
+
+          // Create new steps and actions
+          for (const convertedStep of convertedSteps) {
+            const [newStep] = await ctx.db
+              .insert(steps)
+              .values({
+                experimentId: id,
+                name: convertedStep.name,
+                description: convertedStep.description,
+                type: convertedStep.type,
+                orderIndex: convertedStep.orderIndex,
+                durationEstimate: convertedStep.durationEstimate,
+                required: convertedStep.required,
+                conditions: convertedStep.conditions,
+              })
+              .returning();
+
+            if (!newStep) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to create step",
+              });
+            }
+
+            // Create actions for this step
+            for (const convertedAction of convertedStep.actions) {
+              await ctx.db.insert(actions).values({
+                stepId: newStep.id,
+                name: convertedAction.name,
+                description: convertedAction.description,
+                type: convertedAction.type,
+                orderIndex: convertedAction.orderIndex,
+                parameters: convertedAction.parameters,
+                timeout: convertedAction.timeout,
+                retryCount: 0,
+                // provenance & execution
+                sourceKind: convertedAction.sourceKind,
+                pluginId: convertedAction.pluginId,
+                pluginVersion: convertedAction.pluginVersion,
+                robotId: convertedAction.robotId ?? null,
+                baseActionId: convertedAction.baseActionId,
+                category: convertedAction.category,
+                transport: convertedAction.transport,
+                ros2: convertedAction.ros2,
+                rest: convertedAction.rest,
+                retryable: convertedAction.retryable,
+                parameterSchemaRaw: convertedAction.parameterSchemaRaw,
+              });
+            }
+          }
+        } catch (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Step conversion failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          });
+        }
+      }
+
       const updatedExperimentResults = await ctx.db
         .update(experiments)
         .set({
           ...updateData,
+          pluginDependencies:
+            pluginDependencySet.size > 0
+              ? Array.from(pluginDependencySet).sort()
+              : (updateData.pluginDependencies ??
+                experiment.pluginDependencies),
+          executionGraph: compiledGraph ?? experiment.executionGraph,
+          integrityHash: integrityHash ?? experiment.integrityHash,
           updatedAt: new Date(),
         })
         .where(eq(experiments.id, id))
@@ -1335,4 +1634,93 @@ export const experimentsRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  getExecutionData: protectedProcedure
+    .input(z.object({ experimentId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // First verify user has access to this experiment
+      const experiment = await ctx.db.query.experiments.findFirst({
+        where: eq(experiments.id, input.experimentId),
+        with: {
+          study: {
+            with: {
+              members: {
+                where: eq(studyMembers.userId, userId),
+              },
+            },
+          },
+          robot: true,
+        },
+      });
+
+      if (!experiment || experiment.study.members.length === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied to this experiment",
+        });
+      }
+
+      // Get steps with their actions for execution
+      const executionSteps = await ctx.db.query.steps.findMany({
+        where: eq(steps.experimentId, input.experimentId),
+        with: {
+          actions: {
+            orderBy: [asc(actions.orderIndex)],
+          },
+        },
+        orderBy: [asc(steps.orderIndex)],
+      });
+
+      // Transform to execution format
+      return {
+        experimentId: experiment.id,
+        experimentName: experiment.name,
+        description: experiment.description,
+        estimatedDuration: experiment.estimatedDuration,
+        robot: experiment.robot,
+        visualDesign: experiment.visualDesign,
+        steps: executionSteps.map((step) => ({
+          id: step.id,
+          name: step.name,
+          description: step.description,
+          type: step.type,
+          orderIndex: step.orderIndex,
+          durationEstimate: step.durationEstimate,
+          required: step.required,
+          conditions: step.conditions,
+          actions: step.actions.map((action) => ({
+            id: action.id,
+            name: action.name,
+            description: action.description,
+            type: action.type,
+            orderIndex: action.orderIndex,
+            parameters: action.parameters,
+            validationSchema: action.validationSchema,
+            timeout: action.timeout,
+            retryCount: action.retryCount,
+          })),
+        })),
+        totalSteps: executionSteps.length,
+        totalActions: executionSteps.reduce(
+          (sum, step) => sum + step.actions.length,
+          0,
+        ),
+      };
+    }),
 });
+
+// Helper (moved outside router) to summarize transports for validateDesign output
+function summarizeTransports(
+  stepsCompiled: ReturnType<typeof validateAndCompile>["steps"],
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const st of stepsCompiled) {
+    for (const act of st.actions) {
+      const t = act.execution.transport;
+      counts[t] = (counts[t] ?? 0) + 1;
+    }
+  }
+  return counts;
+}

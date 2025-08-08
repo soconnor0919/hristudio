@@ -202,6 +202,9 @@ CREATE TABLE actions (
 
 ```sql
 -- Participants in studies
+-- NOTE: The application exposes a computed `trialCount` field in API list responses.
+-- This value is derived at query time by counting linked trials and is NOT persisted
+-- as a physical column in this table to avoid redundancy and maintain consistency.
 CREATE TABLE participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   study_id UUID NOT NULL REFERENCES studies(id) ON DELETE CASCADE,

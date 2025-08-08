@@ -552,7 +552,7 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
 ## Participant Management Routes (`participants`)
 
 ### `participants.list`
-- **Description**: List study participants
+- **Description**: List participants in a study
 - **Type**: Query
 - **Input**:
   ```typescript
@@ -563,7 +563,7 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
     search?: string
   }
   ```
-- **Output**: Paginated participant list
+- **Output**: Paginated participant list. Each participant object in this response includes a computed `trialCount` field (number of linked trials) plus derived consent metadata; sensitive fields like `demographics` and `notes` are omitted in this list view.
 - **Auth Required**: Yes (Study member)
 
 ### `participants.get`
@@ -586,7 +586,7 @@ HRIStudio uses tRPC for type-safe API communication between client and server. A
     demographics?: Record<string, any>
   }
   ```
-- **Output**: Created participant object
+- **Output**: Created participant object (does NOT include `notes` or `trialCount`; `trialCount` is computed and only appears in list output as an aggregate)
 - **Auth Required**: Yes (Study researcher)
 
 ### `participants.update`
