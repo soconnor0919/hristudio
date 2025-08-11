@@ -199,6 +199,145 @@ export function EntityForm({ mode, entityId }: EntityFormProps) {
 }
 ```
 
+## 🔄 Unified Study Selection System
+
+### Problem (Before)
+Two parallel mechanisms tracked the "active" study:
+- `useActiveStudy` (localStorage key: `hristudio-active-study`)
+- `study-context` (`useStudyContext`, key: `hristudio-selected-study`)
+
+This duplication caused:
+- Inconsistent state between pages (e.g., `/experiments` vs. study-scoped pages)
+- Extra localStorage writes
+- Divergent query invalidation logic
+- Breadcrumb/name mismatches
+
+### Solution (After)
+A single source of truth: `study-context` + an optional helper hook `useSelectedStudyDetails`.
+
+Removed:
+- `hooks/useActiveStudy.ts`
+- All imports/usages of `useActiveStudy`
+- Legacy localStorage key `hristudio-active-study` (no migration required)
+
+Added:
+- `useSelectedStudyDetails` hook: wraps `studies.get` and normalizes metadata
+
+### Core Responsibilities Now
+| Concern | Implementation |
+|---------|----------------|
+| Persistence | `study-context` (`hristudio-selected-study`) |
+| Selection / update | `setSelectedStudyId(studyId | null)` |
+| Study metadata (name, counts, role) | `useSelectedStudyDetails()` |
+| Query scoping (experiments, participants, trials) | Pass `selectedStudyId` into list queries |
+| Breadcrumb study name | Retrieved via `useSelectedStudyDetails()` |
+
+### Updated Root / Feature Pages
+| Page | Change |
+|------|--------|
+| `/experiments` | Uses `selectedStudyId` + `experiments.list` (server-filtered) |
+| `/studies/[id]/participants` | Sets `selectedStudyId` from route param |
+| `/studies/[id]/trials` | Sets `selectedStudyId` from route param |
+| Tables (`ExperimentsTable`, `ParticipantsTable`, `TrialsTable`) | All consume `selectedStudyId`; removed legacy active study logic |
+
+### New Helper Hook (Excerpt)
+```ts
+// hooks/useSelectedStudyDetails.ts
+const { studyId, study, isLoading, setStudyId, clearStudy } =
+  useSelectedStudyDetails();
+
+// Example usage in a breadcrumb component
+const breadcrumbLabel = study?.name ?? "Study";
+```
+
+### Trials Table Normalization
+The `trials.list` payload does NOT include:
+- `wizard` object
+- `sessionNumber` (not exposed in list query)
+- Counts (`_count`) or per-trial event/media aggregates
+
+We now map only available fields, providing safe defaults. Future enhancements (if needed) can extend the server query to include aggregates.
+
+### Migration Notes
+No runtime migration required. On first load after deployment:
+- If only the removed key existed, user simply re-selects a study once.
+- All queries invalidate automatically when `setSelectedStudyId` is called.
+
+### Implementation Summary
+- Eliminated duplicated active study state
+- Ensured strict server-side filtering for experiment/trial/participant queries
+- Centralized study detail enrichment (role, counts)
+- Reduced cognitive overhead for new contributors
+
+### Recommended Future Enhancements (Optional)
+1. Add a global Study Switcher component that consumes `useSelectedStudyDetails`.
+2. Preload the selected study’s basic metadata in a server component wrapper to reduce client fetch flashes.
+3. Extend `trials.list` with lightweight aggregate counts if needed for dashboard KPIs (avoid N+1 by joining summarized CTEs).
+
+### Quick Usage Pattern
+```tsx
+import { useStudyContext } from "~/lib/study-context";
+import { useSelectedStudyDetails } from "~/hooks/useSelectedStudyDetails";
+
+function StudyScopedPanel() {
+  const { selectedStudyId, setSelectedStudyId } = useStudyContext();
+  const { study, isLoading } = useSelectedStudyDetails();
+
+  if (!selectedStudyId) return <EmptyState>Select a study</EmptyState>;
+  if (isLoading) return <LoadingSpinner />;
+
+  return <h2>{study?.name}</h2>;
+}
+```
+
+This consolidation reduces ambiguity, simplifies mental models, and enforces consistent, per-study isolation across all entity views.
+
+#### Server-Side Prefetch & Cookie Persistence
+To eliminate the initial "flash" before a study is recognized on first paint, the active study selection is now persisted in both:
+- localStorage: `hristudio-selected-study` (client rehydration & legacy continuity)
+- cookie: `hristudio_selected_study` (SSR pre-seed)
+
+Enhancements:
+1. `StudyProvider` accepts `initialStudyId` (injected from the server layout by reading the cookie).
+2. On selection changes, both localStorage and the cookie are updated (cookie Max-Age = 30 days, SameSite=Lax).
+3. Server layout (`(dashboard)/layout.tsx`) reads the cookie and passes it to `StudyProvider`, allowing:
+   - Immediate breadcrumb rendering
+   - Immediate filtering of study-scoped navigation sections
+   - Consistent SSR → CSR transition with no state mismatch
+
+Outcome: Zero-delay availability of the selected study context across all root pages.
+
+#### Trial List Aggregates Enhancement
+The `trials.list` endpoint now returns richer metadata without additional round-trips:
+- `sessionNumber`
+- `scheduledAt`
+- `wizard` (id, name, email) via left join
+- `eventCount` (aggregated via grouped count over `trial_event`)
+- `mediaCount` (grouped count over `media_capture`)
+- `latestEventAt` (MAX(timestamp) per trial)
+
+Implementation details:
+- Single batched aggregation for event counts + latest timestamp.
+- Separate aggregation for media counts (both scoped to the returned trial ID set).
+- Maps merged in memory, preserving O(n) post-processing.
+- Backward-compatible: new fields added; legacy consumers can safely ignore.
+
+UI Integration:
+- `TrialsTable` now:
+  - Displays event/media counts in the Data column.
+  - Shows a compact “Last evt” time (HH:MM) when available.
+  - Includes status filtering and uses nullish coalescing for safe fallbacks.
+  - Uses new wizard fields when present; defaults gracefully otherwise.
+
+Performance Considerations:
+- Avoids N+1 queries by grouping on trial IDs.
+- Keeps payload lean (no verbose event/action lists).
+- Suitable for pagination (limit/offset preserved).
+
+Future Extension Ideas:
+- Add optional `includeAggregates=false` flag to skip counts for ultra-high-volume dashboards.
+- Introduce additional derived metrics (e.g., average action latency) via a materialized view if needed.
+
 ### **Achievement Metrics**
 - **Significant Code Reduction**: Eliminated form duplication across entities
 - **Complete Consistency**: Uniform experience across all entity types

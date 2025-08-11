@@ -25,7 +25,7 @@ export function StudyGuard({ children, fallback }: StudyGuardProps) {
   }
 
   if (!selectedStudyId) {
-    return fallback || <DefaultStudyRequiredMessage />;
+    return fallback ?? <DefaultStudyRequiredMessage />;
   }
 
   return <>{children}</>;

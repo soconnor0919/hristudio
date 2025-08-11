@@ -35,8 +35,12 @@ export default async function DashboardLayout({
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
+  // Pre-seed selected study from cookie (SSR) to avoid client flash
+  const selectedStudyCookie =
+    cookieStore.get("hristudio_selected_study")?.value ?? null;
+
   return (
-    <StudyProvider>
+    <StudyProvider initialStudyId={selectedStudyCookie}>
       <BreadcrumbProvider>
         <SidebarProvider defaultOpen={defaultOpen}>
           <AppSidebar userRole={userRole} />

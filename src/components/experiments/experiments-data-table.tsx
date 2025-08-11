@@ -14,77 +14,103 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { useActiveStudy } from "~/hooks/useActiveStudy";
+import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 import { experimentsColumns, type Experiment } from "./experiments-columns";
 
 export function ExperimentsDataTable() {
-  const { activeStudy } = useActiveStudy();
+  const { selectedStudyId } = useStudyContext();
   const [statusFilter, setStatusFilter] = React.useState("all");
+
+  const columns = React.useMemo(() => {
+    return experimentsColumns.filter(
+      (col) => !("accessorKey" in col) || col.accessorKey !== "study",
+    );
+  }, []);
 
   const {
     data: experimentsData,
     isLoading,
     error,
     refetch,
-  } = api.experiments.getUserExperiments.useQuery(
-    { page: 1, limit: 50 },
+  } = api.experiments.list.useQuery(
+    { studyId: selectedStudyId ?? "" },
     {
       refetchOnWindowFocus: false,
+      enabled: !!selectedStudyId,
     },
   );
 
   // Auto-refresh experiments when component mounts to catch external changes
   React.useEffect(() => {
+    if (!selectedStudyId) return;
     const interval = setInterval(() => {
       void refetch();
-    }, 30000); // Refresh every 30 seconds
-
+    }, 30000);
     return () => clearInterval(interval);
-  }, [refetch]);
+  }, [refetch, selectedStudyId]);
 
   // Set breadcrumbs
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
     { label: "Studies", href: "/studies" },
-    ...(activeStudy
+    ...(selectedStudyId
       ? [
           {
-            label: (activeStudy as { title: string; id: string }).title,
-            href: `/studies/${(activeStudy as { id: string }).id}`,
+            label: "Experiments",
+            href: `/studies/${selectedStudyId}`,
           },
           { label: "Experiments" },
         ]
       : [{ label: "Experiments" }]),
   ]);
 
-  // Transform experiments data to match the Experiment type expected by columns
+  // Transform experiments data (already filtered by studyId) to match columns
   const experiments: Experiment[] = React.useMemo(() => {
-    if (!experimentsData?.experiments) return [];
+    if (!experimentsData) return [];
+    if (!selectedStudyId) return [];
 
-    return experimentsData.experiments.map((experiment) => ({
-      id: experiment.id,
-      name: experiment.name,
-      description: experiment.description,
-      status: experiment.status,
-      createdAt: experiment.createdAt,
-      updatedAt: experiment.updatedAt,
-      studyId: experiment.studyId,
-      study: experiment.study,
-      createdBy: experiment.createdBy ?? "",
+    interface ListExperiment {
+      id: string;
+      name: string;
+      description: string | null;
+      status: Experiment["status"];
+      createdAt: string | Date;
+      updatedAt: string | Date;
+      studyId: string;
+      createdBy?: { name?: string | null; email?: string | null } | null;
+      steps?: unknown[];
+      trials?: unknown[];
+    }
+
+    return (experimentsData as ListExperiment[]).map((exp) => ({
+      id: exp.id,
+      name: exp.name,
+      description: exp.description,
+      status: exp.status,
+      createdAt:
+        exp.createdAt instanceof Date ? exp.createdAt : new Date(exp.createdAt),
+      updatedAt:
+        exp.updatedAt instanceof Date ? exp.updatedAt : new Date(exp.updatedAt),
+      studyId: exp.studyId,
+      study: {
+        id: exp.studyId,
+        name: "Active Study",
+      },
+      createdBy: exp.createdBy?.name ?? exp.createdBy?.email ?? "",
       owner: {
-        name: experiment.createdBy?.name ?? null,
-        email: experiment.createdBy?.email ?? "",
+        name: exp.createdBy?.name ?? null,
+        email: exp.createdBy?.email ?? "",
       },
       _count: {
-        steps: experiment._count?.steps ?? 0,
-        trials: experiment._count?.trials ?? 0,
+        steps: Array.isArray(exp.steps) ? exp.steps.length : 0,
+        trials: Array.isArray(exp.trials) ? exp.trials.length : 0,
       },
       userRole: undefined,
       canEdit: true,
       canDelete: true,
     }));
-  }, [experimentsData]);
+  }, [experimentsData, selectedStudyId]);
 
   // Status filter options
   const statusOptions = [
@@ -169,7 +195,7 @@ export function ExperimentsDataTable() {
 
       <div className="space-y-4">
         <DataTable
-          columns={experimentsColumns}
+          columns={columns}
           data={filteredExperiments}
           searchKey="name"
           searchPlaceholder="Search experiments..."

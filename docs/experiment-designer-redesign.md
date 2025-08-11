@@ -430,5 +430,5 @@ Edge Cases:
 
 This redesign formalizes a production-grade, reproducible, and extensible experiment design environment with deterministic hashing, plugin-aware action provenance, structured validation, export integrity, and a modular, performance-conscious UI framework. Implementation should now proceed directly against this spec; deviations require documentation updates and justification.
 
---- 
+---
 End of specification.

@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { useActiveStudy } from "~/hooks/useActiveStudy";
+import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 
 export type Experiment = {
@@ -37,28 +37,26 @@ export type Experiment = {
   createdByName: string;
   trialCount: number;
   stepCount: number;
+  actionCount: number;
+  latestActivityAt: Date | null;
 };
 
 const statusConfig = {
   draft: {
     label: "Draft",
     className: "bg-gray-100 text-gray-800",
-    icon: "📝",
   },
   testing: {
     label: "Testing",
     className: "bg-yellow-100 text-yellow-800",
-    icon: "🧪",
   },
   ready: {
     label: "Ready",
     className: "bg-green-100 text-green-800",
-    icon: "✅",
   },
   deprecated: {
     label: "Deprecated",
     className: "bg-red-100 text-red-800",
-    icon: "🚫",
   },
 };
 
@@ -120,24 +118,7 @@ export const columns: ColumnDef<Experiment>[] = [
       );
     },
   },
-  {
-    accessorKey: "studyName",
-    header: "Study",
-    cell: ({ row }) => {
-      const studyName = row.getValue("studyName");
-      const studyId = row.original.studyId;
-      return (
-        <div className="max-w-[120px] truncate">
-          <Link
-            href={`/studies/${studyId}`}
-            className="text-blue-600 hover:underline"
-          >
-            {String(studyName)}
-          </Link>
-        </div>
-      );
-    },
-  },
+  // Study column removed (active study context already selected)
   {
     accessorKey: "status",
     header: "Status",
@@ -153,12 +134,7 @@ export const columns: ColumnDef<Experiment>[] = [
         );
       }
 
-      return (
-        <Badge className={statusInfo.className}>
-          <span className="mr-1">{statusInfo.icon}</span>
-          {statusInfo.label}
-        </Badge>
-      );
+      return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
     },
   },
   {
@@ -182,6 +158,18 @@ export const columns: ColumnDef<Experiment>[] = [
     },
   },
   {
+    accessorKey: "actionCount",
+    header: "Actions",
+    cell: ({ row }) => {
+      const actionCount = row.getValue("actionCount");
+      return (
+        <Badge className="bg-indigo-100 text-indigo-800">
+          {Number(actionCount)} action{Number(actionCount) !== 1 ? "s" : ""}
+        </Badge>
+      );
+    },
+  },
+  {
     accessorKey: "trialCount",
     header: "Trials",
     cell: ({ row }) => {
@@ -197,6 +185,23 @@ export const columns: ColumnDef<Experiment>[] = [
         <Badge className="bg-blue-100 text-blue-800">
           {Number(trialCount)} trial{Number(trialCount) !== 1 ? "s" : ""}
         </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "latestActivityAt",
+    header: "Last Activity",
+    cell: ({ row }) => {
+      const ts = row.getValue("latestActivityAt");
+      if (!ts) {
+        return <span className="text-muted-foreground text-sm">—</span>;
+      }
+      return (
+        <span className="text-sm">
+          {formatDistanceToNow(new Date(ts as string | number | Date), {
+            addSuffix: true,
+          })}
+        </span>
       );
     },
   },
@@ -288,7 +293,7 @@ export const columns: ColumnDef<Experiment>[] = [
 ];
 
 export function ExperimentsTable() {
-  const { activeStudy } = useActiveStudy();
+  const { selectedStudyId } = useStudyContext();
 
   const {
     data: experimentsData,
@@ -297,11 +302,11 @@ export function ExperimentsTable() {
     refetch,
   } = api.experiments.list.useQuery(
     {
-      studyId: activeStudy?.id ?? "",
+      studyId: selectedStudyId ?? "",
     },
     {
       refetchOnWindowFocus: false,
-      enabled: !!activeStudy?.id,
+      enabled: !!selectedStudyId,
     },
   );
 
@@ -320,28 +325,40 @@ export function ExperimentsTable() {
       createdBy?: { name?: string | null; email?: string | null } | null;
       trialCount?: number | null;
       stepCount?: number | null;
+      actionCount?: number | null;
+      latestActivityAt?: string | Date | null;
     }
 
-    const adapt = (exp: RawExperiment): Experiment => ({
-      id: exp.id,
-      name: exp.name,
-      description: exp.description ?? "",
-      status: exp.status,
-      version: exp.version,
-      estimatedDuration: exp.estimatedDuration ?? 0,
-      createdAt:
-        exp.createdAt instanceof Date ? exp.createdAt : new Date(exp.createdAt),
-      studyId: exp.studyId,
-      studyName: activeStudy?.title ?? "Unknown Study",
-      createdByName: exp.createdBy?.name ?? exp.createdBy?.email ?? "Unknown",
-      trialCount: exp.trialCount ?? 0,
-      stepCount: exp.stepCount ?? 0,
-    });
+    const adapt = (exp: RawExperiment): Experiment => {
+      const createdAt =
+        exp.createdAt instanceof Date ? exp.createdAt : new Date(exp.createdAt);
+      const latestActivityAt = exp.latestActivityAt
+        ? exp.latestActivityAt instanceof Date
+          ? exp.latestActivityAt
+          : new Date(exp.latestActivityAt)
+        : null;
+      return {
+        id: exp.id,
+        name: exp.name,
+        description: exp.description ?? "",
+        status: exp.status,
+        version: exp.version,
+        estimatedDuration: exp.estimatedDuration ?? 0,
+        createdAt,
+        studyId: exp.studyId,
+        studyName: "Active Study",
+        createdByName: exp.createdBy?.name ?? exp.createdBy?.email ?? "Unknown",
+        trialCount: exp.trialCount ?? 0,
+        stepCount: exp.stepCount ?? 0,
+        actionCount: exp.actionCount ?? 0,
+        latestActivityAt,
+      };
+    };
 
     return experimentsData.map((e) => adapt(e as unknown as RawExperiment));
-  }, [experimentsData, activeStudy]);
+  }, [experimentsData]);
 
-  if (!activeStudy) {
+  if (!selectedStudyId) {
     return (
       <Card>
         <CardContent className="pt-6">

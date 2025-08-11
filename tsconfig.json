@@ -30,13 +30,15 @@
       "~/*": ["./src/*"]
     }
   },
+
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "src/components/experiments/designer/state/**/*.ts"
   ],
   "exclude": ["node_modules", "robot-plugins"]
 }

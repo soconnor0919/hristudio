@@ -22,6 +22,8 @@ import {
   trials,
   trialStatusEnum,
   wizardInterventions,
+  mediaCaptures,
+  users,
 } from "~/server/db/schema";
 
 // Helper function to check if user has access to trial
@@ -113,6 +115,8 @@ export const trialsRouter = createTRPCRouter({
           participantId: trials.participantId,
           experimentId: trials.experimentId,
           status: trials.status,
+          sessionNumber: trials.sessionNumber,
+          scheduledAt: trials.scheduledAt,
           startedAt: trials.startedAt,
           completedAt: trials.completedAt,
           duration: trials.duration,
@@ -128,11 +132,17 @@ export const trialsRouter = createTRPCRouter({
             id: participants.id,
             participantCode: participants.participantCode,
           },
+          wizard: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          },
           userRole: studyMembers.role,
         })
         .from(trials)
         .innerJoin(experiments, eq(trials.experimentId, experiments.id))
         .innerJoin(participants, eq(trials.participantId, participants.id))
+        .leftJoin(users, eq(users.id, trials.wizardId))
         .innerJoin(studyMembers, eq(studyMembers.studyId, experiments.studyId))
         .where(and(eq(studyMembers.userId, userId), ...conditions))
         .orderBy(desc(trials.createdAt))
@@ -141,9 +151,52 @@ export const trialsRouter = createTRPCRouter({
 
       const results = await query;
 
-      // Add permission flags for each trial
+      // Aggregate event & media counts (batched)
+      const trialIds = results.map((r) => r.id);
+      const eventCountMap = new Map<string, number>();
+      const mediaCountMap = new Map<string, number>();
+      const latestEventAtMap = new Map<string, Date>();
+      // Hoisted map for latest event timestamps so it is in scope after aggregation block
+      // (removed redeclaration of latestEventAtMap; now hoisted above)
+
+      if (trialIds.length > 0) {
+        const eventCounts = await db
+          .select({
+            trialId: trialEvents.trialId,
+            count: count(),
+            latest: sql`max(${trialEvents.timestamp})`.as("latest"),
+          })
+          .from(trialEvents)
+          .where(inArray(trialEvents.trialId, trialIds))
+          .groupBy(trialEvents.trialId);
+
+        eventCounts.forEach((ec) => {
+          eventCountMap.set(ec.trialId, Number(ec.count) || 0);
+          if (ec.latest) {
+            latestEventAtMap.set(ec.trialId, ec.latest as Date);
+          }
+        });
+
+        const mediaCounts = await db
+          .select({
+            trialId: mediaCaptures.trialId,
+            count: count(),
+          })
+          .from(mediaCaptures)
+          .where(inArray(mediaCaptures.trialId, trialIds))
+          .groupBy(mediaCaptures.trialId);
+
+        mediaCounts.forEach((mc) => {
+          mediaCountMap.set(mc.trialId, Number(mc.count) || 0);
+        });
+      }
+
+      // Add permission flags & counts
       return results.map((trial) => ({
         ...trial,
+        eventCount: eventCountMap.get(trial.id) ?? 0,
+        mediaCount: mediaCountMap.get(trial.id) ?? 0,
+        latestEventAt: latestEventAtMap.get(trial.id) ?? null,
         canAccess: ["owner", "researcher", "wizard"].includes(trial.userRole),
       }));
     }),

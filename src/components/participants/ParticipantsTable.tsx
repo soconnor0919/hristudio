@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { useActiveStudy } from "~/hooks/useActiveStudy";
+import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 
 export type Participant = {
@@ -220,7 +220,7 @@ interface ParticipantsTableProps {
 }
 
 export function ParticipantsTable({ studyId }: ParticipantsTableProps = {}) {
-  const { activeStudy } = useActiveStudy();
+  const { selectedStudyId } = useStudyContext();
 
   const {
     data: participantsData,
@@ -229,20 +229,20 @@ export function ParticipantsTable({ studyId }: ParticipantsTableProps = {}) {
     refetch,
   } = api.participants.list.useQuery(
     {
-      studyId: studyId ?? activeStudy?.id ?? "",
+      studyId: studyId ?? selectedStudyId ?? "",
     },
     {
       refetchOnWindowFocus: false,
-      enabled: !!(studyId ?? activeStudy?.id),
+      enabled: !!(studyId ?? selectedStudyId),
     },
   );
 
   // Refetch when active study changes
   useEffect(() => {
-    if (activeStudy?.id || studyId) {
+    if (selectedStudyId || studyId) {
       void refetch();
     }
-  }, [activeStudy?.id, studyId, refetch]);
+  }, [selectedStudyId, studyId, refetch]);
 
   const data: Participant[] = React.useMemo(() => {
     if (!participantsData?.participants) return [];
@@ -263,7 +263,7 @@ export function ParticipantsTable({ studyId }: ParticipantsTableProps = {}) {
     );
   }, [participantsData]);
 
-  if (!studyId && !activeStudy) {
+  if (!studyId && !selectedStudyId) {
     return (
       <Card>
         <CardContent className="pt-6">

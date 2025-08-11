@@ -430,37 +430,99 @@ export function AppSidebar({
         )}
       </SidebarContent>
 
-      {/* Debug Info */}
-      {showDebug && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Debug Info</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="text-muted-foreground space-y-1 px-3 py-2 text-xs">
-              <div>Session: {session?.user?.email ?? "No session"}</div>
-              <div>Role: {userRole ?? "No role"}</div>
-              <div>Studies: {userStudies.length}</div>
-              <div>Selected: {selectedStudy?.name ?? "None"}</div>
-              <div>Auth: {session ? "✓" : "✗"}</div>
-              {debugData && (
-                <>
-                  <div>DB User: {debugData.user?.email ?? "None"}</div>
-                  <div>
-                    System Roles: {debugData.systemRoles.join(", ") || "None"}
-                  </div>
-                  <div>Memberships: {debugData.studyMemberships.length}</div>
-                  <div>All Studies: {debugData.allStudies.length}</div>
-                  <div>
-                    Session ID: {debugData.session.userId.slice(0, 8)}...
-                  </div>
-                </>
-              )}
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
+      {/* Debug info moved to footer tooltip button */}
 
       <SidebarFooter>
         <SidebarMenu>
+          {showDebug && (
+            <SidebarMenuItem>
+              {isCollapsed ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-xs"
+                        aria-label="Debug info"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="space-y-1 p-2 text-[10px]"
+                    >
+                      <div>Session: {session?.user?.email ?? "No session"}</div>
+                      <div>Role: {userRole ?? "No role"}</div>
+                      <div>Studies: {userStudies.length}</div>
+                      <div>Selected: {selectedStudy?.name ?? "None"}</div>
+                      <div>Auth: {session ? "✓" : "✗"}</div>
+                      {debugData && (
+                        <>
+                          <div>DB User: {debugData.user?.email ?? "None"}</div>
+                          <div>
+                            System Roles:{" "}
+                            {debugData.systemRoles.join(", ") || "None"}
+                          </div>
+                          <div>
+                            Memberships: {debugData.studyMemberships.length}
+                          </div>
+                          <div>All Studies: {debugData.allStudies.length}</div>
+                          <div>
+                            Session ID: {debugData.session.userId.slice(0, 8)}
+                            ...
+                          </div>
+                        </>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton className="w-full justify-start">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="truncate">Debug</span>
+                      <ChevronDown className="ml-auto h-4 w-4 flex-shrink-0" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-[--radix-popper-anchor-width] max-w-72"
+                    align="start"
+                  >
+                    <DropdownMenuLabel className="text-xs font-medium">
+                      Debug Info
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div className="space-y-1 px-2 py-1 text-[11px] leading-tight">
+                      <div>Session: {session?.user?.email ?? "No session"}</div>
+                      <div>Role: {userRole ?? "No role"}</div>
+                      <div>Studies: {userStudies.length}</div>
+                      <div>Selected: {selectedStudy?.name ?? "None"}</div>
+                      <div>Auth: {session ? "✓" : "✗"}</div>
+                      {debugData && (
+                        <>
+                          <div>DB User: {debugData.user?.email ?? "None"}</div>
+                          <div>
+                            System Roles:{" "}
+                            {debugData.systemRoles.join(", ") || "None"}
+                          </div>
+                          <div>
+                            Memberships: {debugData.studyMemberships.length}
+                          </div>
+                          <div>All Studies: {debugData.allStudies.length}</div>
+                          <div>
+                            Session ID: {debugData.session.userId.slice(0, 8)}
+                            ...
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             {isCollapsed ? (
               <TooltipProvider>

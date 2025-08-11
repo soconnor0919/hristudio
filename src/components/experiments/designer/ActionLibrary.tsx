@@ -5,7 +5,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
-import { actionRegistry } from "./ActionRegistry";
+import { useActionRegistry } from "./ActionRegistry";
 import type { ActionDefinition } from "~/lib/experiment-designer/types";
 import {
   Plus,
@@ -119,7 +119,7 @@ function DraggableAction({ action }: DraggableActionProps) {
       {showTooltip && (
         <div className="bg-popover absolute top-0 left-full z-50 ml-2 max-w-xs rounded-md border p-2 text-xs shadow-md">
           <div className="font-medium">{action.name}</div>
-            <div className="text-muted-foreground">{action.description}</div>
+          <div className="text-muted-foreground">{action.description}</div>
           <div className="mt-1 text-xs opacity-75">
             Category: {action.category} • ID: {action.id}
           </div>
@@ -139,7 +139,7 @@ export interface ActionLibraryProps {
 }
 
 export function ActionLibrary({ className }: ActionLibraryProps) {
-  const registry = actionRegistry;
+  const registry = useActionRegistry();
   const [activeCategory, setActiveCategory] =
     useState<ActionDefinition["category"]>("wizard");
 
@@ -216,7 +216,9 @@ export function ActionLibrary({ className }: ActionLibraryProps) {
           ) : (
             registry
               .getActionsByCategory(activeCategory)
-              .map((action) => <DraggableAction key={action.id} action={action} />)
+              .map((action) => (
+                <DraggableAction key={action.id} action={action} />
+              ))
           )}
         </div>
       </ScrollArea>
@@ -229,6 +231,18 @@ export function ActionLibrary({ className }: ActionLibraryProps) {
           <Badge variant="outline" className="text-[10px]">
             {registry.getActionsByCategory(activeCategory).length} in view
           </Badge>
+        </div>
+        {/* Debug info */}
+        <div className="text-muted-foreground mt-1 text-[9px]">
+          W:{registry.getActionsByCategory("wizard").length} R:
+          {registry.getActionsByCategory("robot").length} C:
+          {registry.getActionsByCategory("control").length} O:
+          {registry.getActionsByCategory("observation").length}
+        </div>
+        <div className="text-muted-foreground text-[9px]">
+          Core loaded: {registry.getDebugInfo().coreActionsLoaded ? "✓" : "✗"}
+          Plugins loaded:{" "}
+          {registry.getDebugInfo().pluginActionsLoaded ? "✓" : "✗"}
         </div>
       </div>
     </div>

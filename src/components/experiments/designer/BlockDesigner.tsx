@@ -1,6 +1,13 @@
 "use client";
 
 /**
+ * @deprecated
+ * BlockDesigner is being phased out in favor of DesignerShell (see DesignerShell.tsx).
+ * TODO: Remove this file after full migration of add/update/delete handlers, hashing,
+ * validation, drift detection, and export logic to the new architecture.
+ */
+
+/**
  * BlockDesigner (Modular Refactor)
  *
  * Responsibilities:

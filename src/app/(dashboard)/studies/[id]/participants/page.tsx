@@ -4,19 +4,21 @@ import { useParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { ParticipantsTable } from "~/components/participants/ParticipantsTable";
 import { ManagementPageLayout } from "~/components/ui/page-layout";
-import { useActiveStudy } from "~/hooks/useActiveStudy";
+import { useStudyContext } from "~/lib/study-context";
+import { useSelectedStudyDetails } from "~/hooks/useSelectedStudyDetails";
 
 export default function StudyParticipantsPage() {
   const params = useParams();
   const studyId: string = typeof params.id === "string" ? params.id : "";
-  const { setActiveStudy, activeStudy } = useActiveStudy();
+  const { setSelectedStudyId, selectedStudyId } = useStudyContext();
+  const { study } = useSelectedStudyDetails();
 
-  // Set the active study if it doesn't match the current route
+  // Sync selected study (unified study-context)
   useEffect(() => {
-    if (studyId && activeStudy?.id !== studyId) {
-      setActiveStudy(studyId);
+    if (studyId && selectedStudyId !== studyId) {
+      setSelectedStudyId(studyId);
     }
-  }, [studyId, activeStudy?.id, setActiveStudy]);
+  }, [studyId, selectedStudyId, setSelectedStudyId]);
 
   return (
     <ManagementPageLayout
@@ -25,7 +27,7 @@ export default function StudyParticipantsPage() {
       breadcrumb={[
         { label: "Dashboard", href: "/dashboard" },
         { label: "Studies", href: "/studies" },
-        { label: activeStudy?.title ?? "Study", href: `/studies/${studyId}` },
+        { label: study?.name ?? "Study", href: `/studies/${studyId}` },
         { label: "Participants" },
       ]}
       createButton={{

@@ -15,14 +15,14 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { useActiveStudy } from "~/hooks/useActiveStudy";
+import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 
 export type Trial = {
@@ -44,6 +44,7 @@ export type Trial = {
   wizardId: string | null;
   eventCount: number;
   mediaCount: number;
+  latestEventAt: Date | null;
 };
 
 const statusConfig = {
@@ -178,11 +179,11 @@ export const columns: ColumnDef<Trial>[] = [
               href={`/participants/${participantId}`}
               className="font-mono text-sm hover:underline"
             >
-              {String(participantCode) || "Unknown"}
+              {(participantCode ?? "Unknown") as string}
             </Link>
           ) : (
             <span className="font-mono text-sm">
-              {String(participantCode) || "Unknown"}
+              {(participantCode ?? "Unknown") as string}
             </span>
           )}
           {participantName && (
@@ -210,7 +211,7 @@ export const columns: ColumnDef<Trial>[] = [
 
       return (
         <div className="max-w-[150px] truncate text-sm">
-          {String(wizardName)}
+          {wizardName as string}
         </div>
       );
     },
@@ -279,7 +280,10 @@ export const columns: ColumnDef<Trial>[] = [
       }
 
       if (scheduledAt) {
-        const scheduleDate = scheduledAt ? new Date(scheduledAt as string | number | Date) : null;
+        const scheduleDate =
+          scheduledAt != null
+            ? new Date(scheduledAt as string | number | Date)
+            : null;
         const isUpcoming = scheduleDate && scheduleDate > new Date();
         return (
           <div className="text-sm">
@@ -302,21 +306,31 @@ export const columns: ColumnDef<Trial>[] = [
     accessorKey: "eventCount",
     header: "Data",
     cell: ({ row }) => {
-      const eventCount = row.getValue("eventCount") || 0;
-      const mediaCount = row.original?.mediaCount || 0;
+      const eventCount = row.getValue("eventCount") ?? 0;
+      const mediaCount = row.original?.mediaCount ?? 0;
+      const latestEventAt = row.original?.latestEventAt
+        ? new Date(row.original.latestEventAt)
+        : null;
 
       return (
         <div className="text-sm">
-          <div>
-            <Badge className="mr-1 bg-purple-100 text-purple-800">
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge className="bg-purple-100 text-purple-800">
               {Number(eventCount)} events
             </Badge>
-          </div>
-          {mediaCount > 0 && (
-            <div className="mt-1">
+            {mediaCount > 0 && (
               <Badge className="bg-orange-100 text-orange-800">
                 {mediaCount} media
               </Badge>
+            )}
+          </div>
+          {latestEventAt && (
+            <div className="text-muted-foreground mt-1 text-[11px]">
+              Last evt:{" "}
+              {latestEventAt.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </div>
           )}
         </div>
@@ -343,7 +357,9 @@ export const columns: ColumnDef<Trial>[] = [
 
       return (
         <div className="text-muted-foreground text-sm">
-          {formatDistanceToNow(new Date(date as string | number | Date), { addSuffix: true })}
+          {formatDistanceToNow(new Date(date as string | number | Date), {
+            addSuffix: true,
+          })}
         </div>
       );
     },
@@ -415,8 +431,8 @@ interface TrialsTableProps {
 }
 
 export function TrialsTable({ studyId }: TrialsTableProps = {}) {
-  const { activeStudy } = useActiveStudy();
-  const [statusFilter, setStatusFilter] = React.useState("all");
+  const { selectedStudyId } = useStudyContext();
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
   const {
     data: trialsData,
@@ -425,75 +441,82 @@ export function TrialsTable({ studyId }: TrialsTableProps = {}) {
     refetch,
   } = api.trials.list.useQuery(
     {
-      studyId: studyId ?? activeStudy?.id,
+      studyId: studyId ?? selectedStudyId ?? "",
       limit: 50,
     },
     {
       refetchOnWindowFocus: false,
-      enabled: !!(studyId ?? activeStudy?.id),
+      enabled: !!(studyId ?? selectedStudyId),
     },
   );
 
   // Refetch when active study changes
   useEffect(() => {
-    if (activeStudy?.id || studyId) {
-      refetch();
+    if (selectedStudyId || studyId) {
+      void refetch();
     }
-  }, [activeStudy?.id, studyId, refetch]);
+  }, [selectedStudyId, studyId, refetch]);
 
+  // Adapt trials.list payload (no wizard, counts, sessionNumber, scheduledAt in list response)
   const data: Trial[] = React.useMemo(() => {
-    if (!trialsData || !Array.isArray(trialsData)) return [];
+    if (!Array.isArray(trialsData)) return [];
 
-    return trialsData
-      .map((trial: any) => {
-        if (!trial || typeof trial !== "object") {
-          return {
-            id: "",
-            sessionNumber: 0,
-            status: "scheduled" as const,
-            scheduledAt: null,
-            startedAt: null,
-            completedAt: null,
-            createdAt: new Date(),
-            experimentName: "Invalid Trial",
-            experimentId: "",
-            studyName: "Unknown Study",
-            studyId: "",
-            participantCode: null,
-            participantName: null,
-            participantId: null,
-            wizardName: null,
-            wizardId: null,
-            eventCount: 0,
-            mediaCount: 0,
-          };
-        }
+    interface ListTrial {
+      id: string;
+      participantId: string | null;
+      experimentId: string;
+      status: Trial["status"];
+      sessionNumber: number | null;
+      scheduledAt: Date | null;
+      startedAt: Date | null;
+      completedAt: Date | null;
+      duration: number | null;
+      notes: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      experiment: { id: string; name: string; studyId: string };
+      participant?: { id: string; participantCode: string } | null;
+      wizard?: {
+        id: string | null;
+        name: string | null;
+        email: string | null;
+      } | null;
+      eventCount?: number;
+      mediaCount?: number;
+      latestEventAt?: Date | null;
+      userRole: string;
+      canAccess: boolean;
+    }
 
-        return {
-          id: trial.id || "",
-          sessionNumber: trial.sessionNumber || 0,
-          status: trial.status || "scheduled",
-          scheduledAt: trial.scheduledAt || null,
-          startedAt: trial.startedAt || null,
-          completedAt: trial.completedAt || null,
-          createdAt: trial.createdAt || new Date(),
-          experimentName: trial.experiment?.name || "Unknown Experiment",
-          experimentId: trial.experiment?.id || "",
-          studyName: trial.experiment?.study?.name || "Unknown Study",
-          studyId: trial.experiment?.study?.id || "",
-          participantCode: trial.participant?.participantCode || null,
-          participantName: trial.participant?.name || null,
-          participantId: trial.participant?.id || null,
-          wizardName: trial.wizard?.name || null,
-          wizardId: trial.wizard?.id || null,
-          eventCount: trial._count?.events || 0,
-          mediaCount: trial._count?.mediaCaptures || 0,
-        };
-      })
-      .filter((trial) => trial.id); // Filter out any trials without valid IDs
-  }, [trialsData]);
+    const mapped = (trialsData as ListTrial[]).map((t) => ({
+      id: t.id,
+      sessionNumber: t.sessionNumber ?? 0,
+      status: t.status,
+      scheduledAt: t.scheduledAt ?? null,
+      startedAt: t.startedAt ?? null,
+      completedAt: t.completedAt ?? null,
+      createdAt: t.createdAt,
+      experimentName: t.experiment.name,
+      experimentId: t.experiment.id,
+      studyName: "Active Study",
+      studyId: t.experiment.studyId,
+      participantCode: t.participant?.participantCode ?? null,
+      participantName: null,
+      participantId: t.participant?.id ?? null,
+      wizardName: t.wizard?.name ?? null,
+      wizardId: t.wizard?.id ?? null,
+      eventCount: t.eventCount ?? 0,
+      mediaCount: t.mediaCount ?? 0,
+      latestEventAt: t.latestEventAt ?? null,
+    }));
+    // Apply status filter (if not "all")
+    if (statusFilter !== "all") {
+      return mapped.filter((t) => t.status === statusFilter);
+    }
+    return mapped;
+  }, [trialsData, statusFilter]);
 
-  if (!studyId && !activeStudy) {
+  if (!selectedStudyId && !studyId) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -551,8 +574,8 @@ export function TrialsTable({ studyId }: TrialsTableProps = {}) {
         <DropdownMenuItem onClick={() => setStatusFilter("completed")}>
           Completed
         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setStatusFilter("aborted")}>
-                  Aborted
+        <DropdownMenuItem onClick={() => setStatusFilter("aborted")}>
+          Aborted
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setStatusFilter("failed")}>
           Failed

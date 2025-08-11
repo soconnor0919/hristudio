@@ -18,14 +18,24 @@ const StudyContext = createContext<StudyContextType | undefined>(undefined);
 
 const STUDY_STORAGE_KEY = "hristudio-selected-study";
 
-export function StudyProvider({ children }: { children: ReactNode }) {
+export function StudyProvider({
+  children,
+  initialStudyId,
+}: {
+  children: ReactNode;
+  initialStudyId?: string | null;
+}) {
   const [selectedStudyId, setSelectedStudyIdState] = useState<string | null>(
-    null,
+    initialStudyId ?? null,
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (only if no server-provided initial ID)
   useEffect(() => {
+    if (initialStudyId) {
+      setIsLoading(false);
+      return;
+    }
     try {
       const stored = localStorage.getItem(STUDY_STORAGE_KEY);
       if (stored && stored !== "null") {
@@ -36,19 +46,23 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [initialStudyId]);
 
-  // Persist to localStorage when changed
-  const setSelectedStudyId = (studyId: string | null) => {
+  // Persist to localStorage & cookie when changed
+  const setSelectedStudyId = (studyId: string | null): void => {
     setSelectedStudyIdState(studyId);
     try {
       if (studyId) {
         localStorage.setItem(STUDY_STORAGE_KEY, studyId);
+        // 30 days
+        document.cookie = `hristudio_selected_study=${studyId}; Path=/; Max-Age=2592000; SameSite=Lax`;
       } else {
         localStorage.removeItem(STUDY_STORAGE_KEY);
+        document.cookie =
+          "hristudio_selected_study=; Path=/; Max-Age=0; SameSite=Lax";
       }
     } catch (error) {
-      console.warn("Failed to save study selection to localStorage:", error);
+      console.warn("Failed to persist study selection:", error);
     }
   };
 

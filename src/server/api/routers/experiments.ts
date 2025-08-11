@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -12,6 +12,7 @@ import {
   experimentStatusEnum,
   robots,
   steps,
+  trials,
   stepTypeEnum,
   studyMembers,
   userSystemRoles,
@@ -124,11 +125,64 @@ export const experimentsRouter = createTRPCRouter({
         orderBy: [desc(experiments.updatedAt)],
       });
 
-      return experimentsList.map((exp) => ({
-        ...exp,
-        stepCount: exp.steps.length,
-        trialCount: exp.trials.length,
-      }));
+      // Aggregate action counts & latest trial activity (single pass merges)
+      const experimentIds = experimentsList.map((e) => e.id);
+
+      const actionCountMap = new Map<string, number>();
+      const latestTrialActivityMap = new Map<string, Date>();
+
+      if (experimentIds.length > 0) {
+        // Action counts (join actions -> steps -> experiments)
+        const actionCounts = await ctx.db
+          .select({
+            experimentId: steps.experimentId,
+            count: count(),
+          })
+          .from(actions)
+          .innerJoin(steps, eq(actions.stepId, steps.id))
+          .where(inArray(steps.experimentId, experimentIds))
+          .groupBy(steps.experimentId);
+
+        actionCounts.forEach((row) =>
+          actionCountMap.set(row.experimentId, Number(row.count) || 0),
+        );
+
+        // Latest trial activity (max of trial started/completed/created timestamps)
+        const trialActivity = await ctx.db
+          .select({
+            experimentId: trials.experimentId,
+            latest: sql`max(GREATEST(
+              COALESCE(${trials.completedAt}, 'epoch'::timestamptz),
+              COALESCE(${trials.startedAt}, 'epoch'::timestamptz),
+              COALESCE(${trials.createdAt}, 'epoch'::timestamptz)
+            ))`.as("latest"),
+          })
+          .from(trials)
+          .where(inArray(trials.experimentId, experimentIds))
+          .groupBy(trials.experimentId);
+
+        trialActivity.forEach((row) => {
+          if (row.latest) {
+            latestTrialActivityMap.set(row.experimentId, row.latest as Date);
+          }
+        });
+      }
+
+      return experimentsList.map((exp) => {
+        const trialLatest = latestTrialActivityMap.get(exp.id);
+        const latestActivityAt =
+          trialLatest && trialLatest > exp.updatedAt
+            ? trialLatest
+            : exp.updatedAt;
+
+        return {
+          ...exp,
+          stepCount: exp.steps.length,
+          trialCount: exp.trials.length,
+          actionCount: actionCountMap.get(exp.id) ?? 0,
+          latestActivityAt,
+        };
+      });
     }),
 
   getUserExperiments: protectedProcedure

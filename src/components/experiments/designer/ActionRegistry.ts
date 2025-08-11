@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { ActionDefinition } from "~/lib/experiment-designer/types";
 
 /**
@@ -27,12 +28,24 @@ export class ActionRegistry {
   private coreActionsLoaded = false;
   private pluginActionsLoaded = false;
   private loadedStudyId: string | null = null;
+  private listeners = new Set<() => void>();
 
   static getInstance(): ActionRegistry {
     if (!ActionRegistry.instance) {
       ActionRegistry.instance = new ActionRegistry();
     }
     return ActionRegistry.instance;
+  }
+
+  /* ---------------- Reactivity ---------------- */
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach((listener) => listener());
   }
 
   /* ---------------- Core Actions ---------------- */
@@ -67,21 +80,26 @@ export class ActionRegistry {
     }
 
     try {
-      const coreActionSets = ["wizard-actions", "control-flow", "observation"];
+      const coreActionSets = [
+        "wizard-actions",
+        "control-flow",
+        "observation",
+        "events",
+      ];
 
       for (const actionSetId of coreActionSets) {
         try {
           const response = await fetch(
             `/hristudio-core/plugins/${actionSetId}.json`,
           );
-            // Non-blocking skip if not found
+          // Non-blocking skip if not found
           if (!response.ok) continue;
 
           const rawActionSet = (await response.json()) as unknown;
           const actionSet = rawActionSet as { blocks?: CoreBlock[] };
           if (!actionSet.blocks || !Array.isArray(actionSet.blocks)) continue;
 
-            // Register each block as an ActionDefinition
+          // Register each block as an ActionDefinition
           actionSet.blocks.forEach((block) => {
             if (!block.id || !block.name) return;
 
@@ -131,6 +149,7 @@ export class ActionRegistry {
       }
 
       this.coreActionsLoaded = true;
+      this.notifyListeners();
     } catch (error) {
       console.error("Failed to load core actions:", error);
       this.loadFallbackActions();
@@ -142,8 +161,9 @@ export class ActionRegistry {
   ): ActionDefinition["category"] {
     switch (category) {
       case "wizard":
-      case "event":
         return "wizard";
+      case "event":
+        return "wizard"; // Events are wizard-initiated triggers
       case "robot":
         return "robot";
       case "control":
@@ -252,6 +272,7 @@ export class ActionRegistry {
     ];
 
     fallbackActions.forEach((action) => this.actions.set(action.id, action));
+    this.notifyListeners();
   }
 
   /* ---------------- Plugin Actions ---------------- */
@@ -294,22 +315,52 @@ export class ActionRegistry {
       };
     }>,
   ): void {
+    console.log("ActionRegistry.loadPluginActions called with:", {
+      studyId,
+      pluginCount: studyPlugins?.length ?? 0,
+      plugins: studyPlugins?.map((sp) => ({
+        id: sp.plugin.id,
+        actionCount: Array.isArray(sp.plugin.actionDefinitions)
+          ? sp.plugin.actionDefinitions.length
+          : 0,
+        hasActionDefs: !!sp.plugin.actionDefinitions,
+      })),
+    });
+
     if (this.pluginActionsLoaded && this.loadedStudyId === studyId) return;
 
     if (this.loadedStudyId !== studyId) {
       this.resetPluginActions();
     }
 
+    let totalActionsLoaded = 0;
+
     (studyPlugins ?? []).forEach((studyPlugin) => {
       const { plugin } = studyPlugin;
       const actionDefs = Array.isArray(plugin.actionDefinitions)
         ? plugin.actionDefinitions
         : undefined;
+
+      console.log(`Plugin ${plugin.id}:`, {
+        actionDefinitions: plugin.actionDefinitions,
+        isArray: Array.isArray(plugin.actionDefinitions),
+        actionCount: actionDefs?.length ?? 0,
+      });
+
       if (!actionDefs) return;
 
       actionDefs.forEach((action) => {
-        const category =
-          (action.category as ActionDefinition["category"]) || "robot";
+        const rawCategory =
+          typeof action.category === "string"
+            ? action.category.toLowerCase().trim()
+            : "";
+        const categoryMap: Record<string, ActionDefinition["category"]> = {
+          wizard: "wizard",
+          robot: "robot",
+          control: "control",
+          observation: "observation",
+        };
+        const category = categoryMap[rawCategory] ?? "robot";
 
         const execution = action.ros2
           ? {
@@ -364,11 +415,26 @@ export class ActionRegistry {
           parameterSchemaRaw: action.parameterSchema ?? undefined,
         };
         this.actions.set(actionDef.id, actionDef);
+        totalActionsLoaded++;
       });
+    });
+
+    console.log(
+      `ActionRegistry: Loaded ${totalActionsLoaded} plugin actions for study ${studyId}`,
+    );
+    console.log("Current action registry state:", {
+      totalActions: this.actions.size,
+      actionsByCategory: {
+        wizard: this.getActionsByCategory("wizard").length,
+        robot: this.getActionsByCategory("robot").length,
+        control: this.getActionsByCategory("control").length,
+        observation: this.getActionsByCategory("observation").length,
+      },
     });
 
     this.pluginActionsLoaded = true;
     this.loadedStudyId = studyId;
+    this.notifyListeners();
   }
 
   private convertParameterSchemaToParameters(
@@ -422,8 +488,23 @@ export class ActionRegistry {
     const pluginActionIds = Array.from(this.actions.keys()).filter(
       (id) =>
         !id.startsWith("wizard_") &&
+        !id.startsWith("when_") &&
         !id.startsWith("wait") &&
-        !id.startsWith("observe"),
+        !id.startsWith("observe") &&
+        !id.startsWith("repeat") &&
+        !id.startsWith("if_") &&
+        !id.startsWith("parallel") &&
+        !id.startsWith("sequence") &&
+        !id.startsWith("random_") &&
+        !id.startsWith("try_") &&
+        !id.startsWith("break") &&
+        !id.startsWith("measure_") &&
+        !id.startsWith("count_") &&
+        !id.startsWith("record_") &&
+        !id.startsWith("capture_") &&
+        !id.startsWith("log_") &&
+        !id.startsWith("survey_") &&
+        !id.startsWith("physiological_"),
     );
     pluginActionIds.forEach((id) => this.actions.delete(id));
   }
@@ -445,6 +526,46 @@ export class ActionRegistry {
   getAction(id: string): ActionDefinition | undefined {
     return this.actions.get(id);
   }
+
+  /* ---------------- Debug Helpers ---------------- */
+
+  getDebugInfo(): {
+    coreActionsLoaded: boolean;
+    pluginActionsLoaded: boolean;
+    loadedStudyId: string | null;
+    totalActions: number;
+    actionsByCategory: Record<ActionDefinition["category"], number>;
+    sampleActionIds: string[];
+  } {
+    return {
+      coreActionsLoaded: this.coreActionsLoaded,
+      pluginActionsLoaded: this.pluginActionsLoaded,
+      loadedStudyId: this.loadedStudyId,
+      totalActions: this.actions.size,
+      actionsByCategory: {
+        wizard: this.getActionsByCategory("wizard").length,
+        robot: this.getActionsByCategory("robot").length,
+        control: this.getActionsByCategory("control").length,
+        observation: this.getActionsByCategory("observation").length,
+      },
+      sampleActionIds: Array.from(this.actions.keys()).slice(0, 10),
+    };
+  }
 }
 
 export const actionRegistry = ActionRegistry.getInstance();
+
+/* ---------------- React Hook ---------------- */
+
+export function useActionRegistry(): ActionRegistry {
+  const [, forceUpdate] = useState({});
+
+  useEffect(() => {
+    const unsubscribe = actionRegistry.subscribe(() => {
+      forceUpdate({});
+    });
+    return unsubscribe;
+  }, []);
+
+  return actionRegistry;
+}
