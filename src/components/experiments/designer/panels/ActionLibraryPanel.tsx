@@ -125,8 +125,8 @@ function DraggableAction({
       {...listeners}
       style={style}
       className={cn(
-        "group relative flex cursor-grab items-center gap-2 rounded border bg-background/60 px-2 transition-colors hover:bg-accent/50",
-        compact ? "py-1 text-[11px]" : "py-2 text-xs",
+        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab flex-col items-start gap-1 rounded border px-2 transition-colors",
+        compact ? "py-2 text-[11px]" : "py-3 text-[12px]",
         isDragging && "opacity-50",
       )}
       draggable={false}
@@ -218,19 +218,16 @@ export function ActionLibraryPanel() {
     }
   }, []);
 
-  const persistFavorites = useCallback(
-    (next: Set<string>) => {
-      try {
-        localStorage.setItem(
-          FAVORITES_STORAGE_KEY,
-            JSON.stringify({ favorites: Array.from(next) }),
-        );
-      } catch {
-        /* noop */
-      }
-    },
-    [],
-  );
+  const persistFavorites = useCallback((next: Set<string>) => {
+    try {
+      localStorage.setItem(
+        FAVORITES_STORAGE_KEY,
+        JSON.stringify({ favorites: Array.from(next) }),
+      );
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   const toggleFavorite = useCallback(
     (id: string) => {
@@ -254,7 +251,12 @@ export function ActionLibraryPanel() {
   }> = [
     { key: "wizard", label: "Wizard", icon: User, color: "bg-blue-500" },
     { key: "robot", label: "Robot", icon: Bot, color: "bg-emerald-600" },
-    { key: "control", label: "Control", icon: GitBranch, color: "bg-amber-500" },
+    {
+      key: "control",
+      label: "Control",
+      icon: GitBranch,
+      color: "bg-amber-500",
+    },
     { key: "observation", label: "Observe", icon: Eye, color: "bg-purple-600" },
   ];
 
@@ -329,10 +331,10 @@ export function ActionLibraryPanel() {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="border-b bg-background/60 p-2">
+      <div className="bg-background/60 border-b p-2">
         <div className="mb-2 flex gap-2">
           <div className="relative flex-1">
-            <Search className="text-muted-foreground absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -413,20 +415,22 @@ export function ActionLibraryPanel() {
           })}
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+        <div className="text-muted-foreground mt-2 flex items-center justify-between text-[10px]">
           <div>
             {filtered.length} shown / {allActions.length} total
           </div>
           <div className="flex items-center gap-1">
             <FolderPlus className="h-3 w-3" />
-            <span>Plugins: {registry.getDebugInfo().pluginActionsLoaded ? "✓" : "…"}</span>
+            <span>
+              Plugins: {registry.getDebugInfo().pluginActionsLoaded ? "✓" : "…"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Actions List */}
       <ScrollArea className="flex-1">
-        <div className="space-y-1 p-2">
+        <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
           {filtered.length === 0 ? (
             <div className="text-muted-foreground/70 flex flex-col items-center gap-2 py-10 text-center text-xs">
               <Filter className="h-6 w-6" />
@@ -448,7 +452,7 @@ export function ActionLibraryPanel() {
       </ScrollArea>
 
       {/* Footer Summary */}
-      <div className="border-t bg-background/60 p-2">
+      <div className="bg-background/60 border-t p-2">
         <div className="flex items-center justify-between text-[10px]">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="h-4 px-1 text-[10px]">
@@ -460,7 +464,7 @@ export function ActionLibraryPanel() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
             Core: {registry.getDebugInfo().coreActionsLoaded ? "✓" : "…"}
           </div>

@@ -1,10 +1,35 @@
 import React, { useCallback, useMemo } from "react";
 import { useDesignerStore } from "../state/store";
 import { StepFlow } from "../StepFlow";
+import { useDroppable } from "@dnd-kit/core";
 import type {
   ExperimentAction,
   ExperimentStep,
 } from "~/lib/experiment-designer/types";
+
+/**
+ * Hidden droppable anchors so actions dragged from the ActionLibraryPanel
+ * can land on steps even though StepFlow is still a legacy component.
+ * This avoids having to deeply modify StepFlow during the transitional phase.
+ */
+function HiddenDroppableAnchors({ stepIds }: { stepIds: string[] }) {
+  return (
+    <>
+      {stepIds.map((id) => (
+        <SingleAnchor key={id} id={id} />
+      ))}
+    </>
+  );
+}
+
+function SingleAnchor({ id }: { id: string }) {
+  // Register a droppable area matching the StepFlow internal step id pattern
+  useDroppable({
+    id: `step-${id}`,
+  });
+  // Render nothing (zero-size element) – DnD kit only needs the registration
+  return null;
+}
 
 /**
  * FlowListView (Transitional)
@@ -34,7 +59,10 @@ export interface FlowListViewProps {
   /**
    * Optional callbacks for higher-level orchestration (e.g. autosave triggers)
    */
-  onStepMutated?: (step: ExperimentStep, kind: "create" | "update" | "delete") => void;
+  onStepMutated?: (
+    step: ExperimentStep,
+    kind: "create" | "update" | "delete",
+  ) => void;
   onActionMutated?: (
     action: ExperimentAction,
     step: ExperimentStep,
@@ -118,10 +146,12 @@ export function FlowListView({
         </div>
       </div>
       <div className="h-[calc(100%-2.5rem)]">
+        {/* Hidden droppable anchors to enable dropping actions onto steps */}
+        <HiddenDroppableAnchors stepIds={steps.map((s) => s.id)} />
         <StepFlow
           steps={steps}
-            selectedStepId={selectedStepId ?? null}
-            selectedActionId={selectedActionId ?? null}
+          selectedStepId={selectedStepId ?? null}
+          selectedActionId={selectedActionId ?? null}
           onStepSelect={(id) => selectStep(id)}
           onActionSelect={(actionId) =>
             selectedStepId && actionId

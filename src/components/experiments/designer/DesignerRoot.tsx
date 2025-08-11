@@ -10,6 +10,7 @@ import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
 import { PanelsContainer } from "./layout/PanelsContainer";
+import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
@@ -18,6 +19,7 @@ import { FlowListView } from "./flow/FlowListView";
 import {
   type ExperimentDesign,
   type ExperimentStep,
+  type ExperimentAction,
 } from "~/lib/experiment-designer/types";
 
 import { useDesignerStore } from "./state/store";
@@ -158,6 +160,7 @@ export function DesignerRoot({
   const setPersistedHash = useDesignerStore((s) => s.setPersistedHash);
   const setValidatedHash = useDesignerStore((s) => s.setValidatedHash);
   const upsertStep = useDesignerStore((s) => s.upsertStep);
+  const upsertAction = useDesignerStore((s) => s.upsertAction);
 
   /* ------------------------------- Local Meta ------------------------------ */
   const [designMeta, setDesignMeta] = useState<{
@@ -444,6 +447,66 @@ export function DesignerRoot({
   }, [keyHandler]);
 
   /* ------------------------------ Header Badges ---------------------------- */
+
+  /* ----------------------------- Drag Handlers ----------------------------- */
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over) return;
+
+      // Expect dragged action (library) onto a step droppable
+      const activeId = active.id.toString();
+      const overId = over.id.toString();
+
+      if (
+        activeId.startsWith("action-") &&
+        overId.startsWith("step-") &&
+        active.data.current?.action
+      ) {
+        const actionDef = active.data.current.action as {
+          id: string;
+          type: string;
+          name: string;
+          category: string;
+          description?: string;
+          source: { kind: string; pluginId?: string; pluginVersion?: string };
+          execution?: { transport: string; retryable?: boolean };
+          parameters: Array<{ id: string; name: string }>;
+        };
+
+        const stepId = overId.replace("step-", "");
+        const targetStep = steps.find((s) => s.id === stepId);
+        if (!targetStep) return;
+
+        const execution: ExperimentAction["execution"] =
+          actionDef.execution &&
+          (actionDef.execution.transport === "internal" ||
+            actionDef.execution.transport === "rest" ||
+            actionDef.execution.transport === "ros2")
+            ? {
+                transport: actionDef.execution.transport,
+                retryable: actionDef.execution.retryable ?? false,
+              }
+            : {
+                transport: "internal",
+                retryable: false,
+              };
+        const newAction: ExperimentAction = {
+          id: `action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          type: actionDef.type,
+          name: actionDef.name,
+          category: actionDef.category as ExperimentAction["category"],
+          parameters: {},
+          source: actionDef.source as ExperimentAction["source"],
+          execution,
+        };
+
+        upsertAction(stepId, newAction);
+        toast.success(`Added ${actionDef.name} to ${targetStep.name}`);
+      }
+    },
+    [steps, upsertAction],
+  );
   const validationBadge =
     driftStatus === "drift" ? (
       <Badge variant="destructive">Drift</Badge>
@@ -529,14 +592,19 @@ export function DesignerRoot({
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
-        <PanelsContainer
-          left={<ActionLibraryPanel />}
-          center={<FlowListView />}
-          right={<InspectorPanel />}
-          initialLeftWidth={300}
-          initialRightWidth={360}
-          className="flex-1"
-        />
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <PanelsContainer
+            left={<ActionLibraryPanel />}
+            center={<FlowListView />}
+            right={<InspectorPanel />}
+            initialLeftWidth={260}
+            initialRightWidth={360}
+            className="flex-1"
+          />
+        </DndContext>
         <BottomStatusBar
           onSave={() => persist()}
           onValidate={() => validateDesign()}

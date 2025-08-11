@@ -17,7 +17,6 @@ import {
   Settings,
   AlertTriangle,
   GitBranch,
-  ListChecks,
   PackageSearch,
 } from "lucide-react";
 
@@ -83,10 +82,7 @@ export function InspectorPanel({
   );
 
   const selectedAction: ExperimentAction | undefined = useMemo(
-    () =>
-      selectedStep?.actions.find(
-        (a) => a.id === selectedActionId,
-      ) as ExperimentAction | undefined,
+    () => selectedStep?.actions.find((a) => a.id === selectedActionId),
     [selectedStep, selectedActionId],
   );
 
@@ -112,11 +108,7 @@ export function InspectorPanel({
 
   const handleTabChange = useCallback(
     (val: string) => {
-      if (
-        val === "properties" ||
-        val === "issues" ||
-        val === "dependencies"
-      ) {
+      if (val === "properties" || val === "issues" || val === "dependencies") {
         if (activeTab) {
           onTabChange?.(val);
         } else {
@@ -131,11 +123,7 @@ export function InspectorPanel({
   /* Mutation Handlers (pass-through to store)                                */
   /* ------------------------------------------------------------------------ */
   const handleActionUpdate = useCallback(
-    (
-      stepId: string,
-      actionId: string,
-      updates: Partial<ExperimentAction>,
-    ) => {
+    (stepId: string, actionId: string, updates: Partial<ExperimentAction>) => {
       const step = steps.find((s) => s.id === stepId);
       if (!step) return;
       const action = step.actions.find((a) => a.id === actionId);
@@ -159,10 +147,7 @@ export function InspectorPanel({
   /* ------------------------------------------------------------------------ */
   const issueCount = useMemo(
     () =>
-      Object.values(validationIssues).reduce(
-        (sum, arr) => sum + arr.length,
-        0,
-      ),
+      Object.values(validationIssues).reduce((sum, arr) => sum + arr.length, 0),
     [validationIssues],
   );
 
@@ -179,7 +164,7 @@ export function InspectorPanel({
   return (
     <div
       className={cn(
-        "flex h-full flex-col border-l bg-background/40 backdrop-blur-sm",
+        "bg-background/40 flex h-full flex-col border-l backdrop-blur-sm",
         className,
       )}
     >
@@ -209,7 +194,7 @@ export function InspectorPanel({
                 Issues{issueCount > 0 ? ` (${issueCount})` : ""}
               </span>
               {issueCount > 0 && (
-                <span className="text-amber-600 dark:text-amber-400 sm:hidden">
+                <span className="text-amber-600 sm:hidden dark:text-amber-400">
                   {issueCount}
                 </span>
               )}
@@ -224,7 +209,7 @@ export function InspectorPanel({
                 Deps{driftCount > 0 ? ` (${driftCount})` : ""}
               </span>
               {driftCount > 0 && (
-                <span className="text-purple-600 dark:text-purple-400 sm:hidden">
+                <span className="text-purple-600 sm:hidden dark:text-purple-400">
                   {driftCount}
                 </span>
               )}
@@ -237,45 +222,43 @@ export function InspectorPanel({
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs value={effectiveTab}>
           {/* Properties */}
-            <TabsContent
-              value="properties"
-              className="m-0 flex h-full flex-col data-[state=inactive]:hidden"
-            >
-              {propertiesEmpty ? (
-                <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-background/70">
-                    <GitBranch className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">
-                      Select a Step or Action
-                    </p>
-                    <p className="text-xs">
-                      Click within the flow to edit its properties here.
-                    </p>
-                  </div>
+          <TabsContent
+            value="properties"
+            className="m-0 flex h-full flex-col data-[state=inactive]:hidden"
+          >
+            {propertiesEmpty ? (
+              <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+                <div className="bg-background/70 flex h-10 w-10 items-center justify-center rounded-full border">
+                  <GitBranch className="h-5 w-5" />
                 </div>
-              ) : (
-                <ScrollArea className="flex-1">
-                  <div className="p-3">
-                    <PropertiesPanel
-                      design={{
-                        id: "design",
-                        name: "Design",
-                        description: "",
-                        version: 1,
-                        steps,
-                        lastSaved: new Date(),
-                      }}
-                      selectedStep={selectedStep}
-                      selectedAction={selectedAction}
-                      onActionUpdate={handleActionUpdate}
-                      onStepUpdate={handleStepUpdate}
-                    />
-                  </div>
-                </ScrollArea>
-              )}
-            </TabsContent>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Select a Step or Action</p>
+                  <p className="text-xs">
+                    Click within the flow to edit its properties here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <PropertiesPanel
+                    design={{
+                      id: "design",
+                      name: "Design",
+                      description: "",
+                      version: 1,
+                      steps,
+                      lastSaved: new Date(),
+                    }}
+                    selectedStep={selectedStep}
+                    selectedAction={selectedAction}
+                    onActionUpdate={handleActionUpdate}
+                    onStepUpdate={handleStepUpdate}
+                  />
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
 
           {/* Issues */}
           <TabsContent
@@ -315,15 +298,13 @@ export function InspectorPanel({
                   actionDefinitions={actionRegistry.getAllActions()}
                   onReconcileAction={(actionId) => {
                     // Placeholder: future diff modal / signature update
-                    // eslint-disable-next-line no-console
+
                     console.log("Reconcile TODO for action:", actionId);
                   }}
                   onRefreshDependencies={() => {
-                    // eslint-disable-next-line no-console
                     console.log("Refresh dependencies TODO");
                   }}
                   onInstallPlugin={(pluginId) => {
-                    // eslint-disable-next-line no-console
                     console.log("Install plugin TODO:", pluginId);
                   }}
                 />
@@ -334,7 +315,7 @@ export function InspectorPanel({
       </div>
 
       {/* Footer (lightweight) */}
-      <div className="border-t px-3 py-1.5 text-[10px] text-muted-foreground">
+      <div className="text-muted-foreground border-t px-3 py-1.5 text-[10px]">
         Inspector • {selectedStep ? "Step" : selectedAction ? "Action" : "None"}{" "}
         • {issueCount} issues • {driftCount} drift
       </div>
