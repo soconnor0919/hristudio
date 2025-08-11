@@ -38,7 +38,8 @@
     "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts",
-    "src/components/experiments/designer/state/**/*.ts"
+    "src/components/experiments/designer/**/*.ts",
+    "src/components/experiments/designer/**/*.tsx"
   ],
   "exclude": ["node_modules", "robot-plugins"]
 }

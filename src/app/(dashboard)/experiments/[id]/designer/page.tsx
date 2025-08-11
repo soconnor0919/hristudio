@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DesignerShell } from "~/components/experiments/designer/DesignerShell";
+import { DesignerRoot } from "~/components/experiments/designer/DesignerRoot";
 import type { ExperimentStep } from "~/lib/experiment-designer/types";
 import { api } from "~/trpc/server";
 
@@ -44,7 +44,7 @@ export default async function ExperimentDesignerPage({
         : undefined;
 
     return (
-      <DesignerShell
+      <DesignerRoot
         experimentId={experiment.id}
         initialDesign={initialDesign}
       />
