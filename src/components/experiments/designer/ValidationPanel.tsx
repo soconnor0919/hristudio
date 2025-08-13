@@ -1,12 +1,20 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { AlertCircle, AlertTriangle, Info, Filter, X } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Filter,
+  X,
+  Search,
+  CheckCircle2,
+} from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Separator } from "~/components/ui/separator";
+import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 
 /* -------------------------------------------------------------------------- */
@@ -39,6 +47,10 @@ export interface ValidationPanelProps {
    * Called to clear all issues for an entity.
    */
   onEntityClear?: (entityId: string) => void;
+  /**
+   * Optional function to map entity IDs to human-friendly names (e.g., step/action names).
+   */
+  entityLabelForId?: (entityId: string) => string;
   className?: string;
 }
 
@@ -109,16 +121,22 @@ interface IssueItemProps {
   issue: ValidationIssue & { entityId: string; index: number };
   onIssueClick?: (issue: ValidationIssue) => void;
   onIssueClear?: (entityId: string, issueIndex: number) => void;
+  entityLabelForId?: (entityId: string) => string;
 }
 
-function IssueItem({ issue, onIssueClick, onIssueClear }: IssueItemProps) {
+function IssueItem({
+  issue,
+  onIssueClick,
+  onIssueClear,
+  entityLabelForId,
+}: IssueItemProps) {
   const config = severityConfig[issue.severity];
   const IconComponent = config.icon;
 
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 rounded-md border p-3 transition-colors",
+        "group flex w-full max-w-full min-w-0 items-start gap-2 rounded-md border p-2 break-words transition-colors",
         config.borderColor,
         config.bgColor,
         onIssueClick && "cursor-pointer hover:shadow-sm",
@@ -132,25 +150,30 @@ function IssueItem({ issue, onIssueClick, onIssueClear }: IssueItemProps) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-sm leading-relaxed">{issue.message}</p>
+            <p className="text-[12px] leading-snug break-words whitespace-normal">
+              {issue.message}
+            </p>
 
             <div className="mt-1 flex flex-wrap items-center gap-1">
-              <Badge variant={config.badgeVariant} className="h-4 text-[10px]">
+              <Badge variant={config.badgeVariant} className="text-[10px]">
                 {config.label}
               </Badge>
 
               {issue.category && (
-                <Badge variant="outline" className="h-4 text-[10px] capitalize">
+                <Badge variant="outline" className="text-[10px] capitalize">
                   {issue.category}
                 </Badge>
               )}
 
-              <Badge variant="secondary" className="h-4 text-[10px]">
-                {getEntityDisplayName(issue.entityId)}
+              <Badge
+                variant="secondary"
+                className="max-w-full text-[10px] break-words whitespace-normal"
+              >
+                {entityLabelForId?.(issue.entityId) ?? "Unknown"}
               </Badge>
 
               {issue.field && (
-                <Badge variant="outline" className="h-4 text-[10px]">
+                <Badge variant="outline" className="text-[10px]">
                   {issue.field}
                 </Badge>
               )}
@@ -185,6 +208,7 @@ export function ValidationPanel({
   onIssueClick,
   onIssueClear,
   onEntityClear: _onEntityClear,
+  entityLabelForId,
   className,
 }: ValidationPanelProps) {
   const [severityFilter, setSeverityFilter] = useState<
@@ -193,21 +217,23 @@ export function ValidationPanel({
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | "structural" | "parameter" | "semantic" | "execution"
   >("all");
+  const [search, setSearch] = useState("");
 
   // Flatten and filter issues
   const flatIssues = useMemo(() => {
     const flat = flattenIssues(issues);
-
+    const q = search.trim().toLowerCase();
     return flat.filter((issue) => {
-      if (severityFilter !== "all" && issue.severity !== severityFilter) {
+      if (severityFilter !== "all" && issue.severity !== severityFilter)
         return false;
-      }
-      if (categoryFilter !== "all" && issue.category !== categoryFilter) {
+      if (categoryFilter !== "all" && issue.category !== categoryFilter)
         return false;
-      }
-      return true;
+      if (!q) return true;
+      const hay =
+        `${issue.message} ${issue.field ?? ""} ${issue.category ?? ""} ${issue.entityId}`.toLowerCase();
+      return hay.includes(q);
     });
-  }, [issues, severityFilter, categoryFilter]);
+  }, [issues, severityFilter, categoryFilter, search]);
 
   // Count by severity
   const counts = useMemo(() => {
@@ -220,6 +246,12 @@ export function ValidationPanel({
     };
   }, [issues]);
 
+  React.useEffect(() => {
+    // Debug: surface validation state to console
+    // eslint-disable-next-line no-console
+    console.log("[ValidationPanel] issues", issues, { flatIssues, counts });
+  }, [issues, flatIssues, counts]);
+
   // Available categories
   const availableCategories = useMemo(() => {
     const flat = flattenIssues(issues);
@@ -230,160 +262,127 @@ export function ValidationPanel({
   }, [issues]);
 
   return (
-    <Card className={cn("h-[calc(100vh-12rem)]", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            Validation Issues
-          </div>
-          <div className="flex items-center gap-1">
-            {counts.error > 0 && (
-              <Badge variant="destructive" className="h-4 text-[10px]">
-                {counts.error}
-              </Badge>
-            )}
-            {counts.warning > 0 && (
-              <Badge variant="secondary" className="h-4 text-[10px]">
-                {counts.warning}
-              </Badge>
-            )}
-            {counts.info > 0 && (
-              <Badge variant="outline" className="h-4 text-[10px]">
-                {counts.info}
-              </Badge>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
+    <div
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
+        className,
+      )}
+    >
+      {/* Header (emulate ActionLibraryPanel) */}
+      <div className="bg-background/60 border-b p-2">
+        <div className="relative mb-2">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search issues"
+            className="h-8 w-full pl-7 text-xs"
+            aria-label="Search issues"
+          />
+        </div>
 
-      <CardContent className="p-0">
-        {/* Filters */}
-        {counts.total > 0 && (
-          <>
-            <div className="border-b p-3">
-              <div className="flex flex-wrap gap-2">
-                {/* Severity Filter */}
-                <div className="flex items-center gap-1">
-                  <Filter className="text-muted-foreground h-3 w-3" />
-                  <Button
-                    variant={severityFilter === "all" ? "default" : "ghost"}
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setSeverityFilter("all")}
-                  >
-                    All ({counts.total})
-                  </Button>
-                  {counts.error > 0 && (
-                    <Button
-                      variant={
-                        severityFilter === "error" ? "destructive" : "ghost"
-                      }
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setSeverityFilter("error")}
-                    >
-                      Errors ({counts.error})
-                    </Button>
-                  )}
-                  {counts.warning > 0 && (
-                    <Button
-                      variant={
-                        severityFilter === "warning" ? "secondary" : "ghost"
-                      }
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setSeverityFilter("warning")}
-                    >
-                      Warnings ({counts.warning})
-                    </Button>
-                  )}
-                  {counts.info > 0 && (
-                    <Button
-                      variant={severityFilter === "info" ? "outline" : "ghost"}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setSeverityFilter("info")}
-                    >
-                      Info ({counts.info})
-                    </Button>
-                  )}
-                </div>
+        <div className="mb-2 grid grid-cols-2 gap-1">
+          <Button
+            variant={severityFilter === "all" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 justify-start gap-1 text-[11px]"
+            onClick={() => setSeverityFilter("all")}
+            aria-pressed={severityFilter === "all"}
+          >
+            <Filter className="h-3 w-3" /> All
+            <span className="ml-auto text-[10px] font-normal opacity-80">
+              {counts.total}
+            </span>
+          </Button>
+          <Button
+            variant={severityFilter === "error" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-7 justify-start gap-1 text-[11px]",
+              severityFilter === "error" &&
+                "bg-red-600 text-white hover:opacity-90",
+            )}
+            onClick={() => setSeverityFilter("error")}
+            aria-pressed={severityFilter === "error"}
+          >
+            <AlertCircle className="h-3 w-3" /> Errors
+            <span className="ml-auto text-[10px] font-normal opacity-80">
+              {counts.error}
+            </span>
+          </Button>
+          <Button
+            variant={severityFilter === "warning" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-7 justify-start gap-1 text-[11px]",
+              severityFilter === "warning" &&
+                "bg-amber-500 text-white hover:opacity-90",
+            )}
+            onClick={() => setSeverityFilter("warning")}
+            aria-pressed={severityFilter === "warning"}
+          >
+            <AlertTriangle className="h-3 w-3" /> Warn
+            <span className="ml-auto text-[10px] font-normal opacity-80">
+              {counts.warning}
+            </span>
+          </Button>
+          <Button
+            variant={severityFilter === "info" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-7 justify-start gap-1 text-[11px]",
+              severityFilter === "info" &&
+                "bg-blue-600 text-white hover:opacity-90",
+            )}
+            onClick={() => setSeverityFilter("info")}
+            aria-pressed={severityFilter === "info"}
+          >
+            <Info className="h-3 w-3" /> Info
+            <span className="ml-auto text-[10px] font-normal opacity-80">
+              {counts.info}
+            </span>
+          </Button>
+        </div>
+      </div>
 
-                {/* Category Filter */}
-                {availableCategories.length > 0 && (
-                  <>
-                    <Separator orientation="vertical" className="h-6" />
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant={categoryFilter === "all" ? "default" : "ghost"}
-                        size="sm"
-                        className="h-6 px-2 text-xs"
-                        onClick={() => setCategoryFilter("all")}
-                      >
-                        All Categories
-                      </Button>
-                      {availableCategories.map((category) => (
-                        <Button
-                          key={category}
-                          variant={
-                            categoryFilter === category ? "outline" : "ghost"
-                          }
-                          size="sm"
-                          className="h-6 px-2 text-xs capitalize"
-                          onClick={() => setCategoryFilter(category)}
-                        >
-                          {category}
-                        </Button>
-                      ))}
-                    </div>
-                  </>
-                )}
+      {/* Issues List */}
+      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="flex min-w-0 flex-col gap-2 p-2 pr-2">
+          {counts.total === 0 ? (
+            <div className="py-8 text-center">
+              <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/20">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                All clear — no issues
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Validate again after changes.
+              </p>
             </div>
-          </>
-        )}
-
-        {/* Issues List */}
-        <ScrollArea className="h-full">
-          <div className="p-3">
-            {counts.total === 0 ? (
-              <div className="py-8 text-center">
-                <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/20">
-                  <Info className="h-4 w-4 text-green-600 dark:text-green-400" />
-                </div>
-                <p className="text-sm font-medium text-green-700 dark:text-green-300">
-                  No validation issues
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Your experiment design looks good!
-                </p>
+          ) : flatIssues.length === 0 ? (
+            <div className="py-8 text-center">
+              <div className="bg-muted mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full">
+                <Filter className="h-4 w-4" />
               </div>
-            ) : flatIssues.length === 0 ? (
-              <div className="py-8 text-center">
-                <div className="bg-muted mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full">
-                  <Filter className="h-4 w-4" />
-                </div>
-                <p className="text-sm font-medium">No issues match filters</p>
-                <p className="text-muted-foreground text-xs">
-                  Try adjusting your filter criteria
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {flatIssues.map((issue) => (
-                  <IssueItem
-                    key={`${issue.entityId}-${issue.index}`}
-                    issue={issue}
-                    onIssueClick={onIssueClick}
-                    onIssueClear={onIssueClear}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+              <p className="text-sm font-medium">No issues match filters</p>
+              <p className="text-muted-foreground text-xs">
+                Adjust your filters
+              </p>
+            </div>
+          ) : (
+            flatIssues.map((issue) => (
+              <IssueItem
+                key={`${issue.entityId}-${issue.index}`}
+                issue={issue}
+                onIssueClick={onIssueClick}
+                onIssueClear={onIssueClear}
+                entityLabelForId={entityLabelForId}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }

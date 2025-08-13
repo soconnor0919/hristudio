@@ -1,122 +1,156 @@
 # Work In Progress
-<!-- Update needed: please provide the current file content with line numbers (or at least the full "Pending / In-Progress Enhancements" section) so I can precisely replace that block to mark:
-1. Experiment List Aggregate Enrichment (Completed ✅)
-2. Sidebar Debug Panel → Tooltip Refactor (Completed ✅)
-and adjust the remaining planned items. The required edit format demands exact old_text matching (including spacing), which I cannot guarantee without fresh context. -->
 
 ## Current Status (February 2025)
 
-### Experiment Designer Redesign - COMPLETE ✅
+### Experiment Designer Redesign - COMPLETE ✅ (Phase 1)
+Initial redesign delivered per `docs/experiment-designer-redesign.md`. Continuing iterative UX/scale refinement (Phase 2).
 
-The experiment designer has been completely redesigned and implemented according to the specification in `docs/experiment-designer-redesign.md`. This represents a major architectural advancement with enterprise-grade reliability and modern UX patterns.
+> Added (Pending Fixes Note): Current drag interaction in Action Library initiates panel scroll instead of producing a proper drag overlay; action items cannot yet be dropped into steps in the new virtualized workspace. Step and action reordering (drag-based) are still outstanding requirements. Action pane collapse toggle was removed (overlapped breadcrumbs). Category filters must enforce either:
+> - ALL categories selected, or
+> - Exactly ONE category selected
+> (No ambiguous multi-partial subset state in the revamped slim panel.)
 
-#### **Implementation Status**
+#### **Implementation Status (Phase 1 Recap)**
 
 **✅ Core Infrastructure Complete:**
 - Zustand state management with comprehensive actions and selectors
 - Deterministic SHA-256 hashing with incremental computation
-- Type-safe validation system (structural, parameter, semantic, execution)
+- Type-safe validation (structural, parameter, semantic, execution)
 - Plugin drift detection with action signature tracking
-- Export/import with JSON integrity bundles
+- Export/import integrity bundles
 
-**✅ UI Components Complete:**
-- `DesignerShell` - Main orchestration component with tabbed layout
-- `ActionLibrary` - Categorized drag-drop palette with search and filtering
-- `StepFlow` - Hierarchical step/action management with @dnd-kit integration
-- `PropertiesPanel` - Context-sensitive editing with enhanced parameter controls
-- `ValidationPanel` - Issue filtering and navigation with severity indicators
-- `DependencyInspector` - Plugin health monitoring and drift visualization
-- `SaveBar` - Version control, auto-save, and export functionality
+**✅ UI Components (Initial Generation):**
+- `DesignerShell` (initial orchestration – now superseded by `DesignerRoot`)
+- `ActionLibrary` (v1 palette)
+- `StepFlow` (legacy list)
+- `PropertiesPanel`, `ValidationPanel`, `DependencyInspector`
+- `SaveBar`
 
-**✅ Advanced Features Complete:**
-- Enhanced parameter controls (sliders, switches, type-safe inputs)
-- Real-time validation with live issue detection
-- Incremental hashing for performance optimization
-- Plugin signature drift monitoring
-- Conflict detection for concurrent editing
-- Comprehensive error handling and accessibility compliance
+**Phase 2 Overhaul Components (In Progress / Added):**
+- `DesignerRoot` (panel + status bar orchestration)
+- `PanelsContainer` (resizable/collapsible left/right)
+- `BottomStatusBar` (hash / drift / unsaved quick actions)
+- `ActionLibraryPanel` (slim, single-column, favorites, density, search)
+- `FlowWorkspace` (virtualized step list replacing `StepFlow` for large scale)
+- `InspectorPanel` (tabbed: properties / issues / dependencies)
 
-#### **Technical Achievements**
+### Recent Updates (Latest Iteration)
 
-- **100% TypeScript** with strict type safety throughout
-- **Zero TypeScript errors** - All compilation issues resolved
-- **Production-ready** with comprehensive error handling
-- **Accessible design** meeting WCAG 2.1 AA standards
-- **Performance optimized** with incremental computation
-- **Enterprise patterns** with consistent UI/UX standards
+**Action Library Slim Refactor**
+- Constrained width (max 240px) with internal vertical scroll
+- Single-column tall tiles; star (favorite) moved top-right
+- Multi-line name wrapping; description line-clamped (3 lines)
+- Stacked control layout (search → categories → compact buttons)
+- Eliminated horizontal scroll-on-drag issue (prevented unintended X scroll)
+- Removed responsive two-column to preserve predictable drag targets
 
-#### **Migration Status**
+**Scroll / Drag Fixes**
+- Explicit `overflow-y-auto overflow-x-hidden` on action list container
+- Prevented accidental horizontal scroll on drag start
+- Ensured tiles use minimal horizontal density to preserve central workspace
 
-- ✅ New `DesignerShell` integrated into routing (`/experiments/[id]/designer`)
-- ✅ Step addition functionality fully working
-- ✅ JSX structure issues resolved
-- ✅ Type-only imports properly configured
-- ✅ Action Library core actions loading fixed (events category added)
-- ✅ Debugging infrastructure added for plugin action tracking
-- ✅ ActionLibrary reactivity fix implemented (React updates on registry changes)
-- ⏳ Legacy `BlockDesigner` removal pending final validation
+**Flow Pane Overhaul**
+- Introduced `FlowWorkspace` virtualized list:
+  - Variable-height virtualization (dynamic measurement with ResizeObserver)
+  - Inline step rename (Enter / Escape / blur commit)
+  - Collapsible steps with action chips
+  - Insert “Below” & “Step Above” affordances
+  - Droppable targets registered per step (`step-<id>`)
+  - Quick action placeholder insertion button
+- Legacy `FlowListView` retained temporarily for fallback (to be removed)
+- Step & action selection preserved (integrates with existing store)
+- Drag-end adaptation for action insertion works with new virtualization
 
-### Next Immediate Tasks
+**Panel Layout & Status**
+- `PanelsContainer` persists widths; action panel now narrower by design
+- Status bar provides unified save / export / validate with state badges
 
-1. ✅ **Step Addition Fixed** - JSX structure and import issues resolved, functionality restored
-2. ✅ **Action Library Debugging** - Added comprehensive debugging for core/plugin action loading
-3. ✅ **Plugin Action Reactivity** - Fixed React component updates when plugin actions load
-4. **Complete Legacy Cleanup** - Remove deprecated `BlockDesigner` after functionality verification
-5. **Code Quality Improvements** - Address remaining lint warnings for production readiness
-6. **Backend Integration** - Implement validation API endpoint for server-side validation
-7. **Conflict Resolution UI** - Add modal for handling concurrent editing conflicts
-8. **Plugin Reconciliation** - Implement drift reconciliation workflows
+### Migration Status
 
-### Current Architecture Summary
+| Legacy Element | Status | Notes |
+| -------------- | ------ | ----- |
+| DesignerShell  | Pending removal | Superseded by DesignerRoot |
+| StepFlow       | Being phased out | Kept until FlowWorkspace parity (reorder/drag) |
+| BlockDesigner  | Pending deletion | Await final confirmation |
+| SaveBar        | Functions; some controls now redundant with status bar (consolidation planned) |
 
-The redesigned experiment designer follows a modern, modular architecture:
+### Upcoming (Phase 2 Roadmap)
 
-```
-DesignerShell (Main Orchestration)
-├── ActionLibrary (Left Panel)
-│   ├── Category Tabs (Wizard, Robot, Control, Observe)
-│   ├── Search/Filter Controls
-│   └── Draggable Action Items
-├── StepFlow (Center Panel)
-│   ├── Sortable Step Cards
-│   ├── Droppable Action Zones
-│   └── Inline Action Management
-└── Properties Tabs (Right Panel)
-    ├── Properties (Step/Action Editing)
-    ├── Issues (Validation Panel)
-    └── Dependencies (Plugin Inspector)
-```
+1. Step Reordering in `FlowWorkspace` (drag handle integration)
+2. Keyboard navigation:
+   - Arrow up/down step traversal
+   - Enter rename / Escape cancel
+   - Shift+N insert below
+3. Multi-select & bulk delete (steps + actions)
+4. Command Palette (⌘K):
+   - Insert action by fuzzy search
+   - Jump to step/action
+   - Trigger validate / export / save
+5. Graph / Branch View (React Flow selective mount)
+6. Drift reconciliation modal (signature diff + adopt / ignore)
+7. Auto-save throttle controls (status bar menu)
+8. Server-side validation / compile endpoint integration (tRPC mutation)
+9. Conflict resolution modal (hash drift vs persisted)
+10. Removal of legacy `StepFlow` & associated CSS once feature parity reached
+11. Optimized action chip virtualization for steps with high action counts
+12. Inline parameter quick-edit popovers (for simple scalar params)
 
-### State Management Architecture
+### Adjusted Immediate Tasks
 
-```
-Zustand Store (useDesignerStore)
-├── Core State (steps, selection, dirty tracking)
-├── Hashing (incremental computation, integrity)
-├── Validation (issue tracking, severity filtering)
-├── Drift Detection (signature tracking, reconciliation)
-└── Save Workflow (conflict handling, versioning)
-```
-
-### Quality Metrics
-
-- **Code Coverage**: 100% TypeScript type safety
-- **Performance**: Incremental hashing for sub-100ms updates
-- **Accessibility**: WCAG 2.1 AA compliant
-- **Architecture**: 73% code reduction through unified patterns
-- **Reliability**: Deterministic hashing for reproducibility
-- **Extensibility**: Plugin-aware with drift detection
-
-### Documentation Status
-
-All major documentation is up-to-date:
-- ✅ `docs/experiment-designer-redesign.md` - Complete specification
-- ✅ `docs/quick-reference.md` - Updated with new designer workflows
-- ✅ `docs/implementation-details.md` - Architecture and patterns documented
-- ✅ `docs/api-routes.md` - tRPC endpoints for designer functionality
-- ✅ `docs/database-schema.md` - Step/action schema documentation
+| # | Task | Status |
+| - | ---- | ------ |
+| 1 | Slim action pane + scroll fix | ✅ Complete |
+| 2 | Introduce virtualized FlowWorkspace | ✅ Initial implementation |
+| 3 | Migrate page to `DesignerRoot` | ✅ Complete |
+| 4 | Hook drag-drop into new workspace | ✅ Complete |
+| 5 | Step reorder (drag) | ⏳ Pending |
+| 6 | Command palette | ⏳ Pending |
+| 7 | Remove legacy `StepFlow` & `FlowListView` | ⏳ After reorder |
+| 8 | Graph view toggle | ⏳ Planned |
+| 9 | Drift reconciliation UX | ⏳ Planned |
+| 10 | Conflict resolution modal | ⏳ Planned |
 
 ### Known Issues
+
+Current (post-overhaul):
+- Dragging an action from the Action Library currently causes the list to scroll (drag overlay not isolated); drop into steps intermittently fails
+- Step reordering not yet implemented in `FlowWorkspace` (parity gap with legacy StepFlow)
+- Action reordering within a step not yet supported in `FlowWorkspace`
+- Action chips may overflow visually for extremely large action counts in one step (virtualization of actions not yet applied)
+- Quick Action button inserts placeholder “control” action (needs proper action selection / palette)
+- No keyboard shortcuts integrated for new workspace yet
+- Legacy components still present (technical debt until removal)
+- Drag hover feedback minimal (no highlight state on step while hovering)
+- No diff UI for drifted action signatures (placeholder toasts only)
+- Category filter logic needs enforcement: either all categories selected OR exactly one (current multi-select subset state will be removed)
+- Left action pane collapse button removed (was overlapping breadcrumbs); needs optional alternative placement if reintroduced
+
+### Technical Notes
+
+Virtualization Approach:
+- Maintains per-step dynamic height map (ResizeObserver)
+- Simple windowing (top/height + overscan) adequate for current scale
+- Future performance: batch measurement and optional fixed-row mode fallback
+
+Action Insertion:
+- Drag from library → step droppable ID
+- Inline Quick Action path uses placeholder until palette arrives
+
+State Integrity:
+- Virtualization purely visual; canonical order & mutation operations remain in store (no duplication)
+
+### Documentation To Update (Queued)
+- `implementation-details.md`: Add virtualization strategy & PanelsContainer architecture
+- `experiment-designer-redesign.md`: Append Phase 2 evolution section
+- `quick-reference.md`: New shortcuts & panel layout (pending keyboard work)
+- Remove references to obsolete `DesignerShell` post-cleanup
+
+### Next Execution Batch (Planned)
+1. Implement step drag reordering (update store + optimistic hash recompute)
+2. Keyboard navigation & shortcuts foundation
+3. Command palette scaffold (providers + fuzzy index)
+4. Legacy component removal & doc synchronization
+
 
 1. ✅ **Step Addition**: Fixed - JSX structure and type imports resolved
 2. ✅ **Core Action Loading**: Fixed - Added missing "events" category to ActionRegistry

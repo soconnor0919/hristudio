@@ -1,20 +1,37 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
-import { Play, Plus } from "lucide-react";
+import { Play } from "lucide-react";
 
-import { PageHeader, ActionButton } from "~/components/ui/page-header";
+import { PageHeader } from "~/components/ui/page-header";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
 import { PanelsContainer } from "./layout/PanelsContainer";
-import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
-import { FlowListView } from "./flow/FlowListView";
+import { FlowWorkspace } from "./flow/FlowWorkspace";
 
 import {
   type ExperimentDesign,
@@ -25,7 +42,10 @@ import {
 import { useDesignerStore } from "./state/store";
 import { actionRegistry } from "./ActionRegistry";
 import { computeDesignHash } from "./state/hashing";
-import { validateExperimentDesign } from "./state/validators";
+import {
+  validateExperimentDesign,
+  groupIssuesByEntity,
+} from "./state/validators";
 
 /**
  * DesignerRoot
@@ -161,6 +181,30 @@ export function DesignerRoot({
   const setValidatedHash = useDesignerStore((s) => s.setValidatedHash);
   const upsertStep = useDesignerStore((s) => s.upsertStep);
   const upsertAction = useDesignerStore((s) => s.upsertAction);
+  const selectStep = useDesignerStore((s) => s.selectStep);
+  const selectAction = useDesignerStore((s) => s.selectAction);
+  const setValidationIssues = useDesignerStore((s) => s.setValidationIssues);
+  const clearAllValidationIssues = useDesignerStore(
+    (s) => s.clearAllValidationIssues,
+  );
+  const selectedStepId = useDesignerStore((s) => s.selectedStepId);
+  const selectedActionId = useDesignerStore((s) => s.selectedActionId);
+
+  const libraryRootRef = useRef<HTMLDivElement | null>(null);
+  const toggleLibraryScrollLock = useCallback((lock: boolean) => {
+    const viewport = libraryRootRef.current?.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLElement | null;
+    if (viewport) {
+      if (lock) {
+        viewport.style.overflowY = "hidden";
+        viewport.style.overscrollBehavior = "contain";
+      } else {
+        viewport.style.overflowY = "";
+        viewport.style.overscrollBehavior = "";
+      }
+    }
+  }, []);
 
   /* ------------------------------- Local Meta ------------------------------ */
   const [designMeta, setDesignMeta] = useState<{
@@ -193,10 +237,24 @@ export function DesignerRoot({
   const [isValidating, setIsValidating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined);
+  const [inspectorTab, setInspectorTab] = useState<
+    "properties" | "issues" | "dependencies"
+  >("properties");
+  /**
+   * Active action being dragged from the Action Library (for DragOverlay rendering).
+   * Captures a lightweight subset for visual feedback.
+   */
+  const [dragOverlayAction, setDragOverlayAction] = useState<{
+    id: string;
+    name: string;
+    category: string;
+    description?: string;
+  } | null>(null);
 
   /* ----------------------------- Initialization ---------------------------- */
   useEffect(() => {
-    if (initialized || loadingExperiment) return;
+    if (initialized) return;
+    if (loadingExperiment && !initialDesign) return;
     const adapted =
       initialDesign ??
       (experiment
@@ -288,8 +346,10 @@ export function DesignerRoot({
       expanded: true,
     };
     upsertStep(newStep);
+    selectStep(newStep.id);
+    setInspectorTab("properties");
     toast.success(`Created ${newStep.name}`);
-  }, [steps.length, upsertStep]);
+  }, [steps.length, upsertStep, selectStep]);
 
   /* ------------------------------- Validation ------------------------------ */
   const validateDesign = useCallback(async () => {
@@ -297,14 +357,39 @@ export function DesignerRoot({
     setIsValidating(true);
     try {
       const currentSteps = [...steps];
+      // Ensure core actions are loaded before validating
+      await actionRegistry.loadCoreActions();
       const result = validateExperimentDesign(currentSteps, {
         steps: currentSteps,
         actionDefinitions: actionRegistry.getAllActions(),
       });
+      // Debug: log validation results for troubleshooting
+      // eslint-disable-next-line no-console
+      console.debug("[DesignerRoot] validation", {
+        valid: result.valid,
+        errors: result.errorCount,
+        warnings: result.warningCount,
+        infos: result.infoCount,
+        issues: result.issues,
+      });
+      // Persist issues to store for inspector rendering
+      const grouped = groupIssuesByEntity(result.issues);
+      clearAllValidationIssues();
+      for (const [entityId, arr] of Object.entries(grouped)) {
+        setValidationIssues(
+          entityId,
+          arr.map((i) => ({
+            entityId,
+            severity: i.severity,
+            message: i.message,
+            code: undefined,
+          })),
+        );
+      }
       const hash = await computeDesignHash(currentSteps);
       setValidatedHash(hash);
       if (result.valid) {
-        toast.success(`Validated • ${hash.slice(0, 10)}… • No issues`);
+        toast.success(`Validated • ${hash.slice(0, 10)}… • 0 errors`);
       } else {
         toast.warning(
           `Validated with ${result.errorCount} errors, ${result.warningCount} warnings`,
@@ -319,7 +404,13 @@ export function DesignerRoot({
     } finally {
       setIsValidating(false);
     }
-  }, [initialized, steps, setValidatedHash]);
+  }, [
+    initialized,
+    steps,
+    setValidatedHash,
+    setValidationIssues,
+    clearAllValidationIssues,
+  ]);
 
   /* --------------------------------- Save ---------------------------------- */
   const persist = useCallback(async () => {
@@ -414,6 +505,19 @@ export function DesignerRoot({
     void recomputeHash();
   }, [steps.length, initialized, recomputeHash]);
 
+  useEffect(() => {
+    if (selectedStepId || selectedActionId) {
+      setInspectorTab("properties");
+    }
+  }, [selectedStepId, selectedActionId]);
+
+  // Auto-open properties tab when a step or action becomes selected
+  useEffect(() => {
+    if (selectedStepId || selectedActionId) {
+      setInspectorTab("properties");
+    }
+  }, [selectedStepId, selectedActionId]);
+
   /* -------------------------- Keyboard Shortcuts --------------------------- */
   const keyHandler = useCallback(
     (e: globalThis.KeyboardEvent) => {
@@ -448,21 +552,76 @@ export function DesignerRoot({
 
   /* ------------------------------ Header Badges ---------------------------- */
 
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor),
+  );
+
   /* ----------------------------- Drag Handlers ----------------------------- */
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      if (
+        active.id.toString().startsWith("action-") &&
+        active.data.current?.action
+      ) {
+        const a = active.data.current.action as {
+          id: string;
+          name: string;
+          category: string;
+          description?: string;
+        };
+        toggleLibraryScrollLock(true);
+        setDragOverlayAction({
+          id: a.id,
+          // prefer definition name; fallback to id
+          name: a.name || a.id,
+          category: a.category,
+          description: a.description,
+        });
+      }
+    },
+    [toggleLibraryScrollLock],
+  );
+
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    async (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over) return;
+      console.debug("[DesignerRoot] dragEnd", {
+        active: active?.id,
+        over: over?.id ?? null,
+      });
+      // Clear overlay immediately
+      toggleLibraryScrollLock(false);
+      setDragOverlayAction(null);
+      if (!over) {
+        console.debug("[DesignerRoot] dragEnd: no drop target (ignored)");
+        return;
+      }
 
       // Expect dragged action (library) onto a step droppable
       const activeId = active.id.toString();
       const overId = over.id.toString();
 
-      if (
-        activeId.startsWith("action-") &&
-        overId.startsWith("step-") &&
-        active.data.current?.action
-      ) {
+      if (activeId.startsWith("action-") && active.data.current?.action) {
+        // Resolve stepId from possible over ids: step-<id>, s-step-<id>, or s-act-<actionId>
+        let stepId: string | null = null;
+        if (overId.startsWith("step-")) {
+          stepId = overId.slice("step-".length);
+        } else if (overId.startsWith("s-step-")) {
+          stepId = overId.slice("s-step-".length);
+        } else if (overId.startsWith("s-act-")) {
+          const actionId = overId.slice("s-act-".length);
+          const parent = steps.find((s) =>
+            s.actions.some((a) => a.id === actionId),
+          );
+          stepId = parent?.id ?? null;
+        }
+        if (!stepId) return;
+
         const actionDef = active.data.current.action as {
           id: string;
           type: string;
@@ -474,7 +633,6 @@ export function DesignerRoot({
           parameters: Array<{ id: string; name: string }>;
         };
 
-        const stepId = overId.replace("step-", "");
         const targetStep = steps.find((s) => s.id === stepId);
         if (!targetStep) return;
 
@@ -502,24 +660,24 @@ export function DesignerRoot({
         };
 
         upsertAction(stepId, newAction);
+        // Select the newly added action and open properties
+        selectStep(stepId);
+        selectAction(stepId, newAction.id);
+        setInspectorTab("properties");
+        await recomputeHash();
         toast.success(`Added ${actionDef.name} to ${targetStep.name}`);
       }
     },
-    [steps, upsertAction],
+    [
+      steps,
+      upsertAction,
+      recomputeHash,
+      selectStep,
+      selectAction,
+      toggleLibraryScrollLock,
+    ],
   );
-  const validationBadge =
-    driftStatus === "drift" ? (
-      <Badge variant="destructive">Drift</Badge>
-    ) : driftStatus === "validated" ? (
-      <Badge
-        variant="outline"
-        className="border-green-400 text-green-700 dark:text-green-400"
-      >
-        Validated
-      </Badge>
-    ) : (
-      <Badge variant="outline">Unvalidated</Badge>
-    );
+  // validation status badges removed (unused)
 
   /* ------------------------------- Render ---------------------------------- */
   if (loadingExperiment && !initialized) {
@@ -538,54 +696,23 @@ export function DesignerRoot({
         icon={Play}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {validationBadge}
-            {experiment?.integrityHash && (
-              <Badge variant="outline" className="text-xs">
-                Hash: {experiment.integrityHash.slice(0, 10)}…
-              </Badge>
-            )}
-            <Badge variant="secondary" className="text-xs">
-              {steps.length} steps
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {steps.reduce((s, st) => s + st.actions.length, 0)} actions
-            </Badge>
-            {hasUnsavedChanges && (
-              <Badge
-                variant="outline"
-                className="border-orange-300 text-orange-600"
-              >
-                Unsaved
-              </Badge>
-            )}
-            <ActionButton
-              onClick={() => persist()}
-              disabled={!hasUnsavedChanges || isSaving}
-            >
-              {isSaving ? "Saving…" : "Save"}
-            </ActionButton>
-            <ActionButton
-              variant="outline"
-              onClick={() => validateDesign()}
-              disabled={isValidating}
-            >
-              {isValidating ? "Validating…" : "Validate"}
-            </ActionButton>
-            <ActionButton
-              variant="outline"
-              onClick={() => handleExport()}
-              disabled={isExporting}
-            >
-              {isExporting ? "Exporting…" : "Export"}
-            </ActionButton>
             <Button
               size="sm"
               variant="default"
-              className="h-8 text-xs"
-              onClick={createNewStep}
+              className="h-8 px-3 text-xs"
+              onClick={() => validateDesign()}
+              disabled={isValidating}
             >
-              <Plus className="mr-1 h-4 w-4" />
-              Step
+              Validate
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 px-3 text-xs"
+              onClick={() => persist()}
+              disabled={!hasUnsavedChanges || isSaving}
+            >
+              Save
             </Button>
           </div>
         }
@@ -593,17 +720,38 @@ export function DesignerRoot({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
         <DndContext
-          collisionDetection={closestCenter}
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => toggleLibraryScrollLock(false)}
         >
           <PanelsContainer
-            left={<ActionLibraryPanel />}
-            center={<FlowListView />}
-            right={<InspectorPanel />}
+            left={
+              <div ref={libraryRootRef} data-library-root>
+                <ActionLibraryPanel />
+              </div>
+            }
+            center={<FlowWorkspace />}
+            right={
+              <InspectorPanel
+                activeTab={inspectorTab}
+                onTabChange={setInspectorTab}
+              />
+            }
             initialLeftWidth={260}
-            initialRightWidth={360}
+            initialRightWidth={260}
+            minRightWidth={240}
+            maxRightWidth={300}
             className="flex-1"
           />
+          <DragOverlay>
+            {dragOverlayAction ? (
+              <div className="bg-background pointer-events-none rounded border px-2 py-1 text-xs shadow-lg select-none">
+                {dragOverlayAction.name}
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
         <BottomStatusBar
           onSave={() => persist()}

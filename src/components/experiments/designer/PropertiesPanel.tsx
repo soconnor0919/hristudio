@@ -124,7 +124,7 @@ export function PropertiesPanel({
         : Zap;
 
     return (
-      <div className={cn("space-y-3", className)}>
+      <div className={cn("w-full min-w-0 space-y-3 px-3", className)}>
         {/* Header / Metadata */}
         <div className="border-b pb-3">
           <div className="mb-2 flex items-center gap-2">
@@ -142,8 +142,8 @@ export function PropertiesPanel({
               <h3 className="truncate text-sm font-medium">
                 {selectedAction.name}
               </h3>
-              <p className="text-muted-foreground text-xs">
-                {def?.category} • {selectedAction.type}
+              <p className="text-muted-foreground text-xs capitalize">
+                {def?.category}
               </p>
             </div>
           </div>
@@ -151,14 +151,7 @@ export function PropertiesPanel({
             <Badge variant="outline" className="h-4 text-[10px]">
               {selectedAction.source.kind === "plugin" ? "Plugin" : "Core"}
             </Badge>
-            {selectedAction.source.pluginId && (
-              <Badge variant="secondary" className="h-4 text-[10px]">
-                {selectedAction.source.pluginId}
-                {selectedAction.source.pluginVersion
-                  ? `@${selectedAction.source.pluginVersion}`
-                  : ""}
-              </Badge>
-            )}
+            {/* internal plugin identifiers hidden from UI */}
             <Badge variant="outline" className="h-4 text-[10px]">
               {selectedAction.execution.transport}
             </Badge>
@@ -175,8 +168,11 @@ export function PropertiesPanel({
           )}
         </div>
 
-        {/* General Action Fields */}
+        {/* General */}
         <div className="space-y-2">
+          <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+            General
+          </div>
           <div>
             <Label className="text-xs">Display Name</Label>
             <Input
@@ -186,7 +182,7 @@ export function PropertiesPanel({
                   name: e.target.value,
                 })
               }
-              className="mt-1 h-7 text-xs"
+              className="mt-1 h-7 w-full text-xs"
             />
           </div>
         </div>
@@ -231,7 +227,7 @@ export function PropertiesPanel({
                       value={(rawValue as string) ?? ""}
                       placeholder={param.placeholder}
                       onChange={(e) => updateParamValue(e.target.value)}
-                      className="mt-1 h-7 text-xs"
+                      className="mt-1 h-7 w-full text-xs"
                     />
                   );
                 } else if (param.type === "select") {
@@ -240,7 +236,7 @@ export function PropertiesPanel({
                       value={(rawValue as string) ?? ""}
                       onValueChange={(val) => updateParamValue(val)}
                     >
-                      <SelectTrigger className="mt-1 h-7 text-xs">
+                      <SelectTrigger className="mt-1 h-7 w-full text-xs">
                         <SelectValue placeholder="Select…" />
                       </SelectTrigger>
                       <SelectContent>
@@ -322,7 +318,7 @@ export function PropertiesPanel({
                         onChange={(e) =>
                           updateParamValue(parseFloat(e.target.value) || 0)
                         }
-                        className="mt-1 h-7 text-xs"
+                        className="mt-1 h-7 w-full text-xs"
                       />
                     );
                   }
@@ -354,7 +350,7 @@ export function PropertiesPanel({
   /* --------------------------- Step Properties View --------------------------- */
   if (selectedStep) {
     return (
-      <div className={cn("space-y-3", className)}>
+      <div className={cn("w-full min-w-0 space-y-3 px-3", className)}>
         <div className="border-b pb-2">
           <h3 className="flex items-center gap-2 text-sm font-medium">
             <div
@@ -368,73 +364,88 @@ export function PropertiesPanel({
             Step Settings
           </h3>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
-            <Label className="text-xs">Name</Label>
-            <Input
-              value={selectedStep.name}
-              onChange={(e) =>
-                onStepUpdate(selectedStep.id, { name: e.target.value })
-              }
-              className="mt-1 h-7 text-xs"
-            />
+            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              General
+            </div>
+            <div className="mt-2 space-y-2">
+              <div>
+                <Label className="text-xs">Name</Label>
+                <Input
+                  value={selectedStep.name}
+                  onChange={(e) =>
+                    onStepUpdate(selectedStep.id, { name: e.target.value })
+                  }
+                  className="mt-1 h-7 w-full text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Description</Label>
+                <Input
+                  value={selectedStep.description ?? ""}
+                  placeholder="Optional step description"
+                  onChange={(e) =>
+                    onStepUpdate(selectedStep.id, {
+                      description: e.target.value,
+                    })
+                  }
+                  className="mt-1 h-7 w-full text-xs"
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <Label className="text-xs">Description</Label>
-            <Input
-              value={selectedStep.description ?? ""}
-              placeholder="Optional step description"
-              onChange={(e) =>
-                onStepUpdate(selectedStep.id, {
-                  description: e.target.value,
-                })
-              }
-              className="mt-1 h-7 text-xs"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Type</Label>
-            <Select
-              value={selectedStep.type}
-              onValueChange={(val) =>
-                onStepUpdate(selectedStep.id, { type: val as StepType })
-              }
-            >
-              <SelectTrigger className="mt-1 h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sequential">Sequential</SelectItem>
-                <SelectItem value="parallel">Parallel</SelectItem>
-                <SelectItem value="conditional">Conditional</SelectItem>
-                <SelectItem value="loop">Loop</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Trigger</Label>
-            <Select
-              value={selectedStep.trigger.type}
-              onValueChange={(val) =>
-                onStepUpdate(selectedStep.id, {
-                  trigger: {
-                    ...selectedStep.trigger,
-                    type: val as TriggerType,
-                  },
-                })
-              }
-            >
-              <SelectTrigger className="mt-1 h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRIGGER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              Behavior
+            </div>
+            <div className="mt-2 space-y-2">
+              <div>
+                <Label className="text-xs">Type</Label>
+                <Select
+                  value={selectedStep.type}
+                  onValueChange={(val) =>
+                    onStepUpdate(selectedStep.id, { type: val as StepType })
+                  }
+                >
+                  <SelectTrigger className="mt-1 h-7 w-full text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sequential">Sequential</SelectItem>
+                    <SelectItem value="parallel">Parallel</SelectItem>
+                    <SelectItem value="conditional">Conditional</SelectItem>
+                    <SelectItem value="loop">Loop</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Trigger</Label>
+                <Select
+                  value={selectedStep.trigger.type}
+                  onValueChange={(val) =>
+                    onStepUpdate(selectedStep.id, {
+                      trigger: {
+                        ...selectedStep.trigger,
+                        type: val as TriggerType,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1 h-7 w-full text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRIGGER_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -451,9 +462,9 @@ export function PropertiesPanel({
     >
       <div>
         <Settings className="text-muted-foreground/50 mx-auto mb-2 h-6 w-6" />
-        <h3 className="mb-1 text-sm font-medium">Select Step or Action</h3>
+        <h3 className="mb-1 text-sm font-medium">No selection</h3>
         <p className="text-muted-foreground text-xs">
-          Click in the flow to edit properties
+          Select a step or action in the flow to edit its properties.
         </p>
       </div>
     </div>

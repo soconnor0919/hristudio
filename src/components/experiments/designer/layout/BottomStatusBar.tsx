@@ -131,7 +131,7 @@ export function BottomStatusBar({
             title="Validated (hash stable)"
           >
             <CheckCircle2 className="mr-1 h-3 w-3" />
-            Validated
+            <span className="hidden sm:inline">Validated</span>
           </Badge>
         );
       case "drift":
@@ -142,14 +142,14 @@ export function BottomStatusBar({
             title="Drift since last validation"
           >
             <AlertTriangle className="mr-1 h-3 w-3" />
-            Drift
+            <span className="hidden sm:inline">Drift</span>
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" title="Not validated yet">
             <Hash className="mr-1 h-3 w-3" />
-            Unvalidated
+            <span className="hidden sm:inline">Unvalidated</span>
           </Badge>
         );
     }
@@ -162,7 +162,8 @@ export function BottomStatusBar({
         className="border-orange-300 text-orange-600 dark:text-orange-400"
         title="Unsaved changes"
       >
-        ● Unsaved
+        <AlertTriangle className="mr-1 h-3 w-3" />
+        <span className="hidden sm:inline">Unsaved</span>
       </Badge>
     ) : null;
 
@@ -208,7 +209,7 @@ export function BottomStatusBar({
   return (
     <div
       className={cn(
-        "border-border/60 bg-muted/40 backdrop-blur supports-[backdrop-filter]:bg-muted/30",
+        "border-border/60 bg-muted/40 supports-[backdrop-filter]:bg-muted/30 backdrop-blur",
         "flex h-10 w-full flex-shrink-0 items-center gap-3 border-t px-3 text-xs",
         "font-medium",
         className,
@@ -216,7 +217,7 @@ export function BottomStatusBar({
       aria-label="Designer status bar"
     >
       {/* Left Cluster: Validation & Hash */}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         {validationBadge}
         {unsavedBadge}
         {savingIndicator}
@@ -225,7 +226,7 @@ export function BottomStatusBar({
           className="flex items-center gap-1 font-mono text-[11px]"
           title="Current design hash"
         >
-          <Hash className="h-3 w-3 text-muted-foreground" />
+          <Hash className="text-muted-foreground h-3 w-3" />
           {shortHash}
           {lastPersistedShort && lastPersistedShort !== shortHash && (
             <span
@@ -239,20 +240,22 @@ export function BottomStatusBar({
       </div>
 
       {/* Middle Cluster: Aggregate Counts */}
-      <div className="flex items-center gap-3 text-muted-foreground">
+      <div className="text-muted-foreground flex min-w-0 items-center gap-3 truncate">
         <div
           className="flex items-center gap-1"
           title="Steps in current design"
         >
           <GitBranch className="h-3 w-3" />
-          {steps.length} steps
+          {steps.length}
+          <span className="hidden sm:inline"> steps</span>
         </div>
         <div
           className="flex items-center gap-1"
           title="Total actions across all steps"
         >
           <Sparkles className="h-3 w-3" />
-          {actionCount} actions
+          {actionCount}
+          <span className="hidden sm:inline"> actions</span>
         </div>
         <div
           className="hidden items-center gap-1 sm:flex"
@@ -270,7 +273,7 @@ export function BottomStatusBar({
           {versionStrategy.replace(/_/g, " ")}
         </div>
         <div
-          className="hidden items-center gap-1 text-[10px] font-normal tracking-wide text-muted-foreground/80 md:flex"
+          className="text-muted-foreground/80 hidden items-center gap-1 text-[10px] font-normal tracking-wide md:flex"
           title="Relative time since last save"
         >
           Saved {relSaved}
@@ -289,9 +292,10 @@ export function BottomStatusBar({
           disabled={!hasUnsaved && !pendingSave}
           onClick={handleSave}
           aria-label="Save (s)"
+          title="Save (s)"
         >
           <Save className="mr-1 h-3 w-3" />
-          Save
+          <span className="hidden sm:inline">Save</span>
         </Button>
         <Button
           variant="ghost"
@@ -300,14 +304,12 @@ export function BottomStatusBar({
           onClick={handleValidate}
           disabled={validating}
           aria-label="Validate (v)"
+          title="Validate (v)"
         >
-            <RefreshCw
-              className={cn(
-                "mr-1 h-3 w-3",
-                validating && "animate-spin",
-              )}
-            />
-          Validate
+          <RefreshCw
+            className={cn("mr-1 h-3 w-3", validating && "animate-spin")}
+          />
+          <span className="hidden sm:inline">Validate</span>
         </Button>
         <Button
           variant="ghost"
@@ -316,9 +318,10 @@ export function BottomStatusBar({
           onClick={handleExport}
           disabled={exporting}
           aria-label="Export (e)"
+          title="Export (e)"
         >
           <Download className="mr-1 h-3 w-3" />
-          Export
+          <span className="hidden sm:inline">Export</span>
         </Button>
         <Separator orientation="vertical" className="mx-1 h-4" />
         <Button
@@ -327,9 +330,10 @@ export function BottomStatusBar({
           className="h-7 px-2"
           onClick={handlePalette}
           aria-label="Command Palette (⌘K)"
+          title="Command Palette (⌘K)"
         >
           <Keyboard className="mr-1 h-3 w-3" />
-          Commands
+          <span className="hidden sm:inline">Commands</span>
         </Button>
       </div>
     </div>

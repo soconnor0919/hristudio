@@ -25,6 +25,7 @@ import type { ActionDefinition } from "~/lib/experiment-designer/types";
 export class ActionRegistry {
   private static instance: ActionRegistry;
   private actions = new Map<string, ActionDefinition>();
+  private aliasIndex = new Map<string, string>();
   private coreActionsLoaded = false;
   private pluginActionsLoaded = false;
   private loadedStudyId: string | null = null;
@@ -292,6 +293,7 @@ export class ActionRegistry {
           icon?: string;
           timeout?: number;
           retryable?: boolean;
+          aliases?: string[];
           parameterSchema?: unknown;
           ros2?: {
             topic?: string;
@@ -394,8 +396,8 @@ export class ActionRegistry {
               };
 
         const actionDef: ActionDefinition = {
-          id: `${plugin.id}.${action.id}`,
-          type: `${plugin.id}.${action.id}`,
+          id: `${plugin.robotId ?? plugin.id}.${action.id}`,
+          type: `${plugin.robotId ?? plugin.id}.${action.id}`,
           name: action.name,
           description: action.description ?? "",
           category,
@@ -406,7 +408,7 @@ export class ActionRegistry {
           ),
           source: {
             kind: "plugin",
-            pluginId: plugin.id,
+            pluginId: plugin.robotId ?? plugin.id,
             robotId: plugin.robotId,
             pluginVersion: plugin.version ?? undefined,
             baseActionId: action.id,
@@ -415,6 +417,17 @@ export class ActionRegistry {
           parameterSchemaRaw: action.parameterSchema ?? undefined,
         };
         this.actions.set(actionDef.id, actionDef);
+        // Register aliases if provided by plugin metadata
+        const aliases = Array.isArray(action.aliases)
+          ? action.aliases
+          : undefined;
+        if (aliases) {
+          for (const alias of aliases) {
+            if (typeof alias === "string" && alias.trim()) {
+              this.aliasIndex.set(alias, actionDef.id);
+            }
+          }
+        }
         totalActionsLoaded++;
       });
     });
@@ -524,7 +537,10 @@ export class ActionRegistry {
   }
 
   getAction(id: string): ActionDefinition | undefined {
-    return this.actions.get(id);
+    const direct = this.actions.get(id);
+    if (direct) return direct;
+    const mapped = this.aliasIndex.get(id);
+    return mapped ? this.actions.get(mapped) : undefined;
   }
 
   /* ---------------- Debug Helpers ---------------- */

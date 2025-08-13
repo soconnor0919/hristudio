@@ -32,6 +32,7 @@
   },
 
   "include": [
+    // FlowWorkspace (flow/FlowWorkspace.tsx) and new designer modules are included via recursive globs
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",

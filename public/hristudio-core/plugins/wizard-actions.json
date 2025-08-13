@@ -43,7 +43,13 @@
           "name": "Tone",
           "type": "select",
           "value": "neutral",
-          "options": ["neutral", "friendly", "encouraging", "instructional", "questioning"],
+          "options": [
+            "neutral",
+            "friendly",
+            "encouraging",
+            "instructional",
+            "questioning"
+          ],
           "description": "Suggested tone for delivery"
         }
       ],
@@ -68,7 +74,15 @@
           "name": "Gesture",
           "type": "select",
           "value": "wave",
-          "options": ["wave", "point", "nod", "thumbs_up", "beckon", "stop_hand", "applaud"],
+          "options": [
+            "wave",
+            "point",
+            "nod",
+            "thumbs_up",
+            "beckon",
+            "stop_hand",
+            "applaud"
+          ],
           "description": "Type of gesture to perform"
         },
         {
@@ -76,7 +90,15 @@
           "name": "Direction",
           "type": "select",
           "value": "forward",
-          "options": ["forward", "left", "right", "up", "down", "participant", "robot"],
+          "options": [
+            "forward",
+            "left",
+            "right",
+            "up",
+            "down",
+            "participant",
+            "robot"
+          ],
           "description": "Direction or target of the gesture"
         }
       ],
@@ -109,8 +131,15 @@
           "name": "Action",
           "type": "select",
           "value": "hold_up",
-          "options": ["hold_up", "demonstrate", "point_to", "place_on_table", "hand_to_participant"],
-          "description": "How to present the object"
+          "options": [
+            "hold_up",
+            "demonstrate",
+            "point_to",
+            "place_on_table",
+            "hand_to_participant"
+          ],
+          "description": "How to present the object",
+          "required": false
         }
       ],
       "execution": {
@@ -134,7 +163,13 @@
           "name": "Note Type",
           "type": "select",
           "value": "observation",
-          "options": ["observation", "participant_response", "technical_issue", "protocol_deviation", "other"],
+          "options": [
+            "observation",
+            "participant_response",
+            "technical_issue",
+            "protocol_deviation",
+            "other"
+          ],
           "description": "Category of note being recorded"
         },
         {
@@ -210,7 +245,14 @@
           "name": "Rating Type",
           "type": "select",
           "value": "engagement",
-          "options": ["engagement", "comprehension", "comfort", "success", "naturalness", "custom"],
+          "options": [
+            "engagement",
+            "comprehension",
+            "comfort",
+            "success",
+            "naturalness",
+            "custom"
+          ],
           "description": "Aspect being rated"
         },
         {

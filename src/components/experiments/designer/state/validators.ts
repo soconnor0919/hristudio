@@ -12,7 +12,6 @@
 
 import type {
   ExperimentStep,
-  ExperimentAction,
   ActionDefinition,
   TriggerType,
   StepType,
@@ -69,7 +68,7 @@ const VALID_TRIGGER_TYPES: TriggerType[] = [
 
 export function validateStructural(
   steps: ExperimentStep[],
-  context: ValidationContext,
+  _context: ValidationContext,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
@@ -189,7 +188,7 @@ export function validateStructural(
     }
 
     // Action-level structural validation
-    step.actions.forEach((action, actionIndex) => {
+    step.actions.forEach((action) => {
       const actionId = action.id;
 
       // Action name validation
@@ -423,7 +422,10 @@ export function validateParameters(
                 field,
                 stepId,
                 actionId,
-                suggestion: `Choose from: ${paramDef.options.join(", ")}`,
+                suggestion:
+                  Array.isArray(paramDef.options) && paramDef.options.length
+                    ? `Choose from: ${paramDef.options.join(", ")}`
+                    : "Choose a valid option",
               });
             }
             break;
@@ -472,7 +474,7 @@ export function validateParameters(
 
 export function validateSemantic(
   steps: ExperimentStep[],
-  context: ValidationContext,
+  _context: ValidationContext,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
@@ -629,7 +631,7 @@ export function validateSemantic(
 
 export function validateExecution(
   steps: ExperimentStep[],
-  context: ValidationContext,
+  _context: ValidationContext,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
@@ -720,7 +722,7 @@ export function groupIssuesByEntity(
   const grouped: Record<string, ValidationIssue[]> = {};
 
   issues.forEach((issue) => {
-    const entityId = issue.actionId || issue.stepId || "experiment";
+    const entityId = issue.actionId ?? issue.stepId ?? "experiment";
     if (!grouped[entityId]) {
       grouped[entityId] = [];
     }

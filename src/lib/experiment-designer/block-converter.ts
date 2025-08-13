@@ -28,7 +28,7 @@ function mapStepTypeToDatabase(
 ): "wizard" | "robot" | "parallel" | "conditional" {
   switch (stepType) {
     case "sequential":
-      return "wizard"; // Default to wizard for sequential
+      return "wizard";
     case "parallel":
       return "parallel";
     case "conditional":

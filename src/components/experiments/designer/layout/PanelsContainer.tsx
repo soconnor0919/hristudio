@@ -115,17 +115,17 @@ export function PanelsContainer({
       if (!raw) return;
       const parsed = JSON.parse(raw) as PersistedLayout;
       if (typeof parsed.left === "number") setLeftWidth(parsed.left);
-      if (typeof parsed.right === "number") setRightWidth(parsed.right);
+      if (typeof parsed.right === "number")
+        setRightWidth(Math.max(parsed.right, minRightWidth));
       if (typeof parsed.leftCollapsed === "boolean") {
         setLeftCollapsed(parsed.leftCollapsed);
       }
-      if (typeof parsed.rightCollapsed === "boolean") {
-        setRightCollapsed(parsed.rightCollapsed);
-      }
+      // Always start with right panel visible to avoid hidden inspector state
+      setRightCollapsed(false);
     } catch {
       /* noop */
     }
-  }, [disablePersistence]);
+  }, [disablePersistence, minRightWidth]);
 
   const persist = useCallback(
     (next?: Partial<PersistedLayout>) => {
@@ -172,7 +172,7 @@ export function PanelsContainer({
         next = Math.max(minRightWidth, Math.min(maxRightWidth, next));
         if (next !== rightWidth) {
           if (frameReq.current) cancelAnimationFrame(frameReq.current);
-            frameReq.current = requestAnimationFrame(() => setRightWidth(next));
+          frameReq.current = requestAnimationFrame(() => setRightWidth(next));
         }
       }
     },
@@ -205,7 +205,14 @@ export function PanelsContainer({
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", endDrag);
     },
-    [leftWidth, rightWidth, leftCollapsed, rightCollapsed, onPointerMove, endDrag],
+    [
+      leftWidth,
+      rightWidth,
+      leftCollapsed,
+      rightCollapsed,
+      onPointerMove,
+      endDrag,
+    ],
   );
 
   /* ------------------------------------------------------------------------ */
@@ -275,7 +282,7 @@ export function PanelsContainer({
   return (
     <div
       className={cn(
-        "flex h-full w-full select-none overflow-hidden",
+        "flex h-full w-full overflow-hidden select-none",
         className,
       )}
       aria-label="Designer panel layout"
@@ -284,13 +291,15 @@ export function PanelsContainer({
       {hasLeft && (
         <div
           className={cn(
-            "relative flex h-full flex-shrink-0 flex-col border-r bg-background/50 transition-[width] duration-150",
-            leftCollapsed ? "w-0 border-r-0" : "w-[--panel-left-width]",
+            "bg-background/50 relative flex h-full flex-shrink-0 flex-col border-r transition-[width] duration-150",
+            leftCollapsed ? "w-0 border-r-0" : "w-[var(--panel-left-width)]",
           )}
           style={
             leftCollapsed
               ? undefined
-              : ({ ["--panel-left-width" as string]: `${leftWidth}px` } as React.CSSProperties)
+              : ({
+                  ["--panel-left-width" as string]: `${leftWidth}px`,
+                } as React.CSSProperties)
           }
         >
           {!leftCollapsed && (
@@ -303,30 +312,15 @@ export function PanelsContainer({
       {hasLeft && !leftCollapsed && (
         <button
           type="button"
-            aria-label="Resize left panel (Enter to toggle collapse)"
+          aria-label="Resize left panel (Enter to toggle collapse)"
           onPointerDown={(e) => startDrag("left", e)}
+          onDoubleClick={toggleLeft}
           onKeyDown={(e) => handleKeyResize("left", e)}
-          className="hover:bg-accent/40 focus-visible:ring-ring group relative z-10 h-full w-1 cursor-col-resize outline-none focus-visible:ring-2"
-        >
-          <span className="bg-border absolute inset-y-0 left-0 w-px" />
-          <span className="bg-border/0 group-hover:bg-border absolute inset-y-0 right-0 w-px transition-colors" />
-        </button>
+          className="hover:bg-accent/40 focus-visible:ring-ring relative z-10 h-full w-0 cursor-col-resize px-1 outline-none focus-visible:ring-2"
+        />
       )}
 
-      {/* Collapse / Expand Toggle (Left) */}
-      {hasLeft && (
-        <button
-          type="button"
-          aria-label={leftCollapsed ? "Expand left panel" : "Collapse left panel"}
-          onClick={toggleLeft}
-          className={cn(
-            "text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-2 z-20 rounded border bg-background/95 px-1.5 py-0.5 text-[10px] font-medium shadow-sm outline-none focus-visible:ring-2",
-            leftCollapsed ? "left-1" : "left-2",
-          )}
-        >
-          {leftCollapsed ? "»" : "«"}
-        </button>
-      )}
+      {/* Left collapse toggle removed to prevent breadcrumb overlap */}
 
       {/* Center (Workspace) */}
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -337,49 +331,50 @@ export function PanelsContainer({
       {hasRight && !rightCollapsed && (
         <button
           type="button"
-            aria-label="Resize right panel (Enter to toggle collapse)"
+          aria-label="Resize right panel (Enter to toggle collapse)"
           onPointerDown={(e) => startDrag("right", e)}
+          onDoubleClick={toggleRight}
           onKeyDown={(e) => handleKeyResize("right", e)}
-          className="hover:bg-accent/40 focus-visible:ring-ring group relative z-10 h-full w-1 cursor-col-resize outline-none focus-visible:ring-2"
-        >
-          <span className="bg-border absolute inset-y-0 right-0 w-px" />
-          <span className="bg-border/0 group-hover:bg-border absolute inset-y-0 left-0 w-px transition-colors" />
-        </button>
+          className="hover:bg-accent/40 focus-visible:ring-ring relative z-10 h-full w-1 cursor-col-resize outline-none focus-visible:ring-2"
+        />
       )}
 
       {/* Right Panel */}
       {hasRight && (
         <div
           className={cn(
-            "relative flex h-full flex-shrink-0 flex-col border-l bg-background/50 transition-[width] duration-150",
-            rightCollapsed ? "w-0 border-l-0" : "w-[--panel-right-width]",
+            "bg-background/50 relative flex h-full flex-shrink-0 flex-col transition-[width] duration-150",
+            rightCollapsed ? "w-0" : "w-[var(--panel-right-width)]",
           )}
           style={
             rightCollapsed
               ? undefined
-              : ({ ["--panel-right-width" as string]: `${rightWidth}px` } as React.CSSProperties)
+              : ({
+                  ["--panel-right-width" as string]: `${rightWidth}px`,
+                } as React.CSSProperties)
           }
         >
           {!rightCollapsed && (
-            <div className="flex-1 overflow-hidden">{right}</div>
+            <div className="min-w-0 flex-1 overflow-hidden">{right}</div>
           )}
         </div>
       )}
 
-      {/* Collapse / Expand Toggle (Right) */}
+      {/* Minimal Right Toggle (top-right), non-intrusive like VSCode */}
       {hasRight && (
         <button
           type="button"
           aria-label={
-            rightCollapsed ? "Expand right panel" : "Collapse right panel"
+            rightCollapsed ? "Expand inspector" : "Collapse inspector"
           }
           onClick={toggleRight}
           className={cn(
-            "text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-2 z-20 rounded border bg-background/95 px-1.5 py-0.5 text-[10px] font-medium shadow-sm outline-none focus-visible:ring-2",
-            rightCollapsed ? "right-1" : "right-2",
+            "text-muted-foreground hover:text-foreground absolute top-1 z-20 p-1 text-[10px]",
+            rightCollapsed ? "right-1" : "right-1",
           )}
+          title={rightCollapsed ? "Show inspector" : "Hide inspector"}
         >
-          {rightCollapsed ? "«" : "»"}
+          {rightCollapsed ? "◀" : "▶"}
         </button>
       )}
     </div>

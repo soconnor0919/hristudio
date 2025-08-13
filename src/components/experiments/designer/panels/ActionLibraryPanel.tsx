@@ -1,20 +1,4 @@
 "use client";
-/*
-Unable to apply the requested minimal edits reliably because I don't have the authoritative line numbers for the current file contents (the editing protocol requires exact line matches with starting line numbers).
-Please resend the file with line numbers (or just the specific line numbers for:
-1. The DraggableAction wrapper <div> className
-2. The star/favorite button block
-3. The description <div>
-4. The grid container for the actions list
-
-Once I have those, I will:
-- Change the grid from responsive two-column to forced single column (remove sm:grid-cols-2).
-- Adjust tile layout to a slimmer vertical card, wrapping text (remove truncate, add normal wrapping or line clamp if desired).
-- Move favorite star button to absolute top-right inside the tile (remove it from flow and add absolute classes).
-- Optionally constrain left panel width through class (e.g., max-w-[260px]) if you want a thinner drawer.
-- Ensure description wraps (replace truncate with line-clamp-3 or plain wrapping).
-Let me know if you prefer line-clamp (limited lines) or full wrap.
-*/
 
 import React, {
   useCallback,
@@ -47,20 +31,6 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { cn } from "~/lib/utils";
 import { useActionRegistry } from "../ActionRegistry";
 import type { ActionDefinition } from "~/lib/experiment-designer/types";
-
-/**
- * ActionLibraryPanel
- *
- * Enhanced wrapper panel for the experiment designer left side:
- *  - Fuzzy-ish search (case-insensitive substring) over name, description, id
- *  - Multi-category filtering (toggle chips)
- *  - Favorites (local persisted)
- *  - Density toggle (comfortable / compact)
- *  - Star / unstar actions inline
- *  - Drag support (DndKit) identical to legacy ActionLibrary
- *
- * Does NOT own persistence of actions themselves—delegates to action registry.
- */
 
 export type ActionCategory = ActionDefinition["category"];
 
@@ -109,22 +79,16 @@ function DraggableAction({
   onToggleFavorite,
   highlight,
 }: DraggableActionProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `action-${action.id}`,
-      data: { action },
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `action-${action.id}`,
+    data: { action },
+  });
 
-  const style: React.CSSProperties = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px,0)`,
-      }
-    : {};
+  // Disable visual translation during drag so the list does not shift items.
+  // We still let dnd-kit manage the drag overlay internally (no manual transform).
+  const style: React.CSSProperties = {};
 
-  const IconComponent =
-    iconMap[action.icon] ??
-    // fallback icon (Sparkles)
-    Sparkles;
+  const IconComponent = iconMap[action.icon] ?? Sparkles;
 
   const categoryColors: Record<ActionCategory, string> = {
     wizard: "bg-blue-500",
@@ -140,12 +104,12 @@ function DraggableAction({
       {...listeners}
       style={style}
       className={cn(
-        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab flex-col gap-2 rounded border px-3 transition-colors",
-        compact ? "py-2 text-[11px]" : "py-3 text-[12px]",
-        isDragging && "opacity-50",
+        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab touch-none flex-col gap-1 rounded border px-2 transition-colors select-none",
+        compact ? "py-1.5 text-[11px]" : "py-2 text-[12px]",
+        isDragging && "ring-border opacity-60 ring-1",
       )}
       draggable={false}
-      title={action.description ?? ""}
+      onDragStart={(e) => e.preventDefault()}
     >
       <button
         type="button"
@@ -162,14 +126,15 @@ function DraggableAction({
           <StarOff className="h-3 w-3" />
         )}
       </button>
-      <div className="flex items-start gap-2">
+
+      <div className="flex items-start gap-2 select-none">
         <div
           className={cn(
-            "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-white",
+            "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-white",
             categoryColors[action.category],
           )}
         >
-          <IconComponent className="h-3.5 w-3.5" />
+          <IconComponent className="h-3 w-3" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 leading-snug font-medium">
@@ -187,7 +152,7 @@ function DraggableAction({
             </span>
           </div>
           {action.description && !compact && (
-            <div className="text-muted-foreground mt-1 line-clamp-3 text-[11px] leading-snug break-words whitespace-normal">
+            <div className="text-muted-foreground mt-1 line-clamp-3 text-[10.5px] leading-snug break-words whitespace-normal">
               {highlight
                 ? highlightMatch(action.description, highlight)
                 : action.description}
@@ -198,10 +163,6 @@ function DraggableAction({
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Panel Component                                                            */
-/* -------------------------------------------------------------------------- */
 
 export function ActionLibraryPanel() {
   const registry = useActionRegistry();
@@ -220,7 +181,6 @@ export function ActionLibraryPanel() {
 
   const allActions = registry.getAllActions();
 
-  /* ------------------------------- Favorites -------------------------------- */
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
@@ -259,7 +219,6 @@ export function ActionLibraryPanel() {
     [persistFavorites],
   );
 
-  /* ----------------------------- Category List ------------------------------ */
   const categories = useMemo(
     () =>
       [
@@ -281,21 +240,48 @@ export function ActionLibraryPanel() {
     [],
   );
 
-  const toggleCategory = useCallback((c: ActionCategory) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(c)) {
-        next.delete(c);
-      } else {
-        next.add(c);
-      }
-      if (next.size === 0) {
-        // Keep at least one category selected
-        next.add(c);
-      }
-      return next;
-    });
-  }, []);
+  /**
+   * Enforce invariant:
+   * - Either ALL categories selected
+   * - Or EXACTLY ONE selected
+   *
+   * Behaviors:
+   * - From ALL -> clicking a category selects ONLY that category
+   * - From single selected -> clicking same category returns to ALL
+   * - From single selected -> clicking different category switches to that single
+   * - Any multi-subset attempt collapses to the clicked category (prevents ambiguous subset)
+   */
+  const toggleCategory = useCallback(
+    (c: ActionCategory) => {
+      setSelectedCategories((prev) => {
+        const allKeys = categories.map((k) => k.key) as ActionCategory[];
+        const fullSize = allKeys.length;
+        const isFull = prev.size === fullSize;
+        const isSingle = prev.size === 1;
+        const has = prev.has(c);
+
+        // Case: full set -> reduce to single clicked
+        if (isFull) {
+          return new Set<ActionCategory>([c]);
+        }
+
+        // Case: single selection
+        if (isSingle) {
+          // Clicking the same => expand to all
+          if (has) {
+            return new Set<ActionCategory>(allKeys);
+          }
+          // Clicking different => switch single
+          return new Set<ActionCategory>([c]);
+        }
+
+        // (Should not normally reach: ambiguous multi-subset)
+        // Collapse to single clicked to restore invariant
+        return new Set<ActionCategory>([c]);
+      });
+    },
+    [categories],
+  );
 
   const clearFilters = useCallback(() => {
     setSelectedCategories(new Set(categories.map((c) => c.key)));
@@ -304,11 +290,9 @@ export function ActionLibraryPanel() {
   }, [categories]);
 
   useEffect(() => {
-    // On mount select all categories for richer initial view
     setSelectedCategories(new Set(categories.map((c) => c.key)));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ------------------------------- Filtering -------------------------------- */
   const filtered = useMemo(() => {
     const activeCats = selectedCategories;
     const q = search.trim().toLowerCase();
@@ -338,9 +322,7 @@ export function ActionLibraryPanel() {
       control: 0,
       observation: 0,
     };
-    for (const a of allActions) {
-      map[a.category] += 1;
-    }
+    for (const a of allActions) map[a.category] += 1;
     return map;
   }, [allActions]);
 
@@ -348,26 +330,51 @@ export function ActionLibraryPanel() {
     filtered.some((a) => a.id === id),
   ).length;
 
-  /* ------------------------------- Rendering -------------------------------- */
   return (
-    <div className="flex h-full flex-col">
-      {/* Toolbar */}
+    <div className="flex h-full max-w-[240px] flex-col overflow-hidden">
       <div className="bg-background/60 border-b p-2">
-        <div className="mb-2 flex gap-2">
-          <div className="relative flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search actions"
-              className="h-8 pl-7 text-xs"
-              aria-label="Search actions"
-            />
-          </div>
+        <div className="relative mb-2">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search"
+            className="h-8 w-full pl-7 text-xs"
+            aria-label="Search actions"
+          />
+        </div>
+
+        <div className="mb-2 grid grid-cols-2 gap-1">
+          {categories.map((cat) => {
+            const active = selectedCategories.has(cat.key);
+            const Icon = cat.icon;
+            return (
+              <Button
+                key={cat.key}
+                variant={active ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-7 justify-start gap-1 text-[11px]",
+                  active && `${cat.color} text-white hover:opacity-90`,
+                )}
+                onClick={() => toggleCategory(cat.key)}
+                aria-pressed={active}
+              >
+                <Icon className="h-3 w-3" />
+                {cat.label}
+                <span className="ml-auto text-[10px] font-normal opacity-80">
+                  {countsByCategory[cat.key]}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap gap-1">
           <Button
             variant={showOnlyFavorites ? "default" : "outline"}
             size="sm"
-            className="h-8"
+            className="h-7 min-w-[80px] flex-1"
             onClick={() => setShowOnlyFavorites((s) => !s)}
             aria-pressed={showOnlyFavorites}
             aria-label="Toggle favorites filter"
@@ -387,7 +394,7 @@ export function ActionLibraryPanel() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8"
+            className="h-7 min-w-[80px] flex-1"
             onClick={() =>
               setDensity((d) =>
                 d === "comfortable" ? "compact" : "comfortable",
@@ -396,66 +403,41 @@ export function ActionLibraryPanel() {
             aria-label="Toggle density"
           >
             <SlidersHorizontal className="mr-1 h-3 w-3" />
-            {density === "comfortable" ? "Compact" : "Comfort"}
+            {density === "comfortable" ? "Dense" : "Relax"}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8"
+            className="h-7 min-w-[60px] flex-1"
             onClick={clearFilters}
             aria-label="Clear filters"
           >
             <X className="h-3 w-3" />
+            Clear
           </Button>
-        </div>
-
-        {/* Category Filters */}
-        <div className="grid grid-cols-4 gap-1">
-          {categories.map((cat) => {
-            const active = selectedCategories.has(cat.key);
-            const Icon = cat.icon;
-            return (
-              <Button
-                key={cat.key}
-                variant={active ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-7 justify-start gap-1 truncate text-[11px]",
-                  active && `${cat.color} text-white hover:opacity-90`,
-                )}
-                onClick={() => toggleCategory(cat.key)}
-                aria-pressed={active}
-              >
-                <Icon className="h-3 w-3" />
-                {cat.label}
-                <span className="ml-auto text-[10px] font-normal opacity-80">
-                  {countsByCategory[cat.key]}
-                </span>
-              </Button>
-            );
-          })}
         </div>
 
         <div className="text-muted-foreground mt-2 flex items-center justify-between text-[10px]">
           <div>
-            {filtered.length} shown / {allActions.length} total
+            {filtered.length} / {allActions.length}
           </div>
           <div className="flex items-center gap-1">
             <FolderPlus className="h-3 w-3" />
             <span>
-              Plugins: {registry.getDebugInfo().pluginActionsLoaded ? "✓" : "…"}
+              {registry.getDebugInfo().pluginActionsLoaded
+                ? "Plugins ✓"
+                : "Plugins …"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Actions List */}
-      <ScrollArea className="flex-1">
-        <div className="grid grid-cols-1 gap-2 p-2">
+      <ScrollArea className="flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col gap-2 p-2">
           {filtered.length === 0 ? (
             <div className="text-muted-foreground/70 flex flex-col items-center gap-2 py-10 text-center text-xs">
               <Filter className="h-6 w-6" />
-              <div>No actions match filters</div>
+              <div>No actions</div>
             </div>
           ) : (
             filtered.map((action) => (
@@ -472,7 +454,6 @@ export function ActionLibraryPanel() {
         </div>
       </ScrollArea>
 
-      {/* Footer Summary */}
       <div className="bg-background/60 border-t p-2">
         <div className="flex items-center justify-between text-[10px]">
           <div className="flex items-center gap-2">
@@ -481,7 +462,7 @@ export function ActionLibraryPanel() {
             </Badge>
             {showOnlyFavorites && (
               <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                {visibleFavoritesCount} favorites
+                {visibleFavoritesCount} fav
               </Badge>
             )}
           </div>
@@ -491,9 +472,8 @@ export function ActionLibraryPanel() {
           </div>
         </div>
         <Separator className="my-1" />
-        <p className="text-muted-foreground text-[9px] leading-relaxed">
-          Drag actions into the flow. Use search / category filters to narrow
-          results. Star actions you use frequently.
+        <p className="text-muted-foreground hidden text-[9px] leading-relaxed md:block">
+          Drag actions into the flow. Star frequent actions.
         </p>
       </div>
     </div>
