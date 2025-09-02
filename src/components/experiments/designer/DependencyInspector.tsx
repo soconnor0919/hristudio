@@ -420,7 +420,7 @@ export function DependencyInspector({
     dependencies.some((d) => d.status !== "available") || drifts.length > 0;
 
   return (
-    <Card className={cn("h-[calc(100vh-12rem)]", className)}>
+    <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">

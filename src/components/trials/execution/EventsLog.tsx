@@ -2,20 +2,35 @@
 
 import { format, formatDistanceToNow } from "date-fns";
 import {
-    Activity, AlertTriangle, ArrowRight, Bot, Camera, CheckCircle, Eye, Hand, MessageSquare, Pause, Play, Settings, User, Volume2, XCircle
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Bot,
+  Camera,
+  CheckCircle,
+  Eye,
+  Hand,
+  MessageSquare,
+  Pause,
+  Play,
+  Settings,
+  User,
+  Volume2,
+  XCircle,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { api } from "~/trpc/react";
+import type { WebSocketMessage } from "~/hooks/useWebSocket";
 
 interface EventsLogProps {
   trialId: string;
   refreshKey: number;
   isLive: boolean;
   maxEvents?: number;
-  realtimeEvents?: any[];
+  realtimeEvents?: WebSocketMessage[];
   isWebSocketConnected?: boolean;
 }
 
@@ -24,7 +39,7 @@ interface TrialEvent {
   trialId: string;
   eventType: string;
   timestamp: Date;
-  data: any;
+  data: Record<string, unknown> | null;
   notes: string | null;
   createdAt: Date;
 }
@@ -177,7 +192,17 @@ export function EventsLog({
     {
       trialId,
       limit: maxEvents,
-      type: filter === "all" ? undefined : filter as "error" | "custom" | "trial_start" | "trial_end" | "step_start" | "step_end" | "wizard_intervention",
+      type:
+        filter === "all"
+          ? undefined
+          : (filter as
+              | "error"
+              | "custom"
+              | "trial_start"
+              | "trial_end"
+              | "step_start"
+              | "step_end"
+              | "wizard_intervention"),
     },
     {
       refetchInterval: isLive && !isWebSocketConnected ? 2000 : 10000, // Less frequent polling when WebSocket is active
@@ -186,23 +211,48 @@ export function EventsLog({
     },
   );
 
-  // Convert WebSocket events to trial events format
-  const convertWebSocketEvent = (wsEvent: any): TrialEvent => ({
-    id: `ws-${Date.now()}-${Math.random()}`,
-    trialId,
-    eventType:
-      wsEvent.type === "trial_action_executed"
-        ? "wizard_action"
-        : wsEvent.type === "intervention_logged"
-          ? "wizard_intervention"
-          : wsEvent.type === "step_changed"
-            ? "step_transition"
-            : wsEvent.type || "system_event",
-    timestamp: new Date(wsEvent.data?.timestamp || Date.now()),
-    data: wsEvent.data || {},
-    notes: wsEvent.data?.notes || null,
-    createdAt: new Date(wsEvent.data?.timestamp || Date.now()),
-  });
+  // Convert WebSocket events to trial events format (type-safe)
+  const convertWebSocketEvent = useCallback(
+    (wsEvent: WebSocketMessage): TrialEvent => {
+      const eventType =
+        wsEvent.type === "trial_action_executed"
+          ? "wizard_action"
+          : wsEvent.type === "intervention_logged"
+            ? "wizard_intervention"
+            : wsEvent.type === "step_changed"
+              ? "step_transition"
+              : wsEvent.type || "system_event";
+
+      const rawData = wsEvent.data;
+      const isRecord = (v: unknown): v is Record<string, unknown> =>
+        typeof v === "object" && v !== null;
+
+      const data: Record<string, unknown> | null = isRecord(rawData)
+        ? rawData
+        : null;
+
+      const ts =
+        isRecord(rawData) && typeof rawData.timestamp === "number"
+          ? rawData.timestamp
+          : Date.now();
+
+      const notes =
+        isRecord(rawData) && typeof rawData.notes === "string"
+          ? rawData.notes
+          : null;
+
+      return {
+        id: `ws-${Date.now()}-${Math.random()}`,
+        trialId,
+        eventType,
+        timestamp: new Date(ts),
+        data,
+        notes,
+        createdAt: new Date(ts),
+      };
+    },
+    [trialId],
+  );
 
   // Update events when data changes (prioritize WebSocket events)
   useEffect(() => {
@@ -210,11 +260,26 @@ export function EventsLog({
 
     // Add database events
     if (eventsData) {
-      newEvents = eventsData.map((event) => ({
-        ...event,
+      type ApiTrialEvent = {
+        id: string;
+        trialId: string;
+        eventType: string;
+        timestamp: string | Date;
+        data: unknown;
+      };
+
+      const apiEvents = (eventsData as unknown as ApiTrialEvent[]) ?? [];
+      newEvents = apiEvents.map((event) => ({
+        id: event.id,
+        trialId: event.trialId,
+        eventType: event.eventType,
         timestamp: new Date(event.timestamp),
+        data:
+          typeof event.data === "object" && event.data !== null
+            ? (event.data as Record<string, unknown>)
+            : null,
+        notes: null,
         createdAt: new Date(event.timestamp),
-        notes: null, // Add required field
       }));
     }
 
@@ -240,7 +305,14 @@ export function EventsLog({
       .slice(-maxEvents); // Keep only the most recent events
 
     setEvents(uniqueEvents);
-  }, [eventsData, refreshKey, realtimeEvents, trialId, maxEvents]);
+  }, [
+    eventsData,
+    refreshKey,
+    realtimeEvents,
+    trialId,
+    maxEvents,
+    convertWebSocketEvent,
+  ]);
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
@@ -256,41 +328,87 @@ export function EventsLog({
     );
   };
 
-  const formatEventData = (eventType: string, data: any) => {
+  const formatEventData = (
+    eventType: string,
+    data: Record<string, unknown> | null,
+  ): string | null => {
     if (!data) return null;
 
+    const str = (k: string): string | undefined => {
+      const v = data[k];
+      return typeof v === "string" ? v : undefined;
+    };
+    const num = (k: string): number | undefined => {
+      const v = data[k];
+      return typeof v === "number" ? v : undefined;
+    };
+
     switch (eventType) {
-      case "step_transition":
-        return `Step ${data.from_step + 1} → Step ${data.to_step + 1}${data.step_name ? `: ${data.step_name}` : ""}`;
+      case "step_transition": {
+        const fromIdx = num("from_step");
+        const toIdx = num("to_step");
+        const stepName = str("step_name");
+        if (typeof toIdx === "number") {
+          const fromLabel =
+            typeof fromIdx === "number" ? `${fromIdx + 1} → ` : "";
+          const nameLabel = stepName ? `: ${stepName}` : "";
+          return `Step ${fromLabel}${toIdx + 1}${nameLabel}`;
+        }
+        return "Step changed";
+      }
 
-      case "wizard_action":
-        return `${data.action_type ? data.action_type.replace(/_/g, " ") : "Action executed"}${data.step_name ? ` in ${data.step_name}` : ""}`;
+      case "wizard_action": {
+        const actionType = str("action_type");
+        const stepName = str("step_name");
+        const actionLabel = actionType
+          ? actionType.replace(/_/g, " ")
+          : "Action executed";
+        const inStep = stepName ? ` in ${stepName}` : "";
+        return `${actionLabel}${inStep}`;
+      }
 
-      case "robot_action":
-        return `${data.action_name || "Robot action"}${data.parameters ? ` with parameters` : ""}`;
+      case "robot_action": {
+        const actionName = str("action_name") ?? "Robot action";
+        const hasParams =
+          typeof data.parameters !== "undefined" && data.parameters !== null;
+        return `${actionName}${hasParams ? " with parameters" : ""}`;
+      }
 
-      case "emergency_action":
-        return `Emergency: ${data.emergency_type ? data.emergency_type.replace(/_/g, " ") : "Unknown"}`;
+      case "emergency_action": {
+        const emergency = str("emergency_type");
+        return `Emergency: ${
+          emergency ? emergency.replace(/_/g, " ") : "Unknown"
+        }`;
+      }
 
-      case "recording_control":
-        return `Recording ${data.action === "start_recording" ? "started" : "stopped"}`;
+      case "recording_control": {
+        const action = str("action");
+        return `Recording ${action === "start_recording" ? "started" : "stopped"}`;
+      }
 
-      case "video_control":
-        return `Video ${data.action === "video_on" ? "enabled" : "disabled"}`;
+      case "video_control": {
+        const action = str("action");
+        return `Video ${action === "video_on" ? "enabled" : "disabled"}`;
+      }
 
-      case "audio_control":
-        return `Audio ${data.action === "audio_on" ? "enabled" : "disabled"}`;
+      case "audio_control": {
+        const action = str("action");
+        return `Audio ${action === "audio_on" ? "enabled" : "disabled"}`;
+      }
 
-      case "wizard_intervention":
+      case "wizard_intervention": {
         return (
-          data.content || data.intervention_type || "Intervention recorded"
+          str("content") ?? str("intervention_type") ?? "Intervention recorded"
         );
+      }
 
-      default:
-        if (typeof data === "string") return data;
-        if (data.message) return data.message;
-        if (data.description) return data.description;
+      default: {
+        const message = str("message");
+        if (message) return message;
+        const description = str("description");
+        if (description) return description;
         return null;
+      }
     }
   };
 
@@ -305,7 +423,8 @@ export function EventsLog({
       if (
         index === 0 ||
         Math.abs(
-          event.timestamp.getTime() - (events[index - 1]?.timestamp.getTime() ?? 0),
+          event.timestamp.getTime() -
+            (events[index - 1]?.timestamp.getTime() ?? 0),
         ) > 30000
       ) {
         groups.push([event]);
@@ -317,7 +436,7 @@ export function EventsLog({
     [],
   );
 
-  const uniqueEventTypes = Array.from(new Set(events.map((e) => e.eventType)));
+  // uniqueEventTypes removed (unused)
 
   if (isLoading) {
     return (
@@ -433,9 +552,11 @@ export function EventsLog({
                   </div>
                   <div className="h-px flex-1 bg-slate-200"></div>
                   <div className="text-xs text-slate-400">
-                    {group[0] ? formatDistanceToNow(group[0].timestamp, {
-                      addSuffix: true,
-                    }) : ""}
+                    {group[0]
+                      ? formatDistanceToNow(group[0].timestamp, {
+                          addSuffix: true,
+                        })
+                      : ""}
                   </div>
                 </div>
 
@@ -503,20 +624,22 @@ export function EventsLog({
 
                           {event.notes && (
                             <p className="mt-1 text-xs text-slate-500 italic">
-                              "{event.notes}"
+                              {event.notes}
                             </p>
                           )}
 
-                          {event.data && Object.keys(event.data).length > 0 && (
-                            <details className="mt-2">
-                              <summary className="cursor-pointer text-xs text-blue-600 hover:text-blue-800">
-                                View details
-                              </summary>
-                              <pre className="mt-1 overflow-x-auto rounded border bg-white p-2 text-xs text-slate-600">
-                                {JSON.stringify(event.data, null, 2)}
-                              </pre>
-                            </details>
-                          )}
+                          {event.data &&
+                            typeof event.data === "object" &&
+                            Object.keys(event.data).length > 0 && (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-xs text-blue-600 hover:text-blue-800">
+                                  View details
+                                </summary>
+                                <pre className="mt-1 overflow-x-auto rounded border bg-white p-2 text-xs text-slate-600">
+                                  {JSON.stringify(event.data, null, 2)}
+                                </pre>
+                              </details>
+                            )}
                         </div>
 
                         <div className="flex-shrink-0 text-xs text-slate-400">

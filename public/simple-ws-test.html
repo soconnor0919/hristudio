@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple WebSocket Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .connecting { background: #d1ecf1; color: #0c5460; }
+        .log { background: #f8f9fa; padding: 10px; height: 300px; overflow-y: auto; border: 1px solid #ddd; font-family: monospace; white-space: pre-wrap; }
+        button { padding: 8px 16px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="status" class="status disconnected">Disconnected</div>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button onclick="sendTest()">Send Test</button>
+    <div id="log" class="log"></div>
+
+    <script>
+        let ws = null;
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+
+        function updateStatus(text, className) {
+            status.textContent = text;
+            status.className = 'status ' + className;
+        }
+
+        function addLog(msg) {
+            log.textContent += new Date().toLocaleTimeString() + ': ' + msg + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function connect() {
+            const trialId = '931c626d-fe3f-4db3-a36c-50d6898e1b17';
+            const token = btoa(JSON.stringify({userId: '08594f2b-64fe-4952-947f-3edc5f144f52', timestamp: Math.floor(Date.now()/1000)}));
+            const url = `ws://localhost:3000/api/websocket?trialId=${trialId}&token=${token}`;
+
+            addLog('Connecting to: ' + url);
+            updateStatus('Connecting...', 'connecting');
+
+            ws = new WebSocket(url);
+
+            ws.onopen = function() {
+                addLog('✅ Connected!');
+                updateStatus('Connected', 'connected');
+            };
+
+            ws.onmessage = function(event) {
+                addLog('📨 Received: ' + event.data);
+            };
+
+            ws.onclose = function(event) {
+                addLog('🔌 Closed: ' + event.code + ' ' + event.reason);
+                updateStatus('Disconnected', 'disconnected');
+            };
+
+            ws.onerror = function(error) {
+                addLog('❌ Error: ' + error);
+                updateStatus('Error', 'disconnected');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendTest() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const msg = JSON.stringify({type: 'heartbeat', data: {}});
+                ws.send(msg);
+                addLog('📤 Sent: ' + msg);
+            } else {
+                addLog('❌ Not connected');
+            }
+        }
+    </script>
+</body>
+</html>

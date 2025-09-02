@@ -63,7 +63,7 @@ export function EntityForm<T extends FieldValues = FieldValues>({
   entityName,
   entityNamePlural,
   backUrl,
-  listUrl,
+  listUrl: _listUrl,
   title,
   description,
   icon: Icon,
@@ -195,7 +195,7 @@ export function EntityForm<T extends FieldValues = FieldValues>({
                         </span>
                       </div>
                     ) : (
-                      submitText || defaultSubmitText
+                      (submitText ?? defaultSubmitText)
                     )}
                   </Button>
                 </div>

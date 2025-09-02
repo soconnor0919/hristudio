@@ -1,43 +1,62 @@
 "use client";
 
 import {
-    AlertTriangle, Camera, Clock, Hand, HelpCircle, Lightbulb, MessageSquare, Pause,
-    Play,
-    RotateCcw, Target, Video,
-    VideoOff, Volume2,
-    VolumeX, Zap
+  AlertTriangle,
+  Camera,
+  Clock,
+  Hand,
+  HelpCircle,
+  Lightbulb,
+  MessageSquare,
+  Pause,
+  RotateCcw,
+  Target,
+  Video,
+  VideoOff,
+  Volume2,
+  VolumeX,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 
 interface ActionControlsProps {
+  trialId: string;
   currentStep: {
     id: string;
     name: string;
-    type: "wizard_action" | "robot_action" | "parallel_steps" | "conditional_branch";
-    parameters?: any;
-    actions?: any[];
+    type:
+      | "wizard_action"
+      | "robot_action"
+      | "parallel_steps"
+      | "conditional_branch";
+    description?: string;
+    parameters?: Record<string, unknown>;
+    duration?: number;
   } | null;
-  onExecuteAction: (actionType: string, actionData: any) => Promise<void>;
-  trialId: string;
+  onActionComplete: (
+    actionId: string,
+    actionData: Record<string, unknown>,
+  ) => void;
+  isConnected: boolean;
 }
 
 interface QuickAction {
@@ -50,7 +69,12 @@ interface QuickAction {
   requiresConfirmation?: boolean;
 }
 
-export function ActionControls({ currentStep, onExecuteAction, trialId }: ActionControlsProps) {
+export function ActionControls({
+  trialId: _trialId,
+  currentStep,
+  onActionComplete,
+  isConnected: _isConnected,
+}: ActionControlsProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
@@ -119,82 +143,71 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
     { value: "cut_power", label: "Emergency Power Cut" },
   ];
 
-  const handleQuickAction = async (action: QuickAction) => {
+  const handleQuickAction = (action: QuickAction) => {
     if (action.requiresConfirmation) {
       setShowEmergencyDialog(true);
       return;
     }
 
-    try {
-      await onExecuteAction(action.action, {
-        action_id: action.id,
-        step_id: currentStep?.id,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (_error) {
-      console.error(`Failed to execute ${action.action}:`, _error);
-    }
+    onActionComplete(action.id, {
+      action_type: action.action,
+      notes: action.description,
+      timestamp: new Date().toISOString(),
+    });
   };
 
-  const handleEmergencyAction = async () => {
+  const handleEmergencyAction = () => {
     if (!selectedEmergencyAction) return;
 
-    try {
-      await onExecuteAction("emergency_action", {
-        emergency_type: selectedEmergencyAction,
-        step_id: currentStep?.id,
-        timestamp: new Date().toISOString(),
-        severity: "high",
-      });
-      setShowEmergencyDialog(false);
-      setSelectedEmergencyAction("");
-    } catch (_error) {
-      console.error("Failed to execute emergency action:", _error);
-    }
+    onActionComplete("emergency_action", {
+      emergency_type: selectedEmergencyAction,
+      notes: interventionNote || "Emergency action executed",
+      timestamp: new Date().toISOString(),
+    });
+
+    setShowEmergencyDialog(false);
+    setSelectedEmergencyAction("");
+    setInterventionNote("");
   };
 
-  const handleInterventionSubmit = async () => {
+  const handleInterventionSubmit = () => {
     if (!interventionNote.trim()) return;
 
-    try {
-      await onExecuteAction("wizard_intervention", {
-        intervention_type: "note",
-        content: interventionNote,
-        step_id: currentStep?.id,
-        timestamp: new Date().toISOString(),
-      });
-      setInterventionNote("");
-      setIsCommunicationOpen(false);
-    } catch (_error) {
-      console.error("Failed to submit intervention:", _error);
-    }
+    onActionComplete("wizard_intervention", {
+      intervention_type: "note",
+      content: interventionNote,
+      timestamp: new Date().toISOString(),
+    });
+
+    setInterventionNote("");
+    setIsCommunicationOpen(false);
   };
 
-  const toggleRecording = async () => {
+  const toggleRecording = () => {
     const newState = !isRecording;
     setIsRecording(newState);
 
-    await onExecuteAction("recording_control", {
+    onActionComplete("recording_control", {
       action: newState ? "start_recording" : "stop_recording",
       timestamp: new Date().toISOString(),
     });
   };
 
-  const toggleVideo = async () => {
+  const toggleVideo = () => {
     const newState = !isVideoOn;
     setIsVideoOn(newState);
 
-    await onExecuteAction("video_control", {
+    onActionComplete("video_control", {
       action: newState ? "video_on" : "video_off",
       timestamp: new Date().toISOString(),
     });
   };
 
-  const toggleAudio = async () => {
+  const toggleAudio = () => {
     const newState = !isAudioOn;
     setIsAudioOn(newState);
 
-    await onExecuteAction("audio_control", {
+    onActionComplete("audio_control", {
       action: newState ? "audio_on" : "audio_off",
       timestamp: new Date().toISOString(),
     });
@@ -217,7 +230,9 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
               onClick={toggleRecording}
               className="flex items-center space-x-2"
             >
-              <div className={`w-2 h-2 rounded-full ${isRecording ? "bg-white animate-pulse" : "bg-red-500"}`}></div>
+              <div
+                className={`h-2 w-2 rounded-full ${isRecording ? "animate-pulse" : ""}`}
+              ></div>
               <span>{isRecording ? "Stop Recording" : "Start Recording"}</span>
             </Button>
 
@@ -226,7 +241,11 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
               onClick={toggleVideo}
               className="flex items-center space-x-2"
             >
-              {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              {isVideoOn ? (
+                <Video className="h-4 w-4" />
+              ) : (
+                <VideoOff className="h-4 w-4" />
+              )}
               <span>Video</span>
             </Button>
 
@@ -235,7 +254,11 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
               onClick={toggleAudio}
               className="flex items-center space-x-2"
             >
-              {isAudioOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {isAudioOn ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
               <span>Audio</span>
             </Button>
 
@@ -265,15 +288,18 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
               <Button
                 key={action.id}
                 variant={
-                  action.type === "emergency" ? "destructive" :
-                  action.type === "primary" ? "default" : "outline"
+                  action.type === "emergency"
+                    ? "destructive"
+                    : action.type === "primary"
+                      ? "default"
+                      : "outline"
                 }
                 onClick={() => handleQuickAction(action)}
-                className="flex items-center justify-start space-x-3 h-12"
+                className="flex h-12 items-center justify-start space-x-3"
               >
                 <action.icon className="h-4 w-4 flex-shrink-0" />
                 <div className="flex-1 text-left">
-                  <div className="font-medium">{action.label}</div>
+                  <h4 className="font-medium">{action.label}</h4>
                   <div className="text-xs opacity-75">{action.description}</div>
                 </div>
               </Button>
@@ -293,29 +319,14 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="text-sm text-slate-600">
-                Current step: <span className="font-medium">{currentStep.name}</span>
+              <div className="text-muted-foreground text-sm">
+                Current step:{" "}
+                <span className="font-medium">{currentStep.name}</span>
               </div>
 
-              {currentStep.actions && currentStep.actions.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Available Actions:</Label>
-                  <div className="grid gap-2">
-                    {currentStep.actions.map((action: any, index: number) => (
-                      <Button
-                        key={action.id || index}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onExecuteAction(`step_action_${action.id}`, action)}
-                        className="justify-start text-left"
-                      >
-                        <Play className="h-3 w-3 mr-2" />
-                        {action.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="text-muted-foreground text-xs">
+                Use the controls below to execute wizard actions for this step.
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -343,8 +354,8 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
               />
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-slate-500" />
-              <span className="text-sm text-slate-500">
+              <Clock className="h-4 w-4" />
+              <span className="text-muted-foreground text-sm">
                 {new Date().toLocaleTimeString()}
               </span>
             </div>
@@ -370,18 +381,22 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
       <Dialog open={showEmergencyDialog} onOpenChange={setShowEmergencyDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-600">
+            <DialogTitle className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5" />
               <span>Emergency Action Required</span>
             </DialogTitle>
             <DialogDescription>
-              Select the type of emergency action to perform. This will immediately stop or override current robot operations.
+              Select the type of emergency action to perform. This will
+              immediately stop or override current robot operations.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="emergency-select">Emergency Action Type</Label>
-              <Select value={selectedEmergencyAction} onValueChange={setSelectedEmergencyAction}>
+              <Select
+                value={selectedEmergencyAction}
+                onValueChange={setSelectedEmergencyAction}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select emergency action..." />
                 </SelectTrigger>
@@ -394,11 +409,13 @@ export function ActionControls({ currentStep, onExecuteAction, trialId }: Action
                 </SelectContent>
               </Select>
             </div>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="rounded-lg border p-3">
               <div className="flex items-start space-x-2">
-                <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-800">
-                  <strong>Warning:</strong> Emergency actions will immediately halt all robot operations and may require manual intervention to resume.
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <div className="text-sm">
+                  <strong>Warning:</strong> Emergency actions will immediately
+                  halt all robot operations and may require manual intervention
+                  to resume.
                 </div>
               </div>
             </div>

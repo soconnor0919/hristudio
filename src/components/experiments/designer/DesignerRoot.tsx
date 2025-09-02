@@ -1,17 +1,11 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Play } from "lucide-react";
 
 import { PageHeader } from "~/components/ui/page-header";
-import { Badge } from "~/components/ui/badge";
+
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
@@ -176,7 +170,7 @@ export function DesignerRoot({
   const recomputeHash = useDesignerStore((s) => s.recomputeHash);
   const lastPersistedHash = useDesignerStore((s) => s.lastPersistedHash);
   const currentDesignHash = useDesignerStore((s) => s.currentDesignHash);
-  const lastValidatedHash = useDesignerStore((s) => s.lastValidatedHash);
+
   const setPersistedHash = useDesignerStore((s) => s.setPersistedHash);
   const setValidatedHash = useDesignerStore((s) => s.setValidatedHash);
   const upsertStep = useDesignerStore((s) => s.upsertStep);
@@ -236,6 +230,7 @@ export function DesignerRoot({
   const [isSaving, setIsSaving] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined);
   const [inspectorTab, setInspectorTab] = useState<
     "properties" | "issues" | "dependencies"
@@ -324,12 +319,6 @@ export function DesignerRoot({
   const hasUnsavedChanges =
     !!currentDesignHash && lastPersistedHash !== currentDesignHash;
 
-  const driftStatus = useMemo<"unvalidated" | "drift" | "validated">(() => {
-    if (!currentDesignHash || !lastValidatedHash) return "unvalidated";
-    if (currentDesignHash !== lastValidatedHash) return "drift";
-    return "validated";
-  }, [currentDesignHash, lastValidatedHash]);
-
   /* ------------------------------- Step Ops -------------------------------- */
   const createNewStep = useCallback(() => {
     const newStep: ExperimentStep = {
@@ -364,7 +353,7 @@ export function DesignerRoot({
         actionDefinitions: actionRegistry.getAllActions(),
       });
       // Debug: log validation results for troubleshooting
-      // eslint-disable-next-line no-console
+
       console.debug("[DesignerRoot] validation", {
         valid: result.valid,
         errors: result.errorCount,
@@ -689,7 +678,7 @@ export function DesignerRoot({
   }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] flex-col gap-3">
+    <div className="space-y-4">
       <PageHeader
         title={designMeta.name}
         description="Compose ordered steps with provenance-aware actions."
@@ -718,7 +707,7 @@ export function DesignerRoot({
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
+      <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -727,23 +716,22 @@ export function DesignerRoot({
           onDragCancel={() => toggleLibraryScrollLock(false)}
         >
           <PanelsContainer
+            showDividers
+            className="min-h-0 flex-1"
             left={
-              <div ref={libraryRootRef} data-library-root>
+              <div ref={libraryRootRef} data-library-root className="h-full">
                 <ActionLibraryPanel />
               </div>
             }
             center={<FlowWorkspace />}
             right={
-              <InspectorPanel
-                activeTab={inspectorTab}
-                onTabChange={setInspectorTab}
-              />
+              <div className="h-full">
+                <InspectorPanel
+                  activeTab={inspectorTab}
+                  onTabChange={setInspectorTab}
+                />
+              </div>
             }
-            initialLeftWidth={260}
-            initialRightWidth={260}
-            minRightWidth={240}
-            maxRightWidth={300}
-            className="flex-1"
           />
           <DragOverlay>
             {dragOverlayAction ? (
@@ -753,15 +741,17 @@ export function DesignerRoot({
             ) : null}
           </DragOverlay>
         </DndContext>
-        <BottomStatusBar
-          onSave={() => persist()}
-          onValidate={() => validateDesign()}
-          onExport={() => handleExport()}
-          lastSavedAt={lastSavedAt}
-          saving={isSaving}
-          validating={isValidating}
-          exporting={isExporting}
-        />
+        <div className="flex-shrink-0 border-t">
+          <BottomStatusBar
+            onSave={() => persist()}
+            onValidate={() => validateDesign()}
+            onExport={() => handleExport()}
+            lastSavedAt={lastSavedAt}
+            saving={isSaving}
+            validating={isValidating}
+            exporting={isExporting}
+          />
+        </div>
       </div>
     </div>
   );

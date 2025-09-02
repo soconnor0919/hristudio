@@ -32,7 +32,7 @@ export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "hristudio-theme",
-  attribute = "class",
+  attribute: _attribute = "class",
   enableSystem = true,
   disableTransitionOnChange = false,
   ...props

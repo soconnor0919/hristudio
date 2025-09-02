@@ -1,381 +1,309 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import * as React from "react";
 import { cn } from "~/lib/utils";
+
+type Edge = "left" | "right";
+
+export interface PanelsContainerProps {
+  left?: React.ReactNode;
+  center: React.ReactNode;
+  right?: React.ReactNode;
+
+  /**
+   * Draw dividers between panels (applied to center only to avoid double borders).
+   * Defaults to true.
+   */
+  showDividers?: boolean;
+
+  /** Class applied to the root container */
+  className?: string;
+
+  /** Class applied to each panel wrapper (left/center/right) */
+  panelClassName?: string;
+
+  /** Class applied to each panel's internal scroll container */
+  contentClassName?: string;
+
+  /** Accessible label for the overall layout */
+  "aria-label"?: string;
+
+  /** Min/Max fractional widths for left and right panels (0..1), clamped during drag */
+  minLeftPct?: number;
+  maxLeftPct?: number;
+  minRightPct?: number;
+  maxRightPct?: number;
+
+  /** Keyboard resize step (fractional) per arrow press; Shift increases by 2x */
+  keyboardStepPct?: number;
+}
 
 /**
  * PanelsContainer
  *
- * Structural layout component for the Experiment Designer refactor.
- * Provides:
- *  - Optional left + right side panels (resizable + collapsible)
- *  - Central workspace (always present)
- *  - Persistent panel widths (localStorage)
- *  - Keyboard-accessible resize handles
- *  - Minimal DOM repaint during drag (inline styles)
+ * Tailwind-first, grid-based panel layout with:
+ * - Drag-resizable left/right panels (no persistence)
+ * - Strict overflow containment (no page-level x-scroll)
+ * - Internal y-scroll for each panel
+ * - Optional visual dividers on the center panel only (prevents double borders)
  *
- * NOT responsible for:
- *  - Business logic or data fetching
- *  - Panel content semantics (passed via props)
- *
- * Accessibility:
- *  - Resize handles are <button> elements with aria-label
- *  - Keyboard: ArrowLeft / ArrowRight adjusts width by step
+ * Implementation details:
+ * - Uses CSS variables for column fractions and an explicit grid template:
+ *   [minmax(0,var(--col-left)) minmax(0,var(--col-center)) minmax(0,var(--col-right))]
+ * - Resize handles are absolutely positioned over the grid at the left and right boundaries.
+ * - Fractions are clamped with configurable min/max so panels remain usable at all sizes.
  */
-
-const STORAGE_KEY = "hristudio-designer-panels-v1";
-
-interface PersistedLayout {
-  left: number;
-  right: number;
-  leftCollapsed: boolean;
-  rightCollapsed: boolean;
-}
-
-export interface PanelsContainerProps {
-  left?: ReactNode;
-  center: ReactNode;
-  right?: ReactNode;
-
-  /**
-   * Initial (non-collapsed) widths in pixels.
-   * If panels are omitted, their widths are ignored.
-   */
-  initialLeftWidth?: number;
-  initialRightWidth?: number;
-
-  /**
-   * Minimum / maximum constraints to avoid unusable panels.
-   */
-  minLeftWidth?: number;
-  minRightWidth?: number;
-  maxLeftWidth?: number;
-  maxRightWidth?: number;
-
-  /**
-   * Whether persistence to localStorage should be skipped (e.g. SSR preview)
-   */
-  disablePersistence?: boolean;
-
-  /**
-   * ClassName pass-through for root container
-   */
-  className?: string;
-}
-
-interface DragState {
-  edge: "left" | "right";
-  startX: number;
-  startWidth: number;
-}
-
 export function PanelsContainer({
   left,
   center,
   right,
-  initialLeftWidth = 280,
-  initialRightWidth = 340,
-  minLeftWidth = 200,
-  minRightWidth = 260,
-  maxLeftWidth = 520,
-  maxRightWidth = 560,
-  disablePersistence = false,
+  showDividers = true,
   className,
+  panelClassName,
+  contentClassName,
+  "aria-label": ariaLabel = "Designer panel layout",
+  minLeftPct = 0.12,
+  maxLeftPct = 0.33,
+  minRightPct = 0.12,
+  maxRightPct = 0.33,
+  keyboardStepPct = 0.02,
 }: PanelsContainerProps) {
   const hasLeft = Boolean(left);
   const hasRight = Boolean(right);
+  const hasCenter = Boolean(center);
 
-  /* ------------------------------------------------------------------------ */
-  /* State                                                                    */
-  /* ------------------------------------------------------------------------ */
+  // Fractions for side panels (center is derived as 1 - (left + right))
+  const [leftPct, setLeftPct] = React.useState<number>(hasLeft ? 0.2 : 0);
+  const [rightPct, setRightPct] = React.useState<number>(hasRight ? 0.24 : 0);
 
-  const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
-  const [rightWidth, setRightWidth] = useState(initialRightWidth);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const dragRef = React.useRef<{
+    edge: Edge;
+    startX: number;
+    startLeft: number;
+    startRight: number;
+    containerWidth: number;
+  } | null>(null);
 
-  const dragRef = useRef<DragState | null>(null);
-  const frameReq = useRef<number | null>(null);
+  const clamp = (v: number, lo: number, hi: number): number =>
+    Math.max(lo, Math.min(hi, v));
 
-  /* ------------------------------------------------------------------------ */
-  /* Persistence                                                              */
-  /* ------------------------------------------------------------------------ */
+  const recompute = React.useCallback(
+    (lp: number, rp: number) => {
+      if (!hasCenter) return { l: 0, c: 0, r: 0 };
 
-  useLayoutEffect(() => {
-    if (disablePersistence) return;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as PersistedLayout;
-      if (typeof parsed.left === "number") setLeftWidth(parsed.left);
-      if (typeof parsed.right === "number")
-        setRightWidth(Math.max(parsed.right, minRightWidth));
-      if (typeof parsed.leftCollapsed === "boolean") {
-        setLeftCollapsed(parsed.leftCollapsed);
+      if (hasLeft && hasRight) {
+        const l = clamp(lp, minLeftPct, maxLeftPct);
+        const r = clamp(rp, minRightPct, maxRightPct);
+        const c = Math.max(0.1, 1 - (l + r)); // always preserve some center space
+        return { l, c, r };
       }
-      // Always start with right panel visible to avoid hidden inspector state
-      setRightCollapsed(false);
-    } catch {
-      /* noop */
-    }
-  }, [disablePersistence, minRightWidth]);
-
-  const persist = useCallback(
-    (next?: Partial<PersistedLayout>) => {
-      if (disablePersistence) return;
-      const snapshot: PersistedLayout = {
-        left: leftWidth,
-        right: rightWidth,
-        leftCollapsed,
-        rightCollapsed,
-        ...next,
-      };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      } catch {
-        /* noop */
+      if (hasLeft && !hasRight) {
+        const l = clamp(lp, minLeftPct, maxLeftPct);
+        const c = Math.max(0.2, 1 - l);
+        return { l, c, r: 0 };
       }
-    },
-    [disablePersistence, leftWidth, rightWidth, leftCollapsed, rightCollapsed],
-  );
-
-  useEffect(() => {
-    persist();
-  }, [leftWidth, rightWidth, leftCollapsed, rightCollapsed, persist]);
-
-  /* ------------------------------------------------------------------------ */
-  /* Drag Handlers                                                            */
-  /* ------------------------------------------------------------------------ */
-
-  const onPointerMove = useCallback(
-    (e: PointerEvent) => {
-      if (!dragRef.current) return;
-      const { edge, startX, startWidth } = dragRef.current;
-      const delta = e.clientX - startX;
-
-      if (edge === "left") {
-        let next = startWidth + delta;
-        next = Math.max(minLeftWidth, Math.min(maxLeftWidth, next));
-        if (next !== leftWidth) {
-          if (frameReq.current) cancelAnimationFrame(frameReq.current);
-          frameReq.current = requestAnimationFrame(() => setLeftWidth(next));
-        }
-      } else if (edge === "right") {
-        let next = startWidth - delta;
-        next = Math.max(minRightWidth, Math.min(maxRightWidth, next));
-        if (next !== rightWidth) {
-          if (frameReq.current) cancelAnimationFrame(frameReq.current);
-          frameReq.current = requestAnimationFrame(() => setRightWidth(next));
-        }
+      if (!hasLeft && hasRight) {
+        const r = clamp(rp, minRightPct, maxRightPct);
+        const c = Math.max(0.2, 1 - r);
+        return { l: 0, c, r };
       }
+      // Center only
+      return { l: 0, c: 1, r: 0 };
     },
     [
-      leftWidth,
-      rightWidth,
-      minLeftWidth,
-      maxLeftWidth,
-      minRightWidth,
-      maxRightWidth,
+      hasCenter,
+      hasLeft,
+      hasRight,
+      minLeftPct,
+      maxLeftPct,
+      minRightPct,
+      maxRightPct,
     ],
   );
 
-  const endDrag = useCallback(() => {
+  const { l, c, r } = recompute(leftPct, rightPct);
+
+  // Attach/detach global pointer handlers safely
+  const onPointerMove = React.useCallback(
+    (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d || d.containerWidth <= 0) return;
+
+      const deltaPx = e.clientX - d.startX;
+      const deltaPct = deltaPx / d.containerWidth;
+
+      if (d.edge === "left" && hasLeft) {
+        const nextLeft = clamp(d.startLeft + deltaPct, minLeftPct, maxLeftPct);
+        setLeftPct(nextLeft);
+      } else if (d.edge === "right" && hasRight) {
+        // Dragging the right edge moves leftwards as delta increases
+        const nextRight = clamp(
+          d.startRight - deltaPct,
+          minRightPct,
+          maxRightPct,
+        );
+        setRightPct(nextRight);
+      }
+    },
+    [hasLeft, hasRight, minLeftPct, maxLeftPct, minRightPct, maxRightPct],
+  );
+
+  const endDrag = React.useCallback(() => {
     dragRef.current = null;
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", endDrag);
   }, [onPointerMove]);
 
-  const startDrag = useCallback(
-    (edge: "left" | "right", e: React.PointerEvent<HTMLButtonElement>) => {
+  const startDrag =
+    (edge: Edge) => (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (!rootRef.current) return;
       e.preventDefault();
-      if (edge === "left" && leftCollapsed) return;
-      if (edge === "right" && rightCollapsed) return;
+
+      const rect = rootRef.current.getBoundingClientRect();
       dragRef.current = {
         edge,
         startX: e.clientX,
-        startWidth: edge === "left" ? leftWidth : rightWidth,
+        startLeft: leftPct,
+        startRight: rightPct,
+        containerWidth: rect.width,
       };
+
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", endDrag);
-    },
-    [
-      leftWidth,
-      rightWidth,
-      leftCollapsed,
-      rightCollapsed,
-      onPointerMove,
-      endDrag,
-    ],
+    };
+
+  React.useEffect(() => {
+    return () => {
+      // Cleanup if unmounted mid-drag
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", endDrag);
+    };
+  }, [onPointerMove, endDrag]);
+
+  // Keyboard resize for handles
+  const onKeyResize =
+    (edge: Edge) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+
+      const step = (e.shiftKey ? 2 : 1) * keyboardStepPct;
+
+      if (edge === "left" && hasLeft) {
+        const next = clamp(
+          leftPct + (e.key === "ArrowRight" ? step : -step),
+          minLeftPct,
+          maxLeftPct,
+        );
+        setLeftPct(next);
+      } else if (edge === "right" && hasRight) {
+        const next = clamp(
+          rightPct + (e.key === "ArrowLeft" ? step : -step),
+          minRightPct,
+          maxRightPct,
+        );
+        setRightPct(next);
+      }
+    };
+
+  // CSS variables for the grid fractions
+  const styleVars: React.CSSProperties & Record<string, string> = hasCenter
+    ? {
+        "--col-left": `${(hasLeft ? l : 0) * 100}%`,
+        "--col-center": `${c * 100}%`,
+        "--col-right": `${(hasRight ? r : 0) * 100}%`,
+      }
+    : {};
+
+  // Explicit grid template depending on which side panels exist
+  const gridCols =
+    hasLeft && hasRight
+      ? "[grid-template-columns:minmax(0,var(--col-left))_minmax(0,var(--col-center))_minmax(0,var(--col-right))]"
+      : hasLeft && !hasRight
+        ? "[grid-template-columns:minmax(0,var(--col-left))_minmax(0,var(--col-center))]"
+        : !hasLeft && hasRight
+          ? "[grid-template-columns:minmax(0,var(--col-center))_minmax(0,var(--col-right))]"
+          : "[grid-template-columns:minmax(0,1fr)]";
+
+  // Dividers on the center panel only (prevents double borders if children have their own borders)
+  const centerDividers =
+    showDividers && hasCenter
+      ? cn({
+          "border-l": hasLeft,
+          "border-r": hasRight,
+        })
+      : undefined;
+
+  const Panel: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
+    className: panelCls,
+    children,
+  }) => (
+    <section
+      className={cn("min-w-0 overflow-hidden", panelCls, panelClassName)}
+    >
+      <div
+        className={cn(
+          "h-full min-h-0 w-full overflow-x-hidden overflow-y-auto",
+          contentClassName,
+        )}
+      >
+        {children}
+      </div>
+    </section>
   );
-
-  /* ------------------------------------------------------------------------ */
-  /* Collapse / Expand                                                         */
-  /* ------------------------------------------------------------------------ */
-
-  const toggleLeft = useCallback(() => {
-    if (!hasLeft) return;
-    setLeftCollapsed((c) => {
-      const next = !c;
-      if (next === false && leftWidth < minLeftWidth) {
-        setLeftWidth(initialLeftWidth);
-      }
-      return next;
-    });
-  }, [hasLeft, leftWidth, minLeftWidth, initialLeftWidth]);
-
-  const toggleRight = useCallback(() => {
-    if (!hasRight) return;
-    setRightCollapsed((c) => {
-      const next = !c;
-      if (next === false && rightWidth < minRightWidth) {
-        setRightWidth(initialRightWidth);
-      }
-      return next;
-    });
-  }, [hasRight, rightWidth, minRightWidth, initialRightWidth]);
-
-  /* Keyboard resizing (focused handle) */
-  const handleKeyResize = useCallback(
-    (edge: "left" | "right", e: React.KeyboardEvent<HTMLButtonElement>) => {
-      const step = e.shiftKey ? 24 : 12;
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        e.preventDefault();
-        if (edge === "left" && !leftCollapsed) {
-          setLeftWidth((w) => {
-            const delta = e.key === "ArrowLeft" ? -step : step;
-            return Math.max(minLeftWidth, Math.min(maxLeftWidth, w + delta));
-          });
-        } else if (edge === "right" && !rightCollapsed) {
-          setRightWidth((w) => {
-            const delta = e.key === "ArrowLeft" ? -step : step;
-            return Math.max(minRightWidth, Math.min(maxRightWidth, w + delta));
-          });
-        }
-      } else if (e.key === "Enter" || e.key === " ") {
-        if (edge === "left") toggleLeft();
-        else toggleRight();
-      }
-    },
-    [
-      leftCollapsed,
-      rightCollapsed,
-      minLeftWidth,
-      maxLeftWidth,
-      minRightWidth,
-      maxRightWidth,
-      toggleLeft,
-      toggleRight,
-    ],
-  );
-
-  /* ------------------------------------------------------------------------ */
-  /* Render                                                                    */
-  /* ------------------------------------------------------------------------ */
 
   return (
     <div
+      ref={rootRef}
+      aria-label={ariaLabel}
+      style={styleVars}
       className={cn(
-        "flex h-full w-full overflow-hidden select-none",
+        "relative grid h-full min-h-0 w-full overflow-hidden select-none",
+        gridCols,
         className,
       )}
-      aria-label="Designer panel layout"
     >
-      {/* Left Panel */}
-      {hasLeft && (
-        <div
-          className={cn(
-            "bg-background/50 relative flex h-full flex-shrink-0 flex-col border-r transition-[width] duration-150",
-            leftCollapsed ? "w-0 border-r-0" : "w-[var(--panel-left-width)]",
-          )}
-          style={
-            leftCollapsed
-              ? undefined
-              : ({
-                  ["--panel-left-width" as string]: `${leftWidth}px`,
-                } as React.CSSProperties)
-          }
-        >
-          {!leftCollapsed && (
-            <div className="flex-1 overflow-hidden">{left}</div>
-          )}
-        </div>
-      )}
+      {hasLeft && <Panel>{left}</Panel>}
 
-      {/* Left Resize Handle */}
-      {hasLeft && !leftCollapsed && (
+      {hasCenter && <Panel className={centerDividers}>{center}</Panel>}
+
+      {hasRight && <Panel>{right}</Panel>}
+
+      {/* Resize handles (only render where applicable) */}
+      {hasCenter && hasLeft && (
         <button
           type="button"
-          aria-label="Resize left panel (Enter to toggle collapse)"
-          onPointerDown={(e) => startDrag("left", e)}
-          onDoubleClick={toggleLeft}
-          onKeyDown={(e) => handleKeyResize("left", e)}
-          className="hover:bg-accent/40 focus-visible:ring-ring relative z-10 h-full w-0 cursor-col-resize px-1 outline-none focus-visible:ring-2"
+          role="separator"
+          aria-label="Resize left panel"
+          aria-orientation="vertical"
+          onPointerDown={startDrag("left")}
+          onKeyDown={onKeyResize("left")}
+          className={cn(
+            "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
+            "focus-visible:ring-ring focus-visible:ring-2",
+          )}
+          // Position at the boundary between left and center
+          style={{ left: "var(--col-left)", transform: "translateX(-0.5px)" }}
+          tabIndex={0}
         />
       )}
 
-      {/* Left collapse toggle removed to prevent breadcrumb overlap */}
-
-      {/* Center (Workspace) */}
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-hidden">{center}</div>
-      </div>
-
-      {/* Right Resize Handle */}
-      {hasRight && !rightCollapsed && (
+      {hasCenter && hasRight && (
         <button
           type="button"
-          aria-label="Resize right panel (Enter to toggle collapse)"
-          onPointerDown={(e) => startDrag("right", e)}
-          onDoubleClick={toggleRight}
-          onKeyDown={(e) => handleKeyResize("right", e)}
-          className="hover:bg-accent/40 focus-visible:ring-ring relative z-10 h-full w-1 cursor-col-resize outline-none focus-visible:ring-2"
+          role="separator"
+          aria-label="Resize right panel"
+          aria-orientation="vertical"
+          onPointerDown={startDrag("right")}
+          onKeyDown={onKeyResize("right")}
+          className={cn(
+            "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
+            "focus-visible:ring-ring focus-visible:ring-2",
+          )}
+          // Position at the boundary between center and right (offset from the right)
+          style={{ right: "var(--col-right)", transform: "translateX(0.5px)" }}
+          tabIndex={0}
         />
-      )}
-
-      {/* Right Panel */}
-      {hasRight && (
-        <div
-          className={cn(
-            "bg-background/50 relative flex h-full flex-shrink-0 flex-col transition-[width] duration-150",
-            rightCollapsed ? "w-0" : "w-[var(--panel-right-width)]",
-          )}
-          style={
-            rightCollapsed
-              ? undefined
-              : ({
-                  ["--panel-right-width" as string]: `${rightWidth}px`,
-                } as React.CSSProperties)
-          }
-        >
-          {!rightCollapsed && (
-            <div className="min-w-0 flex-1 overflow-hidden">{right}</div>
-          )}
-        </div>
-      )}
-
-      {/* Minimal Right Toggle (top-right), non-intrusive like VSCode */}
-      {hasRight && (
-        <button
-          type="button"
-          aria-label={
-            rightCollapsed ? "Expand inspector" : "Collapse inspector"
-          }
-          onClick={toggleRight}
-          className={cn(
-            "text-muted-foreground hover:text-foreground absolute top-1 z-20 p-1 text-[10px]",
-            rightCollapsed ? "right-1" : "right-1",
-          )}
-          title={rightCollapsed ? "Show inspector" : "Hide inspector"}
-        >
-          {rightCollapsed ? "◀" : "▶"}
-        </button>
       )}
     </div>
   );

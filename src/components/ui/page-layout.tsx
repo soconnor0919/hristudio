@@ -81,8 +81,8 @@ export function PageLayout({
   className,
   title,
   description,
-  userName,
-  userRole,
+  userName: _userName,
+  userRole: _userRole,
   breadcrumb,
   createButton,
   quickActions,
@@ -201,7 +201,7 @@ export function PageLayout({
               variant={
                 action.variant === "primary"
                   ? "default"
-                  : action.variant || "default"
+                  : (action.variant ?? "default")
               }
               className="h-auto flex-col gap-2 p-4"
             >

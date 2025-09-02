@@ -95,6 +95,26 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
     { enabled: !!resolvedParams?.id },
   );
 
+  const { data: experimentsData } = api.experiments.list.useQuery(
+    { studyId: resolvedParams?.id ?? "" },
+    { enabled: !!resolvedParams?.id },
+  );
+
+  const { data: participantsData } = api.participants.list.useQuery(
+    { studyId: resolvedParams?.id ?? "" },
+    { enabled: !!resolvedParams?.id },
+  );
+
+  const { data: trialsData } = api.trials.list.useQuery(
+    { studyId: resolvedParams?.id ?? "" },
+    { enabled: !!resolvedParams?.id },
+  );
+
+  const { data: activityData } = api.studies.getActivity.useQuery(
+    { studyId: resolvedParams?.id ?? "", limit: 5 },
+    { enabled: !!resolvedParams?.id },
+  );
+
   useEffect(() => {
     if (studyData) {
       setStudy(studyData);
@@ -124,12 +144,19 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
 
   const statusInfo = statusConfig[study.status as keyof typeof statusConfig];
 
-  // TODO: Get actual stats from API
-  const mockStats = {
-    experiments: 0,
-    totalTrials: 0,
-    participants: 0,
-    completionRate: "—",
+  const experiments = experimentsData ?? [];
+  const participants = participantsData?.participants ?? [];
+  const trials = trialsData ?? [];
+  const activities = activityData?.activities ?? [];
+
+  const completedTrials = trials.filter((trial: { status: string }) => trial.status === "completed").length;
+  const totalTrials = trials.length;
+
+  const stats = {
+    experiments: experiments.length,
+    totalTrials: totalTrials,
+    participants: participants.length,
+    completionRate: totalTrials > 0 ? `${Math.round((completedTrials / totalTrials) * 100)}%` : "—",
   };
 
   return (
@@ -207,27 +234,128 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
               </Button>
             }
           >
-            <EmptyState
-              icon="FlaskConical"
-              title="No Experiments Yet"
-              description="Create your first experiment to start designing research protocols"
-              action={
-                <Button asChild>
-                  <Link href={`/experiments/new?studyId=${study.id}`}>
-                    Create First Experiment
-                  </Link>
-                </Button>
-              }
-            />
+            {experiments.length === 0 ? (
+              <EmptyState
+                icon="FlaskConical"
+                title="No Experiments Yet"
+                description="Create your first experiment to start designing research protocols"
+                action={
+                  <Button asChild>
+                    <Link href={`/experiments/new?studyId=${study.id}`}>
+                      Create First Experiment
+                    </Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="space-y-4">
+                {experiments.map((experiment) => (
+                  <div
+                    key={experiment.id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-medium">
+                          <Link
+                            href={`/experiments/${experiment.id}`}
+                            className="hover:underline"
+                          >
+                            {experiment.name}
+                          </Link>
+                        </h4>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            experiment.status === "draft"
+                              ? "bg-gray-100 text-gray-800"
+                              : experiment.status === "ready"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {experiment.status}
+                        </span>
+                      </div>
+                      {experiment.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {experiment.description}
+                        </p>
+                      )}
+                      <div className="mt-2 flex items-center space-x-4 text-xs text-muted-foreground">
+                        <span>
+                          Created {formatDistanceToNow(experiment.createdAt, { addSuffix: true })}
+                        </span>
+                        {experiment.estimatedDuration && (
+                          <span>
+                            Est. {experiment.estimatedDuration} min
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/experiments/${experiment.id}/designer`}>
+                          Design
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/experiments/${experiment.id}`}>
+                          View
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </EntityViewSection>
 
           {/* Recent Activity */}
           <EntityViewSection title="Recent Activity" icon="BarChart3">
-            <EmptyState
-              icon="Calendar"
-              title="No Recent Activity"
-              description="Activity will appear here once you start working on this study"
-            />
+            {activities.length === 0 ? (
+              <EmptyState
+                icon="Calendar"
+                title="No Recent Activity"
+                description="Activity will appear here once you start working on this study"
+              />
+            ) : (
+              <div className="space-y-3">
+                {activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start space-x-3 rounded-lg border p-3"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                      <span className="text-sm font-medium text-blue-600">
+                        {activity.user?.name?.charAt(0) ?? activity.user?.email?.charAt(0) ?? "?"}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium">
+                          {activity.user?.name ?? activity.user?.email ?? "Unknown User"}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(activity.createdAt, { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {activity.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {activityData && activityData.pagination.total > 5 && (
+                  <div className="pt-2">
+                    <Button asChild variant="outline" size="sm" className="w-full">
+                      <Link href={`/studies/${study.id}/activity`}>
+                        View All Activity ({activityData.pagination.total})
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </EntityViewSection>
         </div>
 
@@ -280,19 +408,19 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
               stats={[
                 {
                   label: "Experiments",
-                  value: mockStats.experiments,
+                  value: stats.experiments,
                 },
                 {
                   label: "Total Trials",
-                  value: mockStats.totalTrials,
+                  value: stats.totalTrials,
                 },
                 {
                   label: "Participants",
-                  value: mockStats.participants,
+                  value: stats.participants,
                 },
                 {
                   label: "Completion Rate",
-                  value: mockStats.completionRate,
+                  value: stats.completionRate,
                   color: "success",
                 },
               ]}

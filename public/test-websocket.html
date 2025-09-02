@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRIStudio WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .connecting { background-color: #d1ecf1; color: #0c5460; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .error { background-color: #f5c6cb; color: #721c24; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .input-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-group label {
+            min-width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 HRIStudio WebSocket Test</h1>
+
+        <div class="input-group">
+            <label>Trial ID:</label>
+            <input type="text" id="trialId" value="931c626d-fe3f-4db3-a36c-50d6898e1b17" style="width: 300px;">
+        </div>
+
+        <div class="input-group">
+            <label>User ID:</label>
+            <input type="text" id="userId" value="08594f2b-64fe-4952-947f-3edc5f144f52" style="width: 300px;">
+        </div>
+
+        <div class="input-group">
+            <label>Server:</label>
+            <input type="text" id="serverUrl" value="ws://localhost:3000" style="width: 200px;">
+        </div>
+
+        <div id="status" class="status disconnected">Disconnected</div>
+
+        <div>
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <button onclick="sendHeartbeat()" disabled id="heartbeatBtn">Send Heartbeat</button>
+            <button onclick="requestStatus()" disabled id="statusBtn">Request Status</button>
+            <button onclick="sendTestAction()" disabled id="actionBtn">Send Test Action</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <h3>📨 Message Log</h3>
+        <div id="log" class="log"></div>
+
+        <h3>🎮 Send Custom Message</h3>
+        <div class="input-group">
+            <label>Type:</label>
+            <select id="messageType">
+                <option value="heartbeat">heartbeat</option>
+                <option value="request_trial_status">request_trial_status</option>
+                <option value="trial_action">trial_action</option>
+                <option value="wizard_intervention">wizard_intervention</option>
+                <option value="step_transition">step_transition</option>
+            </select>
+            <button onclick="sendCustomMessage()" disabled id="customBtn">Send</button>
+        </div>
+        <textarea id="messageData" placeholder='{"key": "value"}' rows="3" style="width: 100%; margin: 5px 0;"></textarea>
+    </div>
+
+    <script>
+        let ws = null;
+        let connectionAttempts = 0;
+        const maxRetries = 3;
+
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const heartbeatBtn = document.getElementById('heartbeatBtn');
+        const statusBtn = document.getElementById('statusBtn');
+        const actionBtn = document.getElementById('actionBtn');
+        const customBtn = document.getElementById('customBtn');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'sent' ? '📤' : type === 'received' ? '📨' : type === 'error' ? '❌' : 'ℹ️';
+            logEl.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            statusEl.textContent = status;
+            statusEl.className = `status ${className}`;
+        }
+
+        function updateButtons(connected) {
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            heartbeatBtn.disabled = !connected;
+            statusBtn.disabled = !connected;
+            actionBtn.disabled = !connected;
+            customBtn.disabled = !connected;
+        }
+
+        function generateToken() {
+            const userId = document.getElementById('userId').value;
+            const tokenData = {
+                userId: userId,
+                timestamp: Math.floor(Date.now() / 1000)
+            };
+            return btoa(JSON.stringify(tokenData));
+        }
+
+        function connect() {
+            if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+                log('Already connected or connecting', 'error');
+                return;
+            }
+
+            const trialId = document.getElementById('trialId').value;
+            const serverUrl = document.getElementById('serverUrl').value;
+            const token = generateToken();
+
+            if (!trialId) {
+                log('Please enter a trial ID', 'error');
+                return;
+            }
+
+            const wsUrl = `${serverUrl}/api/websocket?trialId=${trialId}&token=${token}`;
+            log(`Connecting to: ${wsUrl}`);
+
+            updateStatus('Connecting...', 'connecting');
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    connectionAttempts = 0;
+                    updateStatus('Connected', 'connected');
+                    updateButtons(true);
+                    log('WebSocket connection established!');
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const message = JSON.parse(event.data);
+                        log(`${message.type}: ${JSON.stringify(message.data, null, 2)}`, 'received');
+                    } catch (e) {
+                        log(`Raw message: ${event.data}`, 'received');
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    updateStatus(`Disconnected (${event.code})`, 'disconnected');
+                    updateButtons(false);
+                    log(`Connection closed: ${event.code} ${event.reason}`);
+
+                    // Auto-reconnect logic
+                    if (event.code !== 1000 && connectionAttempts < maxRetries) {
+                        connectionAttempts++;
+                        log(`Attempting reconnection ${connectionAttempts}/${maxRetries}...`);
+                        setTimeout(() => connect(), 2000 * connectionAttempts);
+                    }
+                };
+
+                ws.onerror = function(event) {
+                    updateStatus('Error', 'error');
+                    updateButtons(false);
+                    log('WebSocket error occurred', 'error');
+                };
+
+            } catch (error) {
+                log(`Failed to create WebSocket: ${error.message}`, 'error');
+                updateStatus('Error', 'error');
+                updateButtons(false);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close(1000, 'Manual disconnect');
+                ws = null;
+            }
+            connectionAttempts = maxRetries; // Prevent auto-reconnect
+        }
+
+        function sendMessage(type, data = {}) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket not connected', 'error');
+                return;
+            }
+
+            const message = { type, data };
+            ws.send(JSON.stringify(message));
+            log(`${type}: ${JSON.stringify(data, null, 2)}`, 'sent');
+        }
+
+        function sendHeartbeat() {
+            sendMessage('heartbeat');
+        }
+
+        function requestStatus() {
+            sendMessage('request_trial_status');
+        }
+
+        function sendTestAction() {
+            sendMessage('trial_action', {
+                actionType: 'test_action',
+                message: 'Hello from WebSocket test!',
+                timestamp: Date.now()
+            });
+        }
+
+        function sendCustomMessage() {
+            const type = document.getElementById('messageType').value;
+            let data = {};
+
+            try {
+                const dataText = document.getElementById('messageData').value.trim();
+                if (dataText) {
+                    data = JSON.parse(dataText);
+                }
+            } catch (e) {
+                log('Invalid JSON in message data', 'error');
+                return;
+            }
+
+            sendMessage(type, data);
+        }
+
+        function clearLog() {
+            logEl.textContent = '';
+        }
+
+        // Auto-connect on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('WebSocket test page loaded');
+            log('Click "Connect" to start testing the WebSocket connection');
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (ws) {
+                ws.close(1000, 'Page unload');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -23,6 +23,8 @@ HRIStudio addresses critical challenges in HRI research by providing a comprehen
 - **Role-Based Access**: Administrator, Researcher, Wizard, Observer (4 distinct roles)
 - **Unified Form Experiences**: 73% code reduction through standardized patterns
 - **Enterprise DataTables**: Advanced filtering, pagination, export capabilities
+- **Real-time Trial Execution**: Professional wizard interface with live monitoring
+- **Mock Robot Integration**: Complete simulation system for development and testing
 
 ## Quick Start
 
@@ -221,12 +223,14 @@ Full paper available at: [docs/paper.md](docs/paper.md)
 
 ## Current Status
 
-- **98% Complete**: Production-ready platform
+- **Production Ready**: Complete platform with all major features
 - **31 Database Tables**: Comprehensive data model
-- **11 tRPC Routers**: Complete API coverage
+- **12 tRPC Routers**: Complete API coverage
 - **26+ Core Blocks**: Repository-based experiment building blocks
 - **4 User Roles**: Complete role-based access control
 - **Plugin System**: Extensible robot integration architecture
+- **Trial System**: Unified design with real-time execution capabilities
+- **Mock Robot Integration**: Complete simulation for development and testing
 
 ## Deployment
 

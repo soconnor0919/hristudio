@@ -108,6 +108,7 @@ This documentation suite provides everything needed to understand, build, deploy
     - Recent changes and improvements
     - Core blocks system implementation
     - Plugin architecture enhancements
+    - Panel-based wizard interface (matching experiment designer)
     - Technical debt resolution
     - UI/UX enhancements
 
@@ -209,9 +210,11 @@ bun dev
 - **Performance Optimized**: Database indexes and query optimization
 - **Security First**: Role-based access control throughout
 - **Modern Stack**: Next.js 15, tRPC, Drizzle ORM, shadcn/ui
+- **Consistent Architecture**: Panel-based interfaces across visual programming tools
 
 ### **Development Experience**
 - **Unified Components**: Significant reduction in code duplication
+- **Panel Architecture**: 90% code sharing between experiment designer and wizard interface
 - **Enterprise DataTables**: Advanced filtering, export, pagination
 - **Comprehensive Testing**: Realistic seed data with complete scenarios
 - **Developer Friendly**: Clear patterns and extensive documentation
@@ -231,6 +234,7 @@ bun dev
 - ✅ **Database Schema** - 31 tables with comprehensive relationships
 - ✅ **Authentication** - Role-based access control system
 - ✅ **Visual Designer** - Repository-based plugin architecture
+- ✅ **Panel-Based Wizard Interface** - Consistent with experiment designer architecture
 - ✅ **Core Blocks System** - 26 blocks across events, wizard, control, observation
 - ✅ **Plugin Architecture** - Unified system for core blocks and robot actions
 - ✅ **Development Environment** - Realistic test data and scenarios

@@ -1,9 +1,15 @@
 "use client";
 
 import {
-    AlertCircle, CheckCircle, File, FileAudio, FileImage,
-    FileVideo, Loader2, Upload,
-    X
+  AlertCircle,
+  CheckCircle,
+  File,
+  FileAudio,
+  FileImage,
+  FileVideo,
+  Loader2,
+  Upload,
+  X,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -62,20 +68,23 @@ export function FileUpload({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
-    if (file.size > maxSize) {
-      return `File size exceeds ${Math.round(maxSize / 1024 / 1024)}MB limit`;
-    }
-
-    if (allowedTypes.length > 0) {
-      const extension = file.name.split('.').pop()?.toLowerCase() || '';
-      if (!allowedTypes.includes(extension)) {
-        return `File type .${extension} is not allowed`;
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (file.size > maxSize) {
+        return `File size exceeds ${Math.round(maxSize / 1024 / 1024)}MB limit`;
       }
-    }
 
-    return null;
-  };
+      if (allowedTypes && allowedTypes.length > 0) {
+        const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+        if (!allowedTypes.includes(extension)) {
+          return `File type .${extension} is not allowed`;
+        }
+      }
+
+      return null;
+    },
+    [maxSize, allowedTypes],
+  );
 
   const createFilePreview = (file: File): FileWithPreview => {
     const fileWithPreview = file as FileWithPreview;
@@ -83,66 +92,69 @@ export function FileUpload({
     fileWithPreview.uploaded = false;
 
     // Create preview for images
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       fileWithPreview.preview = URL.createObjectURL(file);
     }
 
     return fileWithPreview;
   };
 
-  const handleFiles = useCallback((newFiles: FileList | File[]) => {
-    const fileArray = Array.from(newFiles);
+  const handleFiles = useCallback(
+    (newFiles: FileList | File[]) => {
+      const fileArray = Array.from(newFiles);
 
-    // Check max files limit
-    if (!multiple && fileArray.length > 1) {
-      onUploadError?.("Only one file is allowed");
-      return;
-    }
-
-    if (files.length + fileArray.length > maxFiles) {
-      onUploadError?.(`Maximum ${maxFiles} files allowed`);
-      return;
-    }
-
-    const validFiles: FileWithPreview[] = [];
-    const errors: string[] = [];
-
-    fileArray.forEach((file) => {
-      const error = validateFile(file);
-      if (error) {
-        errors.push(`${file.name}: ${error}`);
-      } else {
-        validFiles.push(createFilePreview(file));
+      // Check max files limit
+      if (!multiple && fileArray.length > 1) {
+        onUploadError?.("Only one file is allowed");
+        return;
       }
-    });
 
-    if (errors.length > 0) {
-      onUploadError?.(errors.join(', '));
-      return;
-    }
+      if (files.length + fileArray.length > maxFiles) {
+        onUploadError?.(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
 
-    setFiles((prev) => [...prev, ...validFiles]);
-  }, [files.length, maxFiles, multiple, maxSize, allowedTypes, onUploadError]);
+      const validFiles: FileWithPreview[] = [];
+      const errors: string[] = [];
+
+      fileArray.forEach((file) => {
+        const error = validateFile(file);
+        if (error) {
+          errors.push(`${file.name}: ${error}`);
+        } else {
+          validFiles.push(createFilePreview(file));
+        }
+      });
+
+      if (errors.length > 0) {
+        onUploadError?.(errors.join(", "));
+        return;
+      }
+
+      setFiles((prev) => [...prev, ...validFiles]);
+    },
+    [files.length, maxFiles, multiple, onUploadError, validateFile],
+  );
 
   const uploadFile = async (file: FileWithPreview): Promise<UploadedFile> => {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', category);
+    formData.append("file", file);
+    formData.append("category", category);
     if (trialId) {
-      formData.append('trialId', trialId);
+      formData.append("trialId", trialId);
     }
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
+    const response = await fetch("/api/upload", {
+      method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Upload failed');
+      const error = (await response.json()) as { error?: string };
+      throw new Error(error.error ?? "Upload failed");
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as { data: UploadedFile };
     return result.data;
   };
 
@@ -160,17 +172,17 @@ export function FileUpload({
       try {
         // Update progress
         setFiles((prev) =>
-          prev.map((f, index) =>
-            index === i ? { ...f, progress: 0 } : f
-          )
+          prev.map((f, index) => (index === i ? { ...f, progress: 0 } : f)),
         );
 
         // Simulate progress (in real implementation, use XMLHttpRequest for progress)
         const progressInterval = setInterval(() => {
           setFiles((prev) =>
             prev.map((f, index) =>
-              index === i ? { ...f, progress: Math.min((f.progress || 0) + 10, 90) } : f
-            )
+              index === i
+                ? { ...f, progress: Math.min((f.progress ?? 0) + 10, 90) }
+                : f,
+            ),
           );
         }, 100);
 
@@ -188,19 +200,20 @@ export function FileUpload({
                   uploaded: true,
                   uploadedData: uploadedFile,
                 }
-              : f
-          )
+              : f,
+          ),
         );
 
         uploadedFiles.push(uploadedFile);
       } catch (_error) {
-        const errorMessage = _error instanceof Error ? _error.message : 'Upload failed';
+        const errorMessage =
+          _error instanceof Error ? _error.message : "Upload failed";
         errors.push(`${file?.name}: ${errorMessage}`);
 
         setFiles((prev) =>
           prev.map((f, index) =>
-            index === i ? { ...f, error: errorMessage, progress: 0 } : f
-          )
+            index === i ? { ...f, error: errorMessage, progress: 0 } : f,
+          ),
         );
       }
     }
@@ -208,7 +221,7 @@ export function FileUpload({
     setIsUploading(false);
 
     if (errors.length > 0) {
-      onUploadError?.(errors.join(', '));
+      onUploadError?.(errors.join(", "));
     }
 
     if (uploadedFiles.length > 0) {
@@ -240,15 +253,18 @@ export function FileUpload({
         handleFiles(droppedFiles);
       }
     },
-    [handleFiles, disabled]
+    [handleFiles, disabled],
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!disabled) {
-      setIsDragging(true);
-    }
-  }, [disabled]);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      if (!disabled) {
+        setIsDragging(true);
+      }
+    },
+    [disabled],
+  );
 
   const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -262,24 +278,24 @@ export function FileUpload({
         handleFiles(selectedFiles);
       }
       // Reset input value to allow selecting the same file again
-      e.target.value = '';
+      e.target.value = "";
     },
-    [handleFiles]
+    [handleFiles],
   );
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return FileImage;
-    if (file.type.startsWith('video/')) return FileVideo;
-    if (file.type.startsWith('audio/')) return FileAudio;
+    if (file.type.startsWith("image/")) return FileImage;
+    if (file.type.startsWith("video/")) return FileVideo;
+    if (file.type.startsWith("audio/")) return FileAudio;
     return File;
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -287,11 +303,11 @@ export function FileUpload({
       {/* Upload Area */}
       <Card
         className={cn(
-          "border-2 border-dashed transition-colors cursor-pointer",
+          "cursor-pointer border-2 border-dashed transition-colors",
           isDragging
             ? "border-blue-500 bg-blue-50"
             : "border-slate-300 hover:border-slate-400",
-          disabled && "opacity-50 cursor-not-allowed"
+          disabled && "cursor-not-allowed opacity-50",
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -299,10 +315,12 @@ export function FileUpload({
         onClick={() => !disabled && fileInputRef.current?.click()}
       >
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Upload className={cn(
-            "h-12 w-12 mb-4",
-            isDragging ? "text-blue-500" : "text-slate-400"
-          )} />
+          <Upload
+            className={cn(
+              "mb-4 h-12 w-12",
+              isDragging ? "text-blue-500" : "text-slate-400",
+            )}
+          />
           <div className="space-y-2">
             <p className="text-lg font-medium">
               {isDragging ? "Drop files here" : "Upload files"}
@@ -312,7 +330,7 @@ export function FileUpload({
             </p>
             <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-500">
               {allowedTypes.length > 0 && (
-                <span>Allowed: {allowedTypes.join(', ')}</span>
+                <span>Allowed: {allowedTypes.join(", ")}</span>
               )}
               <span>Max size: {Math.round(maxSize / 1024 / 1024)}MB</span>
               {multiple && <span>Max files: {maxFiles}</span>}
@@ -340,7 +358,7 @@ export function FileUpload({
               <Button
                 size="sm"
                 onClick={handleUpload}
-                disabled={isUploading || files.every(f => f.uploaded)}
+                disabled={isUploading || files.every((f) => f.uploaded)}
               >
                 {isUploading ? (
                   <>
@@ -369,6 +387,7 @@ export function FileUpload({
                 <Card key={index} className="p-3">
                   <div className="flex items-center space-x-3">
                     {file.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={file.preview}
                         alt={file.name}
@@ -380,8 +399,8 @@ export function FileUpload({
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{file.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{file.name}</p>
                       <p className="text-sm text-slate-600">
                         {formatFileSize(file.size)}
                       </p>

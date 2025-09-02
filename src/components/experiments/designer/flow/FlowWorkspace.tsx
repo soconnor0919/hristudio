@@ -2,7 +2,6 @@
 
 import React, {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -27,8 +26,6 @@ import {
   Plus,
   Trash2,
   GitBranch,
-  Sparkles,
-  CircleDot,
   Edit3,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -88,9 +85,7 @@ function generateStepId(): string {
   return `step-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function generateActionId(): string {
-  return `action-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
+
 
 function sortableStepId(stepId: string) {
   return `s-step-${stepId}`;
@@ -165,7 +160,7 @@ function SortableActionChip({
       className={cn(
         "group relative flex w-full flex-col items-start gap-1 rounded border px-3 py-2 text-[11px]",
         "bg-muted/40 hover:bg-accent/40 cursor-pointer",
-        isSelected && "border-blue-500 bg-blue-50 dark:bg-blue-950/30",
+        isSelected && "border-border bg-accent/30",
         isDragging && "opacity-70 shadow-lg",
       )}
       onClick={onSelect}
@@ -245,7 +240,7 @@ export function FlowWorkspace({
   overscan = 400,
   onStepCreate,
   onStepDelete,
-  onActionCreate,
+  onActionCreate: _onActionCreate,
 }: FlowWorkspaceProps) {
   /* Store selectors */
   const steps = useDesignerStore((s) => s.steps);
@@ -256,7 +251,7 @@ export function FlowWorkspace({
 
   const upsertStep = useDesignerStore((s) => s.upsertStep);
   const removeStep = useDesignerStore((s) => s.removeStep);
-  const upsertAction = useDesignerStore((s) => s.upsertAction);
+
   const removeAction = useDesignerStore((s) => s.removeAction);
   const reorderStep = useDesignerStore((s) => s.reorderStep);
   const reorderAction = useDesignerStore((s) => s.reorderAction);
@@ -266,12 +261,12 @@ export function FlowWorkspace({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const measureRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const roRef = useRef<ResizeObserver | null>(null);
+  const pendingHeightsRef = useRef<Map<string, number> | null>(null);
+  const heightsRafRef = useRef<number | null>(null);
   const [heights, setHeights] = useState<Map<string, number>>(new Map());
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(600);
-  const [containerWidth, setContainerWidth] = useState(0);
   const [renamingStepId, setRenamingStepId] = useState<string | null>(null);
-  const [isDraggingLibraryAction, setIsDraggingLibraryAction] = useState(false);
   // dragKind state removed (unused after refactor)
 
   /* Parent lookup for action reorder */
@@ -293,41 +288,47 @@ export function FlowWorkspace({
       for (const entry of entries) {
         const cr = entry.contentRect;
         setViewportHeight(cr.height);
-        setContainerWidth((prev) => {
-          if (Math.abs(prev - cr.width) > 0.5) {
-            // Invalidate cached heights on width change to force re-measure
-            setHeights(new Map());
-          }
-          return cr.width;
-        });
+        // Do not invalidate all heights on width change; per-step observers will update as needed
       }
     });
     observer.observe(el);
-    const cr = el.getBoundingClientRect();
+
     setViewportHeight(el.clientHeight);
-    setContainerWidth(cr.width);
     return () => observer.disconnect();
   }, []);
 
   /* Per-step measurement observer (attach/detach on ref set) */
   useLayoutEffect(() => {
     roRef.current = new ResizeObserver((entries) => {
-      setHeights((prev) => {
-        const next = new Map(prev);
-        let changed = false;
-        for (const entry of entries) {
-          const id = entry.target.getAttribute("data-step-id");
-          if (!id) continue;
-          const h = entry.contentRect.height;
-          if (prev.get(id) !== h) {
-            next.set(id, h);
-            changed = true;
+      pendingHeightsRef.current ??= new Map();
+      for (const entry of entries) {
+        const id = entry.target.getAttribute("data-step-id");
+        if (!id) continue;
+        const h = entry.contentRect.height;
+        pendingHeightsRef.current.set(id, h);
+      }
+      heightsRafRef.current ??= requestAnimationFrame(() => {
+        const pending = pendingHeightsRef.current;
+        heightsRafRef.current = null;
+        pendingHeightsRef.current = null;
+        if (!pending) return;
+        setHeights((prev) => {
+          let changed = false;
+          const next = new Map(prev);
+          for (const [id, h] of pending) {
+            if (prev.get(id) !== h) {
+              next.set(id, h);
+              changed = true;
+            }
           }
-        }
-        return changed ? next : prev;
+          return changed ? next : prev;
+        });
       });
     });
     return () => {
+      if (heightsRafRef.current) cancelAnimationFrame(heightsRafRef.current);
+      heightsRafRef.current = null;
+      pendingHeightsRef.current = null;
       roRef.current?.disconnect();
       roRef.current = null;
     };
@@ -430,29 +431,6 @@ export function FlowWorkspace({
     [upsertStep],
   );
 
-  const addActionToStep = useCallback(
-    (
-      stepId: string,
-      actionDef: { type: string; name: string; category: string },
-    ) => {
-      const step = steps.find((s) => s.id === stepId);
-      if (!step) return;
-      const newAction: ExperimentAction = {
-        id: generateActionId(),
-        type: actionDef.type,
-        name: actionDef.name,
-        category: actionDef.category as ExperimentAction["category"],
-        parameters: {},
-        source: { kind: "core" },
-        execution: { transport: "internal" },
-      };
-      upsertAction(stepId, newAction);
-      onActionCreate?.(stepId, newAction);
-      void recomputeHash();
-    },
-    [steps, upsertAction, onActionCreate, recomputeHash],
-  );
-
   const deleteAction = useCallback(
     (stepId: string, actionId: string) => {
       removeAction(stepId, actionId);
@@ -469,14 +447,13 @@ export function FlowWorkspace({
   const handleLocalDragStart = useCallback((e: DragStartEvent) => {
     const id = e.active.id.toString();
     if (id.startsWith("action-")) {
-      setIsDraggingLibraryAction(true);
+      // no-op
     }
   }, []);
 
   const handleLocalDragEnd = useCallback(
     (e: DragEndEvent) => {
       const { active, over } = e;
-      setIsDraggingLibraryAction(false);
       if (!over || !active) {
         return;
       }
@@ -525,7 +502,7 @@ export function FlowWorkspace({
     onDragStart: handleLocalDragStart,
     onDragEnd: handleLocalDragEnd,
     onDragCancel: () => {
-      setIsDraggingLibraryAction(false);
+      // no-op
     },
   });
 
@@ -578,9 +555,9 @@ export function FlowWorkspace({
           <StepDroppableArea stepId={step.id} />
           <div
             className={cn(
-              "rounded border shadow-sm transition-colors mb-2",
+              "mb-2 rounded border shadow-sm transition-colors",
               selectedStepId === step.id
-                ? "border-blue-400/60 bg-blue-50/40 dark:bg-blue-950/20"
+                ? "border-border bg-accent/30"
                 : "hover:bg-accent/30",
               isDragging && "opacity-80 ring-1 ring-blue-300",
             )}
@@ -590,7 +567,8 @@ export function FlowWorkspace({
               onClick={(e) => {
                 // Avoid selecting step when interacting with controls or inputs
                 const tag = (e.target as HTMLElement).tagName.toLowerCase();
-                if (tag === "input" || tag === "textarea" || tag === "button") return;
+                if (tag === "input" || tag === "textarea" || tag === "button")
+                  return;
                 selectStep(step.id);
                 selectAction(step.id, undefined);
               }}
@@ -718,7 +696,7 @@ export function FlowWorkspace({
                 </div>
                 {/* Persistent centered bottom drop hint */}
                 <div className="mt-3 flex w-full items-center justify-center">
-                  <div className="text-muted-foreground border border-dashed border-muted-foreground/30 rounded px-2 py-1 text-[11px]">
+                  <div className="text-muted-foreground border-muted-foreground/30 rounded border border-dashed px-2 py-1 text-[11px]">
                     Drop actions here
                   </div>
                 </div>
@@ -734,7 +712,7 @@ export function FlowWorkspace({
   /* Render                                                                    */
   /* ------------------------------------------------------------------------ */
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className={cn("flex h-full min-h-0 flex-col", className)}>
       <div className="flex items-center justify-between border-b px-3 py-2 text-xs">
         <div className="flex items-center gap-3 font-medium">
           <span className="text-muted-foreground flex items-center gap-1">
@@ -760,20 +738,24 @@ export function FlowWorkspace({
 
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-y-auto"
+        className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
         onScroll={onScroll}
       >
         {steps.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border">
-                <GitBranch className="h-6 w-6 text-muted-foreground" />
+                <GitBranch className="text-muted-foreground h-6 w-6" />
               </div>
               <p className="mb-2 text-sm font-medium">No steps yet</p>
               <p className="text-muted-foreground mb-3 text-xs">
                 Create your first step to begin designing the flow.
               </p>
-              <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => createStep()}>
+              <Button
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                onClick={() => createStep()}
+              >
                 <Plus className="mr-1 h-3 w-3" /> Add Step
               </Button>
             </div>

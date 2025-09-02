@@ -3,15 +3,15 @@
 import { formatDistanceToNow } from "date-fns";
 import { Calendar, FlaskConical, Plus, Settings, Users } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { api } from "~/trpc/react";
@@ -173,8 +173,6 @@ function ExperimentCard({ experiment }: ExperimentCardProps) {
 }
 
 export function ExperimentsGrid() {
-  const [refreshKey, setRefreshKey] = useState(0);
-
   const {
     data: experimentsData,
     isLoading,
@@ -188,11 +186,6 @@ export function ExperimentsGrid() {
   );
 
   const experiments = experimentsData?.experiments ?? [];
-
-  const handleExperimentCreated = () => {
-    setRefreshKey((prev) => prev + 1);
-    void refetch();
-  };
 
   if (isLoading) {
     return (
@@ -295,10 +288,10 @@ export function ExperimentsGrid() {
                 Failed to Load Experiments
               </h3>
               <p className="mb-4 text-slate-600">
-                {error.message ||
+                {error?.message ??
                   "An error occurred while loading your experiments."}
               </p>
-              <Button onClick={() => refetch()} variant="outline">
+              <Button onClick={() => void refetch()} variant="outline">
                 Try Again
               </Button>
             </div>
@@ -320,52 +313,54 @@ export function ExperimentsGrid() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {/* Create New Experiment Card */}
-      <Card className="border-2 border-dashed border-slate-300 transition-colors hover:border-slate-400">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-blue-100">
-            <Plus className="h-8 w-8 text-blue-600" />
-          </div>
-          <CardTitle>Create New Experiment</CardTitle>
-          <CardDescription>Design a new experimental protocol</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild className="w-full">
-            <Link href="/experiments/new">Create Experiment</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Experiments */}
-      {experiments.map((experiment) => (
-        <ExperimentCard key={experiment.id} experiment={experiment} />
-      ))}
-
-      {/* Empty State */}
-      {experiments.length === 0 && (
-        <Card className="md:col-span-2 lg:col-span-2">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-lg bg-slate-100">
-                <FlaskConical className="h-12 w-12 text-slate-400" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-slate-900">
-                No Experiments Yet
-              </h3>
-              <p className="mb-4 text-slate-600">
-                Create your first experiment to start designing HRI protocols.
-                Experiments define the structure and flow of your research
-                trials.
-              </p>
-              <Button asChild>
-                <Link href="/experiments/new">
-                  Create Your First Experiment
-                </Link>
-              </Button>
+        {/* Create New Experiment Card */}
+        <Card className="border-2 border-dashed border-slate-300 transition-colors hover:border-slate-400">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-blue-100">
+              <Plus className="h-8 w-8 text-blue-600" />
             </div>
+            <CardTitle>Create New Experiment</CardTitle>
+            <CardDescription>
+              Design a new experimental protocol
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/experiments/new">Create Experiment</Link>
+            </Button>
           </CardContent>
         </Card>
-      )}
+
+        {/* Experiments */}
+        {experiments.map((experiment) => (
+          <ExperimentCard key={experiment.id} experiment={experiment} />
+        ))}
+
+        {/* Empty State */}
+        {experiments.length === 0 && (
+          <Card className="md:col-span-2 lg:col-span-2">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-lg bg-slate-100">
+                  <FlaskConical className="h-12 w-12 text-slate-400" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-slate-900">
+                  No Experiments Yet
+                </h3>
+                <p className="mb-4 text-slate-600">
+                  Create your first experiment to start designing HRI protocols.
+                  Experiments define the structure and flow of your research
+                  trials.
+                </p>
+                <Button asChild>
+                  <Link href="/experiments/new">
+                    Create Your First Experiment
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

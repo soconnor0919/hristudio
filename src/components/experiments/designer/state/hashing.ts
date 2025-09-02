@@ -70,8 +70,8 @@ function canonicalize(value: unknown): CanonicalValue {
 function bufferToHex(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let hex = "";
-  for (let i = 0; i < bytes.length; i++) {
-    const b = bytes[i]?.toString(16).padStart(2, "0");
+  for (const byte of bytes) {
+    const b = byte.toString(16).padStart(2, "0");
     hex += b;
   }
   return hex;
@@ -90,8 +90,9 @@ async function hashString(input: string): Promise<string> {
 
   // Fallback to Node (should not execute in Edge runtime)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const nodeCrypto: typeof import("crypto") = require("crypto");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+    const nodeCrypto = require("crypto");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return nodeCrypto.createHash("sha256").update(input).digest("hex");
   } catch {
     throw new Error("No suitable crypto implementation available for hashing.");

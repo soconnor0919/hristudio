@@ -104,16 +104,16 @@ High-level layout:
 Component responsibilities:
 | Component                     | Responsibility |
 |------------------------------|----------------|
-| `DesignerShell`              | Data loading, permission guard, store boot |
+| `DesignerRoot`               | Data loading, permission guard, store boot |
 | `ActionLibraryPanel`         | Search/filter, categorized draggable items |
-| `StepFlow`                   | Rendering + reordering steps & actions |
+| `FlowWorkspace`              | Rendering + reordering steps & actions |
 | `StepCard`                   | Step context container |
 | `ActionItem`                 | Visual + selectable action row |
 | `PropertiesPanel`            | Context editing (step/action) |
 | `ParameterFieldFactory`      | Schema → control mapping |
 | `ValidationPanel`            | Issue listing + filtering |
 | `DependencyInspector`        | Plugin + action provenance health |
-| `SaveBar`                    | Hash/drift/dirtiness/export/version controls |
+| `BottomStatusBar`            | Hash/drift/dirtiness/export/version controls |
 | `hashing.ts`                 | Canonicalization + incremental hashing |
 | `validators.ts`              | Rule execution (structural, parameter) |
 | `exporters.ts`               | Export bundle builder |
@@ -356,14 +356,14 @@ Edge Cases:
 
 ---
 
-## 15. Migration Plan (Internal)
+## 15. Migration Plan (Internal) - COMPLETE ✅
 
-1. Introduce new store + hashing modules.
-2. Replace current `BlockDesigner` usage with `DesignerShell`.
-3. Port ActionLibrary / StepFlow / PropertiesPanel to new contract.
-4. Add SaveBar + drift/UI overlays.
-5. Remove deprecated legacy design references (no “enhanced” terminology).
-6. Update docs cross-links (`project-overview.md`, `implementation-details.md`).
+1. ✅ Introduce new store + hashing modules.
+2. ✅ Replace current `BlockDesigner` usage with `DesignerRoot`.
+3. ✅ Port ActionLibrary / StepFlow / PropertiesPanel to new contract (`ActionLibraryPanel`, `FlowWorkspace`, `InspectorPanel`).
+4. ✅ Add BottomStatusBar + drift/UI overlays.
+5. ✅ Remove deprecated legacy design references and components.
+6. ✅ Update docs cross-links (`project-overview.md`, `implementation-details.md`).
 7. Add export/import UI.
 8. Stabilize, then enforce hash validation before trial creation.
 
@@ -395,22 +395,120 @@ Edge Cases:
 
 ## 18. Implementation Checklist (Actionable)
 
-- [ ] hashing.ts (canonical + incremental)
-- [ ] validators.ts (structural + param rules)
-- [ ] store/useDesignerStore.ts
-- [ ] ActionRegistry rewrite with signature hashing
-- [ ] ActionLibraryPanel (search, categories, drift indicators)
-- [ ] StepFlow + StepCard + ActionItem (DnD with @dnd-kit)
-- [ ] PropertiesPanel + ParameterFieldFactory
-- [ ] ValidationPanel + badges
-- [ ] DependencyInspector + plugin drift mapping
-- [ ] SaveBar (dirty, versioning, export)
+- [x] hashing.ts (canonical + incremental)
+- [x] validators.ts (structural + param rules)
+- [x] store/useDesignerStore.ts
+- [x] layout/PanelsContainer.tsx — Tailwind-first grid (fraction-based), strict overflow containment, non-persistent
+- [x] Drag-resize for panels — fraction CSS variables with hard clamps (no localStorage)
+- [x] DesignerRoot layout — status bar inside bordered container (no bottom gap), min-h-0 + overflow-hidden chain
+- [x] ActionLibraryPanel — internal scroll only (panel scroll, not page)
+- [x] InspectorPanel — single Tabs root for header+content; removed extra border; grid tabs header
+- [x] Tabs (shadcn) — restored stock component; globals.css theming for active state
+
+---
+
+## 19. Layout & Overflow Refactor (2025‑08)
+
+Why:
+- Eliminate page-level horizontal scrolling and snapping
+- Ensure each panel scrolls internally while the page/container never does on X
+- Remove brittle width persistence and hard-coded pixel widths
+
+Key rules (must follow):
+- Use Tailwind-first CSS Grid for panels; ratios, not pixels
+  - PanelsContainer sets grid-template-columns with CSS variables (e.g., --col-left/center/right)
+  - No hard-coded px widths in panels; use fractions and minmax(0, …)
+- Strict overflow containment chain:
+  - Dashboard content wrapper: flex, min-h-0, overflow-hidden
+  - DesignerRoot outer container: flex, min-h-0, overflow-hidden
+  - PanelsContainer root: grid, h-full, min-h-0, w-full, overflow-hidden
+  - Panel wrapper: min-w-0, overflow-hidden
+  - Panel content: overflow-y-auto, overflow-x-hidden
+- Status Bar:
+  - Lives inside the bordered designer container
+  - No gap between panels area and status bar (status bar is flex-shrink-0 with border-t)
+- No persistence:
+  - Remove localStorage panel width persistence to avoid flash/snap on load
+- No page-level X scroll:
+  - If X scroll appears, fix the child (truncate/break-words/overflow-x-hidden), not the container
+
+Container chain snapshot:
+- Dashboard layout: header + content (p-4, pt-0, overflow-hidden)
+- DesignerRoot: flex column; PageHeader (shrink-0) + main bordered container (flex-1, overflow-hidden)
+- PanelsContainer: grid with minmax(0, …) columns; internal y-scroll per panel
+- BottomStatusBar: inside bordered container (no external spacing)
+
+---
+
+## 20. Inspector Tabs (shadcn) Resolution
+
+Symptoms:
+- Active state not visible in right panel tabs despite working elsewhere
+
+Root cause:
+- Multiple Tabs roots and extra wrappers around triggers prevented data-state propagation/styling
+
+Fix:
+- Use a single Tabs root to control both header and content
+- Header markup mirrors working example (e.g., trials analysis):
+  - TabsList: grid w-full grid-cols-3 (or inline-flex with bg-muted and p-1)
+  - TabsTrigger: stock shadcn triggers (no Tooltip wrapper around the trigger itself)
+- Remove right-panel self border when container draws dividers (avoid double border)
+- Restore stock shadcn/ui Tabs component via generator; theme via globals.css only
+
+Do:
+- Keep Tabs value/onValueChange at the single root
+- Style active state via globals.css selectors targeting data-state="active"
+
+Don’t:
+- Wrap TabsTrigger directly in Tooltip wrappers (use title or wrap outside the trigger)
+- Create nested Tabs roots for header vs content
+
+---
+
+## 21. Drag‑Resize Panels (Non‑Persistent)
+
+Approach:
+- PanelsContainer exposes drag handles at left/center and center/right separators
+- Resize adjusts CSS variables for grid fractions:
+  - --col-left, --col-center, --col-right (sum ~ 1)
+- Hard clamps ensure usable panels and avoid overflow:
+  - left in [minLeftPct, maxLeftPct], right in [minRightPct, maxRightPct]
+  - center = 1 − (left + right), with a minimum center fraction
+
+Accessibility:
+- Handles are buttons with role="separator", aria-orientation="vertical"
+- Keyboard: Arrow keys resize (Shift increases step)
+
+Persistence:
+- None. No localStorage. Prevents snap-back and layout flash on load
+
+Overflow:
+- Grid and panels keep overflow-x hidden at every level
+- Long content in a panel scrolls vertically within that panel only
+
+---
+
+## 22. Tabs Theming (Global)
+
+- Use globals.css to style shadcn Tabs consistently via data attributes:
+  - [data-slot="tabs-list"]: container look (bg-muted, rounded, p-1)
+  - [data-slot="tabs-trigger"][data-state="active"]: bg/text/shadow (active contrast)
+- Avoid component-level overrides unless necessary; prefer global theme tokens (background, foreground, muted, accent)
+
+- [x] ActionRegistry rewrite with signature hashing
+- [x] ActionLibraryPanel (search, categories, drift indicators)
+- [x] FlowWorkspace + StepCard + ActionItem (DnD with @dnd-kit)
+- [x] PropertiesPanel + ParameterFieldFactory
+- [x] ValidationPanel + badges
+- [x] DependencyInspector + plugin drift mapping
+- [x] BottomStatusBar (dirty, versioning, export)
 - [ ] Exporter (JSON bundle) + import hook
 - [ ] Conflict modal
 - [ ] Drift reconciliation UI
 - [ ] Unit & integration tests
-- [ ] Docs cross-link updates
-- [ ] Remove obsolete legacy code paths
+- [x] Docs cross-link updates
+- [x] Remove obsolete legacy code paths
 
 (Track progress in `docs/work_in_progress.md` under “Experiment Designer Redesign Implementation”.)
 

@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import type { db } from "~/server/db";
+import { db } from "~/server/db";
 import {
   experiments,
   participants,
@@ -25,6 +25,7 @@ import {
   mediaCaptures,
   users,
 } from "~/server/db/schema";
+import { TrialExecutionEngine } from "~/server/services/trial-execution";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -76,6 +77,9 @@ async function checkTrialAccess(
 
   return trial[0];
 }
+
+// Global execution engine instance
+const executionEngine = new TrialExecutionEngine(db);
 
 export const trialsRouter = createTRPCRouter({
   list: protectedProcedure
@@ -412,25 +416,31 @@ export const trialsRouter = createTRPCRouter({
         });
       }
 
-      // Start trial
-      const [trial] = await db
-        .update(trials)
-        .set({
-          status: "in_progress",
-          startedAt: new Date(),
-        })
+      // Use execution engine to start trial
+      const result = await executionEngine.startTrial(input.id, userId);
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Failed to start trial",
+        });
+      }
+
+      // Return updated trial data
+      const trial = await db
+        .select()
+        .from(trials)
         .where(eq(trials.id, input.id))
-        .returning();
+        .limit(1);
 
-      // Log trial start event
-      await db.insert(trialEvents).values({
-        trialId: input.id,
-        eventType: "trial_started",
-        timestamp: new Date(),
-        data: { userId },
-      });
+      if (!trial[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Trial not found after start",
+        });
+      }
 
-      return trial;
+      return trial[0];
     }),
 
   complete: protectedProcedure
@@ -488,24 +498,31 @@ export const trialsRouter = createTRPCRouter({
         "wizard",
       ]);
 
-      const [trial] = await db
-        .update(trials)
-        .set({
-          status: "aborted",
-          completedAt: new Date(),
-        })
+      // Use execution engine to abort trial
+      const result = await executionEngine.abortTrial(input.id, input.reason);
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Failed to complete trial",
+        });
+      }
+
+      // Return updated trial data
+      const trial = await db
+        .select()
+        .from(trials)
         .where(eq(trials.id, input.id))
-        .returning();
+        .limit(1);
 
-      // Log trial abort event
-      await db.insert(trialEvents).values({
-        trialId: input.id,
-        eventType: "trial_aborted",
-        timestamp: new Date(),
-        data: { userId, reason: input.reason },
-      });
+      if (!trial[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Trial not found after abort",
+        });
+      }
 
-      return trial;
+      return trial[0];
     }),
 
   logEvent: protectedProcedure
@@ -788,5 +805,85 @@ export const trialsRouter = createTRPCRouter({
           pages: Math.ceil(totalCount / limit),
         },
       };
+    }),
+  // Trial Execution Procedures
+  executeCurrentStep: protectedProcedure
+    .input(z.object({ trialId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
+
+      const result = await executionEngine.executeCurrentStep(input.trialId);
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Failed to reset trial",
+        });
+      }
+
+      return result;
+    }),
+
+  advanceToNextStep: protectedProcedure
+    .input(z.object({ trialId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
+
+      const result = await executionEngine.advanceToNextStep(input.trialId);
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Failed to advance to next step",
+        });
+      }
+
+      return result;
+    }),
+
+  getExecutionStatus: protectedProcedure
+    .input(z.object({ trialId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
+
+      const status = executionEngine.getTrialStatus(input.trialId);
+      const currentStep = executionEngine.getCurrentStep(input.trialId);
+
+      return {
+        status,
+        currentStep,
+      };
+    }),
+
+  getCurrentStep: protectedProcedure
+    .input(z.object({ trialId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
+
+      return executionEngine.getCurrentStep(input.trialId);
+    }),
+
+  completeWizardAction: protectedProcedure
+    .input(
+      z.object({
+        trialId: z.string(),
+        actionId: z.string(),
+        data: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
+
+      // Log wizard action completion
+      await ctx.db.insert(trialEvents).values({
+        trialId: input.trialId,
+        eventType: "wizard_action_completed",
+        actionId: input.actionId,
+        data: input.data,
+        timestamp: new Date(),
+        createdBy: ctx.session.user.id,
+      });
+
+      return { success: true };
     }),
 });

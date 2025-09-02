@@ -477,11 +477,16 @@ export const usersRouter = createTRPCRouter({
                 role.role === "wizard" ||
                 role.role === "researcher" ||
                 role.role === "administrator",
-            )?.role || "wizard",
+            )?.role ?? "wizard",
         });
       }
     });
 
-    return Array.from(wizardUsers.values());
+    return Array.from(wizardUsers.values()) as Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: "wizard" | "researcher" | "administrator";
+    }>;
   }),
 });

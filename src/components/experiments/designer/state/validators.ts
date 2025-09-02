@@ -434,7 +434,7 @@ export function validateParameters(
             // Unknown parameter type
             issues.push({
               severity: "warning",
-              message: `Unknown parameter type '${paramDef.type}' for '${paramDef.name}'`,
+              message: `Unknown parameter type '${String(paramDef.type)}' for '${paramDef.name}'`,
               category: "parameter",
               field,
               stepId,
@@ -723,9 +723,7 @@ export function groupIssuesByEntity(
 
   issues.forEach((issue) => {
     const entityId = issue.actionId ?? issue.stepId ?? "experiment";
-    if (!grouped[entityId]) {
-      grouped[entityId] = [];
-    }
+    grouped[entityId] ??= [];
     grouped[entityId].push(issue);
   });
 

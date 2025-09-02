@@ -17,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
@@ -106,13 +107,19 @@ const statusConfig = {
 };
 
 function TrialActionsCell({ trial }: { trial: Trial }) {
+  const startTrialMutation = api.trials.start.useMutation();
+  const completeTrialMutation = api.trials.complete.useMutation();
+  const abortTrialMutation = api.trials.abort.useMutation();
+  // const deleteTrialMutation = api.trials.delete.useMutation();
+
   const handleDelete = async () => {
     if (
       window.confirm(`Are you sure you want to delete trial "${trial.name}"?`)
     ) {
       try {
-        // Delete trial functionality not yet implemented
-        toast.success("Trial deleted successfully");
+        // await deleteTrialMutation.mutateAsync({ id: trial.id });
+        toast.success("Trial deletion not yet implemented");
+        // window.location.reload();
       } catch {
         toast.error("Failed to delete trial");
       }
@@ -124,14 +131,22 @@ function TrialActionsCell({ trial }: { trial: Trial }) {
     toast.success("Trial ID copied to clipboard");
   };
 
-  const handleStartTrial = () => {
-    window.location.href = `/trials/${trial.id}/wizard`;
+  const handleStartTrial = async () => {
+    try {
+      await startTrialMutation.mutateAsync({ id: trial.id });
+      toast.success("Trial started successfully");
+      window.location.href = `/trials/${trial.id}/wizard`;
+    } catch {
+      toast.error("Failed to start trial");
+    }
   };
 
   const handlePauseTrial = async () => {
     try {
-      // Pause trial functionality not yet implemented
-      toast.success("Trial paused");
+      // For now, pausing means completing the trial
+      await completeTrialMutation.mutateAsync({ id: trial.id });
+      toast.success("Trial paused/completed");
+      window.location.reload();
     } catch {
       toast.error("Failed to pause trial");
     }
@@ -140,8 +155,9 @@ function TrialActionsCell({ trial }: { trial: Trial }) {
   const handleStopTrial = async () => {
     if (window.confirm("Are you sure you want to stop this trial?")) {
       try {
-        // Stop trial functionality not yet implemented
+        await abortTrialMutation.mutateAsync({ id: trial.id });
         toast.success("Trial stopped");
+        window.location.reload();
       } catch {
         toast.error("Failed to stop trial");
       }

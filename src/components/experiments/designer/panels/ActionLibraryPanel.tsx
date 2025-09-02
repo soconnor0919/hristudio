@@ -28,6 +28,7 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { ScrollArea } from "~/components/ui/scroll-area";
+
 import { cn } from "~/lib/utils";
 import { useActionRegistry } from "../ActionRegistry";
 import type { ActionDefinition } from "~/lib/experiment-designer/types";
@@ -79,14 +80,17 @@ function DraggableAction({
   onToggleFavorite,
   highlight,
 }: DraggableActionProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `action-${action.id}`,
-    data: { action },
-  });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `action-${action.id}`,
+      data: { action },
+    });
 
-  // Disable visual translation during drag so the list does not shift items.
-  // We still let dnd-kit manage the drag overlay internally (no manual transform).
-  const style: React.CSSProperties = {};
+  const style: React.CSSProperties = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : {};
 
   const IconComponent = iconMap[action.icon] ?? Sparkles;
 
@@ -104,12 +108,12 @@ function DraggableAction({
       {...listeners}
       style={style}
       className={cn(
-        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab touch-none flex-col gap-1 rounded border px-2 transition-colors select-none",
+        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab touch-none flex-col gap-1 rounded border px-2 text-left transition-colors select-none",
         compact ? "py-1.5 text-[11px]" : "py-2 text-[12px]",
-        isDragging && "ring-border opacity-60 ring-1",
+        isDragging && "opacity-50",
       )}
       draggable={false}
-      onDragStart={(e) => e.preventDefault()}
+      title={action.description ?? ""}
     >
       <button
         type="button"
@@ -127,7 +131,7 @@ function DraggableAction({
         )}
       </button>
 
-      <div className="flex items-start gap-2 select-none">
+      <div className="flex min-w-0 items-start gap-2 select-none">
         <div
           className={cn(
             "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-white",
@@ -331,8 +335,8 @@ export function ActionLibraryPanel() {
   ).length;
 
   return (
-    <div className="flex h-full max-w-[240px] flex-col overflow-hidden">
-      <div className="bg-background/60 border-b p-2">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="bg-background/60 flex-shrink-0 border-b p-2">
         <div className="relative mb-2">
           <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
@@ -359,10 +363,11 @@ export function ActionLibraryPanel() {
                 )}
                 onClick={() => toggleCategory(cat.key)}
                 aria-pressed={active}
+                aria-label={cat.label}
               >
                 <Icon className="h-3 w-3" />
-                {cat.label}
-                <span className="ml-auto text-[10px] font-normal opacity-80">
+                <span className="hidden md:inline">{cat.label}</span>
+                <span className="ml-auto hidden text-[10px] font-normal opacity-80 lg:inline">
                   {countsByCategory[cat.key]}
                 </span>
               </Button>
@@ -374,17 +379,17 @@ export function ActionLibraryPanel() {
           <Button
             variant={showOnlyFavorites ? "default" : "outline"}
             size="sm"
-            className="h-7 min-w-[80px] flex-1"
+            className="h-7 flex-1"
             onClick={() => setShowOnlyFavorites((s) => !s)}
             aria-pressed={showOnlyFavorites}
             aria-label="Toggle favorites filter"
           >
-            <Star className="mr-1 h-3 w-3" />
-            Fav
+            <Star className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">Fav</span>
             {showOnlyFavorites && (
               <Badge
                 variant="secondary"
-                className="ml-1 h-4 px-1 text-[10px]"
+                className="ml-1 hidden h-4 px-1 text-[10px] sm:inline"
                 title="Visible favorites"
               >
                 {visibleFavoritesCount}
@@ -394,7 +399,7 @@ export function ActionLibraryPanel() {
           <Button
             variant="outline"
             size="sm"
-            className="h-7 min-w-[80px] flex-1"
+            className="h-7 flex-1"
             onClick={() =>
               setDensity((d) =>
                 d === "comfortable" ? "compact" : "comfortable",
@@ -402,18 +407,20 @@ export function ActionLibraryPanel() {
             }
             aria-label="Toggle density"
           >
-            <SlidersHorizontal className="mr-1 h-3 w-3" />
-            {density === "comfortable" ? "Dense" : "Relax"}
+            <SlidersHorizontal className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">
+              {density === "comfortable" ? "Dense" : "Relax"}
+            </span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 min-w-[60px] flex-1"
+            className="h-7 flex-1"
             onClick={clearFilters}
             aria-label="Clear filters"
           >
             <X className="h-3 w-3" />
-            Clear
+            <span className="ml-1 hidden sm:inline">Clear</span>
           </Button>
         </div>
 
@@ -432,8 +439,8 @@ export function ActionLibraryPanel() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 overflow-x-hidden overflow-y-auto">
-        <div className="flex flex-col gap-2 p-2">
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 gap-2 p-2">
           {filtered.length === 0 ? (
             <div className="text-muted-foreground/70 flex flex-col items-center gap-2 py-10 text-center text-xs">
               <Filter className="h-6 w-6" />
@@ -454,7 +461,7 @@ export function ActionLibraryPanel() {
         </div>
       </ScrollArea>
 
-      <div className="bg-background/60 border-t p-2">
+      <div className="bg-background/60 flex-shrink-0 border-t p-2">
         <div className="flex items-center justify-between text-[10px]">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="h-4 px-1 text-[10px]">

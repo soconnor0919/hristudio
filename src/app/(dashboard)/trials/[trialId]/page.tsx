@@ -1,16 +1,9 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import {
-  AlertCircle,
-  Calendar,
-  CheckCircle,
-  Eye,
-  Info,
-  Play,
-  Zap,
-} from "lucide-react";
+import { AlertCircle, Eye, Info, Play, Zap } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
@@ -101,6 +94,8 @@ export default function TrialDetailPage({
   searchParams,
 }: TrialDetailPageProps) {
   const { data: session } = useSession();
+  const router = useRouter();
+  const startTrialMutation = api.trials.start.useMutation();
   const [trial, setTrial] = useState<Trial | null>(null);
   const [events, setEvents] = useState<TrialEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,6 +187,12 @@ export default function TrialDetailPage({
   const canControl =
     userRoles.includes("wizard") || userRoles.includes("researcher");
 
+  const handleStartTrial = async () => {
+    if (!trial) return;
+    await startTrialMutation.mutateAsync({ id: trial.id });
+    router.push(`/trials/${trial.id}/wizard`);
+  };
+
   const displayName = `Trial #${trial.id.slice(-6)}`;
   const experimentName = trial.experiment?.name ?? "Unknown Experiment";
 
@@ -219,12 +220,21 @@ export default function TrialDetailPage({
         actions={
           <>
             {canControl && trial.status === "scheduled" && (
-              <Button asChild>
-                <Link href={`/trials/${trial.id}/wizard`}>
+              <>
+                <Button
+                  onClick={handleStartTrial}
+                  disabled={startTrialMutation.isPending}
+                >
                   <Play className="mr-2 h-4 w-4" />
-                  Start Trial
-                </Link>
-              </Button>
+                  {startTrialMutation.isPending ? "Starting..." : "Start"}
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/trials/${trial.id}/start`}>
+                    <Zap className="mr-2 h-4 w-4" />
+                    Preflight
+                  </Link>
+                </Button>
+              </>
             )}
             {canControl && trial.status === "in_progress" && (
               <Button asChild variant="secondary">
@@ -238,7 +248,7 @@ export default function TrialDetailPage({
               <Button asChild variant="outline">
                 <Link href={`/trials/${trial.id}/analysis`}>
                   <Info className="mr-2 h-4 w-4" />
-                  View Analysis
+                  Analysis
                 </Link>
               </Button>
             )}

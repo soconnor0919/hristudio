@@ -268,7 +268,7 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
 }
 
 export function TrialsGrid() {
-  const [refreshKey, setRefreshKey] = useState(0);
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: userSession } = api.auth.me.useQuery();
@@ -282,7 +282,15 @@ export function TrialsGrid() {
     {
       page: 1,
       limit: 50,
-      status: statusFilter === "all" ? undefined : (statusFilter as any),
+      status:
+        statusFilter === "all"
+          ? undefined
+          : (statusFilter as
+              | "scheduled"
+              | "in_progress"
+              | "completed"
+              | "aborted"
+              | "failed"),
     },
     {
       refetchOnWindowFocus: false,
@@ -309,16 +317,13 @@ export function TrialsGrid() {
     }
   };
 
-  const handleTrialCreated = () => {
-    setRefreshKey((prev) => prev + 1);
-    void refetch();
-  };
+
 
   // Group trials by status for better organization
   const upcomingTrials = trials.filter((t) => t.status === "scheduled");
   const activeTrials = trials.filter((t) => t.status === "in_progress");
   const completedTrials = trials.filter((t) => t.status === "completed");
-  const cancelledTrials = trials.filter((t) => t.status === "aborted");
+
 
   if (isLoading) {
     return (

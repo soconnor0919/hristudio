@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { DesignerRoot } from "~/components/experiments/designer/DesignerRoot";
 import type {
   ExperimentStep,
   ExperimentAction,
@@ -8,6 +7,7 @@ import type {
   ExecutionDescriptor,
 } from "~/lib/experiment-designer/types";
 import { api } from "~/trpc/server";
+import { DesignerPageClient } from "./DesignerPageClient";
 
 interface ExperimentDesignerPageProps {
   params: Promise<{
@@ -239,8 +239,8 @@ export default async function ExperimentDesignerPage({
     }
 
     return (
-      <DesignerRoot
-        experimentId={experiment.id}
+      <DesignerPageClient
+        experiment={experiment}
         initialDesign={initialDesign}
       />
     );

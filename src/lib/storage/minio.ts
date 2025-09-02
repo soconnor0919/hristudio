@@ -1,19 +1,25 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 
 // Configure MinIO S3 client
 const s3Client = new S3Client({
-  endpoint: env.MINIO_ENDPOINT || "http://localhost:9000",
-  region: env.MINIO_REGION || "us-east-1",
+  endpoint: env.MINIO_ENDPOINT ?? "http://localhost:9000",
+  region: env.MINIO_REGION ?? "us-east-1",
   credentials: {
-    accessKeyId: env.MINIO_ACCESS_KEY || "minioadmin",
-    secretAccessKey: env.MINIO_SECRET_KEY || "minioadmin",
+    accessKeyId: env.MINIO_ACCESS_KEY ?? "minioadmin",
+    secretAccessKey: env.MINIO_SECRET_KEY ?? "minioadmin",
   },
   forcePathStyle: true, // Required for MinIO
 });
 
-const BUCKET_NAME = env.MINIO_BUCKET_NAME || "hristudio";
+const BUCKET_NAME = env.MINIO_BUCKET_NAME ?? "hristudio";
 const PRESIGNED_URL_EXPIRY = 3600; // 1 hour in seconds
 
 export interface UploadParams {
@@ -46,7 +52,7 @@ export async function uploadFile(params: UploadParams): Promise<UploadResult> {
       Bucket: BUCKET_NAME,
       Key: params.key,
       Body: params.body,
-      ContentType: params.contentType || "application/octet-stream",
+      ContentType: params.contentType ?? "application/octet-stream",
       Metadata: params.metadata,
     });
 
@@ -55,13 +61,17 @@ export async function uploadFile(params: UploadParams): Promise<UploadResult> {
     return {
       key: params.key,
       url: `${env.MINIO_ENDPOINT}/${BUCKET_NAME}/${params.key}`,
-      size: Buffer.isBuffer(params.body) ? params.body.length : params.body.toString().length,
-      contentType: params.contentType || "application/octet-stream",
-      etag: result.ETag || "",
+      size: Buffer.isBuffer(params.body)
+        ? params.body.length
+        : params.body.toString().length,
+      contentType: params.contentType ?? "application/octet-stream",
+      etag: result.ETag ?? "",
     };
   } catch (error) {
     console.error("Error uploading file to MinIO:", error);
-    throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -71,10 +81,14 @@ export async function uploadFile(params: UploadParams): Promise<UploadResult> {
 export async function getPresignedUrl(
   key: string,
   operation: "getObject" | "putObject" = "getObject",
-  options: PresignedUrlOptions = {}
+  options: PresignedUrlOptions = {},
 ): Promise<string> {
   try {
-    const { expiresIn = PRESIGNED_URL_EXPIRY, responseContentType, responseContentDisposition } = options;
+    const {
+      expiresIn = PRESIGNED_URL_EXPIRY,
+      responseContentType,
+      responseContentDisposition,
+    } = options;
 
     let command;
     if (operation === "getObject") {
@@ -96,7 +110,9 @@ export async function getPresignedUrl(
     return url;
   } catch (error) {
     console.error("Error generating presigned URL:", error);
-    throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to generate presigned URL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -113,7 +129,9 @@ export async function deleteFile(key: string): Promise<void> {
     await s3Client.send(command);
   } catch (error) {
     console.error("Error deleting file from MinIO:", error);
-    throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -134,7 +152,9 @@ export async function fileExists(key: string): Promise<boolean> {
       return false;
     }
     console.error("Error checking file existence:", error);
-    throw new Error(`Failed to check file existence: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to check file existence: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -157,23 +177,30 @@ export async function getFileMetadata(key: string): Promise<{
     const result = await s3Client.send(command);
 
     return {
-      size: result.ContentLength || 0,
-      lastModified: result.LastModified || new Date(),
-      contentType: result.ContentType || "application/octet-stream",
-      etag: result.ETag || "",
-      metadata: result.Metadata || {},
+      size: result.ContentLength ?? 0,
+      lastModified: result.LastModified ?? new Date(),
+      contentType: result.ContentType ?? "application/octet-stream",
+      etag: result.ETag ?? "",
+      metadata: result.Metadata ?? {},
     };
   } catch (error) {
     console.error("Error getting file metadata:", error);
-    throw new Error(`Failed to get file metadata: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to get file metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
 /**
  * Generate a download URL for a file
  */
-export async function getDownloadUrl(key: string, filename?: string): Promise<string> {
-  const contentDisposition = filename ? `attachment; filename="${filename}"` : undefined;
+export async function getDownloadUrl(
+  key: string,
+  filename?: string,
+): Promise<string> {
+  const contentDisposition = filename
+    ? `attachment; filename="${filename}"`
+    : undefined;
 
   return getPresignedUrl(key, "getObject", {
     responseContentDisposition: contentDisposition,
@@ -183,7 +210,10 @@ export async function getDownloadUrl(key: string, filename?: string): Promise<st
 /**
  * Generate an upload URL for direct client uploads
  */
-export async function getUploadUrl(key: string, contentType?: string): Promise<string> {
+export async function getUploadUrl(
+  key: string,
+  contentType?: string,
+): Promise<string> {
   return getPresignedUrl(key, "putObject", {
     responseContentType: contentType,
   });
@@ -196,7 +226,7 @@ export function generateFileKey(
   prefix: string,
   filename: string,
   userId?: string,
-  trialId?: string
+  trialId?: string,
 ): string {
   const timestamp = Date.now();
   const randomSuffix = Math.random().toString(36).substring(2, 8);
@@ -274,7 +304,7 @@ export function getMimeType(filename: string): string {
     gz: "application/gzip",
   };
 
-  return mimeTypes[extension] || "application/octet-stream";
+  return mimeTypes[extension] ?? "application/octet-stream";
 }
 
 /**
@@ -284,10 +314,10 @@ export function validateFile(
   filename: string,
   size: number,
   allowedTypes?: string[],
-  maxSize?: number
+  maxSize?: number,
 ): { valid: boolean; error?: string } {
   // Check file size (default 100MB limit)
-  const maxFileSize = maxSize || 100 * 1024 * 1024;
+  const maxFileSize = maxSize ?? 100 * 1024 * 1024;
   if (size > maxFileSize) {
     return {
       valid: false,
@@ -313,4 +343,3 @@ export function validateFile(
 export { s3Client };
 // Export bucket name for reference
 export { BUCKET_NAME };
-

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { type DefaultSession } from "next-auth";
+import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
@@ -38,9 +38,10 @@ declare module "next-auth" {
  *
  * @see https://next-auth.js.org/configuration/options
  */
-export const authConfig = {
+
+export const authConfig: NextAuthConfig = {
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
@@ -87,17 +88,17 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    jwt: ({ token, user }: { token: any; user: any }) => {
+    jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    session: async ({ session, token }: { session: any; token: any }) => {
-      if (token.id) {
+    session: async ({ session, token }) => {
+      if (token.id && typeof token.id === 'string') {
         // Fetch user roles from database
         const userWithRoles = await db.query.users.findFirst({
-          where: eq(users.id, token.id as string),
+          where: eq(users.id, token.id),
           with: {
             systemRoles: {
               with: {
@@ -117,7 +118,7 @@ export const authConfig = {
           ...session,
           user: {
             ...session.user,
-            id: token.id as string,
+            id: token.id,
             roles:
               userWithRoles?.systemRoles?.map((sr) => ({
                 role: sr.role,
@@ -130,4 +131,4 @@ export const authConfig = {
       return session;
     },
   },
-} as any;
+};

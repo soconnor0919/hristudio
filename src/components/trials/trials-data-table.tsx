@@ -180,12 +180,18 @@ export function TrialsDataTable() {
       <div className="space-y-6">
         <PageHeader
           title="Trials"
-          description="Monitor and manage trial execution for your HRI experiments"
+          description="Schedule and manage trials for your HRI studies"
           icon={TestTube}
           actions={
-            <ActionButton href="/trials/new">
+            <ActionButton
+              href={
+                selectedStudyId
+                  ? `/studies/${selectedStudyId}/trials/new`
+                  : "/trials/new"
+              }
+            >
               <Plus className="mr-2 h-4 w-4" />
-              New Trial
+              Schedule Trial
             </ActionButton>
           }
         />
@@ -210,12 +216,18 @@ export function TrialsDataTable() {
     <div className="space-y-6">
       <PageHeader
         title="Trials"
-        description="Monitor and manage trial execution for your HRI experiments"
+        description="Schedule and manage trials for your HRI studies"
         icon={TestTube}
         actions={
-          <ActionButton href="/trials/new">
+          <ActionButton
+            href={
+              selectedStudyId
+                ? `/studies/${selectedStudyId}/trials/new`
+                : "/trials/new"
+            }
+          >
             <Plus className="mr-2 h-4 w-4" />
-            New Trial
+            Schedule Trial
           </ActionButton>
         }
       />

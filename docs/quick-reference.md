@@ -106,7 +106,7 @@ http://localhost:3000/api/trpc/
 - **`studies`**: CRUD operations, team management
 - **`experiments`**: Design, configuration, validation
 - **`participants`**: Registration, consent, demographics
-- **`trials`**: Execution, monitoring, data capture
+- **`trials`**: Execution, monitoring, data capture, real-time control
 - **`robots`**: Integration, communication, actions, plugins
 - **`admin`**: Repository management, system settings
 
@@ -146,6 +146,67 @@ experiments → steps
 ---
 
 ## 🎨 **UI Components**
+
+---
+
+## 🎯 **Trial System Quick Reference**
+
+### Trial Workflow
+```
+1. Create Study → 2. Design Experiment → 3. Add Participants → 4. Schedule Trial → 5. Execute with Wizard Interface → 6. Analyze Results
+```
+
+### Key Trial Pages
+- **`/trials`**: List all trials with status filtering
+- **`/trials/[id]`**: Trial details and management
+- **`/trials/[id]/wizard`**: Panel-based real-time execution interface
+- **`/trials/[id]/analysis`**: Post-trial data analysis
+
+### Trial Status Flow
+```
+scheduled → in_progress → completed
+           ↘ aborted
+           ↘ failed
+```
+
+### Wizard Interface Architecture (Panel-Based)
+The wizard interface uses the same proven panel system as the experiment designer:
+
+#### **Layout Components**
+- **PageHeader**: Consistent navigation with breadcrumbs
+- **PanelsContainer**: Three-panel resizable layout
+- **Proper Navigation**: Dashboard → Studies → [Study] → Trials → [Trial] → Wizard Control
+
+#### **Panel Organization**
+```
+┌─────────────────────────────────────────────────────────┐
+│ PageHeader: Wizard Control                             │
+├──────────┬─────────────────────────┬────────────────────┤
+│ Left     │ Center                  │ Right              │
+│ Panel    │ Panel                   │ Panel              │
+│          │                         │                    │
+│ Trial    │ Current Step            │ Robot Status       │
+│ Controls │ & Wizard Actions        │ Participant Info   │
+│ Step     │                         │ Live Events        │
+│ List     │                         │ Connection Status  │
+└──────────┴─────────────────────────┴────────────────────┘
+```
+
+#### **Panel Features**
+- **Left Panel**: Trial controls, status, step navigation
+- **Center Panel**: Main execution area with current step and wizard actions
+- **Right Panel**: Real-time monitoring and context information
+- **Resizable**: Drag separators to adjust panel sizes
+- **Overflow Contained**: No page-level scrolling, internal panel scrolling
+
+### Technical Features
+- **Real-time Control**: Step-by-step protocol execution
+- **WebSocket Integration**: Live updates with polling fallback
+- **Component Reuse**: 90% code sharing with experiment designer
+- **Type Safety**: Complete TypeScript compatibility
+- **Mock Robot System**: TurtleBot3 simulation ready for development
+
+---
 
 ### Layout Components
 ```typescript
@@ -341,6 +402,33 @@ CLOUDFLARE_R2_BUCKET_NAME=hristudio-files
 ```
 
 ---
+
+## Experiment Designer — Quick Tips
+
+- Panels layout
+  - Uses Tailwind-first grid via `PanelsContainer` with fraction-based columns (no hardcoded px).
+  - Left/Center/Right panels are minmax(0, …) columns to prevent horizontal overflow.
+  - Status bar lives inside the bordered container; no gap below the panels.
+
+- Resizing (no persistence)
+  - Drag separators between Left↔Center and Center↔Right to resize panels.
+  - Fractions are clamped (min/max) to keep panels usable and avoid page overflow.
+  - Keyboard on handles: Arrow keys to resize; Shift+Arrow for larger steps.
+
+- Overflow rules (no page-level X scroll)
+  - Root containers: `overflow-hidden`, `min-h-0`.
+  - Each panel wrapper: `min-w-0 overflow-hidden`.
+  - Each panel content: `overflow-y-auto overflow-x-hidden` (scroll inside the panel).
+  - If X scroll appears, clamp the offending child (truncate, `break-words`, `overflow-x-hidden`).
+
+- Action Library scroll
+  - Search/categories header and footer are fixed; the list uses internal scroll (`ScrollArea` with `flex-1`).
+  - Long lists never scroll the page — only the panel.
+
+- Inspector tabs (shadcn/ui)
+  - Single Tabs root controls both header and content.
+  - TabsList uses simple grid or inline-flex; triggers are plain `TabsTrigger`.
+  - Active state is styled globally (via `globals.css`) using Radix `data-state="active"`.
 
 ## 🔧 **Troubleshooting**
 

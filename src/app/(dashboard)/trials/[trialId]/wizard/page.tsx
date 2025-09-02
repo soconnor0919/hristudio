@@ -29,7 +29,7 @@ export default async function WizardPage({ params }: WizardPageProps) {
   let trial;
   try {
     trial = await api.trials.get({ id: trialId });
-  } catch (_error) {
+  } catch {
     notFound();
   }
 
@@ -38,51 +38,29 @@ export default async function WizardPage({ params }: WizardPageProps) {
     redirect(`/trials/${trialId}?error=trial_not_active`);
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Wizard Control Interface
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              {trial.experiment.name} • Participant:{" "}
-              {trial.participant.participantCode}
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div
-              className={`flex items-center space-x-2 rounded-full px-3 py-1 text-sm font-medium ${
-                trial.status === "in_progress"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-blue-100 text-blue-800"
-              }`}
-            >
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  trial.status === "in_progress"
-                    ? "animate-pulse bg-green-500"
-                    : "bg-blue-500"
-                }`}
-              ></div>
-              {trial.status === "in_progress"
-                ? "Trial Active"
-                : "Ready to Start"}
-            </div>
-          </div>
-        </div>
-      </div>
+  const normalizedTrial = {
+    ...trial,
+    metadata:
+      typeof trial.metadata === "object" && trial.metadata !== null
+        ? (trial.metadata as Record<string, unknown>)
+        : null,
+    participant: {
+      ...trial.participant,
+      demographics:
+        typeof trial.participant.demographics === "object" &&
+        trial.participant.demographics !== null
+          ? (trial.participant.demographics as Record<string, unknown>)
+          : null,
+    },
+  };
 
-      {/* Main Wizard Interface */}
-      <WizardInterface trial={trial} userRole={userRole} />
-    </div>
-  );
+  return <WizardInterface trial={normalizedTrial} userRole={userRole} />;
 }
 
 // Generate metadata for the page
-export async function generateMetadata({ params }: WizardPageProps) {
+export async function generateMetadata({
+  params,
+}: WizardPageProps): Promise<{ title: string; description: string }> {
   try {
     const { trialId } = await params;
     const trial = await api.trials.get({ id: trialId });

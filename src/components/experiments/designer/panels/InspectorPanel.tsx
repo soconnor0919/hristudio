@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { ScrollArea } from "~/components/ui/scroll-area";
+
 import { cn } from "~/lib/utils";
 import { useDesignerStore } from "../state/store";
 import { actionRegistry } from "../ActionRegistry";
@@ -200,7 +200,7 @@ export function InspectorPanel({
   return (
     <div
       className={cn(
-        "bg-background/40 border-border relative flex h-full min-w-0 flex-col overflow-hidden border-l backdrop-blur-sm",
+        "bg-background/40 border-border relative flex h-full min-w-0 flex-col overflow-hidden break-words whitespace-normal backdrop-blur-sm",
         className,
       )}
       style={{ contain: "layout paint size" }}
@@ -208,62 +208,51 @@ export function InspectorPanel({
       aria-label="Inspector panel"
     >
       {/* Tab Header */}
-      <div className="border-b px-2 py-1.5">
-        <Tabs
-          value={effectiveTab}
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className="flex h-9 w-full items-center gap-1 overflow-hidden">
-            <TabsTrigger
-              value="properties"
-              className="flex min-w-0 flex-1 items-center justify-center gap-1 truncate text-[11px]"
-              title="Properties (Step / Action)"
-            >
+      <Tabs
+        value={effectiveTab}
+        onValueChange={handleTabChange}
+        className="flex min-h-0 w-full flex-1 flex-col"
+      >
+        <div className="px-2 py-1.5">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="properties" title="Properties (Step / Action)">
               <Settings className="h-3 w-3 flex-shrink-0" />
-              <span className="hidden sm:inline">Props</span>
+              <span className="hidden md:inline">Props</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="issues"
-              className="flex min-w-0 flex-1 items-center justify-center gap-1 truncate text-[11px]"
-              title="Validation Issues"
-            >
+
+            <TabsTrigger value="issues" title="Validation Issues">
               <AlertTriangle className="h-3 w-3 flex-shrink-0" />
-              <span className="hidden sm:inline">
+              <span className="hidden md:inline">
                 Issues{issueCount > 0 ? ` (${issueCount})` : ""}
               </span>
               {issueCount > 0 && (
-                <span className="xs:hidden text-amber-600 dark:text-amber-400">
+                <span className="text-amber-600 md:hidden dark:text-amber-400">
                   {issueCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger
-              value="dependencies"
-              className="flex min-w-0 flex-1 items-center justify-center gap-1 truncate text-[11px]"
-              title="Dependencies / Drift"
-            >
+
+            <TabsTrigger value="dependencies" title="Dependencies / Drift">
               <PackageSearch className="h-3 w-3 flex-shrink-0" />
-              <span className="hidden sm:inline">
+              <span className="hidden md:inline">
                 Deps{driftCount > 0 ? ` (${driftCount})` : ""}
               </span>
               {driftCount > 0 && (
-                <span className="xs:hidden text-purple-600 dark:text-purple-400">
+                <span className="text-purple-600 md:hidden dark:text-purple-400">
                   {driftCount}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
-        </Tabs>
-      </div>
+        </div>
 
-      {/* Content */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        {/*
+        {/* Content */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/*
           Force consistent width for tab bodies to prevent reflow when
           switching between content with different intrinsic widths.
         */}
-        <Tabs value={effectiveTab}>
+
           {/* Properties */}
           <TabsContent
             value="properties"
@@ -282,8 +271,8 @@ export function InspectorPanel({
                 </div>
               </div>
             ) : (
-              <ScrollArea className="flex-1">
-                <div className="w-full px-3 py-3">
+              <div className="flex-1 overflow-x-hidden overflow-y-auto">
+                <div className="w-full px-0 py-2 break-words whitespace-normal">
                   <PropertiesPanel
                     design={{
                       id: "design",
@@ -299,7 +288,7 @@ export function InspectorPanel({
                     onStepUpdate={handleStepUpdate}
                   />
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </TabsContent>
 
@@ -344,8 +333,8 @@ export function InspectorPanel({
             value="dependencies"
             className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
           >
-            <ScrollArea className="flex-1">
-              <div className="w-full px-3 py-3">
+            <div className="flex-1 overflow-x-hidden overflow-y-auto">
+              <div className="w-full px-3 py-3 break-words whitespace-normal">
                 <DependencyInspector
                   steps={steps}
                   actionSignatureDrift={actionSignatureDrift}
@@ -363,10 +352,10 @@ export function InspectorPanel({
                   }}
                 />
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
       {/* Footer (lightweight) */}
       <div className="text-muted-foreground border-t px-3 py-1.5 text-[10px]">

@@ -1,5 +1,23 @@
 # HRIStudio Implementation Details
 
+## Experiment Designer Layout & Tabs (2025-08 update)
+
+- Panels layout
+  - Tailwind-first, fraction-based grid via `PanelsContainer` (no hardcoded px widths).
+  - Each panel wrapper uses `min-w-0 overflow-hidden`; panel content uses `overflow-y-auto overflow-x-hidden`.
+  - Status bar lives inside the bordered designer container (no bottom gap).
+- Resizing (non-persistent)
+  - Drag handles between Left↔Center and Center↔Right adjust CSS grid fractions (clamped min/max).
+  - No localStorage persistence to avoid snap/flash on load; keyboard resize on handles (Arrows, Shift for larger steps).
+- Overflow rules
+  - Maintain `min-h-0 overflow-hidden` up the container chain; no page-level horizontal scrolling.
+  - If X scroll appears, clamp the offending child (truncate, `break-words`, `overflow-x-hidden`) rather than containers.
+- Inspector tabs (shadcn/ui)
+  - Single Tabs root controls both header and content.
+  - Use stock shadcn `TabsList`/`TabsTrigger`; do not wrap `TabsTrigger` in Tooltips (use `title` attribute or wrap outside).
+  - Active state styled globally via `globals.css` (Radix `data-state="active"`).
+
+
 ## 🏗️ **Architecture Overview**
 
 HRIStudio is built on a modern, scalable architecture designed for research teams conducting Human-Robot Interaction studies. The platform follows a three-layer architecture with clear separation of concerns.
@@ -343,6 +361,147 @@ Future Extension Ideas:
 - **Complete Consistency**: Uniform experience across all entity types
 - **Developer Velocity**: Much faster implementation of new forms
 - **Maintainability**: Single component for all form improvements
+
+---
+
+## 🎯 **Trial System Overhaul**
+
+### **Visual Design Unification**
+
+**Problem (Before)**: Trial system used custom layout patterns inconsistent with the rest of the platform:
+- Wizard interface used custom layout instead of established panel patterns
+- Missing breadcrumb navigation and PageHeader consistency with other entity pages
+- Information hierarchy didn't match other entity pages
+- Flashing WebSocket connection states caused poor UX
+
+**Solution (After)**: Complete overhaul to unified EntityView architecture:
+
+### **EntityView Integration**
+```typescript
+// Before: Custom tab-based layout
+<Tabs defaultValue="execution">
+  <TabsList>...</TabsList>
+  <TabsContent>...</TabsContent>
+</Tabs>
+
+// After: Unified EntityView pattern
+<EntityView>
+  <EntityViewHeader />
+  <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+    <div className="lg:col-span-3 space-y-8">
+      <EntityViewSection title="Current Step" icon="Play">
+        {/* Step execution controls */}
+      </EntityViewSection>
+    </div>
+    <EntityViewSidebar>
+      <EntityViewSection title="Robot Status" icon="Bot">
+        {/* Robot status monitoring */}
+      </EntityViewSection>
+    </EntityViewSidebar>
+  </div>
+</EntityView>
+```
+
+### **Component Architecture Updates**
+
+**WizardInterface**: Complete redesign to panel-based architecture matching experiment designer
+- Three-panel layout using PanelsContainer: Left (controls), Center (execution), Right (monitoring)
+- Panel-based architecture with 90% code sharing with experiment designer
+- Proper PageHeader and breadcrumb navigation matching platform standards
+- Resizable panels with drag separators and overflow containment
+
+**ActionControls**: Updated interface to match unified patterns
+```typescript
+// Before: Mixed async/sync handlers
+onExecuteAction: (actionType: string, actionData: Record<string, unknown>) => Promise<void>;
+
+// After: Simplified callback pattern
+onActionComplete: (actionId: string, actionData: Record<string, unknown>) => void;
+```
+
+**ParticipantInfo**: Streamlined for sidebar display
+- Removed non-existent properties (name, email)
+- Focused on essential participant context
+- Consistent with sidebar information density
+
+**EventsLogSidebar**: New component for real-time monitoring
+- Live event stream with configurable max events
+- Proper event type categorization and icons
+- Timestamp formatting with relative display
+
+### **WebSocket Stability Improvements**
+
+**Connection Management**: Enhanced error handling and state management
+```typescript
+// Before: Aggressive reconnection causing UI flashing
+const [isConnecting, setIsConnecting] = useState<boolean>(false);
+
+// After: Stable state with debouncing
+const [hasAttemptedConnection, setHasAttemptedConnection] = useState<boolean>(false);
+const connectionStableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+```
+
+**Development Experience**: 
+- Disabled aggressive reconnection in development mode
+- Added 1-second debounce before showing error states
+- Graceful fallback to polling mode with stable UI indicators
+- Clear messaging about WebSocket unavailability in development
+
+### **Information Architecture**
+
+**Layout Transformation**:
+- **Before**: Horizontal tabs competing for attention
+- **After**: Vertical hierarchy with main content + supporting sidebar
+
+**Content Organization**:
+- Left Panel: Trial controls, status, step navigation (compact sidebar)
+- Center Panel: Current step execution and wizard actions (main workflow area)
+- Right Panel: Robot status, participant context, live events (monitoring sidebar)
+- Tertiary: Live events log (sidebar bottom)
+
+### **Real-time Integration**
+
+**WebSocket Implementation**: Enhanced connection handling
+```typescript
+// Stable connection indicators
+{wsConnected ? (
+  <Badge variant="secondary">
+    <Wifi className="mr-1 h-3 w-3" />
+    Connected
+  </Badge>
+) : wsError?.includes("polling mode") ? (
+  <Badge variant="outline">
+    <Activity className="mr-1 h-3 w-3" />
+    Polling Mode
+  </Badge>
+) : null}
+```
+
+**Trial State Management**: Simplified and more reliable
+- Proper type safety for trial state updates
+- Consistent WebSocket message handling
+- Intelligent polling fallback for development
+
+### **Mock Robot Integration**
+
+**Development Testing**: Complete simulation system
+- TurtleBot3 simulation with realistic status updates
+- Battery level, signal strength, position tracking
+- Sensor status monitoring (lidar, camera, IMU, odometry)
+- No ROS2 dependency required for development
+
+**Plugin Architecture**: Ready for production robot integration
+- Abstract action definitions with parameter schemas
+- Platform-specific translation layer
+- Support for RESTful APIs, ROS2, and custom protocols
+
+### **Achievement Metrics**
+- **Visual Consistency**: 100% alignment with EntityView patterns across all trial pages
+- **Code Reduction**: Eliminated custom layout code in favor of unified components
+- **User Experience**: Professional, non-flashing interface with stable connection indicators
+- **Development Workflow**: Mock robot system enables complete testing without hardware
+- **Type Safety**: Complete TypeScript compatibility across all trial components
+- **Responsive Design**: Mobile-friendly sidebar collapse and touch-optimized controls
 
 ---
 

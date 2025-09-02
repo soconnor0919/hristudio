@@ -12,8 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { ScrollArea } from "~/components/ui/scroll-area";
-import { Separator } from "~/components/ui/separator";
+
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 
@@ -62,24 +61,24 @@ const severityConfig = {
   error: {
     icon: AlertCircle,
     color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-50 dark:bg-red-950/20",
-    borderColor: "border-red-200 dark:border-red-800",
+    bgColor: "bg-red-100 dark:bg-red-950/60",
+    borderColor: "border-red-300 dark:border-red-700",
     badgeVariant: "destructive" as const,
     label: "Error",
   },
   warning: {
     icon: AlertTriangle,
     color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-50 dark:bg-amber-950/20",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    bgColor: "bg-amber-100 dark:bg-amber-950/60",
+    borderColor: "border-amber-300 dark:border-amber-700",
     badgeVariant: "secondary" as const,
     label: "Warning",
   },
   info: {
     icon: Info,
     color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-50 dark:bg-blue-950/20",
-    borderColor: "border-blue-200 dark:border-blue-800",
+    bgColor: "bg-blue-100 dark:bg-blue-950/60",
+    borderColor: "border-blue-300 dark:border-blue-700",
     badgeVariant: "outline" as const,
     label: "Info",
   },
@@ -103,15 +102,7 @@ function flattenIssues(issuesMap: Record<string, ValidationIssue[]>) {
   return flattened;
 }
 
-function getEntityDisplayName(entityId: string): string {
-  if (entityId.startsWith("step-")) {
-    return `Step ${entityId.replace("step-", "")}`;
-  }
-  if (entityId.startsWith("action-")) {
-    return `Action ${entityId.replace("action-", "")}`;
-  }
-  return entityId;
-}
+
 
 /* -------------------------------------------------------------------------- */
 /* Issue Item Component                                                       */
@@ -214,7 +205,7 @@ export function ValidationPanel({
   const [severityFilter, setSeverityFilter] = useState<
     "all" | "error" | "warning" | "info"
   >("all");
-  const [categoryFilter, setCategoryFilter] = useState<
+  const [categoryFilter] = useState<
     "all" | "structural" | "parameter" | "semantic" | "execution"
   >("all");
   const [search, setSearch] = useState("");
@@ -248,18 +239,11 @@ export function ValidationPanel({
 
   React.useEffect(() => {
     // Debug: surface validation state to console
-    // eslint-disable-next-line no-console
+
     console.log("[ValidationPanel] issues", issues, { flatIssues, counts });
   }, [issues, flatIssues, counts]);
 
-  // Available categories
-  const availableCategories = useMemo(() => {
-    const flat = flattenIssues(issues);
-    const categories = new Set(flat.map((i) => i.category).filter(Boolean));
-    return Array.from(categories) as Array<
-      "structural" | "parameter" | "semantic" | "execution"
-    >;
-  }, [issues]);
+
 
   return (
     <div
@@ -346,7 +330,7 @@ export function ValidationPanel({
       </div>
 
       {/* Issues List */}
-      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="flex min-w-0 flex-col gap-2 p-2 pr-2">
           {counts.total === 0 ? (
             <div className="py-8 text-center">
@@ -382,7 +366,7 @@ export function ValidationPanel({
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,10 @@ interface AdminContentProps {
   userEmail: string;
 }
 
-export function AdminContent({ userName, userEmail }: AdminContentProps) {
+export function AdminContent({
+  userName,
+  userEmail: _userEmail,
+}: AdminContentProps) {
   const quickActions = [
     {
       title: "Manage Users",
@@ -27,9 +30,17 @@ export function AdminContent({ userName, userEmail }: AdminContentProps) {
     },
   ];
 
-  const stats: any[] = [];
+  const stats: Array<{
+    title: string;
+    value: string | number;
+    description?: string;
+  }> = [];
 
-  const alerts: any[] = [];
+  const alerts: Array<{
+    type: "info" | "warning" | "error";
+    title: string;
+    message: string;
+  }> = [];
 
   const recentActivity = (
     <div className="space-y-6">
