@@ -27,7 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { ManagementPageLayout } from "~/components/ui/page-layout";
+import { PageHeader } from "~/components/ui/page-header";
+import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useStudyContext } from "~/lib/study-context";
 import { useSelectedStudyDetails } from "~/hooks/useSelectedStudyDetails";
 
@@ -303,6 +304,14 @@ export default function StudyAnalyticsPage() {
   const { setSelectedStudyId, selectedStudyId } = useStudyContext();
   const { study } = useSelectedStudyDetails();
 
+  // Set breadcrumbs
+  useBreadcrumbsEffect([
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Studies", href: "/studies" },
+    { label: study?.name ?? "Study", href: `/studies/${studyId}` },
+    { label: "Analytics" },
+  ]);
+
   // Set the active study if it doesn't match the current route
   useEffect(() => {
     if (studyId && selectedStudyId !== studyId) {
@@ -311,19 +320,16 @@ export default function StudyAnalyticsPage() {
   }, [studyId, selectedStudyId, setSelectedStudyId]);
 
   return (
-    <ManagementPageLayout
-      title="Analytics"
-      description="Insights and data analysis for this study"
-      breadcrumb={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Studies", href: "/studies" },
-        { label: study?.name ?? "Study", href: `/studies/${studyId}` },
-        { label: "Analytics" },
-      ]}
-    >
+    <div className="space-y-6">
+      <PageHeader
+        title="Analytics"
+        description="Insights and data analysis for this study"
+        icon={BarChart3}
+      />
+
       <Suspense fallback={<div>Loading analytics...</div>}>
         <AnalyticsContent studyId={studyId} />
       </Suspense>
-    </ManagementPageLayout>
+    </div>
   );
 }

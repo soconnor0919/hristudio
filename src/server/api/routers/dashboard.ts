@@ -78,10 +78,20 @@ export const dashboardRouter = createTRPCRouter({
     .input(
       z.object({
         limit: z.number().min(1).max(10).default(5),
+        studyId: z.string().uuid().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Build where conditions
+      const whereConditions = input.studyId
+        ? and(
+            eq(studyMembers.userId, userId),
+            eq(studies.status, "active"),
+            eq(studies.id, input.studyId),
+          )
+        : and(eq(studyMembers.userId, userId), eq(studies.status, "active"));
 
       // Get studies the user has access to with participant counts
       const studyProgress = await ctx.db
@@ -95,9 +105,7 @@ export const dashboardRouter = createTRPCRouter({
         .from(studies)
         .innerJoin(studyMembers, eq(studies.id, studyMembers.studyId))
         .leftJoin(participants, eq(studies.id, participants.studyId))
-        .where(
-          and(eq(studyMembers.userId, userId), eq(studies.status, "active")),
-        )
+        .where(whereConditions)
         .groupBy(studies.id, studies.name, studies.status, studies.createdAt)
         .orderBy(desc(studies.createdAt))
         .limit(input.limit);
@@ -152,101 +160,118 @@ export const dashboardRouter = createTRPCRouter({
       });
     }),
 
-  getStats: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user.id;
+  getStats: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
 
-    // Get studies the user has access to
-    const accessibleStudies = await ctx.db
-      .select({ studyId: studyMembers.studyId })
-      .from(studyMembers)
-      .where(eq(studyMembers.userId, userId));
+      // Get studies the user has access to
+      const accessibleStudies = await ctx.db
+        .select({ studyId: studyMembers.studyId })
+        .from(studyMembers)
+        .where(eq(studyMembers.userId, userId));
 
-    const studyIds = accessibleStudies.map((s) => s.studyId);
+      let studyIds = accessibleStudies.map((s) => s.studyId);
 
-    if (studyIds.length === 0) {
+      // Filter to specific study if provided
+      if (input.studyId) {
+        // Verify user has access to the specific study
+        if (studyIds.includes(input.studyId)) {
+          studyIds = [input.studyId];
+        } else {
+          // User doesn't have access to this study
+          studyIds = [];
+        }
+      }
+
+      if (studyIds.length === 0) {
+        return {
+          totalStudies: 0,
+          totalExperiments: 0,
+          totalParticipants: 0,
+          totalTrials: 0,
+          activeTrials: 0,
+          scheduledTrials: 0,
+          completedToday: 0,
+        };
+      }
+
+      // Get total counts
+      const [studyCount] = await ctx.db
+        .select({ count: count() })
+        .from(studies)
+        .where(inArray(studies.id, studyIds));
+
+      const [experimentCount] = await ctx.db
+        .select({ count: count() })
+        .from(experiments)
+        .where(inArray(experiments.studyId, studyIds));
+
+      const [participantCount] = await ctx.db
+        .select({ count: count() })
+        .from(participants)
+        .where(inArray(participants.studyId, studyIds));
+
+      const [trialCount] = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(inArray(experiments.studyId, studyIds));
+
+      // Get active trials count
+      const [activeTrialsCount] = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(
+          and(
+            inArray(experiments.studyId, studyIds),
+            eq(trials.status, "in_progress"),
+          ),
+        );
+
+      // Get scheduled trials count
+      const [scheduledTrialsCount] = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(
+          and(
+            inArray(experiments.studyId, studyIds),
+            eq(trials.status, "scheduled"),
+          ),
+        );
+
+      // Get today's completed trials
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const [completedTodayCount] = await ctx.db
+        .select({ count: count() })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(
+          and(
+            inArray(experiments.studyId, studyIds),
+            eq(trials.status, "completed"),
+            gte(trials.completedAt, today),
+          ),
+        );
+
       return {
-        totalStudies: 0,
-        totalExperiments: 0,
-        totalParticipants: 0,
-        totalTrials: 0,
-        activeTrials: 0,
-        scheduledTrials: 0,
-        completedToday: 0,
+        totalStudies: studyCount?.count ?? 0,
+        totalExperiments: experimentCount?.count ?? 0,
+        totalParticipants: participantCount?.count ?? 0,
+        totalTrials: trialCount?.count ?? 0,
+        activeTrials: activeTrialsCount?.count ?? 0,
+        scheduledTrials: scheduledTrialsCount?.count ?? 0,
+        completedToday: completedTodayCount?.count ?? 0,
       };
-    }
-
-    // Get total counts
-    const [studyCount] = await ctx.db
-      .select({ count: count() })
-      .from(studies)
-      .where(inArray(studies.id, studyIds));
-
-    const [experimentCount] = await ctx.db
-      .select({ count: count() })
-      .from(experiments)
-      .where(inArray(experiments.studyId, studyIds));
-
-    const [participantCount] = await ctx.db
-      .select({ count: count() })
-      .from(participants)
-      .where(inArray(participants.studyId, studyIds));
-
-    const [trialCount] = await ctx.db
-      .select({ count: count() })
-      .from(trials)
-      .innerJoin(experiments, eq(trials.experimentId, experiments.id))
-      .where(inArray(experiments.studyId, studyIds));
-
-    // Get active trials count
-    const [activeTrialsCount] = await ctx.db
-      .select({ count: count() })
-      .from(trials)
-      .innerJoin(experiments, eq(trials.experimentId, experiments.id))
-      .where(
-        and(
-          inArray(experiments.studyId, studyIds),
-          eq(trials.status, "in_progress"),
-        ),
-      );
-
-    // Get scheduled trials count
-    const [scheduledTrialsCount] = await ctx.db
-      .select({ count: count() })
-      .from(trials)
-      .innerJoin(experiments, eq(trials.experimentId, experiments.id))
-      .where(
-        and(
-          inArray(experiments.studyId, studyIds),
-          eq(trials.status, "scheduled"),
-        ),
-      );
-
-    // Get today's completed trials
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const [completedTodayCount] = await ctx.db
-      .select({ count: count() })
-      .from(trials)
-      .innerJoin(experiments, eq(trials.experimentId, experiments.id))
-      .where(
-        and(
-          inArray(experiments.studyId, studyIds),
-          eq(trials.status, "completed"),
-          gte(trials.completedAt, today),
-        ),
-      );
-
-    return {
-      totalStudies: studyCount?.count ?? 0,
-      totalExperiments: experimentCount?.count ?? 0,
-      totalParticipants: participantCount?.count ?? 0,
-      totalTrials: trialCount?.count ?? 0,
-      activeTrials: activeTrialsCount?.count ?? 0,
-      scheduledTrials: scheduledTrialsCount?.count ?? 0,
-      completedToday: completedTodayCount?.count ?? 0,
-    };
-  }),
+    }),
 
   debug: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;

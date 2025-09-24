@@ -3,14 +3,7 @@ import { type LucideIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "~/components/ui/breadcrumb";
+import type { BreadcrumbItem } from "~/components/ui/breadcrumb";
 
 interface BreadcrumbItem {
   label: string;
@@ -83,7 +76,7 @@ export function PageLayout({
   description,
   userName: _userName,
   userRole: _userRole,
-  breadcrumb,
+  breadcrumb: _breadcrumb,
   createButton,
   quickActions,
   stats,
@@ -92,28 +85,6 @@ export function PageLayout({
 }: PageLayoutProps) {
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Breadcrumb */}
-      {breadcrumb && breadcrumb.length > 0 && (
-        <Breadcrumb>
-          <BreadcrumbList>
-            {breadcrumb.map((item, index) => (
-              <div key={index} className="flex items-center">
-                {index > 0 && <BreadcrumbSeparator />}
-                <BreadcrumbItem>
-                  {item.href ? (
-                    <BreadcrumbLink href={item.href}>
-                      {item.label}
-                    </BreadcrumbLink>
-                  ) : (
-                    <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                  )}
-                </BreadcrumbItem>
-              </div>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
-      )}
-
       {/* Header */}
       {title && (
         <div className="flex items-center justify-between">
@@ -260,26 +231,37 @@ export const DetailPageLayout = PageLayout;
 export const FormPageLayout = PageLayout;
 
 // Simple components for basic usage
-interface SimplePageHeaderProps {
+interface PageHeaderProps {
   title: string;
   description?: string;
-  children?: ReactNode;
+  icon?: LucideIcon;
+  actions?: ReactNode;
   className?: string;
 }
 
 export function PageHeader({
   title,
   description,
-  children,
+  icon: Icon,
+  actions,
   className,
-}: SimplePageHeaderProps) {
+}: PageHeaderProps) {
   return (
     <div className={cn("flex items-center justify-between", className)}>
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-        {description && <p className="text-muted-foreground">{description}</p>}
+      <div className="flex items-center gap-3">
+        {Icon && (
+          <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
+            <Icon className="text-primary h-6 w-6" />
+          </div>
+        )}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          {description && (
+            <p className="text-muted-foreground">{description}</p>
+          )}
+        </div>
       </div>
-      {children && <div>{children}</div>}
+      {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
   );
 }

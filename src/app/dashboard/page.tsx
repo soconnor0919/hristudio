@@ -24,11 +24,20 @@ import {
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { api } from "~/trpc/react";
 
 // Dashboard Overview Cards
-function OverviewCards() {
-  const { data: stats, isLoading } = api.dashboard.getStats.useQuery();
+function OverviewCards({ studyFilter }: { studyFilter: string | null }) {
+  const { data: stats, isLoading } = api.dashboard.getStats.useQuery({
+    studyId: studyFilter ?? undefined,
+  });
 
   const cards = [
     {
@@ -105,10 +114,11 @@ function OverviewCards() {
 }
 
 // Recent Activity Component
-function RecentActivity() {
+function RecentActivity({ studyFilter }: { studyFilter: string | null }) {
   const { data: activities = [], isLoading } =
     api.dashboard.getRecentActivity.useQuery({
       limit: 8,
+      studyId: studyFilter ?? undefined,
     });
 
   const getStatusIcon = (status: string) => {
@@ -236,10 +246,11 @@ function QuickActions() {
 }
 
 // Study Progress Component
-function StudyProgress() {
+function StudyProgress({ studyFilter }: { studyFilter: string | null }) {
   const { data: studies = [], isLoading } =
     api.dashboard.getStudyProgress.useQuery({
       limit: 5,
+      studyId: studyFilter ?? undefined,
     });
 
   return (
@@ -313,17 +324,59 @@ function StudyProgress() {
 }
 
 export default function DashboardPage() {
+  const [studyFilter, setStudyFilter] = React.useState<string | null>(null);
+
+  // Get user studies for filter dropdown
+  const { data: userStudiesData } = api.studies.list.useQuery({
+    memberOnly: true,
+    limit: 100,
+  });
+
+  const userStudies = userStudiesData?.studies ?? [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Dashboard
+            {studyFilter && (
+              <Badge variant="secondary" className="ml-2">
+                {userStudies.find((s) => s.id === studyFilter)?.name}
+              </Badge>
+            )}
+          </h1>
           <p className="text-muted-foreground">
-            Welcome to your HRI Studio research platform
+            {studyFilter
+              ? "Study-specific dashboard view"
+              : "Welcome to your HRI Studio research platform"}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-muted-foreground text-sm">
+              Filter by study:
+            </span>
+            <Select
+              value={studyFilter ?? "all"}
+              onValueChange={(value) =>
+                setStudyFilter(value === "all" ? null : value)
+              }
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Studies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Studies</SelectItem>
+                {userStudies.map((study) => (
+                  <SelectItem key={study.id} value={study.id}>
+                    {study.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="outline" className="text-xs">
             <Calendar className="mr-1 h-3 w-3" />
             {new Date().toLocaleDateString()}
@@ -332,13 +385,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Overview Cards */}
-      <OverviewCards />
+      <OverviewCards studyFilter={studyFilter} />
 
       {/* Main Content Grid */}
       <div className="grid gap-4 lg:grid-cols-7">
-        <StudyProgress />
+        <StudyProgress studyFilter={studyFilter} />
         <div className="col-span-4 space-y-4">
-          <RecentActivity />
+          <RecentActivity studyFilter={studyFilter} />
         </div>
       </div>
 

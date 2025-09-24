@@ -252,25 +252,42 @@ const onSubmit = async (data: StudyFormData) => {
 ## 🎯 **Route Structure**
 
 ### Study-Scoped Architecture
-All entity management flows through studies for better organization:
+All study-dependent functionality flows through studies for complete organizational consistency:
 
 ```
-/dashboard                    # Global overview
-/studies                     # Study management
-/studies/[id]               # Study details
+Platform Routes (Global):
+/dashboard                    # Global overview with study filtering
+/studies                     # Study management hub
+/profile                     # User account management
+/admin                      # System administration
+
+Study-Scoped Routes (All Study-Dependent):
+/studies/[id]               # Study details and overview
 /studies/[id]/participants  # Study participants
 /studies/[id]/trials       # Study trials  
+/studies/[id]/experiments  # Study experiment protocols
+/studies/[id]/plugins      # Study robot plugins
 /studies/[id]/analytics    # Study analytics
-/experiments               # Global experiments (filtered by selected study)
+
+Individual Entity Routes (Cross-Study):
 /trials/[id]              # Individual trial details
-/plugins                  # Plugin management
-/admin                    # System administration
+/trials/[id]/wizard       # Trial execution interface (TO BE BUILT)
+/experiments/[id]         # Individual experiment details
+/experiments/[id]/designer # Visual experiment designer
+
+Helpful Redirects (User Guidance):
+/participants             # → Study selection guidance
+/trials                  # → Study selection guidance
+/experiments             # → Study selection guidance
+/plugins                 # → Study selection guidance
+/analytics               # → Study selection guidance
 ```
 
-### Removed Routes (Now Redirects)
-- **`/participants`** → Redirects to study selection
-- **`/trials`** → Redirects to study selection  
-- **`/analytics`** → Redirects to study selection
+### Architecture Benefits
+- **Complete Consistency**: All study-dependent functionality properly scoped
+- **Clear Mental Model**: Platform-level vs study-level separation
+- **No Duplication**: Single source of truth for each functionality
+- **User-Friendly**: Helpful guidance for moved functionality
 
 ## 🔐 **Authentication**
 

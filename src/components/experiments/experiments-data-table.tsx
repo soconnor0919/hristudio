@@ -1,12 +1,9 @@
 "use client";
 
-import { FlaskConical, Plus } from "lucide-react";
 import React from "react";
 
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
-import { ActionButton, PageHeader } from "~/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -49,21 +46,6 @@ export function ExperimentsDataTable() {
     }, 30000);
     return () => clearInterval(interval);
   }, [refetch, selectedStudyId]);
-
-  // Set breadcrumbs
-  useBreadcrumbsEffect([
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Studies", href: "/studies" },
-    ...(selectedStudyId
-      ? [
-          {
-            label: "Experiments",
-            href: `/studies/${selectedStudyId}`,
-          },
-          { label: "Experiments" },
-        ]
-      : [{ label: "Experiments" }]),
-  ]);
 
   // Transform experiments data (already filtered by studyId) to match columns
   const experiments: Experiment[] = React.useMemo(() => {
@@ -149,61 +131,34 @@ export function ExperimentsDataTable() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Experiments"
-          description="Design and manage experimental protocols for your HRI studies"
-          icon={FlaskConical}
-          actions={
-            <ActionButton href="/experiments/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Experiment
-            </ActionButton>
-          }
-        />
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <div className="text-red-800">
-            <h3 className="mb-2 text-lg font-semibold">
-              Failed to Load Experiments
-            </h3>
-            <p className="mb-4">
-              {error.message ||
-                "An error occurred while loading your experiments."}
-            </p>
-            <Button onClick={() => refetch()} variant="outline">
-              Try Again
-            </Button>
-          </div>
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+        <div className="text-red-800">
+          <h3 className="mb-2 text-lg font-semibold">
+            Failed to Load Experiments
+          </h3>
+          <p className="mb-4">
+            {error.message ||
+              "An error occurred while loading your experiments."}
+          </p>
+          <Button onClick={() => refetch()} variant="outline">
+            Try Again
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Experiments"
-        description="Design and manage experimental protocols for your HRI studies"
-        icon={FlaskConical}
-        actions={
-          <ActionButton href="/experiments/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Experiment
-          </ActionButton>
-        }
+    <div className="space-y-4">
+      <DataTable
+        columns={columns}
+        data={filteredExperiments}
+        searchKey="name"
+        searchPlaceholder="Search experiments..."
+        isLoading={isLoading}
+        loadingRowCount={5}
+        filters={filters}
       />
-
-      <div className="space-y-4">
-        <DataTable
-          columns={columns}
-          data={filteredExperiments}
-          searchKey="name"
-          searchPlaceholder="Search experiments..."
-          isLoading={isLoading}
-          loadingRowCount={5}
-          filters={filters}
-        />
-      </div>
     </div>
   );
 }

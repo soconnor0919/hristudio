@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { toast } from "sonner";
 import {
   BarChart3,
   Building,
@@ -14,7 +15,10 @@ import {
   MoreHorizontal,
   Puzzle,
   Settings,
+  TestTube,
+  User,
   UserCheck,
+  Users,
 } from "lucide-react";
 
 import { useSidebar } from "~/components/ui/sidebar";
@@ -53,8 +57,8 @@ import { useStudyManagement } from "~/hooks/useStudyManagement";
 import { handleAuthError, isAuthError } from "~/lib/auth-error-handler";
 import { api } from "~/trpc/react";
 
-// Navigation items
-const navigationItems = [
+// Global items - always available
+const globalItems = [
   {
     title: "Overview",
     url: "/dashboard",
@@ -66,20 +70,38 @@ const navigationItems = [
     icon: Building,
   },
   {
+    title: "Profile",
+    url: "/profile",
+    icon: User,
+  },
+];
+
+// Current Study Work section - only shown when study is selected
+const studyWorkItems = [
+  {
+    title: "Participants",
+    url: "/participants",
+    icon: Users,
+  },
+  {
+    title: "Trials",
+    url: "/trials",
+    icon: TestTube,
+  },
+  {
     title: "Experiments",
     url: "/experiments",
     icon: FlaskConical,
-  },
-
-  {
-    title: "Plugins",
-    url: "/plugins",
-    icon: Puzzle,
   },
   {
     title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Plugins",
+    url: "/plugins",
+    icon: Puzzle,
   },
 ];
 
@@ -118,15 +140,13 @@ export function AppSidebar({
     name: string;
   };
 
-  // Filter navigation items based on study selection
-  const availableNavigationItems = navigationItems.filter((item) => {
-    // These items are always available
-    if (item.url === "/dashboard" || item.url === "/studies") {
-      return true;
-    }
-    // These items require a selected study
-    return selectedStudyId !== null;
-  });
+  // Build study work items with proper URLs when study is selected
+  const studyWorkItemsWithUrls = selectedStudyId
+    ? studyWorkItems.map((item) => ({
+        ...item,
+        url: `/studies/${selectedStudyId}${item.url}`,
+      }))
+    : [];
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
@@ -144,6 +164,25 @@ export function AppSidebar({
       }
       // If study selection fails (e.g., study not found), clear the selection
       await selectStudy(null);
+    }
+  };
+
+  const handleClearStudy = async (event: React.MouseEvent) => {
+    try {
+      event.preventDefault();
+      event.stopPropagation();
+      console.log("Clearing study selection...");
+      await selectStudy(null);
+      console.log("Study selection cleared successfully");
+      toast.success("Study selection cleared");
+    } catch (error) {
+      console.error("Failed to clear study:", error);
+      // Handle auth errors first
+      if (isAuthError(error)) {
+        await handleAuthError(error, "Session expired while clearing study");
+        return;
+      }
+      toast.error("Failed to clear study selection");
     }
   };
 
@@ -248,11 +287,7 @@ export function AppSidebar({
                             ))}
                             <DropdownMenuSeparator />
                             {selectedStudyId && (
-                              <DropdownMenuItem
-                                onClick={async () => {
-                                  await selectStudy(null);
-                                }}
-                              >
+                              <DropdownMenuItem onClick={handleClearStudy}>
                                 <Building className="mr-2 h-4 w-4 opacity-50" />
                                 Clear selection
                               </DropdownMenuItem>
@@ -301,11 +336,7 @@ export function AppSidebar({
                       ))}
                       <DropdownMenuSeparator />
                       {selectedStudyId && (
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            await selectStudy(null);
-                          }}
-                        >
+                        <DropdownMenuItem onClick={handleClearStudy}>
                           <Building className="mr-2 h-4 w-4 opacity-50" />
                           Clear selection
                         </DropdownMenuItem>
@@ -325,11 +356,12 @@ export function AppSidebar({
         </SidebarGroup>
 
         {/* Main Navigation */}
+        {/* Global Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Research</SidebarGroupLabel>
+          <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {availableNavigationItems.map((item) => {
+              {globalItems.map((item) => {
                 const isActive =
                   pathname === item.url ||
                   (item.url !== "/dashboard" && pathname.startsWith(item.url));
@@ -364,16 +396,61 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Study-specific items hint */}
-        {!selectedStudyId && !isCollapsed && (
+        {/* Current Study Work Section */}
+        {selectedStudyId && selectedStudy ? (
           <SidebarGroup>
+            <SidebarGroupLabel>Current Study Work</SidebarGroupLabel>
             <SidebarGroupContent>
-              <div className="text-muted-foreground px-3 py-2 text-xs">
-                Select a study to access experiments, participants, trials, and
-                analytics.
-              </div>
+              <SidebarMenu>
+                {studyWorkItemsWithUrls.map((item) => {
+                  const isActive =
+                    pathname === item.url ||
+                    (item.url !== "/dashboard" &&
+                      pathname.startsWith(item.url));
+
+                  const menuButton = (
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  );
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      {isCollapsed ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {menuButton}
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="text-sm">
+                              {item.title}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        menuButton
+                      )}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+        ) : (
+          !isCollapsed && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Current Study Work</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <div className="text-muted-foreground px-3 py-2 text-xs">
+                  Select a study to access participants, trials, experiments,
+                  and analytics.
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )
         )}
 
         {/* Admin Section */}
