@@ -1,5 +1,11 @@
 import {
-    Activity, BarChart3, Calendar, FlaskConical, Home, Play, Target, UserCog, Users
+  Activity,
+  BarChart3,
+  Calendar,
+  FlaskConical,
+  Home,
+  Target,
+  UserCog,
 } from "lucide-react";
 
 export interface NavigationItem {
@@ -40,22 +46,6 @@ export const researchWorkflowItems: NavigationItem[] = [
     roles: ["administrator", "researcher"],
     requiresStudy: true,
     description: "Design experimental protocols",
-  },
-  {
-    label: "Participants",
-    href: "/participants",
-    icon: Users,
-    roles: ["administrator", "researcher"],
-    requiresStudy: true,
-    description: "Manage study participants",
-  },
-  {
-    label: "Trials",
-    href: "/trials",
-    icon: Play,
-    roles: ["administrator", "researcher", "wizard"],
-    requiresStudy: true,
-    description: "Execute and monitor trials",
   },
 ];
 

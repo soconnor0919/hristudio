@@ -145,13 +145,6 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem asChild>
-          <Link href={`/experiments/${experiment.id}/trials`}>
-            <TestTube className="mr-2 h-4 w-4" />
-            View Trials
-          </Link>
-        </DropdownMenuItem>
-
         <DropdownMenuItem onClick={handleCopyId}>
           <Copy className="mr-2 h-4 w-4" />
           Copy Experiment ID

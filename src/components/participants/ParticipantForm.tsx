@@ -126,19 +126,22 @@ export function ParticipantForm({
             ? [
                 {
                   label: participant.name ?? participant.participantCode,
-                  href: `/participants/${participant.id}`,
+                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
                 },
                 { label: "Edit" },
               ]
             : [{ label: "New Participant" }]),
         ]
       : [
-          { label: "Participants", href: "/participants" },
+          {
+            label: "Participants",
+            href: `/studies/${contextStudyId}/participants`,
+          },
           ...(mode === "edit" && participant
             ? [
                 {
                   label: participant.name ?? participant.participantCode,
-                  href: `/participants/${participant.id}`,
+                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
                 },
                 { label: "Edit" },
               ]
@@ -228,7 +231,7 @@ export function ParticipantForm({
 
     try {
       await deleteParticipantMutation.mutateAsync({ id: participantId });
-      router.push("/participants");
+      router.push(`/studies/${contextStudyId}/participants`);
     } catch (error) {
       setError(
         `Failed to delete participant: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -483,8 +486,8 @@ export function ParticipantForm({
       mode={mode}
       entityName="Participant"
       entityNamePlural="Participants"
-      backUrl="/participants"
-      listUrl="/participants"
+      backUrl={`/studies/${contextStudyId}/participants`}
+      listUrl={`/studies/${contextStudyId}/participants`}
       title={
         mode === "create"
           ? "Register New Participant"

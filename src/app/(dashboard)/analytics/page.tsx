@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  Activity,
-  BarChart3,
-  Calendar,
-  Download,
-  Filter,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
-
-import { StudyGuard } from "~/components/dashboard/study-guard";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -19,290 +12,53 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { useStudyContext } from "~/lib/study-context";
 
-// Mock chart component - replace with actual charting library
-function MockChart({ title, data }: { title: string; data: number[] }) {
-  const maxValue = Math.max(...data);
+export default function AnalyticsRedirect() {
+  const router = useRouter();
+  const { selectedStudyId } = useStudyContext();
 
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium">{title}</h4>
-      <div className="flex h-32 items-end space-x-1">
-        {data.map((value, index) => (
-          <div
-            key={index}
-            className="bg-primary min-h-[4px] flex-1 rounded-t"
-            style={{ height: `${(value / maxValue) * 100}%` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsOverview() {
-  const metrics = [
-    {
-      title: "Total Trials This Month",
-      value: "142",
-      change: "+12%",
-      trend: "up",
-      description: "vs last month",
-      icon: Activity,
-    },
-    {
-      title: "Avg Trial Duration",
-      value: "24.5m",
-      change: "-3%",
-      trend: "down",
-      description: "vs last month",
-      icon: Calendar,
-    },
-    {
-      title: "Completion Rate",
-      value: "94.2%",
-      change: "+2.1%",
-      trend: "up",
-      description: "vs last month",
-      icon: TrendingUp,
-    },
-    {
-      title: "Participant Retention",
-      value: "87.3%",
-      change: "+5.4%",
-      trend: "up",
-      description: "vs last month",
-      icon: BarChart3,
-    },
-  ];
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {metrics.map((metric) => (
-        <Card key={metric.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {metric.title}
-            </CardTitle>
-            <metric.icon className="text-muted-foreground h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metric.value}</div>
-            <div className="text-muted-foreground flex items-center space-x-2 text-xs">
-              <span
-                className={`flex items-center ${
-                  metric.trend === "up" ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {metric.trend === "up" ? (
-                  <TrendingUp className="mr-1 h-3 w-3" />
-                ) : (
-                  <TrendingDown className="mr-1 h-3 w-3" />
-                )}
-                {metric.change}
-              </span>
-              <span>{metric.description}</span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function ChartsSection() {
-  const trialData = [12, 19, 15, 27, 32, 28, 35, 42, 38, 41, 37, 44];
-  const participantData = [8, 12, 10, 15, 18, 16, 20, 24, 22, 26, 23, 28];
-  const completionData = [85, 88, 92, 89, 94, 91, 95, 92, 96, 94, 97, 94];
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card>
-        <CardHeader>
-          <CardTitle>Trial Volume</CardTitle>
-          <CardDescription>Monthly trial execution trends</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MockChart title="Trials per Month" data={trialData} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Participant Enrollment</CardTitle>
-          <CardDescription>New participants over time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MockChart title="New Participants" data={participantData} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Completion Rates</CardTitle>
-          <CardDescription>Trial completion percentage</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MockChart title="Completion %" data={completionData} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function RecentInsights() {
-  const insights = [
-    {
-      title: "Peak Performance Hours",
-      description:
-        "Participants show 23% better performance during 10-11 AM trials",
-      type: "trend",
-      severity: "info",
-    },
-    {
-      title: "Attention Span Decline",
-      description:
-        "Average attention span has decreased by 8% over the last month",
-      type: "alert",
-      severity: "warning",
-    },
-    {
-      title: "High Completion Rate",
-      description: "Memory retention study achieved 98% completion rate",
-      type: "success",
-      severity: "success",
-    },
-    {
-      title: "Equipment Utilization",
-      description: "Robot interaction trials are at 85% capacity utilization",
-      type: "info",
-      severity: "info",
-    },
-  ];
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "success":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "warning":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "info":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
+  useEffect(() => {
+    // If user has a selected study, redirect to study analytics
+    if (selectedStudyId) {
+      router.replace(`/studies/${selectedStudyId}/analytics`);
     }
-  };
+  }, [selectedStudyId, router]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Insights</CardTitle>
-        <CardDescription>
-          AI-generated insights from your research data
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {insights.map((insight, index) => (
-            <div
-              key={index}
-              className={`rounded-lg border p-4 ${getSeverityColor(insight.severity)}`}
-            >
-              <h4 className="mb-1 font-medium">{insight.title}</h4>
-              <p className="text-sm">{insight.description}</p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AnalyticsContent() {
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">
-            Insights and data analysis for your research
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Select defaultValue="30d">
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Overview Metrics */}
-      <AnalyticsOverview />
-
-      {/* Charts */}
-      <ChartsSection />
-
-      {/* Insights */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecentInsights />
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Generate custom reports</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Trial Performance Report
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+            <AlertCircle className="h-8 w-8 text-blue-500" />
+          </div>
+          <CardTitle className="text-2xl">Analytics Moved</CardTitle>
+          <CardDescription>
+            Analytics are now organized by study for better data insights.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-muted-foreground space-y-2 text-center text-sm">
+            <p>To view analytics, please:</p>
+            <ul className="space-y-1 text-left">
+              <li>• Select a study from your studies list</li>
+              <li>• Navigate to that study&apos;s analytics page</li>
+              <li>• Get study-specific insights and data</li>
+            </ul>
+          </div>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button asChild className="w-full">
+              <Link href="/studies">
+                <ArrowRight className="mr-2 h-4 w-4" />
+                Browse Studies
+              </Link>
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Activity className="mr-2 h-4 w-4" />
-              Participant Engagement
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Trend Analysis
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Download className="mr-2 h-4 w-4" />
-              Custom Export
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  );
-}
-
-export default function AnalyticsPage() {
-  return (
-    <StudyGuard>
-      <AnalyticsContent />
-    </StudyGuard>
   );
 }

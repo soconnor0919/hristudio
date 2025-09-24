@@ -112,7 +112,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             : [{ label: "New Trial" }]),
         ]
       : [
-          { label: "Trials", href: "/trials" },
+          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
           ...(mode === "edit" && trial
             ? [
                 {
@@ -426,8 +426,8 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
       mode={mode}
       entityName="Trial"
       entityNamePlural="Trials"
-      backUrl="/trials"
-      listUrl="/trials"
+      backUrl={`/studies/${contextStudyId}/trials`}
+      listUrl={`/studies/${contextStudyId}/trials`}
       title={
         mode === "create"
           ? "Schedule New Trial"

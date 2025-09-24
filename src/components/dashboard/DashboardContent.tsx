@@ -54,10 +54,10 @@ export function DashboardContent({
     ...(canControl
       ? [
           {
-            title: "Schedule Trial",
-            description: "Plan a new trial session",
+            title: "Browse Studies",
+            description: "View and manage studies",
             icon: Calendar,
-            href: "/trials/new",
+            href: "/studies",
             variant: "default" as const,
           },
         ]
@@ -84,8 +84,8 @@ export function DashboardContent({
       variant: "success" as const,
       ...(canControl && {
         action: {
-          label: "Control",
-          href: "/trials?status=in_progress",
+          label: "View",
+          href: "/studies",
         },
       }),
     },

@@ -108,6 +108,7 @@ http://localhost:3000/api/trpc/
 - **`participants`**: Registration, consent, demographics
 - **`trials`**: Execution, monitoring, data capture, real-time control
 - **`robots`**: Integration, communication, actions, plugins
+- **`dashboard`**: Overview stats, recent activity, study progress
 - **`admin`**: Repository management, system settings
 
 ### Example Usage
@@ -157,8 +158,8 @@ experiments → steps
 ```
 
 ### Key Trial Pages
-- **`/trials`**: List all trials with status filtering
-- **`/trials/[id]`**: Trial details and management
+- **`/studies/[id]/trials`**: List trials for specific study
+- **`/trials/[id]`**: Individual trial details and management
 - **`/trials/[id]/wizard`**: Panel-based real-time execution interface
 - **`/trials/[id]/analysis`**: Post-trial data analysis
 
@@ -247,6 +248,29 @@ const onSubmit = async (data: StudyFormData) => {
 ```
 
 ---
+
+## 🎯 **Route Structure**
+
+### Study-Scoped Architecture
+All entity management flows through studies for better organization:
+
+```
+/dashboard                    # Global overview
+/studies                     # Study management
+/studies/[id]               # Study details
+/studies/[id]/participants  # Study participants
+/studies/[id]/trials       # Study trials  
+/studies/[id]/analytics    # Study analytics
+/experiments               # Global experiments (filtered by selected study)
+/trials/[id]              # Individual trial details
+/plugins                  # Plugin management
+/admin                    # System administration
+```
+
+### Removed Routes (Now Redirects)
+- **`/participants`** → Redirects to study selection
+- **`/trials`** → Redirects to study selection  
+- **`/analytics`** → Redirects to study selection
 
 ## 🔐 **Authentication**
 
@@ -468,7 +492,6 @@ bun typecheck
 ---
 
 ## 📚 **Further Reading**
-### Further Reading
 
 ### Documentation Files
 - **[Project Overview](./project-overview.md)**: Complete feature overview
@@ -478,6 +501,7 @@ bun typecheck
 - **[Core Blocks System](./core-blocks-system.md)**: Repository-based block architecture
 - **[Plugin System Guide](./plugin-system-implementation-guide.md)**: Robot integration guide
 - **[Project Status](./project-status.md)**: Current development status
+- **[Work in Progress](./work_in_progress.md)**: Recent changes and active development
 
 ### External Resources
 - [Next.js Documentation](https://nextjs.org/docs)
@@ -513,6 +537,12 @@ bun typecheck
 - Follow accessibility guidelines (WCAG 2.1 AA)
 - Use repository-based plugins instead of hardcoded robot actions
 - Test plugin installation/uninstallation in different studies
+
+### Route Architecture
+- **Study-Scoped**: All entity management flows through studies
+- **Individual Entities**: Trial/experiment details maintain separate routes
+- **Helpful Redirects**: Old routes guide users to new locations
+- **Consistent Navigation**: Breadcrumbs reflect the study → entity hierarchy
 
 ---
 

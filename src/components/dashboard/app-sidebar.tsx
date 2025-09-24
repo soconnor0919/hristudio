@@ -14,9 +14,7 @@ import {
   MoreHorizontal,
   Puzzle,
   Settings,
-  Users,
   UserCheck,
-  TestTube,
 } from "lucide-react";
 
 import { useSidebar } from "~/components/ui/sidebar";
@@ -72,16 +70,7 @@ const navigationItems = [
     url: "/experiments",
     icon: FlaskConical,
   },
-  {
-    title: "Participants",
-    url: "/participants",
-    icon: Users,
-  },
-  {
-    title: "Trials",
-    url: "/trials",
-    icon: TestTube,
-  },
+
   {
     title: "Plugins",
     url: "/plugins",

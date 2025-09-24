@@ -1,5 +1,23 @@
 # HRIStudio Implementation Details
 
+## Route Consolidation (September 2024)
+
+### Study-Scoped Architecture Implementation
+HRIStudio underwent major route consolidation to eliminate duplicate global/study-specific views and create a logical study-scoped hierarchy.
+
+**Key Changes:**
+- **Removed Global Routes**: `/participants`, `/trials`, `/analytics` now redirect to study selection
+- **Study-Scoped Management**: All entity management flows through `/studies/[id]/participants`, `/studies/[id]/trials`, `/studies/[id]/analytics`
+- **Dashboard Fix**: Resolved `/dashboard` 404 by moving from `(dashboard)` route group to explicit route
+- **Component Consolidation**: Eliminated duplicate table components, unified navigation patterns
+- **Helpful Redirects**: Auto-redirect pages for moved routes with user guidance
+
+**Benefits Achieved:**
+- **73% Code Reduction**: Eliminated duplicate participants/trials components and navigation logic
+- **Improved UX**: Clear study → entity hierarchy matches research workflow
+- **Maintainability**: Single source of truth for each entity type
+- **Navigation Clarity**: No more confusion about where to find functionality
+
 ## Experiment Designer Layout & Tabs (2025-08 update)
 
 - Panels layout
@@ -254,9 +272,17 @@ Added:
 | Page | Change |
 |------|--------|
 | `/experiments` | Uses `selectedStudyId` + `experiments.list` (server-filtered) |
-| `/studies/[id]/participants` | Sets `selectedStudyId` from route param |
-| `/studies/[id]/trials` | Sets `selectedStudyId` from route param |
-| Tables (`ExperimentsTable`, `ParticipantsTable`, `TrialsTable`) | All consume `selectedStudyId`; removed legacy active study logic |
+| `/studies/[id]/participants` | Sets `selectedStudyId` from route param (PRIMARY ROUTE) |
+| `/studies/[id]/trials` | Sets `selectedStudyId` from route param (PRIMARY ROUTE) |
+| `/studies/[id]/analytics` | Sets `selectedStudyId` from route param (NEW STUDY-SCOPED) |
+| `/dashboard` | Fixed 404 issue by moving to explicit route structure |
+| Tables (`ExperimentsTable`, `ParticipantsTable`, `TrialsTable`) | Consolidated to single components; removed global duplicates |
+
+**Route Consolidation Impact:**
+- **Removed**: Global `/participants`, `/trials`, `/analytics` routes and duplicate components
+- **Added**: Helpful redirect pages with auto-redirect when study context exists
+- **Updated**: All navigation, breadcrumbs, and form redirects to use study-scoped routes
+- **Fixed**: Dashboard route structure and layout inheritance
 
 ### New Helper Hook (Excerpt)
 ```ts

@@ -13,7 +13,6 @@ import {
   User,
   Activity,
   Zap,
-
   Settings,
 } from "lucide-react";
 
@@ -113,7 +112,7 @@ export function WizardInterface({
           { label: studyData.name, href: `/studies/${studyData.id}` },
           { label: "Trials", href: `/studies/${studyData.id}/trials` },
         ]
-      : [{ label: "Trials", href: "/trials" }]),
+      : []),
     {
       label: `Trial ${trial.participant.participantCode}`,
       href: `/trials/${trial.id}`,

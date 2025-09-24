@@ -2,6 +2,28 @@
 
 ## Current Status (December 2024)
 
+### Route Consolidation - COMPLETE ✅ (September 2024)
+Major architectural improvement consolidating global routes into study-scoped workflows.
+
+**✅ Completed Implementation:**
+- **Removed Global Routes**: Eliminated `/participants`, `/trials`, and `/analytics` global views
+- **Study-Scoped Architecture**: All entity management now flows through studies (`/studies/[id]/participants`, `/studies/[id]/trials`, `/studies/[id]/analytics`)
+- **Dashboard Route Fixed**: Resolved `/dashboard` 404 issue by moving from `(dashboard)` route group to explicit `/dashboard` route
+- **Helpful Redirects**: Created redirect pages for moved routes with auto-redirect when study context exists
+- **Custom 404 Handling**: Added dashboard-layout 404 page for broken links within dashboard area
+- **Navigation Cleanup**: Updated sidebar, breadcrumbs, and all navigation references
+- **Form Updates**: Fixed all entity forms (ParticipantForm, TrialForm) to use study-scoped routes
+- **Component Consolidation**: Removed duplicate components (`participants-data-table.tsx`, `trials-data-table.tsx`, etc.)
+
+**Benefits Achieved:**
+- **Logical Hierarchy**: Studies → Participants/Trials/Analytics creates intuitive workflow
+- **Reduced Complexity**: Eliminated confusion about where to find functionality
+- **Code Reduction**: Removed significant duplicate code between global and study-scoped views
+- **Better UX**: Clear navigation path through study-centric organization
+- **Maintainability**: Single source of truth for each entity type
+
+## Previous Status (December 2024)
+
 ### Experiment Designer Redesign - COMPLETE ✅ (Phase 1)
 Initial redesign delivered per `docs/experiment-designer-redesign.md`. Continuing iterative UX/scale refinement (Phase 2).
 
@@ -469,6 +491,15 @@ Future (optional): expose slimmer `useStudy()` facade if needed.
 3. Sidebar debug → tooltip conversion ✅
 4. Study switcher consolidation ✅
 5. Update `work_in_progress.md` after each major step ✅
+
+### Route Consolidation Success Criteria ✅
+- ✅ **Global Routes Removed**: No more `/participants`, `/trials`, `/analytics` confusion
+- ✅ **Study-Scoped Workflows**: All management flows through studies
+- ✅ **Dashboard Working**: `/dashboard` loads properly with full layout
+- ✅ **Navigation Updated**: All links, breadcrumbs, and forms use correct routes
+- ✅ **Helpful User Experience**: Redirect pages guide users to new locations
+- ✅ **TypeScript Clean**: No compilation errors from route changes
+- ✅ **Component Cleanup**: Removed all duplicate table/form components
 
 ### Success Criteria
 - No regressions in existing list/table queries

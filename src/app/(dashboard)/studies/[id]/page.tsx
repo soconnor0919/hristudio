@@ -149,14 +149,19 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   const trials = trialsData ?? [];
   const activities = activityData?.activities ?? [];
 
-  const completedTrials = trials.filter((trial: { status: string }) => trial.status === "completed").length;
+  const completedTrials = trials.filter(
+    (trial: { status: string }) => trial.status === "completed",
+  ).length;
   const totalTrials = trials.length;
 
   const stats = {
     experiments: experiments.length,
     totalTrials: totalTrials,
     participants: participants.length,
-    completionRate: totalTrials > 0 ? `${Math.round((completedTrials / totalTrials) * 100)}%` : "—",
+    completionRate:
+      totalTrials > 0
+        ? `${Math.round((completedTrials / totalTrials) * 100)}%`
+        : "—",
   };
 
   return (
@@ -269,26 +274,27 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                             experiment.status === "draft"
                               ? "bg-gray-100 text-gray-800"
                               : experiment.status === "ready"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-blue-100 text-blue-800"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-blue-100 text-blue-800"
                           }`}
                         >
                           {experiment.status}
                         </span>
                       </div>
                       {experiment.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-sm">
                           {experiment.description}
                         </p>
                       )}
-                      <div className="mt-2 flex items-center space-x-4 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground mt-2 flex items-center space-x-4 text-xs">
                         <span>
-                          Created {formatDistanceToNow(experiment.createdAt, { addSuffix: true })}
+                          Created{" "}
+                          {formatDistanceToNow(experiment.createdAt, {
+                            addSuffix: true,
+                          })}
                         </span>
                         {experiment.estimatedDuration && (
-                          <span>
-                            Est. {experiment.estimatedDuration} min
-                          </span>
+                          <span>Est. {experiment.estimatedDuration} min</span>
                         )}
                       </div>
                     </div>
@@ -299,9 +305,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                         </Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/experiments/${experiment.id}`}>
-                          View
-                        </Link>
+                        <Link href={`/experiments/${experiment.id}`}>View</Link>
                       </Button>
                     </div>
                   </div>
@@ -327,19 +331,25 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                   >
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                       <span className="text-sm font-medium text-blue-600">
-                        {activity.user?.name?.charAt(0) ?? activity.user?.email?.charAt(0) ?? "?"}
+                        {activity.user?.name?.charAt(0) ??
+                          activity.user?.email?.charAt(0) ??
+                          "?"}
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium">
-                          {activity.user?.name ?? activity.user?.email ?? "Unknown User"}
+                          {activity.user?.name ??
+                            activity.user?.email ??
+                            "Unknown User"}
                         </p>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(activity.createdAt, { addSuffix: true })}
+                        <span className="text-muted-foreground text-xs">
+                          {formatDistanceToNow(activity.createdAt, {
+                            addSuffix: true,
+                          })}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="text-muted-foreground mt-1 text-sm">
                         {activity.description}
                       </p>
                     </div>
@@ -347,7 +357,12 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                 ))}
                 {activityData && activityData.pagination.total > 5 && (
                   <div className="pt-2">
-                    <Button asChild variant="outline" size="sm" className="w-full">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
                       <Link href={`/studies/${study.id}/activity`}>
                         View All Activity ({activityData.pagination.total})
                       </Link>
@@ -434,17 +449,17 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                 {
                   label: "Manage Participants",
                   icon: "Users",
-                  href: `/participants?studyId=${study.id}`,
+                  href: `/studies/${study.id}/participants`,
                 },
                 {
                   label: "Schedule Trials",
                   icon: "Calendar",
-                  href: `/trials?studyId=${study.id}`,
+                  href: `/studies/${study.id}/trials`,
                 },
                 {
                   label: "View Analytics",
                   icon: "BarChart3",
-                  href: `/analytics?studyId=${study.id}`,
+                  href: `/studies/${study.id}/analytics`,
                 },
               ]}
             />
