@@ -4,6 +4,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { Clock, Eye, Play, Plus, Settings, Square } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useStudyContext } from "~/lib/study-context";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -122,7 +123,10 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
             <CardTitle className="truncate text-lg font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
-              <Link href={`/trials/${trial.id}`} className="hover:underline">
+              <Link
+                href={`/studies/${trial.experiment?.study?.id}/trials/${trial.id}`}
+                className="hover:underline"
+              >
                 {trial.experiment?.name ?? "Unknown Experiment"}
               </Link>
             </CardTitle>
@@ -241,7 +245,9 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
           )}
           {trial.status === "in_progress" && (
             <Button asChild size="sm" className="flex-1">
-              <Link href={`/trials/${trial.id}/wizard`}>
+              <Link
+                href={`/studies/${trial.experiment?.study?.id}/trials/${trial.id}/wizard`}
+              >
                 <Eye className="mr-1 h-3 w-3" />
                 Wizard Interface
               </Link>
@@ -249,14 +255,18 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
           )}
           {trial.status === "completed" && (
             <Button asChild size="sm" variant="outline" className="flex-1">
-              <Link href={`/trials/${trial.id}/analysis`}>
+              <Link
+                href={`/studies/${trial.experiment?.study?.id}/trials/${trial.id}`}
+              >
                 <Eye className="mr-1 h-3 w-3" />
                 View Analysis
               </Link>
             </Button>
           )}
           <Button asChild size="sm" variant="outline">
-            <Link href={`/trials/${trial.id}`}>
+            <Link
+              href={`/studies/${trial.experiment?.study?.id}/trials/${trial.id}`}
+            >
               <Settings className="mr-1 h-3 w-3" />
               Details
             </Link>
@@ -268,8 +278,8 @@ function TrialCard({ trial, userRole, onTrialAction }: TrialCardProps) {
 }
 
 export function TrialsGrid() {
-
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { selectedStudyId } = useStudyContext();
 
   const { data: userSession } = api.auth.me.useQuery();
 
@@ -317,13 +327,10 @@ export function TrialsGrid() {
     }
   };
 
-
-
   // Group trials by status for better organization
   const upcomingTrials = trials.filter((t) => t.status === "scheduled");
   const activeTrials = trials.filter((t) => t.status === "in_progress");
   const completedTrials = trials.filter((t) => t.status === "completed");
-
 
   if (isLoading) {
     return (
@@ -441,12 +448,14 @@ export function TrialsGrid() {
           </Button>
         </div>
 
-        <Button asChild>
-          <Link href="/trials/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Schedule Trial
-          </Link>
-        </Button>
+        {selectedStudyId && (
+          <Button asChild>
+            <Link href={`/studies/${selectedStudyId}/trials/new`}>
+              <Plus className="mr-2 h-4 w-4" />
+              Schedule Trial
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Active Trials Section (Priority) */}
@@ -503,9 +512,13 @@ export function TrialsGrid() {
                 participants. Trials let you execute your designed experiments
                 with wizard control.
               </p>
-              <Button asChild>
-                <Link href="/trials/new">Schedule Your First Trial</Link>
-              </Button>
+              {selectedStudyId && (
+                <Button asChild>
+                  <Link href={`/studies/${selectedStudyId}/trials/new`}>
+                    Schedule Your First Trial
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (

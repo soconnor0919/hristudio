@@ -105,7 +105,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             ? [
                 {
                   label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-                  href: `/trials/${trial.id}`,
+                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
                 },
                 { label: "Edit" },
               ]
@@ -117,7 +117,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             ? [
                 {
                   label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-                  href: `/trials/${trial.id}`,
+                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
                 },
                 { label: "Edit" },
               ]

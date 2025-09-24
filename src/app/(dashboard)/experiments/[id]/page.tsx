@@ -199,7 +199,9 @@ export default function ExperimentDetailPage({
                 </Link>
               </Button>
               <Button asChild>
-                <Link href={`/trials/new?experimentId=${experiment.id}`}>
+                <Link
+                  href={`/studies/${experiment.study.id}/trials/new?experimentId=${experiment.id}`}
+                >
                   <Play className="mr-2 h-4 w-4" />
                   Start Trial
                 </Link>
@@ -318,7 +320,7 @@ export default function ExperimentDetailPage({
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <Link
-                        href={`/trials/${trial.id}`}
+                        href={`/studies/${experiment.study.id}/trials/${trial.id}`}
                         className="font-medium hover:underline"
                       >
                         Trial #{trial.id.slice(-6)}
@@ -370,7 +372,9 @@ export default function ExperimentDetailPage({
                 action={
                   canEdit && (
                     <Button asChild>
-                      <Link href={`/trials/new?experimentId=${experiment.id}`}>
+                      <Link
+                        href={`/studies/${experiment.study.id}/trials/new?experimentId=${experiment.id}`}
+                      >
                         Start Trial
                       </Link>
                     </Button>

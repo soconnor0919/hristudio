@@ -115,7 +115,10 @@ export const columns: ColumnDef<Trial>[] = [
       const sessionNumber = row.getValue("sessionNumber");
       return (
         <div className="font-mono text-sm">
-          <Link href={`/trials/${row.original.id}`} className="hover:underline">
+          <Link
+            href={`/studies/${row.original.studyId}/trials/${row.original.id}`}
+            className="hover:underline"
+          >
             #{Number(sessionNumber)}
           </Link>
         </div>
@@ -138,19 +141,15 @@ export const columns: ColumnDef<Trial>[] = [
     cell: ({ row }) => {
       const experimentName = row.getValue("experimentName");
       const experimentId = row.original.experimentId;
-      const studyName = row.original.studyName;
       return (
         <div className="max-w-[250px]">
-          <div className="font-medium">
+          <div className="truncate font-medium">
             <Link
               href={`/experiments/${experimentId}`}
-              className="truncate hover:underline"
+              className="hover:underline"
             >
               {String(experimentName)}
             </Link>
-          </div>
-          <div className="text-muted-foreground truncate text-sm">
-            {studyName}
           </div>
         </div>
       );
@@ -393,26 +392,40 @@ export const columns: ColumnDef<Trial>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/trials/${trial.id}`}>View details</Link>
+              <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
+                View details
+              </Link>
             </DropdownMenuItem>
             {trial.status === "scheduled" && (
               <DropdownMenuItem asChild>
-                <Link href={`/trials/${trial.id}/start`}>Start trial</Link>
+                <Link
+                  href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}
+                >
+                  Start trial
+                </Link>
               </DropdownMenuItem>
             )}
             {trial.status === "in_progress" && (
               <DropdownMenuItem asChild>
-                <Link href={`/trials/${trial.id}/control`}>Control trial</Link>
+                <Link
+                  href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}
+                >
+                  Control trial
+                </Link>
               </DropdownMenuItem>
             )}
             {trial.status === "completed" && (
               <DropdownMenuItem asChild>
-                <Link href={`/trials/${trial.id}/analysis`}>View analysis</Link>
+                <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
+                  View analysis
+                </Link>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/trials/${trial.id}/edit`}>Edit trial</Link>
+              <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
+                Edit trial
+              </Link>
             </DropdownMenuItem>
             {(trial.status === "scheduled" || trial.status === "failed") && (
               <DropdownMenuItem className="text-red-600">

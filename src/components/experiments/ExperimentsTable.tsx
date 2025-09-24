@@ -277,7 +277,9 @@ export const columns: ColumnDef<Experiment>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/trials/new?experimentId=${experiment.id}`}>
+              <Link
+                href={`/studies/${experiment.studyId}/trials/new?experimentId=${experiment.id}`}
+              >
                 Create trial
               </Link>
             </DropdownMenuItem>

@@ -61,7 +61,7 @@ export const trialExecutionItems: NavigationItem[] = [
   },
   {
     label: "Schedule Trial",
-    href: "/trials/new",
+    href: "/studies/{studyId}/trials/new",
     icon: Calendar,
     roles: ["administrator", "researcher"],
     requiresStudy: true,

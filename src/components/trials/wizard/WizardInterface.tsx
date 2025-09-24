@@ -1,35 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Play,
-  SkipForward,
-  CheckCircle,
-  X,
-  Clock,
-  AlertCircle,
-  Bot,
-  User,
-  Activity,
-  Zap,
-  Settings,
-} from "lucide-react";
 
-import { Button } from "~/components/ui/button";
+import { Play, CheckCircle, X, Clock, AlertCircle } from "lucide-react";
+
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Separator } from "~/components/ui/separator";
-import { PageHeader } from "~/components/ui/page-header";
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 
 import { PanelsContainer } from "~/components/experiments/designer/layout/PanelsContainer";
-import { ActionControls } from "./ActionControls";
-import { RobotStatus } from "./RobotStatus";
-import { ParticipantInfo } from "./ParticipantInfo";
-import { EventsLogSidebar } from "./EventsLogSidebar";
+import { TrialControlPanel } from "./panels/TrialControlPanel";
+import { ExecutionPanel } from "./panels/ExecutionPanel";
+import { MonitoringPanel } from "./panels/MonitoringPanel";
 
 import { api } from "~/trpc/react";
 import { useTrialWebSocket } from "~/hooks/useWebSocket";
@@ -80,7 +62,6 @@ export function WizardInterface({
   trial: initialTrial,
   userRole: _userRole,
 }: WizardInterfaceProps) {
-  const router = useRouter();
   const [trial, setTrial] = useState(initialTrial);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [trialStartTime, setTrialStartTime] = useState<Date | null>(
@@ -96,29 +77,6 @@ export function WizardInterface({
       staleTime: 30000,
     },
   );
-
-  // Get study data for breadcrumbs
-  const { data: studyData } = api.studies.get.useQuery(
-    { id: trial.experiment.studyId },
-    { enabled: !!trial.experiment.studyId },
-  );
-
-  // Set breadcrumbs
-  useBreadcrumbsEffect([
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Studies", href: "/studies" },
-    ...(studyData
-      ? [
-          { label: studyData.name, href: `/studies/${studyData.id}` },
-          { label: "Trials", href: `/studies/${studyData.id}/trials` },
-        ]
-      : []),
-    {
-      label: `Trial ${trial.participant.participantCode}`,
-      href: `/trials/${trial.id}`,
-    },
-    { label: "Wizard Control" },
-  ]);
 
   // Map database step types to component step types
   const mapStepType = (dbType: string) => {
@@ -147,81 +105,57 @@ export function WizardInterface({
   } = useTrialWebSocket(trial.id);
 
   // Fallback polling for trial updates when WebSocket is not available
-  api.trials.get.useQuery(
+  const { data: pollingData } = api.trials.get.useQuery(
     { id: trial.id },
     {
-      refetchInterval: wsConnected ? 10000 : 2000,
-      refetchOnWindowFocus: true,
-      enabled: !wsConnected,
+      enabled: !wsConnected && !wsConnecting,
+      refetchInterval: wsConnected ? false : 5000,
     },
   );
 
-  // Mutations for trial control
-  const startTrialMutation = api.trials.start.useMutation({
-    onSuccess: (data) => {
-      setTrial((prev) => ({
-        ...prev,
-        status: data.status,
-        startedAt: data.startedAt,
-      }));
-      setTrialStartTime(new Date());
-    },
-  });
+  // Update trial data from polling
+  React.useEffect(() => {
+    if (pollingData && !wsConnected) {
+      setTrial({
+        ...pollingData,
+        metadata: pollingData.metadata as Record<string, unknown> | null,
+        participant: {
+          ...pollingData.participant,
+          demographics: pollingData.participant.demographics as Record<
+            string,
+            unknown
+          > | null,
+        },
+      });
+    }
+  }, [pollingData, wsConnected]);
 
-  const completeTrialMutation = api.trials.complete.useMutation({
-    onSuccess: (data) => {
-      if (data) {
-        setTrial((prev) => ({
-          ...prev,
-          status: data.status,
-          completedAt: data.completedAt,
-        }));
-      }
-      router.push(`/trials/${trial.id}/analysis`);
-    },
-  });
-
-  const abortTrialMutation = api.trials.abort.useMutation({
-    onSuccess: (data) => {
-      if (data) {
-        setTrial((prev) => ({
-          ...prev,
-          status: data.status,
-          completedAt: data.completedAt,
-        }));
-      }
-      router.push(`/trials/${trial.id}`);
-    },
-  });
-
-  // Process steps from API response
-  const steps: StepData[] = React.useMemo(() => {
-    if (!experimentSteps) return [];
-    return experimentSteps.map((step) => ({
+  // Transform experiment steps to component format
+  const steps: StepData[] =
+    experimentSteps?.map((step, index) => ({
       id: step.id,
-      name: step.name,
+      name: step.name ?? `Step ${index + 1}`,
       description: step.description,
       type: mapStepType(step.type),
-      parameters:
-        typeof step.parameters === "object" && step.parameters !== null
-          ? step.parameters
-          : {},
-      order: step.order,
-    }));
-  }, [experimentSteps]);
+      parameters: step.parameters ?? {},
+      order: step.order ?? index,
+    })) ?? [];
 
   const currentStep = steps[currentStepIndex] ?? null;
-  const progress =
-    steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+  const totalSteps = steps.length;
+  const progressPercentage =
+    totalSteps > 0 ? (currentStepIndex / totalSteps) * 100 : 0;
 
-  // Update elapsed time
+  // Timer effect for elapsed time
   useEffect(() => {
     if (!trialStartTime || trial.status !== "in_progress") return;
 
     const interval = setInterval(() => {
-      setElapsedTime(
-        Math.floor((Date.now() - trialStartTime.getTime()) / 1000),
+      const now = new Date();
+      const elapsed = Math.floor(
+        (now.getTime() - trialStartTime.getTime()) / 1000,
       );
+      setElapsedTime(elapsed);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -229,17 +163,88 @@ export function WizardInterface({
 
   // Format elapsed time
   const formatElapsedTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Trial control handlers
+  // Status badge configuration
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return { variant: "outline" as const, color: "blue", icon: Clock };
+      case "in_progress":
+        return { variant: "default" as const, color: "green", icon: Play };
+      case "completed":
+        return {
+          variant: "secondary" as const,
+          color: "gray",
+          icon: CheckCircle,
+        };
+      case "aborted":
+        return { variant: "destructive" as const, color: "orange", icon: X };
+      case "failed":
+        return {
+          variant: "destructive" as const,
+          color: "red",
+          icon: AlertCircle,
+        };
+      default:
+        return { variant: "outline" as const, color: "gray", icon: Clock };
+    }
+  };
+
+  const statusConfig = getStatusConfig(trial.status);
+  const StatusIcon = statusConfig.icon;
+
+  // Mutations for trial actions
+  const startTrialMutation = api.trials.start.useMutation({
+    onSuccess: (data) => {
+      setTrial({ ...trial, status: data.status, startedAt: data.startedAt });
+      setTrialStartTime(new Date());
+    },
+  });
+
+  const completeTrialMutation = api.trials.complete.useMutation({
+    onSuccess: (data) => {
+      if (data) {
+        setTrial({
+          ...trial,
+          status: data.status,
+          completedAt: data.completedAt,
+        });
+      }
+    },
+  });
+
+  const abortTrialMutation = api.trials.abort.useMutation({
+    onSuccess: (data) => {
+      setTrial({ ...trial, status: data.status });
+    },
+  });
+
+  // Action handlers
   const handleStartTrial = async () => {
     try {
       await startTrialMutation.mutateAsync({ id: trial.id });
     } catch (error) {
       console.error("Failed to start trial:", error);
+    }
+  };
+
+  const handlePauseTrial = async () => {
+    // TODO: Implement pause functionality
+    console.log("Pause trial");
+  };
+
+  const handleNextStep = () => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
+      transitionStep?.({
+        to_step: currentStepIndex + 1,
+        from_step: currentStepIndex,
+        step_name: steps[currentStepIndex + 1]?.name,
+      });
     }
   };
 
@@ -252,396 +257,155 @@ export function WizardInterface({
   };
 
   const handleAbortTrial = async () => {
-    if (window.confirm("Are you sure you want to abort this trial?")) {
-      try {
-        await abortTrialMutation.mutateAsync({ id: trial.id });
-      } catch (error) {
-        console.error("Failed to abort trial:", error);
-      }
+    try {
+      await abortTrialMutation.mutateAsync({ id: trial.id });
+    } catch (error) {
+      console.error("Failed to abort trial:", error);
     }
   };
 
-  const handleNextStep = () => {
-    if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
-      if (transitionStep) {
-        void transitionStep({
-          to_step: currentStepIndex + 1,
-          from_step: currentStepIndex,
-          step_name: steps[currentStepIndex + 1]?.name,
-        });
-      }
-    }
-  };
-
-  const handlePreviousStep = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(currentStepIndex - 1);
-      if (transitionStep) {
-        void transitionStep({
-          to_step: currentStepIndex - 1,
-          from_step: currentStepIndex,
-          step_name: steps[currentStepIndex - 1]?.name,
-        });
-      }
-    }
-  };
-
-  const handleCompleteWizardAction = (
+  const handleExecuteAction = async (
     actionId: string,
-    actionData: Record<string, unknown>,
+    parameters?: Record<string, unknown>,
   ) => {
-    if (executeTrialAction) {
-      void executeTrialAction(actionId, actionData);
+    try {
+      executeTrialAction?.(actionId, parameters ?? {});
+    } catch (error) {
+      console.error("Failed to execute action:", error);
     }
   };
 
-  // Left panel - Trial controls and step navigation
-  const leftPanel = (
-    <div className="h-full space-y-4 p-4">
-      {/* Trial Status */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between text-sm">
-            <span>Trial Status</span>
+  return (
+    <div className="flex h-full flex-col">
+      {/* Status Bar */}
+      <div className="bg-background border-b px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Badge
-              variant={
-                trial.status === "in_progress"
-                  ? "default"
-                  : trial.status === "completed"
-                    ? "secondary"
-                    : "outline"
-              }
+              variant={statusConfig.variant}
+              className="flex items-center gap-1"
             >
+              <StatusIcon className="h-3 w-3" />
               {trial.status.replace("_", " ")}
             </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {trial.status === "in_progress" && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Elapsed</span>
-                <span>{formatElapsedTime(elapsedTime)}</span>
+
+            {trial.status === "in_progress" && (
+              <div className="flex items-center gap-1 font-mono text-sm">
+                <Clock className="h-3 w-3" />
+                {formatElapsedTime(elapsedTime)}
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Step</span>
-                <span>
-                  {currentStepIndex + 1} of {steps.length}
+            )}
+
+            {steps.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  Step {currentStepIndex + 1} of {totalSteps}
                 </span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
-
-          {trial.status === "scheduled" && (
-            <Button
-              onClick={handleStartTrial}
-              disabled={startTrialMutation.isPending}
-              className="w-full"
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Start Trial
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Trial Controls */}
-      {trial.status === "in_progress" && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Trial Controls</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              onClick={handleNextStep}
-              disabled={currentStepIndex >= steps.length - 1}
-              className="w-full"
-              size="sm"
-            >
-              <SkipForward className="mr-2 h-4 w-4" />
-              Next Step
-            </Button>
-            <Button
-              onClick={handleCompleteTrial}
-              disabled={completeTrialMutation.isPending}
-              variant="outline"
-              className="w-full"
-              size="sm"
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Complete Trial
-            </Button>
-            <Button
-              onClick={handleAbortTrial}
-              disabled={abortTrialMutation.isPending}
-              variant="destructive"
-              className="w-full"
-              size="sm"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Abort Trial
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step List */}
-      {steps.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Experiment Steps</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-64 space-y-2 overflow-y-auto">
-              {steps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`flex items-center gap-2 rounded-lg p-2 text-sm ${
-                    index === currentStepIndex
-                      ? "bg-primary/10 border-primary/20 border"
-                      : index < currentStepIndex
-                        ? "border border-green-200 bg-green-50"
-                        : "bg-muted/50"
-                  }`}
-                >
-                  <div className="bg-background flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{step.name}</div>
-                    {step.description && (
-                      <div className="text-muted-foreground truncate text-xs">
-                        {step.description}
-                      </div>
-                    )}
-                  </div>
+                <div className="w-16">
+                  <Progress value={progressPercentage} className="h-2" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+              </div>
+            )}
+          </div>
 
-  // Center panel - Main execution area
-  const centerPanel = (
-    <div className="h-full space-y-6 p-6">
-      {/* Connection Status Alert */}
-      {wsError && wsError.length > 0 && !wsConnecting && (
-        <Alert
-          variant={wsError.includes("polling mode") ? "default" : "destructive"}
-        >
+          <div className="text-muted-foreground text-sm">
+            {trial.experiment.name} • {trial.participant.participantCode}
+          </div>
+        </div>
+      </div>
+
+      {/* WebSocket Connection Status */}
+      {wsError && (
+        <Alert className="mx-4 mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {wsError.includes("polling mode")
-              ? "Real-time connection unavailable - using polling for updates"
-              : wsError}
+            WebSocket connection failed. Using fallback polling. Some features
+            may be limited.
           </AlertDescription>
         </Alert>
       )}
 
-      {trial.status === "scheduled" ? (
-        // Trial not started
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Clock className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-            <h3 className="mb-2 text-lg font-semibold">Trial Scheduled</h3>
-            <p className="text-muted-foreground mb-4">
-              This trial is scheduled and ready to begin. Click &quot;Start
-              Trial&quot; in the left panel to begin execution.
-            </p>
-          </CardContent>
-        </Card>
-      ) : trial.status === "in_progress" ? (
-        // Trial in progress - Current step and controls
-        <div className="space-y-6">
-          {/* Current Step */}
-          {currentStep && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  Current Step: {currentStep.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  {currentStep.description}
-                </p>
-                <div className="flex gap-2">
-                  {currentStepIndex > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousStep}
-                    >
-                      Previous
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={handleNextStep}
-                    disabled={currentStepIndex >= steps.length - 1}
-                  >
-                    Next Step
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Wizard Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Wizard Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActionControls
-                trialId={trial.id}
-                currentStep={
-                  currentStep
-                    ? {
-                        id: currentStep.id,
-                        name: currentStep.name,
-                        type: currentStep.type,
-                        description: currentStep.description ?? undefined,
-                        parameters: currentStep.parameters,
-                      }
-                    : null
-                }
-                onActionComplete={handleCompleteWizardAction}
-                isConnected={wsConnected}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        // Trial completed/aborted
-        <Card>
-          <CardContent className="py-12 text-center">
-            <CheckCircle className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-            <h3 className="mb-2 text-lg font-semibold">
-              Trial {trial.status === "completed" ? "Completed" : "Ended"}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              This trial has{" "}
-              {trial.status === "completed"
-                ? "completed successfully"
-                : "ended"}
-              . You can view the results and analysis data.
-            </p>
-            <Button asChild>
-              <a href={`/trials/${trial.id}/analysis`}>View Analysis</a>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-
-  // Right panel - Monitoring and context
-  const rightPanel = (
-    <div className="h-full space-y-4 p-4">
-      {/* Robot Status */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Bot className="h-4 w-4" />
-            Robot Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RobotStatus trialId={trial.id} />
-        </CardContent>
-      </Card>
-
-      {/* Participant Info */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4" />
-            Participant
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ParticipantInfo
-            participant={trial.participant}
-            trialStatus={trial.status}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Live Events */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Activity className="h-4 w-4" />
-            Live Events
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EventsLogSidebar
-            events={trialEvents}
-            maxEvents={15}
-            showTimestamps={true}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Connection Status */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Settings className="h-4 w-4" />
-            Connection
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Status</span>
-              <Badge variant={wsConnected ? "default" : "secondary"}>
-                {wsConnected ? "Connected" : "Polling"}
-              </Badge>
-            </div>
-            <Separator />
-            <div className="text-muted-foreground space-y-1 text-xs">
-              <div>Trial ID: {trial.id.slice(-8)}</div>
-              <div>Experiment: {trial.experiment.name}</div>
-              <div>Participant: {trial.participant.participantCode}</div>
-              {trialStartTime && (
-                <div>Started: {trialStartTime.toLocaleTimeString()}</div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  return (
-    <div className="flex h-screen flex-col">
-      {/* Page Header */}
-      <PageHeader
-        title="Wizard Control"
-        description={`${trial.experiment.name} • ${trial.participant.participantCode}`}
-        icon={Activity}
-      />
-
-      {/* Main Panel Layout */}
-      <PanelsContainer
-        left={leftPanel}
-        center={centerPanel}
-        right={rightPanel}
-        showDividers={true}
-        className="min-h-0 flex-1"
-      />
+      {/* Main Content - Three Panel Layout */}
+      <div className="min-h-0 flex-1">
+        <PanelsContainer
+          left={
+            <TrialControlPanel
+              trial={trial}
+              currentStep={currentStep}
+              steps={steps}
+              currentStepIndex={currentStepIndex}
+              onStartTrial={handleStartTrial}
+              onPauseTrial={handlePauseTrial}
+              onNextStep={handleNextStep}
+              onCompleteTrial={handleCompleteTrial}
+              onAbortTrial={handleAbortTrial}
+              onExecuteAction={handleExecuteAction}
+              isConnected={wsConnected}
+            />
+          }
+          center={
+            <ExecutionPanel
+              trial={trial}
+              currentStep={currentStep}
+              steps={steps}
+              currentStepIndex={currentStepIndex}
+              trialEvents={trialEvents.map((event) => ({
+                type: event.type ?? "unknown",
+                timestamp:
+                  "data" in event &&
+                  event.data &&
+                  typeof event.data === "object" &&
+                  "timestamp" in event.data &&
+                  typeof event.data.timestamp === "number"
+                    ? new Date(event.data.timestamp)
+                    : new Date(),
+                data: "data" in event ? event.data : undefined,
+                message:
+                  "data" in event &&
+                  event.data &&
+                  typeof event.data === "object" &&
+                  "message" in event.data &&
+                  typeof event.data.message === "string"
+                    ? event.data.message
+                    : undefined,
+              }))}
+              onStepSelect={(index) => setCurrentStepIndex(index)}
+              onExecuteAction={handleExecuteAction}
+            />
+          }
+          right={
+            <MonitoringPanel
+              trial={trial}
+              trialEvents={trialEvents.map((event) => ({
+                type: event.type ?? "unknown",
+                timestamp:
+                  "data" in event &&
+                  event.data &&
+                  typeof event.data === "object" &&
+                  "timestamp" in event.data &&
+                  typeof event.data.timestamp === "number"
+                    ? new Date(event.data.timestamp)
+                    : new Date(),
+                data: "data" in event ? event.data : undefined,
+                message:
+                  "data" in event &&
+                  event.data &&
+                  typeof event.data === "object" &&
+                  "message" in event.data &&
+                  typeof event.data.message === "string"
+                    ? event.data.message
+                    : undefined,
+              }))}
+              isConnected={wsConnected}
+              wsError={wsError ?? undefined}
+            />
+          }
+          showDividers={true}
+          className="h-full"
+        />
+      </div>
     </div>
   );
 }
+
+export default WizardInterface;

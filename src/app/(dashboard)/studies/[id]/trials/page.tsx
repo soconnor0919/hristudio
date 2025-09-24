@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
+import Link from "next/link";
 import { TestTube, Plus } from "lucide-react";
 import { TrialsTable } from "~/components/trials/TrialsTable";
 import { PageHeader } from "~/components/ui/page-header";
@@ -39,10 +40,10 @@ export default function StudyTrialsPage() {
         icon={TestTube}
         actions={
           <Button asChild>
-            <a href={`/studies/${studyId}/trials/new`}>
+            <Link href={`/studies/${studyId}/trials/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Schedule Trial
-            </a>
+            </Link>
           </Button>
         }
       />
