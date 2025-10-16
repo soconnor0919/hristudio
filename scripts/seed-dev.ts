@@ -216,9 +216,20 @@ async function main() {
         manufacturer: "SoftBank Robotics",
         model: "NAO V6",
         description:
-          "Humanoid robot designed for education, research, and social interaction",
-        capabilities: ["speech", "vision", "walking", "gestures"],
-        communicationProtocol: "rest" as const,
+          "Humanoid robot designed for education, research, and social interaction with ROS2 integration",
+        capabilities: [
+          "speech",
+          "vision",
+          "walking",
+          "gestures",
+          "joint_control",
+          "touch_sensors",
+          "sonar_sensors",
+          "camera_feed",
+          "imu",
+          "odometry",
+        ],
+        communicationProtocol: "ros2" as const,
       },
     ];
 
@@ -289,6 +300,17 @@ async function main() {
         url: "https://repo.hristudio.com",
         description:
           "Official collection of robot plugins maintained by the HRIStudio team",
+        trustLevel: "official" as const,
+        isEnabled: true,
+        isOfficial: true,
+        syncStatus: "pending" as const,
+        createdBy: seanUser.id,
+      },
+      {
+        name: "NAO6 ROS2 Integration Repository",
+        url: "http://localhost:3000/nao6-plugins",
+        description:
+          "Official NAO6 robot plugins for ROS2-based Human-Robot Interaction experiments",
         trustLevel: "official" as const,
         isEnabled: true,
         isOfficial: true,

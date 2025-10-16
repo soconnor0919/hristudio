@@ -1,0 +1,338 @@
+{
+  "name": "NAO6 Speech & Audio",
+  "version": "1.0.0",
+  "description": "Text-to-speech and audio capabilities for NAO6 robot including voice synthesis, volume control, and language settings",
+  "platform": "NAO6",
+  "category": "speech",
+  "manufacturer": {
+    "name": "SoftBank Robotics",
+    "website": "https://www.softbankrobotics.com"
+  },
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.com/robots/nao6/speech",
+    "quickStart": "https://docs.hristudio.com/robots/nao6/speech/quickstart"
+  },
+  "ros2Config": {
+    "namespace": "/naoqi_driver",
+    "topics": {
+      "speech": {
+        "type": "std_msgs/String",
+        "description": "Text-to-speech commands"
+      },
+      "set_language": {
+        "type": "std_msgs/String",
+        "description": "Set speech language"
+      },
+      "audio_volume": {
+        "type": "std_msgs/Float32",
+        "description": "Control audio volume level"
+      }
+    }
+  },
+  "actions": [
+    {
+      "id": "say_text",
+      "name": "Say Text",
+      "description": "Make the robot speak the specified text using text-to-speech",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "text",
+          "description": "Text for the robot to speak",
+          "required": true,
+          "maxLength": 500,
+          "placeholder": "Enter text for NAO to say..."
+        },
+        {
+          "name": "wait_for_completion",
+          "type": "boolean",
+          "description": "Wait for speech to finish before continuing",
+          "required": false,
+          "default": true
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/speech",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "{{text}}"
+        }
+      }
+    },
+    {
+      "id": "say_with_emotion",
+      "name": "Say Text with Emotion",
+      "description": "Speak text with emotional expression using SSML-like markup",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "text",
+          "description": "Text for the robot to speak",
+          "required": true,
+          "maxLength": 500,
+          "placeholder": "Enter text for NAO to say..."
+        },
+        {
+          "name": "emotion",
+          "type": "select",
+          "description": "Emotional tone for speech",
+          "required": false,
+          "options": [
+            { "value": "neutral", "label": "Neutral" },
+            { "value": "happy", "label": "Happy" },
+            { "value": "sad", "label": "Sad" },
+            { "value": "excited", "label": "Excited" },
+            { "value": "calm", "label": "Calm" }
+          ],
+          "default": "neutral"
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Speech speed multiplier",
+          "required": false,
+          "min": 0.5,
+          "max": 2.0,
+          "default": 1.0,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/speech",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "\\rspd={{speed}}\\\\rst={{emotion}}\\{{text}}"
+        }
+      }
+    },
+    {
+      "id": "set_volume",
+      "name": "Set Volume",
+      "description": "Adjust the robot's audio volume level",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "volume",
+          "type": "number",
+          "description": "Volume level (0.0 = silent, 1.0 = maximum)",
+          "required": true,
+          "min": 0.0,
+          "max": 1.0,
+          "default": 0.5,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/audio_volume",
+        "messageType": "std_msgs/Float32",
+        "messageTemplate": {
+          "data": "{{volume}}"
+        }
+      }
+    },
+    {
+      "id": "set_language",
+      "name": "Set Language",
+      "description": "Change the robot's speech language",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "language",
+          "type": "select",
+          "description": "Speech language",
+          "required": true,
+          "options": [
+            { "value": "en-US", "label": "English (US)" },
+            { "value": "en-GB", "label": "English (UK)" },
+            { "value": "fr-FR", "label": "French" },
+            { "value": "de-DE", "label": "German" },
+            { "value": "es-ES", "label": "Spanish" },
+            { "value": "it-IT", "label": "Italian" },
+            { "value": "ja-JP", "label": "Japanese" },
+            { "value": "ko-KR", "label": "Korean" },
+            { "value": "zh-CN", "label": "Chinese (Simplified)" }
+          ],
+          "default": "en-US"
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/set_language",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "{{language}}"
+        }
+      }
+    },
+    {
+      "id": "say_random_phrase",
+      "name": "Say Random Phrase",
+      "description": "Make the robot say a random phrase from predefined categories",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "category",
+          "type": "select",
+          "description": "Category of phrases",
+          "required": true,
+          "options": [
+            { "value": "greeting", "label": "Greetings" },
+            { "value": "encouragement", "label": "Encouragement" },
+            { "value": "question", "label": "Questions" },
+            { "value": "farewell", "label": "Farewells" },
+            { "value": "instruction", "label": "Instructions" }
+          ],
+          "default": "greeting"
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/speech",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "{{getRandomPhrase(category)}}"
+        }
+      },
+      "phrases": {
+        "greeting": [
+          "Hello! Nice to meet you!",
+          "Hi there! How are you today?",
+          "Welcome! I'm excited to work with you.",
+          "Good day! Ready to get started?",
+          "Greetings! What shall we do today?"
+        ],
+        "encouragement": [
+          "Great job! Keep it up!",
+          "You're doing wonderfully!",
+          "Excellent work! I'm impressed.",
+          "That's fantastic! Well done!",
+          "Perfect! You've got this!"
+        ],
+        "question": [
+          "How can I help you today?",
+          "What would you like to do next?",
+          "Is there anything you'd like to know?",
+          "Shall we try something different?",
+          "What are you thinking about?"
+        ],
+        "farewell": [
+          "Goodbye! It was great working with you!",
+          "See you later! Take care!",
+          "Until next time! Have a wonderful day!",
+          "Farewell! Thanks for spending time with me!",
+          "Bye for now! Look forward to seeing you again!"
+        ],
+        "instruction": [
+          "Please follow my movements.",
+          "Let's try this step by step.",
+          "Watch carefully and then repeat.",
+          "Take your time, there's no rush.",
+          "Remember to stay focused."
+        ]
+      }
+    },
+    {
+      "id": "spell_word",
+      "name": "Spell Word",
+      "description": "Have the robot spell out a word letter by letter",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "word",
+          "type": "text",
+          "description": "Word to spell out",
+          "required": true,
+          "maxLength": 50,
+          "placeholder": "Enter word to spell..."
+        },
+        {
+          "name": "pause_duration",
+          "type": "number",
+          "description": "Pause between letters in seconds",
+          "required": false,
+          "min": 0.1,
+          "max": 2.0,
+          "default": 0.5,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/speech",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "{{word.split('').join('\\pau={{pause_duration * 1000}}\\\\pau=0\\')}}"
+        }
+      }
+    },
+    {
+      "id": "count_numbers",
+      "name": "Count Numbers",
+      "description": "Have the robot count from one number to another",
+      "category": "speech",
+      "parameters": [
+        {
+          "name": "start",
+          "type": "number",
+          "description": "Starting number",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "default": 1,
+          "step": 1
+        },
+        {
+          "name": "end",
+          "type": "number",
+          "description": "Ending number",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "default": 10,
+          "step": 1
+        },
+        {
+          "name": "pause_duration",
+          "type": "number",
+          "description": "Pause between numbers in seconds",
+          "required": false,
+          "min": 0.1,
+          "max": 2.0,
+          "default": 0.8,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/speech",
+        "messageType": "std_msgs/String",
+        "messageTemplate": {
+          "data": "{{Array.from({length: end - start + 1}, (_, i) => start + i).join('\\pau={{pause_duration * 1000}}\\\\pau=0\\')}}"
+        }
+      }
+    }
+  ],
+  "features": {
+    "languages": [
+      "en-US", "en-GB", "fr-FR", "de-DE", "es-ES",
+      "it-IT", "ja-JP", "ko-KR", "zh-CN"
+    ],
+    "emotions": [
+      "neutral", "happy", "sad", "excited", "calm"
+    ],
+    "voiceEffects": [
+      "speed", "pitch", "volume", "emotion"
+    ],
+    "ssmlSupport": true,
+    "maxTextLength": 500
+  },
+  "safety": {
+    "maxVolume": 1.0,
+    "defaultVolume": 0.5,
+    "profanityFilter": true,
+    "maxSpeechDuration": 60,
+    "emergencyQuiet": {
+      "action": "set_volume",
+      "parameters": { "volume": 0 },
+      "description": "Immediately mute robot audio"
+    }
+  }
+}

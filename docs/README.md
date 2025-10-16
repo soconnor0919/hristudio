@@ -112,10 +112,16 @@ This documentation suite provides everything needed to understand, build, deploy
     - Technical debt resolution
     - UI/UX enhancements
 
+### **🤖 Robot Integration Guides**
+
+14. **[NAO6 Complete Integration Guide](./nao6-integration-complete-guide.md)** - Comprehensive NAO6 setup, troubleshooting, and production deployment
+15. **[NAO6 Quick Reference](./nao6-quick-reference.md)** - Essential commands and troubleshooting for NAO6 integration
+16. **[NAO6 ROS2 Setup](./nao6-ros2-setup.md)** - Basic NAO6 ROS2 driver installation guide
+
 ### **📖 Academic References**
 
-14. **[Research Paper](./root.tex)** - Academic LaTeX document
-15. **[Bibliography](./refs.bib)** - Research references
+17. **[Research Paper](./root.tex)** - Academic LaTeX document
+18. **[Bibliography](./refs.bib)** - Research references
 
 ---
 
@@ -152,8 +158,14 @@ This documentation suite provides everything needed to understand, build, deploy
 ### **For Researchers**
 1. **[Project Overview](./project-overview.md)** - Research platform capabilities
 2. **[Feature Requirements](./feature-requirements.md)** - User workflows and features
-3. **[ROS2 Integration](./ros2-integration.md)** - Robot platform integration
-4. **[Research Paper](./root.tex)** - Academic context and methodology
+3. **[NAO6 Quick Reference](./nao6-quick-reference.md)** - Essential NAO6 robot control commands
+4. **[ROS2 Integration](./ros2-integration.md)** - Robot platform integration
+5. **[Research Paper](./root.tex)** - Academic context and methodology
+
+### **For Robot Integration**
+1. **[NAO6 Complete Integration Guide](./nao6-integration-complete-guide.md)** - Full NAO6 setup and troubleshooting
+2. **[NAO6 Quick Reference](./nao6-quick-reference.md)** - Essential commands and quick fixes
+3. **[ROS2 Integration](./ros2-integration.md)** - General robot integration patterns
 
 ---
 
@@ -219,6 +231,13 @@ bun dev
 - **Comprehensive Testing**: Realistic seed data with complete scenarios
 - **Developer Friendly**: Clear patterns and extensive documentation
 
+### **Robot Integration**
+- **NAO6 Full Support**: Complete ROS2 integration with movement, speech, and sensor control
+- **Real-time Control**: WebSocket-based robot control through web interface
+- **Safety Features**: Emergency stops, movement limits, and comprehensive monitoring
+- **Production Ready**: Tested with NAO V6.0 / NAOqi 2.8.7.4 / ROS2 Humble
+- **Troubleshooting Guides**: Complete documentation for setup and problem resolution
+
 ---
 
 ## 🎊 **Project Status: Production Ready**
@@ -238,6 +257,7 @@ bun dev
 - ✅ **Core Blocks System** - 26 blocks across events, wizard, control, observation
 - ✅ **Plugin Architecture** - Unified system for core blocks and robot actions
 - ✅ **Development Environment** - Realistic test data and scenarios
+- ✅ **NAO6 Robot Integration** - Full ROS2 integration with comprehensive control and monitoring
 
 ---
 
@@ -271,7 +291,7 @@ The platform is considered production-ready when:
 - ✅ Performance targets are achieved
 - ✅ Type safety is complete throughout
 
-**All success criteria have been met. HRIStudio is ready for production deployment.**
+**All success criteria have been met. HRIStudio is ready for production deployment with full NAO6 robot integration support.**
 
 ---
 

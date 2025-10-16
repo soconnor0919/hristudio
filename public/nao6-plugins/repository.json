@@ -1,0 +1,44 @@
+{
+  "name": "NAO6 ROS2 Integration Repository",
+  "description": "Official NAO6 robot plugins for ROS2-based Human-Robot Interaction experiments",
+  "version": "1.0.0",
+  "author": {
+    "name": "HRIStudio Team",
+    "email": "support@hristudio.com"
+  },
+  "urls": {
+    "git": "https://github.com/hristudio/nao6-ros2-plugins",
+    "documentation": "https://docs.hristudio.com/robots/nao6",
+    "issues": "https://github.com/hristudio/nao6-ros2-plugins/issues"
+  },
+  "trust": "official",
+  "license": "MIT",
+  "robots": [
+    {
+      "name": "NAO6",
+      "manufacturer": "SoftBank Robotics",
+      "model": "NAO V6",
+      "communicationProtocol": "ros2"
+    }
+  ],
+  "categories": [
+    "movement",
+    "speech",
+    "sensors",
+    "interaction",
+    "vision"
+  ],
+  "ros2": {
+    "distro": "humble",
+    "packages": [
+      "naoqi_driver2",
+      "naoqi_bridge_msgs",
+      "rosbridge_suite"
+    ],
+    "bridge": {
+      "protocol": "websocket",
+      "defaultPort": 9090
+    }
+  },
+  "lastUpdated": "2025-01-16T00:00:00Z"
+}

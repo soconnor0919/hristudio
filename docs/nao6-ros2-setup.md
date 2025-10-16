@@ -2,6 +2,10 @@
 
 This guide walks you through setting up your NAO6 robot with ROS2 integration for use with HRIStudio's experiment platform.
 
+> **📋 For Complete Integration Guide:** See [NAO6 Complete Integration Guide](./nao6-integration-complete-guide.md) for comprehensive setup, troubleshooting, and production deployment instructions.
+
+**⚠️ Critical Note:** NAO robots must be "awakened" (motors stiffened and standing) before movement commands will work. See the troubleshooting section below.
+
 ## Prerequisites
 
 - NAO6 robot with NAOqi OS 2.8.7+
