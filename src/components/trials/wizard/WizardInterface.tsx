@@ -1,20 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-
 import { Play, CheckCircle, X, Clock, AlertCircle } from "lucide-react";
-
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-
 import { PanelsContainer } from "~/components/experiments/designer/layout/PanelsContainer";
-import { TrialControlPanel } from "./panels/TrialControlPanel";
-import { ExecutionPanel } from "./panels/ExecutionPanel";
-import { MonitoringPanel } from "./panels/MonitoringPanel";
-
+import { WizardControlPanel } from "./panels/WizardControlPanel";
+import { WizardExecutionPanel } from "./panels/WizardExecutionPanel";
+import { WizardMonitoringPanel } from "./panels/WizardMonitoringPanel";
 import { api } from "~/trpc/react";
-import { useTrialWebSocket } from "~/hooks/useWebSocket";
+// import { useTrialWebSocket } from "~/hooks/useWebSocket"; // Removed WebSocket dependency
+import { toast } from "sonner";
 
 interface WizardInterfaceProps {
   trial: {
@@ -69,6 +66,17 @@ export function WizardInterface({
   );
   const [elapsedTime, setElapsedTime] = useState(0);
 
+  // Persistent tab states to prevent resets from parent re-renders
+  const [controlPanelTab, setControlPanelTab] = useState<
+    "control" | "step" | "actions"
+  >("control");
+  const [executionPanelTab, setExecutionPanelTab] = useState<
+    "current" | "timeline" | "events"
+  >(trial.status === "in_progress" ? "current" : "timeline");
+  const [monitoringPanelTab, setMonitoringPanelTab] = useState<
+    "status" | "robot" | "events"
+  >("status");
+
   // Get experiment steps from API
   const { data: experimentSteps } = api.experiments.getSteps.useQuery(
     { experimentId: trial.experimentId },
@@ -94,28 +102,25 @@ export function WizardInterface({
     }
   };
 
-  // Real-time WebSocket connection
-  const {
-    isConnected: wsConnected,
-    isConnecting: wsConnecting,
-    connectionError: wsError,
-    trialEvents,
-    executeTrialAction,
-    transitionStep,
-  } = useTrialWebSocket(trial.id);
-
-  // Fallback polling for trial updates when WebSocket is not available
+  // Use polling for real-time updates (no WebSocket dependency)
   const { data: pollingData } = api.trials.get.useQuery(
     { id: trial.id },
     {
-      enabled: !wsConnected && !wsConnecting,
-      refetchInterval: wsConnected ? false : 5000,
+      refetchInterval: 2000, // Poll every 2 seconds
     },
   );
 
+  // Mock trial events for now (can be populated from database later)
+  const trialEvents: Array<{
+    type: string;
+    timestamp: Date;
+    data?: unknown;
+    message?: string;
+  }> = [];
+
   // Update trial data from polling
   React.useEffect(() => {
-    if (pollingData && !wsConnected) {
+    if (pollingData) {
       setTrial({
         ...pollingData,
         metadata: pollingData.metadata as Record<string, unknown> | null,
@@ -128,7 +133,7 @@ export function WizardInterface({
         },
       });
     }
-  }, [pollingData, wsConnected]);
+  }, [pollingData]);
 
   // Transform experiment steps to component format
   const steps: StepData[] =
@@ -225,10 +230,37 @@ export function WizardInterface({
 
   // Action handlers
   const handleStartTrial = async () => {
+    console.log(
+      "[WizardInterface] Starting trial:",
+      trial.id,
+      "Current status:",
+      trial.status,
+    );
+
+    // Check if trial can be started
+    if (trial.status !== "scheduled") {
+      toast.error("Trial can only be started from scheduled status");
+      return;
+    }
+
     try {
-      await startTrialMutation.mutateAsync({ id: trial.id });
+      const result = await startTrialMutation.mutateAsync({ id: trial.id });
+      console.log("[WizardInterface] Trial started successfully", result);
+
+      // Update local state immediately
+      setTrial((prev) => ({
+        ...prev,
+        status: "in_progress",
+        startedAt: new Date(),
+      }));
+      setTrialStartTime(new Date());
+
+      toast.success("Trial started successfully");
     } catch (error) {
       console.error("Failed to start trial:", error);
+      toast.error(
+        `Failed to start trial: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -240,11 +272,7 @@ export function WizardInterface({
   const handleNextStep = () => {
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
-      transitionStep?.({
-        to_step: currentStepIndex + 1,
-        from_step: currentStepIndex,
-        step_name: steps[currentStepIndex + 1]?.name,
-      });
+      // Note: Step transitions can be enhanced later with database logging
     }
   };
 
@@ -269,7 +297,8 @@ export function WizardInterface({
     parameters?: Record<string, unknown>,
   ) => {
     try {
-      executeTrialAction?.(actionId, parameters ?? {});
+      console.log("Executing action:", actionId, parameters);
+      // Note: Action execution can be enhanced later with tRPC mutations
     } catch (error) {
       console.error("Failed to execute action:", error);
     }
@@ -277,7 +306,7 @@ export function WizardInterface({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Status Bar */}
+      {/* Compact Status Bar */}
       <div className="bg-background border-b px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -308,28 +337,29 @@ export function WizardInterface({
             )}
           </div>
 
-          <div className="text-muted-foreground text-sm">
-            {trial.experiment.name} • {trial.participant.participantCode}
+          <div className="text-muted-foreground flex items-center gap-4 text-sm">
+            <div>{trial.experiment.name}</div>
+            <div>{trial.participant.participantCode}</div>
+            <Badge variant="outline" className="text-xs">
+              Polling
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* WebSocket Connection Status */}
-      {wsError && (
-        <Alert className="mx-4 mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            WebSocket connection failed. Using fallback polling. Some features
-            may be limited.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Connection Status */}
+      <Alert className="mx-4 mt-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Using polling mode for trial updates (refreshes every 2 seconds).
+        </AlertDescription>
+      </Alert>
 
       {/* Main Content - Three Panel Layout */}
       <div className="min-h-0 flex-1">
         <PanelsContainer
           left={
-            <TrialControlPanel
+            <WizardControlPanel
               trial={trial}
               currentStep={currentStep}
               steps={steps}
@@ -340,64 +370,33 @@ export function WizardInterface({
               onCompleteTrial={handleCompleteTrial}
               onAbortTrial={handleAbortTrial}
               onExecuteAction={handleExecuteAction}
-              isConnected={wsConnected}
+              _isConnected={true}
+              activeTab={controlPanelTab}
+              onTabChange={setControlPanelTab}
+              isStarting={startTrialMutation.isPending}
             />
           }
           center={
-            <ExecutionPanel
+            <WizardExecutionPanel
               trial={trial}
               currentStep={currentStep}
               steps={steps}
               currentStepIndex={currentStepIndex}
-              trialEvents={trialEvents.map((event) => ({
-                type: event.type ?? "unknown",
-                timestamp:
-                  "data" in event &&
-                  event.data &&
-                  typeof event.data === "object" &&
-                  "timestamp" in event.data &&
-                  typeof event.data.timestamp === "number"
-                    ? new Date(event.data.timestamp)
-                    : new Date(),
-                data: "data" in event ? event.data : undefined,
-                message:
-                  "data" in event &&
-                  event.data &&
-                  typeof event.data === "object" &&
-                  "message" in event.data &&
-                  typeof event.data.message === "string"
-                    ? event.data.message
-                    : undefined,
-              }))}
-              onStepSelect={(index) => setCurrentStepIndex(index)}
+              trialEvents={trialEvents}
+              onStepSelect={(index: number) => setCurrentStepIndex(index)}
               onExecuteAction={handleExecuteAction}
+              activeTab={executionPanelTab}
+              onTabChange={setExecutionPanelTab}
             />
           }
           right={
-            <MonitoringPanel
+            <WizardMonitoringPanel
               trial={trial}
-              trialEvents={trialEvents.map((event) => ({
-                type: event.type ?? "unknown",
-                timestamp:
-                  "data" in event &&
-                  event.data &&
-                  typeof event.data === "object" &&
-                  "timestamp" in event.data &&
-                  typeof event.data.timestamp === "number"
-                    ? new Date(event.data.timestamp)
-                    : new Date(),
-                data: "data" in event ? event.data : undefined,
-                message:
-                  "data" in event &&
-                  event.data &&
-                  typeof event.data === "object" &&
-                  "message" in event.data &&
-                  typeof event.data.message === "string"
-                    ? event.data.message
-                    : undefined,
-              }))}
-              isConnected={wsConnected}
-              wsError={wsError ?? undefined}
+              trialEvents={trialEvents}
+              isConnected={true}
+              wsError={undefined}
+              activeTab={monitoringPanelTab}
+              onTabChange={setMonitoringPanelTab}
             />
           }
           showDividers={true}

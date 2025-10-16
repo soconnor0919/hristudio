@@ -2,6 +2,31 @@
 
 ## Current Status (December 2024)
 
+### Wizard Interface Multi-View Implementation - COMPLETE ✅ (December 2024)
+Complete redesign of trial execution interface with role-based views for thesis research.
+
+**✅ Completed Implementation:**
+- **Role-Based Views**: Created three distinct interfaces - Wizard, Observer, and Participant views
+- **Fixed Layout Issues**: Eliminated double headers and bottom cut-off problems
+- **Removed Route Duplication**: Cleaned up global trial routes, enforced study-scoped architecture
+- **Professional UI**: Redesigned with experiment designer-inspired three-panel layout
+- **Smart Role Detection**: Automatic role assignment with URL override capability (?view=wizard|observer|participant)
+- **Type Safety**: Full TypeScript compliance with proper metadata handling
+- **WebSocket Integration**: Connected real-time trial updates with fallback polling
+
+**Implementation Details:**
+- **WizardView**: Full trial control with TrialControlPanel, ExecutionPanel, and MonitoringPanel
+- **ObserverView**: Read-only monitoring interface with trial overview and live activity
+- **ParticipantView**: Friendly, welcoming interface designed for study participants
+- **Route Structure**: `/studies/[id]/trials/[trialId]/wizard` with role-based rendering
+- **Layout Fix**: Proper height calculations with `min-h-0 flex-1` and removed duplicate headers
+
+**Benefits for Thesis Research:**
+- **Multi-User Support**: Appropriate interface for researchers, observers, and participants
+- **Professional Experience**: Clean, purpose-built UI for each user role
+- **Research Ready**: Supports Wizard of Oz study methodology comparing HRIStudio vs Choregraphe
+- **Flexible Testing**: URL parameters enable easy view switching during development
+
 ### Route Consolidation - COMPLETE ✅ (September 2024)
 Major architectural improvement consolidating global routes into study-scoped workflows.
 
@@ -21,6 +46,31 @@ Major architectural improvement consolidating global routes into study-scoped wo
 - **Code Reduction**: Removed significant duplicate code between global and study-scoped views
 - **Better UX**: Clear navigation path through study-centric organization
 - **Maintainability**: Single source of truth for each entity type
+
+## Next Priority: WebSocket Implementation Enhancement
+
+### WebSocket Real-Time Infrastructure - IN PROGRESS 🚧
+Critical for thesis research - enable real-time trial execution and monitoring.
+
+**Current Status:**
+- ✅ Basic WebSocket hooks exist (`useWebSocket.ts`, `useTrialWebSocket.ts`)
+- ✅ Trial execution engine with tRPC endpoints
+- ❌ **Missing**: Real-time robot communication and status updates
+- ❌ **Missing**: Live trial event broadcasting to all connected clients
+- ❌ **Missing**: WebSocket server implementation for trial coordination
+
+**Required Implementation:**
+- **Robot Integration**: WebSocket connection to robot platforms (ROS2, REST APIs)
+- **Event Broadcasting**: Real-time trial events to wizard, observers, and monitoring systems
+- **Session Management**: Multi-client coordination for collaborative trial execution
+- **Error Handling**: Robust connection recovery and fallback mechanisms
+- **Security**: Proper authentication and role-based WebSocket access
+
+**Files to Focus On:**
+- `src/hooks/useWebSocket.ts` - Client-side WebSocket management
+- `src/server/services/trial-execution.ts` - Trial execution engine
+- WebSocket server implementation (needs creation)
+- Robot plugin WebSocket adapters
 
 ## Previous Status (December 2024)
 

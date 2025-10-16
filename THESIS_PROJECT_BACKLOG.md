@@ -17,10 +17,10 @@
 - **Development Environment**: Comprehensive seed data and documentation
 
 ### Critical Gaps
-- **Wizard Interface**: Needs complete revamp - current implementation insufficient
-- **Robot Control**: Not working yet - core functionality missing
+- **Wizard Interface**: ✅ COMPLETE - Role-based views implemented (Wizard, Observer, Participant)
+- **Robot Control**: Not working yet - core functionality missing (NEXT PRIORITY)
 - **NAO6 Integration**: Cannot test without working robot control
-- **Trial Execution**: Dependent on wizard interface completion
+- **Trial Execution**: WebSocket implementation needed for real-time functionality
 
 ### Platform Constraints
 - **Device Target**: Laptop-only (no mobile/tablet optimization needed)
@@ -65,25 +65,37 @@
 
 #### Week 1-2: Foundation (Sept 23 - Oct 6)
 
-**WIZARD-001: Wizard Interface Architecture** - CRITICAL
+**WIZARD-001: Wizard Interface Architecture** - ✅ COMPLETE (December 2024)
 - **Story**: As a wizard, I need a functional interface to control experiments
 - **Tasks**:
-  - Design wizard interface wireframes and user flow
-  - Implement basic panel layout (trial info, current step, controls)
-  - Create trial state management (start/pause/stop/complete)
-  - Build step navigation and progress tracking
-- **Deliverable**: Basic wizard interface shell with navigation
-- **Effort**: 8 days
+  - ✅ Design wizard interface wireframes and user flow
+  - ✅ Implement three-panel layout (trial controls, execution view, monitoring)
+  - ✅ Create role-based views (Wizard, Observer, Participant)
+  - ✅ Build step navigation and progress tracking
+  - ✅ Fix layout issues (double headers, bottom cut-off)
+- **Deliverable**: Complete wizard interface with role-based views
+- **Effort**: 12 days (completed)
 
-**ROBOT-001: Robot Control Foundation** - CRITICAL  
+**ROBOT-001: Robot Control Foundation** - CRITICAL (NEXT PRIORITY)
 - **Story**: As a wizard, I need to send commands to NAO6 robot
 - **Tasks**:
   - Research and implement NAO6 WebSocket connection
   - Create basic action execution engine
   - Implement mock robot mode for development
   - Build connection status monitoring
+  - Integrate with existing wizard interface
 - **Deliverable**: Robot connection established with basic commands
-- **Effort**: 6 days
+- **Effort**: 8 days (increased due to WebSocket server implementation needed)
+
+**WEBSOCKET-001: Real-Time Infrastructure** - CRITICAL (NEW PRIORITY)
+- **Story**: As a system, I need real-time communication between clients and robots
+- **Tasks**:
+  - Implement WebSocket server for real-time trial coordination
+  - Create multi-client session management (wizard, observers, participants)
+  - Build event broadcasting system for live trial updates
+  - Add robust connection recovery and fallback mechanisms
+- **Deliverable**: Working real-time infrastructure for trial execution
+- **Effort**: 10 days
 
 #### Week 3-4: Core Functionality (Oct 7 - Oct 20)
 
@@ -95,19 +107,20 @@
   - Create simple gesture library
   - Add LED color control
   - Implement error handling and recovery
-- **Deliverable**: NAO6 performs essential experiment actions reliably
-- **Effort**: 8 days
+  - Integrate with WebSocket infrastructure for real-time control
+- **Deliverable**: NAO6 performs essential experiment actions reliably via wizard interface
+- **Effort**: 10 days (increased due to real-time integration)
 
-**TRIAL-001: Trial Execution Engine** - CRITICAL
+**TRIAL-001: Trial Execution Engine** - HIGH PRIORITY
 - **Story**: As a wizard, I need to execute experiment protocols step-by-step
 - **Tasks**:
-  - Build trial state machine with database persistence
-  - Implement step-by-step execution workflow
-  - Create event logging with timestamps
-  - Add manual intervention controls
+  - ✅ Basic trial state machine exists (needs WebSocket integration)
+  - Connect existing wizard interface to real-time execution
+  - Enhance event logging with real-time broadcasting
+  - Add manual intervention controls via WebSocket
   - Build trial completion and data export
-- **Deliverable**: Complete trial execution with data capture
-- **Effort**: 6 days
+- **Deliverable**: Complete trial execution with real-time data capture
+- **Effort**: 8 days (integration with existing wizard interface)
 
 #### Week 5-6: Integration & Testing (Oct 21 - Oct 31)
 

@@ -78,8 +78,10 @@ async function checkTrialAccess(
   return trial[0];
 }
 
-// Global execution engine instance
-const executionEngine = new TrialExecutionEngine(db);
+// Lazy-initialized execution engine instance
+function getExecutionEngine() {
+  return new TrialExecutionEngine(db);
+}
 
 export const trialsRouter = createTRPCRouter({
   list: protectedProcedure
@@ -417,6 +419,7 @@ export const trialsRouter = createTRPCRouter({
       }
 
       // Use execution engine to start trial
+      const executionEngine = getExecutionEngine();
       const result = await executionEngine.startTrial(input.id, userId);
 
       if (!result.success) {
@@ -499,6 +502,7 @@ export const trialsRouter = createTRPCRouter({
       ]);
 
       // Use execution engine to abort trial
+      const executionEngine = getExecutionEngine();
       const result = await executionEngine.abortTrial(input.id, input.reason);
 
       if (!result.success) {
@@ -812,6 +816,7 @@ export const trialsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
 
+      const executionEngine = getExecutionEngine();
       const result = await executionEngine.executeCurrentStep(input.trialId);
 
       if (!result.success) {
@@ -829,6 +834,7 @@ export const trialsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
 
+      const executionEngine = getExecutionEngine();
       const result = await executionEngine.advanceToNextStep(input.trialId);
 
       if (!result.success) {
@@ -846,6 +852,7 @@ export const trialsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
 
+      const executionEngine = getExecutionEngine();
       const status = executionEngine.getTrialStatus(input.trialId);
       const currentStep = executionEngine.getCurrentStep(input.trialId);
 
@@ -860,6 +867,7 @@ export const trialsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       await checkTrialAccess(ctx.db, ctx.session.user.id, input.trialId);
 
+      const executionEngine = getExecutionEngine();
       return executionEngine.getCurrentStep(input.trialId);
     }),
 
