@@ -12,6 +12,7 @@ import {
   Settings,
   Zap,
   User,
+  Bot,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -20,6 +21,7 @@ import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { RobotActionsPanel } from "../RobotActionsPanel";
 
 interface StepData {
   id: string;
@@ -73,9 +75,15 @@ interface WizardControlPanelProps {
     actionId: string,
     parameters?: Record<string, unknown>,
   ) => void;
+  onExecuteRobotAction?: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<void>;
+  studyId?: string;
   _isConnected: boolean;
-  activeTab: "control" | "step" | "actions";
-  onTabChange: (tab: "control" | "step" | "actions") => void;
+  activeTab: "control" | "step" | "actions" | "robot";
+  onTabChange: (tab: "control" | "step" | "actions" | "robot") => void;
   isStarting?: boolean;
 }
 
@@ -90,6 +98,8 @@ export function WizardControlPanel({
   onCompleteTrial,
   onAbortTrial,
   onExecuteAction,
+  onExecuteRobotAction,
+  studyId,
   _isConnected,
   activeTab,
   onTabChange,
@@ -157,14 +167,19 @@ export function WizardControlPanel({
       <Tabs
         value={activeTab}
         onValueChange={(value: string) => {
-          if (value === "control" || value === "step" || value === "actions") {
-            onTabChange(value);
+          if (
+            value === "control" ||
+            value === "step" ||
+            value === "actions" ||
+            value === "robot"
+          ) {
+            onTabChange(value as "control" | "step" | "actions" | "robot");
           }
         }}
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="border-b px-2 py-1">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="control" className="text-xs">
               <Settings className="mr-1 h-3 w-3" />
               Control
@@ -176,6 +191,10 @@ export function WizardControlPanel({
             <TabsTrigger value="actions" className="text-xs">
               <Zap className="mr-1 h-3 w-3" />
               Actions
+            </TabsTrigger>
+            <TabsTrigger value="robot" className="text-xs">
+              <Bot className="mr-1 h-3 w-3" />
+              Robot
             </TabsTrigger>
           </TabsList>
         </div>
@@ -418,6 +437,32 @@ export function WizardControlPanel({
                         : "Actions unavailable - trial not active"}
                     </div>
                   </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Robot Actions Tab */}
+          <TabsContent
+            value="robot"
+            className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+          >
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                {studyId && onExecuteRobotAction ? (
+                  <RobotActionsPanel
+                    studyId={studyId}
+                    trialId={trial.id}
+                    onExecuteAction={onExecuteRobotAction}
+                  />
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Robot actions are not available. Study ID or action
+                      handler is missing.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             </ScrollArea>

@@ -25,7 +25,10 @@ import {
   mediaCaptures,
   users,
 } from "~/server/db/schema";
-import { TrialExecutionEngine } from "~/server/services/trial-execution";
+import {
+  TrialExecutionEngine,
+  type ActionDefinition,
+} from "~/server/services/trial-execution";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -893,5 +896,75 @@ export const trialsRouter = createTRPCRouter({
       });
 
       return { success: true };
+    }),
+
+  executeRobotAction: protectedProcedure
+    .input(
+      z.object({
+        trialId: z.string(),
+        pluginName: z.string(),
+        actionId: z.string(),
+        parameters: z.record(z.string(), z.unknown()).optional().default({}),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.trialId, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      // Use execution engine to execute robot action
+      const executionEngine = getExecutionEngine();
+
+      // Create action definition for execution
+      const actionDefinition: ActionDefinition = {
+        id: `${input.pluginName}.${input.actionId}`,
+        stepId: "manual", // Manual execution
+        name: input.actionId,
+        type: `${input.pluginName}.${input.actionId}`,
+        orderIndex: 0,
+        parameters: input.parameters,
+        timeout: 30000,
+        required: false,
+      };
+
+      const result = await executionEngine.executeAction(
+        input.trialId,
+        actionDefinition,
+      );
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Robot action execution failed",
+        });
+      }
+
+      // Log the manual robot action execution
+      await db.insert(trialEvents).values({
+        trialId: input.trialId,
+        eventType: "manual_robot_action",
+        actionId: actionDefinition.id,
+        data: {
+          userId,
+          pluginName: input.pluginName,
+          actionId: input.actionId,
+          parameters: input.parameters,
+          result: result.data,
+          duration: result.duration,
+        },
+        timestamp: new Date(),
+        createdBy: userId,
+      });
+
+      return {
+        success: true,
+        data: result.data,
+        duration: result.duration,
+      };
     }),
 });

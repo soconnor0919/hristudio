@@ -68,7 +68,7 @@ export function WizardInterface({
 
   // Persistent tab states to prevent resets from parent re-renders
   const [controlPanelTab, setControlPanelTab] = useState<
-    "control" | "step" | "actions"
+    "control" | "step" | "actions" | "robot"
   >("control");
   const [executionPanelTab, setExecutionPanelTab] = useState<
     "current" | "timeline" | "events"
@@ -85,6 +85,20 @@ export function WizardInterface({
       staleTime: 30000,
     },
   );
+
+  // Robot action execution mutation
+  const executeRobotActionMutation = api.trials.executeRobotAction.useMutation({
+    onSuccess: (result) => {
+      toast.success("Robot action executed successfully", {
+        description: `Completed in ${result.duration}ms`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to execute robot action", {
+        description: error.message,
+      });
+    },
+  });
 
   // Map database step types to component step types
   const mapStepType = (dbType: string) => {
@@ -304,6 +318,23 @@ export function WizardInterface({
     }
   };
 
+  const handleExecuteRobotAction = async (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => {
+    try {
+      await executeRobotActionMutation.mutateAsync({
+        trialId: trial.id,
+        pluginName,
+        actionId,
+        parameters,
+      });
+    } catch (error) {
+      console.error("Failed to execute robot action:", error);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Compact Status Bar */}
@@ -370,6 +401,8 @@ export function WizardInterface({
               onCompleteTrial={handleCompleteTrial}
               onAbortTrial={handleAbortTrial}
               onExecuteAction={handleExecuteAction}
+              onExecuteRobotAction={handleExecuteRobotAction}
+              studyId={trial.experiment.studyId}
               _isConnected={true}
               activeTab={controlPanelTab}
               onTabChange={setControlPanelTab}

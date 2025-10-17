@@ -9,8 +9,19 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
 
 import { type db } from "~/server/db";
-import { trials, steps, actions, trialEvents } from "~/server/db/schema";
+import {
+  trials,
+  steps,
+  actions,
+  trialEvents,
+  plugins,
+} from "~/server/db/schema";
 import { eq, asc } from "drizzle-orm";
+import {
+  getRobotCommunicationService,
+  type RobotAction,
+  type RobotActionResult,
+} from "./robot-communication";
 
 export type TrialStatus =
   | "scheduled"
@@ -72,6 +83,8 @@ export class TrialExecutionEngine {
   private db: typeof db;
   private activeTrials = new Map<string, ExecutionContext>();
   private stepDefinitions = new Map<string, StepDefinition[]>();
+  private pluginCache = new Map<string, any>();
+  private robotComm = getRobotCommunicationService();
 
   constructor(database: typeof db) {
     this.db = database;
@@ -377,7 +390,7 @@ export class TrialExecutionEngine {
   /**
    * Execute a single action
    */
-  private async executeAction(
+  async executeAction(
     trialId: string,
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
@@ -488,46 +501,292 @@ export class TrialExecutionEngine {
     trialId: string,
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
+    const startTime = Date.now();
+
     try {
       // Parse plugin.action format
-      const [pluginId, actionType] = action.type.split(".");
+      const [pluginName, actionId] = action.type.split(".");
 
-      // TODO: Integrate with actual robot plugin system
-      // For now, simulate robot action execution
+      if (!pluginName || !actionId) {
+        throw new Error(
+          `Invalid robot action format: ${action.type}. Expected format: plugin.action`,
+        );
+      }
 
-      const simulationDelay = Math.random() * 2000 + 500; // 500ms - 2.5s
+      // Get plugin configuration from database
+      const plugin = await this.getPluginDefinition(pluginName);
+      if (!plugin) {
+        throw new Error(`Plugin not found: ${pluginName}`);
+      }
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          // Simulate success/failure
-          const success = Math.random() > 0.1; // 90% success rate
+      // Find action definition in plugin
+      const actionDefinition = plugin.actions?.find(
+        (a: any) => a.id === actionId,
+      );
+      if (!actionDefinition) {
+        throw new Error(
+          `Action '${actionId}' not found in plugin '${pluginName}'`,
+        );
+      }
 
-          resolve({
-            success,
-            completed: true,
-            duration: simulationDelay,
-            data: {
-              pluginId,
-              actionType,
-              parameters: action.parameters,
-              robotResponse: success
-                ? "Action completed successfully"
-                : "Robot action failed",
-            },
-            error: success ? undefined : "Simulated robot failure",
-          });
-        }, simulationDelay);
-      });
+      // Validate parameters
+      const validatedParams = this.validateActionParameters(
+        actionDefinition,
+        action.parameters,
+      );
+
+      // Execute action through robot communication service
+      const result = await this.executeRobotActionWithComm(
+        plugin,
+        actionDefinition,
+        validatedParams,
+        trialId,
+      );
+
+      const duration = Date.now() - startTime;
+
+      return {
+        success: true,
+        completed: true,
+        duration,
+        data: {
+          pluginName,
+          actionId,
+          parameters: validatedParams,
+          robotResponse: result,
+          platform: plugin.platform,
+        },
+      };
     } catch (error) {
+      const duration = Date.now() - startTime;
+
       return {
         success: false,
         completed: false,
-        duration: 0,
+        duration,
         error:
           error instanceof Error
             ? error.message
             : "Robot action execution failed",
       };
+    }
+  }
+
+  /**
+   * Get plugin definition from database with caching
+   */
+  private async getPluginDefinition(pluginName: string): Promise<any> {
+    // Check cache first
+    if (this.pluginCache.has(pluginName)) {
+      return this.pluginCache.get(pluginName);
+    }
+
+    try {
+      const [plugin] = await this.db
+        .select()
+        .from(plugins)
+        .where(eq(plugins.name, pluginName))
+        .limit(1);
+
+      if (plugin) {
+        // Cache the plugin definition
+        const pluginData = {
+          ...plugin,
+          actions: plugin.actionDefinitions,
+          platform: (plugin.metadata as any)?.platform,
+          ros2Config: (plugin.metadata as any)?.ros2Config,
+        };
+
+        this.pluginCache.set(pluginName, pluginData);
+        return pluginData;
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Failed to load plugin ${pluginName}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate action parameters against plugin schema
+   */
+  private validateActionParameters(
+    actionDefinition: any,
+    parameters: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const validated: Record<string, unknown> = {};
+
+    if (!actionDefinition.parameters) {
+      return parameters;
+    }
+
+    for (const paramDef of actionDefinition.parameters) {
+      const paramName = paramDef.name;
+      const paramValue = parameters[paramName];
+
+      // Required parameter check
+      if (
+        paramDef.required &&
+        (paramValue === undefined || paramValue === null)
+      ) {
+        throw new Error(`Required parameter '${paramName}' is missing`);
+      }
+
+      // Use default value if parameter not provided
+      if (paramValue === undefined && paramDef.default !== undefined) {
+        validated[paramName] = paramDef.default;
+        continue;
+      }
+
+      if (paramValue !== undefined) {
+        // Type validation
+        switch (paramDef.type) {
+          case "number":
+            const numValue = Number(paramValue);
+            if (isNaN(numValue)) {
+              throw new Error(`Parameter '${paramName}' must be a number`);
+            }
+            if (paramDef.min !== undefined && numValue < paramDef.min) {
+              throw new Error(
+                `Parameter '${paramName}' must be >= ${paramDef.min}`,
+              );
+            }
+            if (paramDef.max !== undefined && numValue > paramDef.max) {
+              throw new Error(
+                `Parameter '${paramName}' must be <= ${paramDef.max}`,
+              );
+            }
+            validated[paramName] = numValue;
+            break;
+
+          case "boolean":
+            validated[paramName] = Boolean(paramValue);
+            break;
+
+          case "select":
+            if (paramDef.options) {
+              const validOptions = paramDef.options.map(
+                (opt: any) => opt.value,
+              );
+              if (!validOptions.includes(paramValue)) {
+                throw new Error(
+                  `Parameter '${paramName}' must be one of: ${validOptions.join(", ")}`,
+                );
+              }
+            }
+            validated[paramName] = paramValue;
+            break;
+
+          default:
+            validated[paramName] = paramValue;
+        }
+      }
+    }
+
+    return validated;
+  }
+
+  /**
+   * Execute robot action through robot communication service
+   */
+  private async executeRobotActionWithComm(
+    plugin: any,
+    actionDefinition: any,
+    parameters: Record<string, unknown>,
+    trialId: string,
+  ): Promise<string> {
+    // Ensure robot communication service is available
+    if (!this.robotComm.getConnectionStatus()) {
+      try {
+        await this.robotComm.connect();
+      } catch (error) {
+        throw new Error(
+          `Failed to connect to robot: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }
+
+    // Prepare robot action
+    const robotAction: RobotAction = {
+      pluginName: plugin.name,
+      actionId: actionDefinition.id,
+      parameters,
+      implementation: actionDefinition.implementation,
+    };
+
+    // Execute action through robot communication service
+    const result: RobotActionResult =
+      await this.robotComm.executeAction(robotAction);
+
+    if (!result.success) {
+      throw new Error(result.error || "Robot action failed");
+    }
+
+    // Log the successful action execution
+    await this.logTrialEvent(trialId, "robot_action_executed", {
+      actionId: actionDefinition.id,
+      parameters,
+      platform: plugin.platform,
+      topic: actionDefinition.implementation?.topic,
+      messageType: actionDefinition.implementation?.messageType,
+      duration: result.duration,
+      robotResponse: result.data,
+    });
+
+    // Return human-readable result
+    return this.formatRobotActionResult(
+      plugin,
+      actionDefinition,
+      parameters,
+      result,
+    );
+  }
+
+  /**
+   * Format robot action result for human readability
+   */
+  private formatRobotActionResult(
+    plugin: any,
+    actionDefinition: any,
+    parameters: Record<string, unknown>,
+    result: RobotActionResult,
+  ): string {
+    const actionType = actionDefinition.id;
+    const platform = plugin.platform || "Robot";
+
+    switch (actionType) {
+      case "say_text":
+        return `${platform} said: "${parameters.text}"`;
+
+      case "walk_forward":
+        return `${platform} walked forward at speed ${parameters.speed} for ${parameters.duration || "indefinite"} seconds`;
+
+      case "walk_backward":
+        return `${platform} walked backward at speed ${parameters.speed} for ${parameters.duration || "indefinite"} seconds`;
+
+      case "turn_left":
+      case "turn_right":
+        const direction = actionType.split("_")[1];
+        return `${platform} turned ${direction} at speed ${parameters.speed}`;
+
+      case "move_head":
+        return `${platform} moved head to yaw=${parameters.yaw}, pitch=${parameters.pitch}`;
+
+      case "move_arm":
+        return `${platform} moved ${parameters.arm} arm to specified position`;
+
+      case "stop_movement":
+        return `${platform} stopped all movement`;
+
+      case "set_volume":
+        return `${platform} set volume to ${parameters.volume}`;
+
+      case "set_language":
+        return `${platform} set language to ${parameters.language}`;
+
+      default:
+        return `${platform} executed action: ${actionType} (${result.duration}ms)`;
     }
   }
 
