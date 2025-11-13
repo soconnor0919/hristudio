@@ -306,17 +306,6 @@ async function main() {
         syncStatus: "pending" as const,
         createdBy: seanUser.id,
       },
-      {
-        name: "NAO6 ROS2 Integration Repository",
-        url: "http://localhost:3000/nao6-plugins",
-        description:
-          "Official NAO6 robot plugins for ROS2-based Human-Robot Interaction experiments",
-        trustLevel: "official" as const,
-        isEnabled: true,
-        isOfficial: true,
-        syncStatus: "pending" as const,
-        createdBy: seanUser.id,
-      },
     ];
 
     const insertedRepos = await db
@@ -428,24 +417,30 @@ async function main() {
       );
     }
 
-    // Install NAO plugin for first study if available
-    console.log("🤝 Installing NAO plugin (if available)...");
+    // Install NAO6 ROS2 plugin for first study if available
+    console.log("🤝 Installing NAO6 ROS2 plugin (if available)...");
     const naoPlugin = await db
       .select()
       .from(schema.plugins)
-      .where(eq(schema.plugins.name, "NAO Humanoid Robot"))
+      .where(eq(schema.plugins.name, "NAO6 Robot (ROS2 Integration)"))
       .limit(1);
     if (naoPlugin.length > 0 && insertedStudies[0]) {
       await db.insert(schema.studyPlugins).values({
         studyId: insertedStudies[0].id,
         pluginId: naoPlugin[0]!.id,
-        configuration: { voice: "nao-tts", locale: "en-US" },
+        configuration: {
+          robotIp: "nao.local",
+          websocketUrl: "ws://localhost:9090",
+          maxLinearVelocity: 0.3,
+          maxAngularVelocity: 1.0,
+          defaultSpeed: 0.5,
+        },
         installedBy: seanUser.id,
       });
-      console.log("✅ Installed NAO plugin in first study");
+      console.log("✅ Installed NAO6 ROS2 plugin in first study");
     } else {
       console.log(
-        "ℹ️ NAO plugin not found in repository sync; continuing without it",
+        "ℹ️ NAO6 ROS2 plugin not found in repository sync; continuing without it",
       );
     }
 
@@ -557,31 +552,31 @@ async function main() {
         retryable: false,
       });
 
-      // Resolve NAO plugin id/version for namespaced action type
+      // Resolve NAO6 ROS2 plugin id/version for namespaced action type
       const naoDbPlugin1 = await db
         .select({ id: schema.plugins.id, version: schema.plugins.version })
         .from(schema.plugins)
-        .where(eq(schema.plugins.name, "NAO Humanoid Robot"))
+        .where(eq(schema.plugins.name, "NAO6 Robot (ROS2 Integration)"))
         .limit(1);
       const naoPluginRow1 = naoDbPlugin1[0];
 
-      // Action 1.2: Robot/NAO says text (or wizard says fallback)
+      // Action 1.2: Robot/NAO speaks text
       await db.insert(schema.actions).values({
         stepId: step1Id,
-        name: naoPluginRow1 ? "NAO Say Text" : "Wizard Say",
+        name: naoPluginRow1 ? "NAO Speak Text" : "Wizard Say",
         description: naoPluginRow1
-          ? "Make the robot speak using text-to-speech"
+          ? "Make the robot speak using text-to-speech via ROS2"
           : "Wizard speaks to participant",
-        type: naoPluginRow1 ? `${naoPluginRow1.id}.say_text` : "wizard_say",
+        type: naoPluginRow1 ? `${naoPluginRow1.id}.nao6_speak` : "wizard_say",
         orderIndex: 1,
         parameters: naoPluginRow1
-          ? { text: "Hello, I am NAO. Let's begin!", speed: 110, volume: 0.75 }
+          ? { text: "Hello, I am NAO. Let's begin!", volume: 0.8 }
           : { message: "Hello! Let's begin the session.", tone: "friendly" },
         sourceKind: naoPluginRow1 ? "plugin" : "core",
         pluginId: naoPluginRow1 ? naoPluginRow1.id : null,
         pluginVersion: naoPluginRow1 ? naoPluginRow1.version : null,
         category: naoPluginRow1 ? "robot" : "wizard",
-        transport: naoPluginRow1 ? "rest" : "internal",
+        transport: naoPluginRow1 ? "ros2" : "internal",
         retryable: false,
       });
 
@@ -635,23 +630,23 @@ async function main() {
       const naoDbPlugin2 = await db
         .select({ id: schema.plugins.id, version: schema.plugins.version })
         .from(schema.plugins)
-        .where(eq(schema.plugins.name, "NAO Humanoid Robot"))
+        .where(eq(schema.plugins.name, "NAO6 Robot (ROS2 Integration)"))
         .limit(1);
       const naoPluginRow2 = naoDbPlugin2[0];
 
       if (naoPluginRow2) {
         await db.insert(schema.actions).values({
           stepId: step3Id,
-          name: "Set LED Color",
-          description: "Change NAO's eye LEDs to reflect state",
-          type: `${naoPluginRow2.id}.set_led_color`,
+          name: "NAO Move Head",
+          description: "Move NAO's head to look at participant",
+          type: `${naoPluginRow2.id}.nao6_move_head`,
           orderIndex: 0,
-          parameters: { color: "blue", intensity: 0.6 },
+          parameters: { yaw: 0.0, pitch: -0.2, speed: 0.3 },
           sourceKind: "plugin",
           pluginId: naoPluginRow2.id,
           pluginVersion: naoPluginRow2.version,
           category: "robot",
-          transport: "rest",
+          transport: "ros2",
           retryable: false,
         });
       } else {

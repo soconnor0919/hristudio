@@ -230,7 +230,37 @@ Full paper available at: [docs/paper.md](docs/paper.md)
 - **4 User Roles**: Complete role-based access control
 - **Plugin System**: Extensible robot integration architecture
 - **Trial System**: Unified design with real-time execution capabilities
-- **Mock Robot Integration**: Complete simulation for development and testing
+
+## NAO6 Robot Integration
+
+Complete NAO6 robot integration is available in the separate **[nao6-hristudio-integration](../nao6-hristudio-integration/)** repository.
+
+### Features
+- Complete ROS2 driver integration for NAO V6.0
+- WebSocket communication via rosbridge
+- 9 robot actions: speech, movement, gestures, sensors, LEDs
+- Real-time control from wizard interface
+- Production-ready with NAOqi 2.8.7.4
+
+### Quick Start
+```bash
+# Start NAO integration
+cd ~/naoqi_ros2_ws
+source install/setup.bash
+ros2 launch nao_launch nao6_hristudio.launch.py nao_ip:=nao.local
+
+# Start HRIStudio
+cd ~/Documents/Projects/hristudio
+bun dev
+
+# Test at: http://localhost:3000/nao-test
+```
+
+### Documentation
+- **[Integration README](../nao6-hristudio-integration/README.md)** - Complete setup guide
+- **[NAO6 Quick Reference](docs/nao6-quick-reference.md)** - Essential commands
+- **[Installation Guide](../nao6-hristudio-integration/docs/INSTALLATION.md)** - Detailed setup
+- **[Troubleshooting](../nao6-hristudio-integration/docs/TROUBLESHOOTING.md)** - Common issues
 
 ## Deployment
 

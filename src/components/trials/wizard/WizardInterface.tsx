@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Play, CheckCircle, X, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
@@ -55,7 +55,7 @@ interface StepData {
   order: number;
 }
 
-export function WizardInterface({
+export const WizardInterface = React.memo(function WizardInterface({
   trial: initialTrial,
   userRole: _userRole,
 }: WizardInterfaceProps) {
@@ -120,34 +120,54 @@ export function WizardInterface({
   const { data: pollingData } = api.trials.get.useQuery(
     { id: trial.id },
     {
-      refetchInterval: 2000, // Poll every 2 seconds
+      refetchInterval: trial.status === "in_progress" ? 10000 : 30000, // Poll less frequently
+      staleTime: 5000, // Consider data fresh for 5 seconds
+      refetchOnWindowFocus: false, // Don't refetch on window focus
     },
   );
 
-  // Mock trial events for now (can be populated from database later)
-  const trialEvents: Array<{
-    type: string;
-    timestamp: Date;
-    data?: unknown;
-    message?: string;
-  }> = [];
+  // Memoized trial events to prevent re-creation on every render
+  const trialEvents = useMemo<
+    Array<{
+      type: string;
+      timestamp: Date;
+      data?: unknown;
+      message?: string;
+    }>
+  >(() => [], []);
 
-  // Update trial data from polling
-  React.useEffect(() => {
-    if (pollingData) {
-      setTrial({
-        ...pollingData,
-        metadata: pollingData.metadata as Record<string, unknown> | null,
+  // Update trial data from polling (optimized to prevent unnecessary re-renders)
+  const updateTrial = useCallback((newTrialData: typeof pollingData) => {
+    if (!newTrialData) return;
+
+    setTrial((prevTrial) => {
+      // Only update if data actually changed
+      if (
+        prevTrial.id === newTrialData.id &&
+        prevTrial.status === newTrialData.status &&
+        prevTrial.startedAt === newTrialData.startedAt &&
+        prevTrial.completedAt === newTrialData.completedAt
+      ) {
+        return prevTrial; // No changes, keep existing state
+      }
+
+      return {
+        ...newTrialData,
+        metadata: newTrialData.metadata as Record<string, unknown> | null,
         participant: {
-          ...pollingData.participant,
-          demographics: pollingData.participant.demographics as Record<
+          ...newTrialData.participant,
+          demographics: newTrialData.participant.demographics as Record<
             string,
             unknown
           > | null,
         },
-      });
-    }
-  }, [pollingData]);
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    updateTrial(pollingData);
+  }, [pollingData, updateTrial]);
 
   // Transform experiment steps to component format
   const steps: StepData[] =
@@ -438,6 +458,6 @@ export function WizardInterface({
       </div>
     </div>
   );
-}
+});
 
 export default WizardInterface;

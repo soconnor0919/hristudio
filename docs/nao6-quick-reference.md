@@ -1,155 +1,114 @@
-# NAO6 HRIStudio Quick Reference
+# NAO6 Quick Reference
 
-**Essential commands for NAO6 robot integration with HRIStudio**
+Essential commands for using NAO6 robots with HRIStudio.
 
-## 🚀 Quick Start (5 Steps)
+## Quick Start
 
-### 1. Start ROS Integration
+### 1. Start NAO Integration
 ```bash
 cd ~/naoqi_ros2_ws
 source install/setup.bash
-ros2 launch install/nao_launch/share/nao_launch/launch/nao6_hristudio.launch.py nao_ip:=nao.local password:=robolab
+ros2 launch nao_launch nao6_hristudio.launch.py nao_ip:=nao.local password:=robolab
 ```
 
-### 2. Wake Up Robot (CRITICAL!)
+### 2. Wake Robot
+Press chest button for 3 seconds, or use:
 ```bash
-sshpass -p "robolab" ssh nao@nao.local "python2 -c \"
-import sys
-sys.path.append('/opt/aldebaran/lib/python2.7/site-packages')
-import naoqi
-motion = naoqi.ALProxy('ALMotion', '127.0.0.1', 9559)
-motion.wakeUp()
-print 'Robot awakened'
-\""
+# Via SSH (institution-specific password)
+ssh nao@nao.local
+# Then run wake-up command (see integration repo docs)
 ```
 
 ### 3. Start HRIStudio
 ```bash
-cd /home/robolab/Documents/Projects/hristudio
+cd ~/Documents/Projects/hristudio
 bun dev
 ```
 
-### 4. Access Test Interface
-- URL: `http://localhost:3000/nao-test`
-- Login: `sean@soconnor.dev` / `password123`
+### 4. Test Connection
+- Open: `http://localhost:3000/nao-test`
+- Click "Connect" 
+- Test robot commands
 
-### 5. Test Robot
-- Click "Connect" to WebSocket
-- Try speech: "Hello from HRIStudio!"
-- Use movement buttons to control robot
+## Essential Commands
 
-## 🛠️ Essential Commands
-
-### Connection Testing
+### Test Connectivity
 ```bash
-# Test NAO connectivity
-ping nao.local
-
-# Test NAOqi service
-telnet nao.local 9559
-
-# Check ROS topics
-ros2 topic list | grep naoqi
+ping nao.local                    # Test network
+ros2 topic list | grep naoqi      # Check ROS topics
 ```
 
-### Manual Robot Control
+### Manual Control
 ```bash
-# Speech test
+# Speech
 ros2 topic pub --once /speech std_msgs/String "data: 'Hello world'"
 
-# Movement test (robot must be awake!)
-ros2 topic pub --times 3 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.05, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'
+# Movement (robot must be awake!)
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1}}'
 
-# Head movement test
-ros2 topic pub --once /joint_angles naoqi_bridge_msgs/msg/JointAnglesWithSpeed '{joint_names: ["HeadYaw"], joint_angles: [0.5], speed: 0.3}'
-
-# Stop all movement
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'
+# Stop
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0}}'
 ```
 
-### Status Checks
+### Monitor Status
 ```bash
-# Check robot info
-ros2 service call /naoqi_driver/get_robot_config naoqi_bridge_msgs/srv/GetRobotInfo
+ros2 topic echo /naoqi_driver/battery        # Battery level
+ros2 topic echo /naoqi_driver/joint_states   # Joint positions
+```
 
-# Monitor joint states
-ros2 topic echo /naoqi_driver/joint_states --once
+## Troubleshooting
 
-# Check ROS nodes
-ros2 node list
+**Robot not moving:** Press chest button for 3 seconds to wake up
 
-# Check WebSocket connection
+**WebSocket fails:** Check rosbridge is running on port 9090
+```bash
 ss -an | grep 9090
 ```
 
-## 🔧 Troubleshooting
-
-### Robot Not Moving
-**Problem:** Commands sent but robot doesn't move
-**Solution:** Robot needs to be awakened first
+**Connection lost:** Restart rosbridge
 ```bash
-# Wake up via SSH (see step 2 above)
-# OR press chest button for 3 seconds
+pkill -f rosbridge
+ros2 run rosbridge_server rosbridge_websocket
 ```
 
-### Connection Issues
-```bash
-# Kill existing processes
-sudo fuser -k 9090/tcp
-pkill -f "rosbridge\|naoqi\|ros2"
+## ROS Topics
 
-# Restart database
-sudo docker compose down && sudo docker compose up -d
-```
-
-### Import Errors in Web Interface
-**Problem:** React component import failures
-**Solution:** Use `~` import alias consistently:
-```typescript
-import { Button } from "~/components/ui/button";
-// NOT: import { Button } from "@/components/ui/button";
-```
-
-## 📊 Key Topics
-
-### Input Topics (Robot Control)
+**Commands (Input):**
 - `/speech` - Text-to-speech
-- `/cmd_vel` - Movement commands
-- `/joint_angles` - Joint position control
+- `/cmd_vel` - Movement
+- `/joint_angles` - Joint control
 
-### Output Topics (Sensor Data)
-- `/naoqi_driver/joint_states` - Joint positions/velocities
+**Sensors (Output):**
+- `/naoqi_driver/joint_states` - Joint data
+- `/naoqi_driver/battery` - Battery level
 - `/naoqi_driver/bumper` - Foot sensors
-- `/naoqi_driver/hand_touch` - Hand touch sensors
-- `/naoqi_driver/head_touch` - Head touch sensors
-- `/naoqi_driver/sonar/left` - Left ultrasonic sensor
-- `/naoqi_driver/sonar/right` - Right ultrasonic sensor
-- `/naoqi_driver/camera/front/image_raw` - Front camera
-- `/naoqi_driver/camera/bottom/image_raw` - Bottom camera
+- `/naoqi_driver/sonar/*` - Distance sensors
+- `/naoqi_driver/camera/*` - Camera feeds
 
-## 🔗 WebSocket Integration
+## WebSocket
 
-**ROS Bridge URL:** `ws://134.82.159.25:9090`
+**URL:** `ws://localhost:9090`
 
-**Message Format:**
+**Example message:**
 ```javascript
-// Publish command
 {
   "op": "publish",
   "topic": "/speech",
   "type": "std_msgs/String",
   "msg": {"data": "Hello world"}
 }
-
-// Subscribe to topic
-{
-  "op": "subscribe",
-  "topic": "/naoqi_driver/joint_states",
-  "type": "sensor_msgs/JointState"
-}
 ```
 
-## 🎯 Common Use Cases
+## More Information
+
+See **[nao6-hristudio-integration](../../nao6-hristudio-integration/)** repository for:
+- Complete installation guide
+- Detailed usage instructions
+- Full troubleshooting guide
+- Plugin definitions
+- Launch file configurations
+
+## Common Use Cases
 
 ### Make Robot Speak
 ```bash
