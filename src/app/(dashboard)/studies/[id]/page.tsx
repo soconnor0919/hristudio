@@ -185,7 +185,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
               </Link>
             </Button>
             <Button asChild>
-              <Link href={`/experiments/new?studyId=${study.id}`}>
+              <Link href={`/studies/${study.id}/experiments/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Experiment
               </Link>
@@ -232,7 +232,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
             description="Design and manage experimental protocols for this study"
             actions={
               <Button asChild variant="outline" size="sm">
-                <Link href={`/experiments/new?studyId=${study.id}`}>
+                <Link href={`/studies/${study.id}/experiments/new`}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Experiment
                 </Link>
@@ -246,7 +246,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                 description="Create your first experiment to start designing research protocols"
                 action={
                   <Button asChild>
-                    <Link href={`/experiments/new?studyId=${study.id}`}>
+                    <Link href={`/studies/${study.id}/experiments/new`}>
                       Create First Experiment
                     </Link>
                   </Button>
@@ -263,20 +263,19 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                       <div className="flex items-center space-x-3">
                         <h4 className="font-medium">
                           <Link
-                            href={`/experiments/${experiment.id}`}
+                            href={`/studies/${study.id}/experiments/${experiment.id}`}
                             className="hover:underline"
                           >
                             {experiment.name}
                           </Link>
                         </h4>
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            experiment.status === "draft"
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${experiment.status === "draft"
                               ? "bg-gray-100 text-gray-800"
                               : experiment.status === "ready"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-blue-100 text-blue-800"
-                          }`}
+                            }`}
                         >
                           {experiment.status}
                         </span>
@@ -300,12 +299,12 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/experiments/${experiment.id}/designer`}>
+                        <Link href={`/studies/${study.id}/experiments/${experiment.id}/designer`}>
                           Design
                         </Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/experiments/${experiment.id}`}>View</Link>
+                        <Link href={`/studies/${study.id}/experiments/${experiment.id}`}>View</Link>
                       </Button>
                     </div>
                   </div>

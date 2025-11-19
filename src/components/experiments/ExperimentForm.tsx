@@ -87,33 +87,33 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
     { label: "Studies", href: "/studies" },
     ...(selectedStudyId
       ? [
-          {
-            label: experiment?.study?.name ?? "Study",
-            href: `/studies/${selectedStudyId}`,
-          },
-          { label: "Experiments", href: "/experiments" },
-          ...(mode === "edit" && experiment
-            ? [
-                {
-                  label: experiment.name,
-                  href: `/experiments/${experiment.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Experiment" }]),
-        ]
+        {
+          label: experiment?.study?.name ?? "Study",
+          href: `/studies/${selectedStudyId}`,
+        },
+        { label: "Experiments", href: "/experiments" },
+        ...(mode === "edit" && experiment
+          ? [
+            {
+              label: experiment.name,
+              href: `/studies/${selectedStudyId}/experiments/${experiment.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Experiment" }]),
+      ]
       : [
-          { label: "Experiments", href: "/experiments" },
-          ...(mode === "edit" && experiment
-            ? [
-                {
-                  label: experiment.name,
-                  href: `/experiments/${experiment.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Experiment" }]),
-        ]),
+        { label: "Experiments", href: "/experiments" },
+        ...(mode === "edit" && experiment
+          ? [
+            {
+              label: experiment.name,
+              href: `/studies/${experiment.studyId}/experiments/${experiment.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Experiment" }]),
+      ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -153,14 +153,14 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
           ...data,
           estimatedDuration: data.estimatedDuration ?? undefined,
         });
-        router.push(`/experiments/${newExperiment.id}/designer`);
+        router.push(`/studies/${data.studyId}/experiments/${newExperiment.id}/designer`);
       } else {
         const updatedExperiment = await updateExperimentMutation.mutateAsync({
           id: experimentId!,
           ...data,
           estimatedDuration: data.estimatedDuration ?? undefined,
         });
-        router.push(`/experiments/${updatedExperiment.id}`);
+        router.push(`/studies/${experiment?.studyId ?? data.studyId}/experiments/${updatedExperiment.id}`);
       }
     } catch (error) {
       setError(

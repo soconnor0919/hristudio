@@ -64,7 +64,8 @@ export default function NaoTestPage() {
   const [sensorData, setSensorData] = useState<any>({});
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  const ROS_BRIDGE_URL = "ws://134.82.159.25:9090";
+  const ROS_BRIDGE_URL =
+    process.env.NEXT_PUBLIC_ROS_BRIDGE_URL || "ws://localhost:9090";
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();

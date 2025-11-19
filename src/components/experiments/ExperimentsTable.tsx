@@ -103,7 +103,7 @@ export const columns: ColumnDef<Experiment>[] = [
         <div className="max-w-[200px]">
           <div className="truncate font-medium">
             <Link
-              href={`/experiments/${row.original.id}`}
+              href={`/studies/${row.original.studyId}/experiments/${row.original.id}`}
               className="hover:underline"
             >
               {String(name)}
@@ -263,15 +263,15 @@ export const columns: ColumnDef<Experiment>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}`}>View details</Link>
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>View details</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}/edit`}>
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
                 Edit experiment
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}/designer`}>
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
                 Open designer
               </Link>
             </DropdownMenuItem>

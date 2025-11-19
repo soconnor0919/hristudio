@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
-import { Play } from "lucide-react";
+import { Play, RefreshCw } from "lucide-react";
 
+import { cn } from "~/lib/utils";
 import { PageHeader } from "~/components/ui/page-header";
 
 import { Button } from "~/components/ui/button";
@@ -150,18 +157,26 @@ export function DesignerRoot({
   } = api.experiments.get.useQuery({ id: experimentId });
 
   const updateExperiment = api.experiments.update.useMutation({
-    onSuccess: async () => {
-      toast.success("Experiment saved");
-      await refetchExperiment();
-    },
     onError: (err) => {
       toast.error(`Save failed: ${err.message}`);
     },
   });
 
-  const { data: studyPlugins } = api.robots.plugins.getStudyPlugins.useQuery(
+  const { data: studyPluginsRaw } = api.robots.plugins.getStudyPlugins.useQuery(
     { studyId: experiment?.studyId ?? "" },
     { enabled: !!experiment?.studyId },
+  );
+
+  // Map studyPlugins to format expected by DependencyInspector
+  const studyPlugins = useMemo(
+    () =>
+      studyPluginsRaw?.map((sp) => ({
+        id: sp.plugin.id,
+        robotId: sp.plugin.robotId ?? "",
+        name: sp.plugin.name,
+        version: sp.plugin.version,
+      })),
+    [studyPluginsRaw],
   );
 
   /* ------------------------------ Store Access ----------------------------- */
@@ -230,6 +245,7 @@ export function DesignerRoot({
   const [isSaving, setIsSaving] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isReady, setIsReady] = useState(false); // Track when everything is loaded
 
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined);
   const [inspectorTab, setInspectorTab] = useState<
@@ -250,6 +266,13 @@ export function DesignerRoot({
   useEffect(() => {
     if (initialized) return;
     if (loadingExperiment && !initialDesign) return;
+
+    console.log('[DesignerRoot] 🚀 INITIALIZING', {
+      hasExperiment: !!experiment,
+      hasInitialDesign: !!initialDesign,
+      loadingExperiment,
+    });
+
     const adapted =
       initialDesign ??
       (experiment
@@ -274,8 +297,9 @@ export function DesignerRoot({
       setValidatedHash(ih);
     }
     setInitialized(true);
-    // Kick initial hash
-    void recomputeHash();
+    // NOTE: We don't call recomputeHash() here because the automatic
+    // hash recomputation useEffect will trigger when setSteps() updates the steps array
+    console.log('[DesignerRoot] 🚀 Initialization complete, steps set');
   }, [
     initialized,
     loadingExperiment,
@@ -299,25 +323,68 @@ export function DesignerRoot({
   // Load plugin actions when study plugins available
   useEffect(() => {
     if (!experiment?.studyId) return;
-    if (!studyPlugins || studyPlugins.length === 0) return;
-    actionRegistry.loadPluginActions(
-      experiment.studyId,
-      studyPlugins.map((sp) => ({
-        plugin: {
-          id: sp.plugin.id,
-          robotId: sp.plugin.robotId,
-          version: sp.plugin.version,
-          actionDefinitions: Array.isArray(sp.plugin.actionDefinitions)
-            ? sp.plugin.actionDefinitions
-            : undefined,
-        },
-      })),
-    );
-  }, [experiment?.studyId, studyPlugins]);
+    if (!studyPluginsRaw) return;
+    // @ts-expect-error - studyPluginsRaw type from tRPC is compatible but TypeScript can't infer it
+    actionRegistry.loadPluginActions(experiment.studyId, studyPluginsRaw);
+  }, [experiment?.studyId, studyPluginsRaw]);
+
+  /* ------------------------- Ready State Management ------------------------ */
+  // Mark as ready once initialized and plugins are loaded
+  useEffect(() => {
+    if (!initialized || isReady) return;
+
+    // Check if plugins are loaded by verifying the action registry has plugin actions
+    const debugInfo = actionRegistry.getDebugInfo();
+    const hasPlugins = debugInfo.pluginActionsLoaded;
+
+    if (hasPlugins) {
+      // Small delay to ensure all components have rendered
+      const timer = setTimeout(() => {
+        setIsReady(true);
+        console.log('[DesignerRoot] ✅ Designer ready (plugins loaded), fading in');
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [initialized, isReady, studyPluginsRaw]);
+
+  /* ----------------------- Automatic Hash Recomputation -------------------- */
+  // Automatically recompute hash when steps change (debounced to avoid excessive computation)
+  useEffect(() => {
+    if (!initialized) return;
+
+    console.log('[DesignerRoot] Steps changed, scheduling hash recomputation', {
+      stepsCount: steps.length,
+      actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
+    });
+
+    const timeoutId = setTimeout(async () => {
+      console.log('[DesignerRoot] Executing debounced hash recomputation');
+      const result = await recomputeHash();
+      if (result) {
+        console.log('[DesignerRoot] Hash recomputed:', {
+          newHash: result.designHash.slice(0, 16),
+          fullHash: result.designHash,
+        });
+      }
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [steps, initialized, recomputeHash]);
+
 
   /* ----------------------------- Derived State ----------------------------- */
   const hasUnsavedChanges =
     !!currentDesignHash && lastPersistedHash !== currentDesignHash;
+
+  // Debug logging to track hash updates and save button state
+  useEffect(() => {
+    console.log('[DesignerRoot] Hash State:', {
+      currentDesignHash: currentDesignHash?.slice(0, 10),
+      lastPersistedHash: lastPersistedHash?.slice(0, 10),
+      hasUnsavedChanges,
+      stepsCount: steps.length,
+    });
+  }, [currentDesignHash, lastPersistedHash, hasUnsavedChanges, steps.length]);
 
   /* ------------------------------- Step Ops -------------------------------- */
   const createNewStep = useCallback(() => {
@@ -386,8 +453,7 @@ export function DesignerRoot({
       }
     } catch (err) {
       toast.error(
-        `Validation error: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Validation error: ${err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -404,6 +470,14 @@ export function DesignerRoot({
   /* --------------------------------- Save ---------------------------------- */
   const persist = useCallback(async () => {
     if (!initialized) return;
+
+    console.log('[DesignerRoot] 💾 SAVE initiated', {
+      stepsCount: steps.length,
+      actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
+      currentHash: currentDesignHash?.slice(0, 16),
+      lastPersistedHash: lastPersistedHash?.slice(0, 16),
+    });
+
     setIsSaving(true);
     try {
       const visualDesign = {
@@ -411,15 +485,43 @@ export function DesignerRoot({
         version: designMeta.version,
         lastSaved: new Date().toISOString(),
       };
-      updateExperiment.mutate({
+
+      console.log('[DesignerRoot] 💾 Sending to server...', {
+        experimentId,
+        stepsCount: steps.length,
+        version: designMeta.version,
+      });
+
+      // Wait for mutation to complete
+      await updateExperiment.mutateAsync({
         id: experimentId,
         visualDesign,
         createSteps: true,
         compileExecution: autoCompile,
       });
-      // Optimistic hash recompute
-      await recomputeHash();
+
+      console.log('[DesignerRoot] 💾 Server save successful');
+
+      // NOTE: We do NOT refetch here because it would reset the local steps state
+      // to the server state, which would cause the hash to match the persisted hash,
+      // preventing the save button from re-enabling on subsequent changes.
+      // The local state is already the source of truth after a successful save.
+
+      // Recompute hash and update persisted hash
+      const hashResult = await recomputeHash();
+      if (hashResult?.designHash) {
+        console.log('[DesignerRoot] 💾 Updated persisted hash:', {
+          newPersistedHash: hashResult.designHash.slice(0, 16),
+          fullHash: hashResult.designHash,
+        });
+        setPersistedHash(hashResult.designHash);
+      }
+
       setLastSavedAt(new Date());
+      toast.success("Experiment saved");
+
+      console.log('[DesignerRoot] 💾 SAVE complete');
+
       onPersist?.({
         id: experimentId,
         name: designMeta.name,
@@ -428,16 +530,22 @@ export function DesignerRoot({
         version: designMeta.version,
         lastSaved: new Date(),
       });
+    } catch (error) {
+      console.error('[DesignerRoot] 💾 SAVE failed:', error);
+      // Error already handled by mutation onError
     } finally {
       setIsSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialized,
     steps,
     designMeta,
     experimentId,
-    updateExperiment,
     recomputeHash,
+    currentDesignHash,
+    setPersistedHash,
+    refetchExperiment,
     onPersist,
     autoCompile,
   ]);
@@ -479,8 +587,7 @@ export function DesignerRoot({
       toast.success("Exported design bundle");
     } catch (err) {
       toast.error(
-        `Export failed: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Export failed: ${err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -489,10 +596,14 @@ export function DesignerRoot({
   }, [currentDesignHash, steps, experimentId, designMeta, experiment]);
 
   /* ---------------------------- Incremental Hash --------------------------- */
+  // Serialize steps for stable comparison
+  const stepsHash = useMemo(() => JSON.stringify(steps), [steps]);
+
   useEffect(() => {
     if (!initialized) return;
     void recomputeHash();
-  }, [steps.length, initialized, recomputeHash]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepsHash, initialized]);
 
   useEffect(() => {
     if (selectedStepId || selectedActionId) {
@@ -627,17 +738,17 @@ export function DesignerRoot({
 
         const execution: ExperimentAction["execution"] =
           actionDef.execution &&
-          (actionDef.execution.transport === "internal" ||
-            actionDef.execution.transport === "rest" ||
-            actionDef.execution.transport === "ros2")
+            (actionDef.execution.transport === "internal" ||
+              actionDef.execution.transport === "rest" ||
+              actionDef.execution.transport === "ros2")
             ? {
-                transport: actionDef.execution.transport,
-                retryable: actionDef.execution.retryable ?? false,
-              }
+              transport: actionDef.execution.transport,
+              retryable: actionDef.execution.retryable ?? false,
+            }
             : {
-                transport: "internal",
-                retryable: false,
-              };
+              transport: "internal",
+              retryable: false,
+            };
         const newAction: ExperimentAction = {
           id: `action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           type: actionDef.type,
@@ -677,80 +788,104 @@ export function DesignerRoot({
     );
   }
 
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        size="sm"
+        variant="default"
+        className="h-8 px-3 text-xs"
+        onClick={() => validateDesign()}
+        disabled={isValidating}
+      >
+        Validate
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="h-8 px-3 text-xs"
+        onClick={() => persist()}
+        disabled={!hasUnsavedChanges || isSaving}
+      >
+        Save
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <PageHeader
         title={designMeta.name}
-        description="Compose ordered steps with provenance-aware actions."
+        description={designMeta.description || "No description"}
         icon={Play}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              className="h-8 px-3 text-xs"
-              onClick={() => validateDesign()}
-              disabled={isValidating}
-            >
-              Validate
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 px-3 text-xs"
-              onClick={() => persist()}
-              disabled={!hasUnsavedChanges || isSaving}
-            >
-              Save
-            </Button>
-          </div>
-        }
+        actions={actions}
       />
 
-      <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => toggleLibraryScrollLock(false)}
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        {/* Loading Overlay */}
+        {!isReady && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-sm">Loading designer...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content - Fade in when ready */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col overflow-hidden transition-opacity duration-500",
+            isReady ? "opacity-100" : "opacity-0"
+          )}
         >
-          <PanelsContainer
-            showDividers
-            className="min-h-0 flex-1"
-            left={
-              <div ref={libraryRootRef} data-library-root className="h-full">
-                <ActionLibraryPanel />
-              </div>
-            }
-            center={<FlowWorkspace />}
-            right={
-              <div className="h-full">
-                <InspectorPanel
-                  activeTab={inspectorTab}
-                  onTabChange={setInspectorTab}
-                />
-              </div>
-            }
-          />
-          <DragOverlay>
-            {dragOverlayAction ? (
-              <div className="bg-background pointer-events-none rounded border px-2 py-1 text-xs shadow-lg select-none">
-                {dragOverlayAction.name}
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-        <div className="flex-shrink-0 border-t">
-          <BottomStatusBar
-            onSave={() => persist()}
-            onValidate={() => validateDesign()}
-            onExport={() => handleExport()}
-            lastSavedAt={lastSavedAt}
-            saving={isSaving}
-            validating={isValidating}
-            exporting={isExporting}
-          />
+          <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => toggleLibraryScrollLock(false)}
+            >
+              <PanelsContainer
+                showDividers
+                className="min-h-0 flex-1"
+                left={
+                  <div ref={libraryRootRef} data-library-root className="h-full">
+                    <ActionLibraryPanel />
+                  </div>
+                }
+                center={<FlowWorkspace />}
+                right={
+                  <div className="h-full">
+                    <InspectorPanel
+                      activeTab={inspectorTab}
+                      onTabChange={setInspectorTab}
+                      studyPlugins={studyPlugins}
+                    />
+                  </div>
+                }
+              />
+              <DragOverlay>
+                {dragOverlayAction ? (
+                  <div className="bg-background pointer-events-none rounded border px-2 py-1 text-xs shadow-lg select-none">
+                    {dragOverlayAction.name}
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+            <div className="flex-shrink-0 border-t">
+              <BottomStatusBar
+                onSave={() => persist()}
+                onValidate={() => validateDesign()}
+                onExport={() => handleExport()}
+                onRecalculateHash={() => recomputeHash()}
+                lastSavedAt={lastSavedAt}
+                saving={isSaving}
+                validating={isValidating}
+                exporting={isExporting}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

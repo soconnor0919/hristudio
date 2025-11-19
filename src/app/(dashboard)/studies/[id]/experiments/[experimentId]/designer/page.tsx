@@ -11,7 +11,7 @@ import { DesignerPageClient } from "./DesignerPageClient";
 
 interface ExperimentDesignerPageProps {
   params: Promise<{
-    id: string;
+    experimentId: string;
   }>;
 }
 
@@ -20,7 +20,7 @@ export default async function ExperimentDesignerPage({
 }: ExperimentDesignerPageProps) {
   try {
     const resolvedParams = await params;
-    const experiment = await api.experiments.get({ id: resolvedParams.id });
+    const experiment = await api.experiments.get({ id: resolvedParams.experimentId });
 
     if (!experiment) {
       notFound();
@@ -36,13 +36,13 @@ export default async function ExperimentDesignerPage({
     // Only pass initialDesign if there's existing visual design data
     let initialDesign:
       | {
-          id: string;
-          name: string;
-          description: string;
-          steps: ExperimentStep[];
-          version: number;
-          lastSaved: Date;
-        }
+        id: string;
+        name: string;
+        description: string;
+        steps: ExperimentStep[];
+        version: number;
+        lastSaved: Date;
+      }
       | undefined;
 
     if (existingDesign?.steps && existingDesign.steps.length > 0) {
@@ -258,7 +258,7 @@ export async function generateMetadata({
 }> {
   try {
     const resolvedParams = await params;
-    const experiment = await api.experiments.get({ id: resolvedParams.id });
+    const experiment = await api.experiments.get({ id: resolvedParams.experimentId });
 
     return {
       title: `${experiment?.name} - Designer | HRIStudio`,

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -79,6 +79,85 @@ export function PropertiesPanel({
   className,
 }: PropertiesPanelProps) {
   const registry = actionRegistry;
+
+  // Local state for controlled inputs
+  const [localActionName, setLocalActionName] = useState("");
+  const [localStepName, setLocalStepName] = useState("");
+  const [localStepDescription, setLocalStepDescription] = useState("");
+  const [localParams, setLocalParams] = useState<Record<string, unknown>>({});
+
+  // Debounce timers
+  const actionUpdateTimer = useRef<NodeJS.Timeout | undefined>(undefined);
+  const stepUpdateTimer = useRef<NodeJS.Timeout | undefined>(undefined);
+  const paramUpdateTimers = useRef(new Map<string, NodeJS.Timeout>());
+
+  // Sync local state when selection ID changes (not on every object recreation)
+  useEffect(() => {
+    if (selectedAction) {
+      setLocalActionName(selectedAction.name);
+      setLocalParams(selectedAction.parameters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAction?.id]);
+
+  useEffect(() => {
+    if (selectedStep) {
+      setLocalStepName(selectedStep.name);
+      setLocalStepDescription(selectedStep.description ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStep?.id]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    const timersMap = paramUpdateTimers.current;
+    return () => {
+      if (actionUpdateTimer.current) clearTimeout(actionUpdateTimer.current);
+      if (stepUpdateTimer.current) clearTimeout(stepUpdateTimer.current);
+      timersMap.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
+  // Debounced update handlers
+  const debouncedActionUpdate = useCallback(
+    (stepId: string, actionId: string, updates: Partial<ExperimentAction>) => {
+      if (actionUpdateTimer.current) clearTimeout(actionUpdateTimer.current);
+      actionUpdateTimer.current = setTimeout(() => {
+        onActionUpdate(stepId, actionId, updates);
+      }, 300);
+    },
+    [onActionUpdate],
+  );
+
+  const debouncedStepUpdate = useCallback(
+    (stepId: string, updates: Partial<ExperimentStep>) => {
+      if (stepUpdateTimer.current) clearTimeout(stepUpdateTimer.current);
+      stepUpdateTimer.current = setTimeout(() => {
+        onStepUpdate(stepId, updates);
+      }, 300);
+    },
+    [onStepUpdate],
+  );
+
+  const debouncedParamUpdate = useCallback(
+    (stepId: string, actionId: string, paramId: string, value: unknown) => {
+      const existing = paramUpdateTimers.current.get(paramId);
+      if (existing) clearTimeout(existing);
+
+      const timer = setTimeout(() => {
+        onActionUpdate(stepId, actionId, {
+          parameters: {
+            ...selectedAction?.parameters,
+            [paramId]: value,
+          },
+        });
+        paramUpdateTimers.current.delete(paramId);
+      }, 300);
+
+      paramUpdateTimers.current.set(paramId, timer);
+    },
+    [onActionUpdate, selectedAction?.parameters],
+  );
 
   // Find containing step for selected action (if any)
   const containingStep =
@@ -176,12 +255,21 @@ export function PropertiesPanel({
           <div>
             <Label className="text-xs">Display Name</Label>
             <Input
-              value={selectedAction.name}
-              onChange={(e) =>
-                onActionUpdate(containingStep.id, selectedAction.id, {
-                  name: e.target.value,
-                })
-              }
+              value={localActionName}
+              onChange={(e) => {
+                const newName = e.target.value;
+                setLocalActionName(newName);
+                debouncedActionUpdate(containingStep.id, selectedAction.id, {
+                  name: newName,
+                });
+              }}
+              onBlur={() => {
+                if (localActionName !== selectedAction.name) {
+                  onActionUpdate(containingStep.id, selectedAction.id, {
+                    name: localActionName,
+                  });
+                }
+              }}
               className="mt-1 h-7 w-full text-xs"
             />
           </div>
@@ -210,6 +298,17 @@ export function PropertiesPanel({
 
                 /* ---- Handlers ---- */
                 const updateParamValue = (value: unknown) => {
+                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
+                  debouncedParamUpdate(
+                    containingStep.id,
+                    selectedAction.id,
+                    param.id,
+                    value,
+                  );
+                };
+
+                const updateParamValueImmediate = (value: unknown) => {
+                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
                   onActionUpdate(containingStep.id, selectedAction.id, {
                     parameters: {
                       ...selectedAction.parameters,
@@ -218,23 +317,50 @@ export function PropertiesPanel({
                   });
                 };
 
+                const updateParamLocal = (value: unknown) => {
+                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
+                };
+
+                const commitParamValue = () => {
+                  if (localParams[param.id] !== rawValue) {
+                    onActionUpdate(containingStep.id, selectedAction.id, {
+                      parameters: {
+                        ...selectedAction.parameters,
+                        [param.id]: localParams[param.id],
+                      },
+                    });
+                  }
+                };
+
                 /* ---- Control Rendering ---- */
                 let control: React.ReactNode = null;
 
                 if (param.type === "text") {
+                  const localValue = localParams[param.id] ?? rawValue ?? "";
                   control = (
                     <Input
-                      value={(rawValue as string) ?? ""}
+                      value={localValue as string}
                       placeholder={param.placeholder}
                       onChange={(e) => updateParamValue(e.target.value)}
+                      onBlur={() => {
+                        if (localParams[param.id] !== rawValue) {
+                          onActionUpdate(containingStep.id, selectedAction.id, {
+                            parameters: {
+                              ...selectedAction.parameters,
+                              [param.id]: localParams[param.id],
+                            },
+                          });
+                        }
+                      }}
                       className="mt-1 h-7 w-full text-xs"
                     />
                   );
                 } else if (param.type === "select") {
+                  const localValue = localParams[param.id] ?? rawValue ?? "";
                   control = (
                     <Select
-                      value={(rawValue as string) ?? ""}
-                      onValueChange={(val) => updateParamValue(val)}
+                      value={localValue as string}
+                      onValueChange={(val) => updateParamValueImmediate(val)}
                     >
                       <SelectTrigger className="mt-1 h-7 w-full text-xs">
                         <SelectValue placeholder="Select…" />
@@ -249,22 +375,26 @@ export function PropertiesPanel({
                     </Select>
                   );
                 } else if (param.type === "boolean") {
+                  const localValue = localParams[param.id] ?? rawValue ?? false;
                   control = (
                     <div className="mt-1 flex h-7 items-center">
                       <Switch
-                        checked={Boolean(rawValue)}
-                        onCheckedChange={(val) => updateParamValue(val)}
+                        checked={Boolean(localValue)}
+                        onCheckedChange={(val) =>
+                          updateParamValueImmediate(val)
+                        }
                         aria-label={param.name}
                       />
                       <span className="text-muted-foreground ml-2 text-[11px]">
-                        {Boolean(rawValue) ? "Enabled" : "Disabled"}
+                        {Boolean(localValue) ? "Enabled" : "Disabled"}
                       </span>
                     </div>
                   );
                 } else if (param.type === "number") {
+                  const localValue = localParams[param.id] ?? rawValue;
                   const numericVal =
-                    typeof rawValue === "number"
-                      ? rawValue
+                    typeof localValue === "number"
+                      ? localValue
                       : typeof param.value === "number"
                         ? param.value
                         : (param.min ?? 0);
@@ -295,8 +425,9 @@ export function PropertiesPanel({
                             step={step}
                             value={[Number(numericVal)]}
                             onValueChange={(vals: number[]) =>
-                              updateParamValue(vals[0])
+                              updateParamLocal(vals[0])
                             }
+                            onPointerUp={commitParamValue}
                           />
                           <span className="text-muted-foreground min-w-[2.5rem] text-right text-[10px] tabular-nums">
                             {step < 1
@@ -318,6 +449,20 @@ export function PropertiesPanel({
                         onChange={(e) =>
                           updateParamValue(parseFloat(e.target.value) || 0)
                         }
+                        onBlur={() => {
+                          if (localParams[param.id] !== rawValue) {
+                            onActionUpdate(
+                              containingStep.id,
+                              selectedAction.id,
+                              {
+                                parameters: {
+                                  ...selectedAction.parameters,
+                                  [param.id]: localParams[param.id],
+                                },
+                              },
+                            );
+                          }
+                        }}
                         className="mt-1 h-7 w-full text-xs"
                       />
                     );
@@ -373,23 +518,41 @@ export function PropertiesPanel({
               <div>
                 <Label className="text-xs">Name</Label>
                 <Input
-                  value={selectedStep.name}
-                  onChange={(e) =>
-                    onStepUpdate(selectedStep.id, { name: e.target.value })
-                  }
+                  value={localStepName}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setLocalStepName(newName);
+                    debouncedStepUpdate(selectedStep.id, { name: newName });
+                  }}
+                  onBlur={() => {
+                    if (localStepName !== selectedStep.name) {
+                      onStepUpdate(selectedStep.id, { name: localStepName });
+                    }
+                  }}
                   className="mt-1 h-7 w-full text-xs"
                 />
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
                 <Input
-                  value={selectedStep.description ?? ""}
+                  value={localStepDescription}
                   placeholder="Optional step description"
-                  onChange={(e) =>
-                    onStepUpdate(selectedStep.id, {
-                      description: e.target.value,
-                    })
-                  }
+                  onChange={(e) => {
+                    const newDesc = e.target.value;
+                    setLocalStepDescription(newDesc);
+                    debouncedStepUpdate(selectedStep.id, {
+                      description: newDesc,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (
+                      localStepDescription !== (selectedStep.description ?? "")
+                    ) {
+                      onStepUpdate(selectedStep.id, {
+                        description: localStepDescription,
+                      });
+                    }
+                  }}
                   className="mt-1 h-7 w-full text-xs"
                 />
               </div>
@@ -405,9 +568,9 @@ export function PropertiesPanel({
                 <Label className="text-xs">Type</Label>
                 <Select
                   value={selectedStep.type}
-                  onValueChange={(val) =>
-                    onStepUpdate(selectedStep.id, { type: val as StepType })
-                  }
+                  onValueChange={(val) => {
+                    onStepUpdate(selectedStep.id, { type: val as StepType });
+                  }}
                 >
                   <SelectTrigger className="mt-1 h-7 w-full text-xs">
                     <SelectValue />
@@ -424,14 +587,14 @@ export function PropertiesPanel({
                 <Label className="text-xs">Trigger</Label>
                 <Select
                   value={selectedStep.trigger.type}
-                  onValueChange={(val) =>
+                  onValueChange={(val) => {
                     onStepUpdate(selectedStep.id, {
                       trigger: {
                         ...selectedStep.trigger,
                         type: val as TriggerType,
                       },
-                    })
-                  }
+                    });
+                  }}
                 >
                   <SelectTrigger className="mt-1 h-7 w-full text-xs">
                     <SelectValue />

@@ -88,8 +88,8 @@ function DraggableAction({
 
   const style: React.CSSProperties = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    }
     : {};
 
   const IconComponent = iconMap[action.icon] ?? Sparkles;
@@ -487,4 +487,6 @@ export function ActionLibraryPanel() {
   );
 }
 
-export default ActionLibraryPanel;
+// Wrap in React.memo to prevent unnecessary re-renders causing flashing in categories
+export default React.memo(ActionLibraryPanel);
+

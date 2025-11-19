@@ -70,7 +70,7 @@ export function getCameraImage(
 ): Record<string, unknown> {
   const camera = params.camera as string;
   const topic =
-    camera === "front" ? "/camera/front/image_raw" : "/camera/bottom/image_raw";
+    camera === "front" ? "/naoqi_driver/camera/front/image_raw" : "/naoqi_driver/camera/bottom/image_raw";
 
   return {
     subscribe: true,
@@ -88,7 +88,7 @@ export function getJointStates(
 ): Record<string, unknown> {
   return {
     subscribe: true,
-    topic: "/joint_states",
+    topic: "/naoqi_driver/joint_states",
     messageType: "sensor_msgs/msg/JointState",
     once: true,
   };
@@ -102,7 +102,7 @@ export function getImuData(
 ): Record<string, unknown> {
   return {
     subscribe: true,
-    topic: "/imu/torso",
+    topic: "/naoqi_driver/imu/torso",
     messageType: "sensor_msgs/msg/Imu",
     once: true,
   };
@@ -116,7 +116,7 @@ export function getBumperStatus(
 ): Record<string, unknown> {
   return {
     subscribe: true,
-    topic: "/bumper",
+    topic: "/naoqi_driver/bumper",
     messageType: "naoqi_bridge_msgs/msg/Bumper",
     once: true,
   };
@@ -129,7 +129,7 @@ export function getTouchSensors(
   params: Record<string, unknown>,
 ): Record<string, unknown> {
   const sensorType = params.sensor_type as string;
-  const topic = sensorType === "hand" ? "/hand_touch" : "/head_touch";
+  const topic = sensorType === "hand" ? "/naoqi_driver/hand_touch" : "/naoqi_driver/head_touch";
   const messageType =
     sensorType === "hand"
       ? "naoqi_bridge_msgs/msg/HandTouch"
@@ -153,12 +153,12 @@ export function getSonarRange(
   let topic: string;
 
   if (sensor === "left") {
-    topic = "/sonar/left";
+    topic = "/naoqi_driver/sonar/left";
   } else if (sensor === "right") {
-    topic = "/sonar/right";
+    topic = "/naoqi_driver/sonar/right";
   } else {
     // For "both", we'll default to left and let the wizard interface handle multiple calls
-    topic = "/sonar/left";
+    topic = "/naoqi_driver/sonar/left";
   }
 
   return {
@@ -177,7 +177,7 @@ export function getRobotInfo(
 ): Record<string, unknown> {
   return {
     subscribe: true,
-    topic: "/info",
+    topic: "/naoqi_driver/info",
     messageType: "naoqi_bridge_msgs/msg/RobotInfo",
     once: true,
   };

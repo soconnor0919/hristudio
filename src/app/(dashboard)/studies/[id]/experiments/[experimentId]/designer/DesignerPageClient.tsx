@@ -48,7 +48,7 @@ export function DesignerPageClient({
     },
     {
       label: experiment.name,
-      href: `/experiments/${experiment.id}`,
+      href: `/studies/${experiment.study.id}/experiments/${experiment.id}`,
     },
     {
       label: "Designer",

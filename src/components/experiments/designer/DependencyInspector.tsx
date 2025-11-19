@@ -58,6 +58,15 @@ export interface DependencyInspectorProps {
    */
   actionDefinitions: ActionDefinition[];
   /**
+   * Study plugins with name and metadata
+   */
+  studyPlugins?: Array<{
+    id: string;
+    robotId: string;
+    name: string;
+    version: string;
+  }>;
+  /**
    * Called when user wants to reconcile a drifted action
    */
   onReconcileAction?: (actionId: string) => void;
@@ -80,6 +89,12 @@ function extractPluginDependencies(
   steps: ExperimentStep[],
   actionDefinitions: ActionDefinition[],
   driftedActions: Set<string>,
+  studyPlugins?: Array<{
+    id: string;
+    robotId: string;
+    name: string;
+    version: string;
+  }>,
 ): PluginDependency[] {
   const dependencyMap = new Map<string, PluginDependency>();
 
@@ -134,9 +149,12 @@ function extractPluginDependencies(
         dep.installedVersion = dep.version;
       }
 
-      // Set plugin name from first available definition
+      // Set plugin name from studyPlugins if available
       if (availableActions[0]) {
-        dep.name = availableActions[0].source.pluginId; // Could be enhanced with actual plugin name
+        const pluginMeta = studyPlugins?.find(
+          (p) => p.robotId === dep.pluginId,
+        );
+        dep.name = pluginMeta?.name ?? dep.pluginId;
       }
     }
   });
@@ -247,7 +265,9 @@ function PluginDependencyItem({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{dependency.pluginId}</span>
+            <span className="text-sm font-medium">
+              {dependency.name ?? dependency.pluginId}
+            </span>
             <Badge
               variant={config.badgeVariant}
               className={cn("h-4 text-[10px]", config.badgeColor)}
@@ -382,6 +402,7 @@ export function DependencyInspector({
   steps,
   actionSignatureDrift,
   actionDefinitions,
+  studyPlugins,
   onReconcileAction,
   onRefreshDependencies,
   onInstallPlugin,
@@ -389,8 +410,13 @@ export function DependencyInspector({
 }: DependencyInspectorProps) {
   const dependencies = useMemo(
     () =>
-      extractPluginDependencies(steps, actionDefinitions, actionSignatureDrift),
-    [steps, actionDefinitions, actionSignatureDrift],
+      extractPluginDependencies(
+        steps,
+        actionDefinitions,
+        actionSignatureDrift,
+        studyPlugins,
+      ),
+    [steps, actionDefinitions, actionSignatureDrift, studyPlugins],
   );
 
   const drifts = useMemo(

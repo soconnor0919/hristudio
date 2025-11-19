@@ -111,7 +111,7 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
       className={cn(
         "pointer-events-none absolute inset-0 rounded-md transition-colors",
         isOver &&
-          "bg-blue-50/40 ring-2 ring-blue-400/60 ring-offset-0 dark:bg-blue-950/20",
+        "bg-blue-50/40 ring-2 ring-blue-400/60 ring-offset-0 dark:bg-blue-950/20",
       )}
     />
   );
@@ -182,11 +182,11 @@ function SortableActionChip({
             "h-2.5 w-2.5 rounded-full",
             def
               ? {
-                  wizard: "bg-blue-500",
-                  robot: "bg-emerald-500",
-                  control: "bg-amber-500",
-                  observation: "bg-purple-500",
-                }[def.category]
+                wizard: "bg-blue-500",
+                robot: "bg-emerald-500",
+                control: "bg-amber-500",
+                observation: "bg-purple-500",
+              }[def.category]
               : "bg-slate-400",
           )}
         />
@@ -608,7 +608,7 @@ export function FlowWorkspace({
                         renameStep(
                           step,
                           (e.target as HTMLInputElement).value.trim() ||
-                            step.name,
+                          step.name,
                         );
                         setRenamingStepId(null);
                         void recomputeHash();
@@ -777,4 +777,6 @@ export function FlowWorkspace({
   );
 }
 
-export default FlowWorkspace;
+// Wrap in React.memo to prevent unnecessary re-renders causing flashing
+export default React.memo(FlowWorkspace);
+
