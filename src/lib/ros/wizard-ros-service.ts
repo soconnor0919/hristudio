@@ -246,10 +246,8 @@ export class WizardRosService extends EventEmitter {
   private subscribeToRobotTopics(): void {
     const topics = [
       { topic: "/joint_states", type: "sensor_msgs/JointState" },
-      {
-        topic: "/naoqi_driver/battery",
-        type: "naoqi_bridge_msgs/BatteryState",
-      },
+      // Battery topic removed - BatteryState message type doesn't exist in naoqi_bridge_msgs
+      // Battery info can be obtained through diagnostics or other means if needed
       { topic: "/naoqi_driver/bumper", type: "naoqi_bridge_msgs/Bumper" },
       {
         topic: "/naoqi_driver/hand_touch",
