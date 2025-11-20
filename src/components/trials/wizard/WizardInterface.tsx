@@ -10,7 +10,7 @@ import { WizardControlPanel } from "./panels/WizardControlPanel";
 import { WizardExecutionPanel } from "./panels/WizardExecutionPanel";
 import { WizardMonitoringPanel } from "./panels/WizardMonitoringPanel";
 import { api } from "~/trpc/react";
-// import { useTrialWebSocket } from "~/hooks/useWebSocket"; // Removed WebSocket dependency
+import { useWizardRos } from "~/hooks/useWizardRos";
 import { toast } from "sonner";
 
 interface WizardInterfaceProps {
@@ -47,10 +47,10 @@ interface StepData {
   name: string;
   description: string | null;
   type:
-    | "wizard_action"
-    | "robot_action"
-    | "parallel_steps"
-    | "conditional_branch";
+  | "wizard_action"
+  | "robot_action"
+  | "parallel_steps"
+  | "conditional_branch";
   parameters: Record<string, unknown>;
   order: number;
 }
@@ -116,17 +116,59 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
   };
 
-  // Use polling for real-time updates (no WebSocket dependency)
+  // Memoized callbacks to prevent infinite re-renders
+  const onActionCompleted = useCallback((execution: { actionId: string }) => {
+    toast.success(`Robot action completed: ${execution.actionId}`);
+  }, []);
+
+  const onActionFailed = useCallback((execution: { actionId: string; error?: string }) => {
+    toast.error(`Robot action failed: ${execution.actionId}`, {
+      description: execution.error,
+    });
+  }, []);
+
+  // ROS WebSocket connection for robot control
+  const {
+    isConnected: rosConnected,
+    isConnecting: rosConnecting,
+    connectionError: rosError,
+    robotStatus,
+    connect: connectRos,
+    disconnect: disconnectRos,
+    executeRobotAction: executeRosAction,
+  } = useWizardRos({
+    autoConnect: true,
+    onActionCompleted,
+    onActionFailed,
+  });
+
+  // Use polling for trial status updates (no trial WebSocket server exists)
   const { data: pollingData } = api.trials.get.useQuery(
     { id: trial.id },
     {
-      refetchInterval: trial.status === "in_progress" ? 10000 : 30000, // Poll less frequently
-      staleTime: 5000, // Consider data fresh for 5 seconds
-      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchInterval: trial.status === "in_progress" ? 5000 : 15000,
+      staleTime: 2000,
+      refetchOnWindowFocus: false,
     },
   );
 
-  // Memoized trial events to prevent re-creation on every render
+  // Update local trial state from polling
+  useEffect(() => {
+    if (pollingData) {
+      setTrial((prev) => ({
+        ...prev,
+        status: pollingData.status,
+        startedAt: pollingData.startedAt
+          ? new Date(pollingData.startedAt)
+          : prev.startedAt,
+        completedAt: pollingData.completedAt
+          ? new Date(pollingData.completedAt)
+          : prev.completedAt,
+      }));
+    }
+  }, [pollingData]);
+
+  // Trial events from robot actions
   const trialEvents = useMemo<
     Array<{
       type: string;
@@ -135,39 +177,6 @@ export const WizardInterface = React.memo(function WizardInterface({
       message?: string;
     }>
   >(() => [], []);
-
-  // Update trial data from polling (optimized to prevent unnecessary re-renders)
-  const updateTrial = useCallback((newTrialData: typeof pollingData) => {
-    if (!newTrialData) return;
-
-    setTrial((prevTrial) => {
-      // Only update if data actually changed
-      if (
-        prevTrial.id === newTrialData.id &&
-        prevTrial.status === newTrialData.status &&
-        prevTrial.startedAt === newTrialData.startedAt &&
-        prevTrial.completedAt === newTrialData.completedAt
-      ) {
-        return prevTrial; // No changes, keep existing state
-      }
-
-      return {
-        ...newTrialData,
-        metadata: newTrialData.metadata as Record<string, unknown> | null,
-        participant: {
-          ...newTrialData.participant,
-          demographics: newTrialData.participant.demographics as Record<
-            string,
-            unknown
-          > | null,
-        },
-      };
-    });
-  }, []);
-
-  useEffect(() => {
-    updateTrial(pollingData);
-  }, [pollingData, updateTrial]);
 
   // Transform experiment steps to component format
   const steps: StepData[] =
@@ -338,22 +347,63 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
   };
 
-  const handleExecuteRobotAction = async (
-    pluginName: string,
-    actionId: string,
-    parameters: Record<string, unknown>,
-  ) => {
-    try {
-      await executeRobotActionMutation.mutateAsync({
-        trialId: trial.id,
-        pluginName,
-        actionId,
-        parameters,
-      });
-    } catch (error) {
-      console.error("Failed to execute robot action:", error);
-    }
-  };
+  const handleExecuteRobotAction = useCallback(
+    async (
+      pluginName: string,
+      actionId: string,
+      parameters: Record<string, unknown>,
+    ) => {
+      try {
+        // Try direct WebSocket execution first for better performance
+        if (rosConnected) {
+          try {
+            await executeRosAction(pluginName, actionId, parameters);
+
+            // Log to trial events for data capture
+            await executeRobotActionMutation.mutateAsync({
+              trialId: trial.id,
+              pluginName,
+              actionId,
+              parameters,
+            });
+
+            toast.success(`Robot action executed: ${actionId}`);
+          } catch (rosError) {
+            console.warn(
+              "WebSocket execution failed, falling back to tRPC:",
+              rosError,
+            );
+
+            // Fallback to tRPC-only execution
+            await executeRobotActionMutation.mutateAsync({
+              trialId: trial.id,
+              pluginName,
+              actionId,
+              parameters,
+            });
+
+            toast.success(`Robot action executed via fallback: ${actionId}`);
+          }
+        } else {
+          // Use tRPC execution if WebSocket not connected
+          await executeRobotActionMutation.mutateAsync({
+            trialId: trial.id,
+            pluginName,
+            actionId,
+            parameters,
+          });
+
+          toast.success(`Robot action executed: ${actionId}`);
+        }
+      } catch (error) {
+        console.error("Failed to execute robot action:", error);
+        toast.error(`Failed to execute robot action: ${actionId}`, {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+    [rosConnected, executeRosAction, executeRobotActionMutation, trial.id],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -391,20 +441,17 @@ export const WizardInterface = React.memo(function WizardInterface({
           <div className="text-muted-foreground flex items-center gap-4 text-sm">
             <div>{trial.experiment.name}</div>
             <div>{trial.participant.participantCode}</div>
-            <Badge variant="outline" className="text-xs">
-              Polling
+            <Badge
+              variant={rosConnected ? "default" : "outline"}
+              className="text-xs"
+            >
+              {rosConnected ? "ROS Connected" : "ROS Offline"}
             </Badge>
           </div>
         </div>
       </div>
 
-      {/* Connection Status */}
-      <Alert className="mx-4 mt-2">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Using polling mode for trial updates (refreshes every 2 seconds).
-        </AlertDescription>
-      </Alert>
+      {/* No connection status alert - ROS connection shown in monitoring panel */}
 
       {/* Main Content - Three Panel Layout */}
       <div className="min-h-0 flex-1">
@@ -423,7 +470,7 @@ export const WizardInterface = React.memo(function WizardInterface({
               onExecuteAction={handleExecuteAction}
               onExecuteRobotAction={handleExecuteRobotAction}
               studyId={trial.experiment.studyId}
-              _isConnected={true}
+              _isConnected={rosConnected}
               activeTab={controlPanelTab}
               onTabChange={setControlPanelTab}
               isStarting={startTrialMutation.isPending}
@@ -446,10 +493,17 @@ export const WizardInterface = React.memo(function WizardInterface({
             <WizardMonitoringPanel
               trial={trial}
               trialEvents={trialEvents}
-              isConnected={true}
+              isConnected={rosConnected}
               wsError={undefined}
               activeTab={monitoringPanelTab}
               onTabChange={setMonitoringPanelTab}
+              rosConnected={rosConnected}
+              rosConnecting={rosConnecting}
+              rosError={rosError ?? undefined}
+              robotStatus={robotStatus}
+              connectRos={connectRos}
+              disconnectRos={disconnectRos}
+              executeRosAction={executeRosAction}
             />
           }
           showDividers={true}

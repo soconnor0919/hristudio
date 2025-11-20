@@ -13,6 +13,9 @@ import {
   Power,
   PowerOff,
   Eye,
+  Volume2,
+  Move,
+  Hand,
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
@@ -61,6 +64,25 @@ interface WizardMonitoringPanelProps {
   wsError?: string;
   activeTab: "status" | "robot" | "events";
   onTabChange: (tab: "status" | "robot" | "events") => void;
+  // ROS connection props
+  rosConnected: boolean;
+  rosConnecting: boolean;
+  rosError?: string;
+  robotStatus: {
+    connected: boolean;
+    battery: number;
+    position: { x: number; y: number; theta: number };
+    joints: Record<string, unknown>;
+    sensors: Record<string, unknown>;
+    lastUpdate: Date;
+  };
+  connectRos: () => Promise<void>;
+  disconnectRos: () => void;
+  executeRosAction: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<unknown>;
 }
 
 const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
@@ -70,331 +92,15 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
   wsError,
   activeTab,
   onTabChange,
+  rosConnected,
+  rosConnecting,
+  rosError,
+  robotStatus,
+  connectRos,
+  disconnectRos,
+  executeRosAction,
 }: WizardMonitoringPanelProps) {
-  // ROS Bridge connection state
-  const [rosConnected, setRosConnected] = useState(false);
-  const [rosConnecting, setRosConnecting] = useState(false);
-  const [rosError, setRosError] = useState<string | null>(null);
-  const [rosSocket, setRosSocket] = useState<WebSocket | null>(null);
-  const [robotStatus, setRobotStatus] = useState({
-    connected: false,
-    battery: 0,
-    position: { x: 0, y: 0, theta: 0 },
-    joints: {},
-    sensors: {},
-    lastUpdate: new Date(),
-  });
-
-  const ROS_BRIDGE_URL = "ws://134.82.159.25:9090";
-
-  // Use refs to persist connection state across re-renders
-  const connectionAttemptRef = useRef(false);
-  const socketRef = useRef<WebSocket | null>(null);
-
-  const connectRos = () => {
-    // Prevent multiple connection attempts
-    if (connectionAttemptRef.current) {
-      console.log("Connection already in progress, skipping");
-      return;
-    }
-
-    if (
-      rosSocket?.readyState === WebSocket.OPEN ||
-      socketRef.current?.readyState === WebSocket.OPEN
-    ) {
-      console.log("Already connected, skipping");
-      return;
-    }
-
-    // Prevent rapid reconnection attempts
-    if (rosConnecting) {
-      console.log("Connection in progress, please wait");
-      return;
-    }
-
-    connectionAttemptRef.current = true;
-    setRosConnecting(true);
-    setRosError(null);
-
-    console.log("🔌 Connecting to ROS Bridge:", ROS_BRIDGE_URL);
-    const socket = new WebSocket(ROS_BRIDGE_URL);
-    socketRef.current = socket;
-
-    // Add connection timeout
-    const connectionTimeout = setTimeout(() => {
-      if (socket.readyState === WebSocket.CONNECTING) {
-        socket.close();
-        connectionAttemptRef.current = false;
-        setRosConnecting(false);
-        setRosError("Connection timeout (10s) - ROS Bridge not responding");
-      }
-    }, 10000);
-
-    socket.onopen = () => {
-      clearTimeout(connectionTimeout);
-      connectionAttemptRef.current = false;
-      console.log("Connected to ROS Bridge successfully");
-      setRosConnected(true);
-      setRosConnecting(false);
-      setRosSocket(socket);
-      setRosError(null);
-
-      // Just log connection success - no auto actions
-      console.log("WebSocket connected successfully to ROS Bridge");
-
-      setRobotStatus((prev) => ({
-        ...prev,
-        connected: true,
-        lastUpdate: new Date(),
-      }));
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data as string) as {
-          topic?: string;
-          msg?: Record<string, unknown>;
-          op?: string;
-          level?: string;
-        };
-
-        // Handle status messages
-        if (data.op === "status") {
-          console.log("ROS Bridge status:", data.msg, "Level:", data.level);
-          return;
-        }
-
-        // Handle topic messages
-        if (data.topic === "/joint_states" && data.msg) {
-          setRobotStatus((prev) => ({
-            ...prev,
-            joints: data.msg ?? {},
-            lastUpdate: new Date(),
-          }));
-        } else if (data.topic === "/naoqi_driver/battery" && data.msg) {
-          const batteryPercent = (data.msg.percentage as number) || 0;
-          setRobotStatus((prev) => ({
-            ...prev,
-            battery: Math.round(batteryPercent),
-            lastUpdate: new Date(),
-          }));
-        } else if (data.topic === "/diagnostics" && data.msg) {
-          // Handle diagnostic messages for battery
-          console.log("Diagnostics received:", data.msg);
-        }
-      } catch (error) {
-        console.error("Error parsing ROS message:", error);
-      }
-    };
-
-    socket.onclose = (event) => {
-      clearTimeout(connectionTimeout);
-      connectionAttemptRef.current = false;
-      setRosConnected(false);
-      setRosConnecting(false);
-      setRosSocket(null);
-      socketRef.current = null;
-      setRobotStatus((prev) => ({
-        ...prev,
-        connected: false,
-        battery: 0,
-        joints: {},
-        sensors: {},
-      }));
-
-      // Only show error if it wasn't a normal closure (code 1000)
-      if (event.code !== 1000) {
-        let errorMsg = "Connection lost";
-        if (event.code === 1006) {
-          errorMsg =
-            "ROS Bridge not responding - check if rosbridge_server is running";
-        } else if (event.code === 1011) {
-          errorMsg = "Server error in ROS Bridge";
-        } else if (event.code === 1002) {
-          errorMsg = "Protocol error - check ROS Bridge version";
-        } else if (event.code === 1001) {
-          errorMsg = "Server going away - ROS Bridge may have restarted";
-        }
-        console.log(
-          `🔌 Connection closed - Code: ${event.code}, Reason: ${event.reason}`,
-        );
-        setRosError(`${errorMsg} (${event.code})`);
-      }
-    };
-
-    socket.onerror = (error) => {
-      clearTimeout(connectionTimeout);
-      connectionAttemptRef.current = false;
-      console.error("ROS Bridge WebSocket error:", error);
-      setRosConnected(false);
-      setRosConnecting(false);
-      setRosError(
-        "Failed to connect to ROS bridge - check if rosbridge_server is running",
-      );
-      setRobotStatus((prev) => ({ ...prev, connected: false }));
-    };
-  };
-
-  const disconnectRos = () => {
-    console.log("Manually disconnecting from ROS Bridge");
-    connectionAttemptRef.current = false;
-    if (rosSocket) {
-      // Close with normal closure code to avoid error messages
-      rosSocket.close(1000, "User disconnected");
-    }
-    if (socketRef.current) {
-      socketRef.current.close(1000, "User disconnected");
-    }
-    // Clear all state
-    setRosSocket(null);
-    socketRef.current = null;
-    setRosConnected(false);
-    setRosConnecting(false);
-    setRosError(null);
-    setRobotStatus({
-      connected: false,
-      battery: 0,
-      position: { x: 0, y: 0, theta: 0 },
-      joints: {},
-      sensors: {},
-      lastUpdate: new Date(),
-    });
-  };
-
-  const executeRobotAction = (
-    action: string,
-    parameters?: Record<string, unknown>,
-  ) => {
-    if (!rosSocket || !rosConnected) {
-      setRosError("Robot not connected");
-      return;
-    }
-
-    let message: {
-      op: string;
-      topic: string;
-      type: string;
-      msg: Record<string, unknown>;
-    };
-
-    switch (action) {
-      case "say_text":
-        const speechText = parameters?.text ?? "Hello from wizard interface!";
-        console.log("🔊 Preparing speech command:", speechText);
-        message = {
-          op: "publish",
-          topic: "/speech",
-          type: "std_msgs/String",
-          msg: { data: speechText },
-        };
-        console.log(
-          "📤 Speech message constructed:",
-          JSON.stringify(message, null, 2),
-        );
-        break;
-
-      case "move_forward":
-      case "move_backward":
-      case "turn_left":
-      case "turn_right":
-        const speed = (parameters?.speed as number) || 0.1;
-        const linear = action.includes("forward")
-          ? speed
-          : action.includes("backward")
-            ? -speed
-            : 0;
-        const angular = action.includes("left")
-          ? speed
-          : action.includes("right")
-            ? -speed
-            : 0;
-
-        message = {
-          op: "publish",
-          topic: "/cmd_vel",
-          type: "geometry_msgs/Twist",
-          msg: {
-            linear: { x: linear, y: 0, z: 0 },
-            angular: { x: 0, y: 0, z: angular },
-          },
-        };
-        break;
-
-      case "stop_movement":
-        message = {
-          op: "publish",
-          topic: "/cmd_vel",
-          type: "geometry_msgs/Twist",
-          msg: {
-            linear: { x: 0, y: 0, z: 0 },
-            angular: { x: 0, y: 0, z: 0 },
-          },
-        };
-        break;
-
-      case "head_movement":
-      case "turn_head":
-        const yaw = (parameters?.yaw as number) || 0;
-        const pitch = (parameters?.pitch as number) || 0;
-        const headSpeed = (parameters?.speed as number) || 0.3;
-
-        message = {
-          op: "publish",
-          topic: "/joint_angles",
-          type: "naoqi_bridge_msgs/JointAnglesWithSpeed",
-          msg: {
-            joint_names: ["HeadYaw", "HeadPitch"],
-            joint_angles: [yaw, pitch],
-            speed: headSpeed,
-          },
-        };
-        break;
-
-      case "play_animation":
-        const animation = (parameters?.animation as string) ?? "Hello";
-
-        message = {
-          op: "publish",
-          topic: "/naoqi_driver/animation",
-          type: "std_msgs/String",
-          msg: { data: animation },
-        };
-        break;
-
-      default:
-        setRosError(`Unknown action: ${String(action)}`);
-        return;
-    }
-
-    try {
-      const messageStr = JSON.stringify(message);
-      console.log("📡 Sending to ROS Bridge:", messageStr);
-      rosSocket.send(messageStr);
-      console.log(`✅ Sent robot action: ${action}`, parameters);
-    } catch (error) {
-      console.error("❌ Failed to send command:", error);
-      setRosError(`Failed to send command: ${String(error)}`);
-    }
-  };
-
-  const subscribeToTopic = (topic: string, messageType: string) => {
-    if (!rosSocket || !rosConnected) {
-      setRosError("Cannot subscribe - not connected");
-      return;
-    }
-
-    try {
-      const subscribeMsg = {
-        op: "subscribe",
-        topic: topic,
-        type: messageType,
-      };
-      rosSocket.send(JSON.stringify(subscribeMsg));
-      console.log(`Manually subscribed to ${topic}`);
-    } catch (error) {
-      setRosError(`Failed to subscribe to ${topic}: ${String(error)}`);
-    }
-  };
+  // ROS connection is now passed as props, no need for separate hook
 
   // Don't close connection on unmount to prevent disconnection issues
   // Connection will persist across component re-renders
@@ -526,7 +232,7 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground text-xs">
-                        WebSocket
+                        ROS Bridge
                       </span>
                       <Badge
                         variant={isConnected ? "default" : "secondary"}
@@ -759,7 +465,7 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="w-full text-xs"
-                        onClick={connectRos}
+                        onClick={() => connectRos()}
                         disabled={rosConnecting || rosConnected}
                       >
                         <Bot className="mr-1 h-3 w-3" />
@@ -774,7 +480,7 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="w-full text-xs"
-                        onClick={disconnectRos}
+                        onClick={() => disconnectRos()}
                       >
                         <PowerOff className="mr-1 h-3 w-3" />
                         Disconnect
@@ -801,7 +507,7 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                           <div>
                             1. Check ROS Bridge:{" "}
                             <code className="bg-muted rounded px-1 text-xs">
-                              telnet 134.82.159.25 9090
+                              telnet localhost 9090
                             </code>
                           </div>
                           <div>2. NAO6 must be awake and connected</div>
@@ -850,10 +556,10 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                       ))}
                     {trialEvents.filter((e) => e.type.includes("robot"))
                       .length === 0 && (
-                      <div className="text-muted-foreground py-2 text-center text-xs">
-                        No robot events yet
-                      </div>
-                    )}
+                        <div className="text-muted-foreground py-2 text-center text-xs">
+                          No robot events yet
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -905,15 +611,17 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("say_text", {
-                            text: "Connection test - can you hear me?",
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "say_text", {
+                              text: "Connection test - can you hear me?",
+                            }).catch(console.error);
+                          }
+                        }}
                         disabled={!rosConnected}
                       >
-                        {rosConnected ? "🔊 Test Speech" : "🔊 Not Ready"}
+                        <Volume2 className="mr-1 h-3 w-3" />
+                        Test Speech
                       </Button>
                     </div>
 
@@ -923,45 +631,9 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         Subscribe to Topics:
                       </div>
                       <div className="grid grid-cols-1 gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="justify-start text-xs"
-                          onClick={() =>
-                            subscribeToTopic(
-                              "/naoqi_driver/battery",
-                              "naoqi_bridge_msgs/Battery",
-                            )
-                          }
-                        >
-                          🔋 Battery Status
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="justify-start text-xs"
-                          onClick={() =>
-                            subscribeToTopic(
-                              "/naoqi_driver/joint_states",
-                              "sensor_msgs/JointState",
-                            )
-                          }
-                        >
-                          🤖 Joint States
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="justify-start text-xs"
-                          onClick={() =>
-                            subscribeToTopic(
-                              "/naoqi_driver/bumper",
-                              "naoqi_bridge_msgs/Bumper",
-                            )
-                          }
-                        >
-                          👟 Bumper Sensors
-                        </Button>
+                        <div className="text-muted-foreground text-xs">
+                          Subscriptions managed automatically
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -978,9 +650,14 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("move_forward", { speed: 0.05 })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "walk_forward", {
+                              speed: 0.05,
+                              duration: 2,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Forward
                       </Button>
@@ -988,9 +665,14 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("turn_left", { speed: 0.3 })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "turn_left", {
+                              speed: 0.3,
+                              duration: 2,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Turn Left
                       </Button>
@@ -998,9 +680,14 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("turn_right", { speed: 0.3 })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "turn_right", {
+                              speed: 0.3,
+                              duration: 2,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Turn Right
                       </Button>
@@ -1012,13 +699,15 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("turn_head", {
-                            yaw: 0,
-                            pitch: 0,
-                            speed: 0.3,
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "turn_head", {
+                              yaw: 0,
+                              pitch: 0,
+                              speed: 0.3,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Center Head
                       </Button>
@@ -1026,13 +715,15 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("turn_head", {
-                            yaw: 0.5,
-                            pitch: 0,
-                            speed: 0.3,
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "turn_head", {
+                              yaw: 0.5,
+                              pitch: 0,
+                              speed: 0.3,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Look Left
                       </Button>
@@ -1040,13 +731,15 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("turn_head", {
-                            yaw: -0.5,
-                            pitch: 0,
-                            speed: 0.3,
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "turn_head", {
+                              yaw: -0.5,
+                              pitch: 0,
+                              speed: 0.3,
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Look Right
                       </Button>
@@ -1058,23 +751,27 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("play_animation", {
-                            animation: "Hello",
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "say_text", {
+                              text: "Hello! I am NAO!",
+                            }).catch(console.error);
+                          }
+                        }}
                       >
-                        Wave Hello
+                        Say Hello
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="text-xs"
-                        onClick={() =>
-                          executeRobotAction("say_text", {
-                            text: "Experiment ready!",
-                          })
-                        }
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction("nao6-ros2", "say_text", {
+                              text: "Experiment ready!",
+                            }).catch(console.error);
+                          }
+                        }}
                       >
                         Say Ready
                       </Button>
@@ -1086,7 +783,15 @@ const WizardMonitoringPanel = React.memo(function WizardMonitoringPanel({
                         size="sm"
                         variant="destructive"
                         className="text-xs"
-                        onClick={() => executeRobotAction("stop_movement", {})}
+                        onClick={() => {
+                          if (rosConnected) {
+                            executeRosAction(
+                              "nao6-ros2",
+                              "emergency_stop",
+                              {},
+                            ).catch(console.error);
+                          }
+                        }}
                       >
                         🛑 Emergency Stop
                       </Button>

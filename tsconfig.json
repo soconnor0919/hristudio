@@ -9,28 +9,34 @@
     "moduleDetection": "force",
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-
     /* Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-
     /* Bundled projects */
-    "lib": ["dom", "dom.iterable", "ES2022"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "jsx": "preserve",
-    "plugins": [{ "name": "next" }],
+    "jsx": "react-jsx",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "incremental": true,
-
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": [
+        "./src/*"
+      ]
     }
   },
-
   "include": [
     // FlowWorkspace (flow/FlowWorkspace.tsx) and new designer modules are included via recursive globs
     "next-env.d.ts",
@@ -40,7 +46,11 @@
     "**/*.js",
     ".next/types/**/*.ts",
     "src/components/experiments/designer/**/*.ts",
-    "src/components/experiments/designer/**/*.tsx"
+    "src/components/experiments/designer/**/*.tsx",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "robot-plugins"]
+  "exclude": [
+    "node_modules",
+    "robot-plugins"
+  ]
 }
