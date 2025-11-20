@@ -107,12 +107,15 @@ export function useWizardRos(
     if (!service) return;
 
     const handleConnected = () => {
-      if (!mountedRef.current) return;
-      console.log("[useWizardRos] Connected to ROS bridge");
+      console.log("[useWizardRos] handleConnected called, mountedRef:", mountedRef.current);
+      // Set state immediately, before checking mounted status
       setIsConnected(true);
       setIsConnecting(false);
       setConnectionError(null);
-      onConnectedRef.current?.();
+
+      if (mountedRef.current) {
+        onConnectedRef.current?.();
+      }
     };
 
     const handleDisconnected = () => {

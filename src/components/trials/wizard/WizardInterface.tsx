@@ -491,12 +491,6 @@ export const WizardInterface = React.memo(function WizardInterface({
           }
           right={
             <WizardMonitoringPanel
-              trial={trial}
-              trialEvents={trialEvents}
-              isConnected={rosConnected}
-              wsError={undefined}
-              activeTab={monitoringPanelTab}
-              onTabChange={setMonitoringPanelTab}
               rosConnected={rosConnected}
               rosConnecting={rosConnecting}
               rosError={rosError ?? undefined}

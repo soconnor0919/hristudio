@@ -13,6 +13,7 @@ import {
   Zap,
   User,
   Bot,
+  Eye,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -28,10 +29,10 @@ interface StepData {
   name: string;
   description: string | null;
   type:
-    | "wizard_action"
-    | "robot_action"
-    | "parallel_steps"
-    | "conditional_branch";
+  | "wizard_action"
+  | "robot_action"
+  | "parallel_steps"
+  | "conditional_branch";
   parameters: Record<string, unknown>;
   order: number;
 }
@@ -173,28 +174,24 @@ export function WizardControlPanel({
             value === "actions" ||
             value === "robot"
           ) {
-            onTabChange(value as "control" | "step" | "actions" | "robot");
+            onTabChange(value as "control" | "step" | "actions");
           }
         }}
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="border-b px-2 py-1">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="control" className="text-xs">
-              <Settings className="mr-1 h-3 w-3" />
+              <Play className="mr-1 h-3 w-3" />
               Control
             </TabsTrigger>
             <TabsTrigger value="step" className="text-xs">
-              <Play className="mr-1 h-3 w-3" />
+              <Eye className="mr-1 h-3 w-3" />
               Step
             </TabsTrigger>
             <TabsTrigger value="actions" className="text-xs">
               <Zap className="mr-1 h-3 w-3" />
               Actions
-            </TabsTrigger>
-            <TabsTrigger value="robot" className="text-xs">
-              <Bot className="mr-1 h-3 w-3" />
-              Robot
             </TabsTrigger>
           </TabsList>
         </div>
@@ -270,13 +267,13 @@ export function WizardControlPanel({
 
                 {(trial.status === "completed" ||
                   trial.status === "aborted") && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      Trial has ended. All controls are disabled.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        Trial has ended. All controls are disabled.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                 {/* Connection Status */}
                 <Separator />
