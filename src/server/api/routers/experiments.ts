@@ -1542,6 +1542,15 @@ export const experimentsRouter = createTRPCRouter({
         parameters: step.conditions as Record<string, unknown>,
         parentId: undefined, // Not supported in current schema
         children: [], // TODO: implement hierarchical steps if needed
+        actions: step.actions.map((action) => ({
+          id: action.id,
+          name: action.name,
+          description: action.description,
+          type: action.type,
+          order: action.orderIndex,
+          parameters: action.parameters as Record<string, unknown>,
+          pluginId: action.pluginId,
+        })),
       }));
     }),
 

@@ -19,6 +19,8 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -35,6 +37,15 @@ interface StepData {
   | "conditional_branch";
   parameters: Record<string, unknown>;
   order: number;
+  actions?: {
+    id: string;
+    name: string;
+    description: string | null;
+    type: string;
+    parameters: Record<string, unknown>;
+    order: number;
+    pluginId: string | null;
+  }[];
 }
 
 interface TrialData {
@@ -86,6 +97,7 @@ interface WizardControlPanelProps {
   activeTab: "control" | "step" | "actions" | "robot";
   onTabChange: (tab: "control" | "step" | "actions" | "robot") => void;
   isStarting?: boolean;
+  onSetAutonomousLife?: (enabled: boolean) => Promise<boolean | void>;
 }
 
 export function WizardControlPanel({
@@ -105,65 +117,28 @@ export function WizardControlPanel({
   activeTab,
   onTabChange,
   isStarting = false,
+  onSetAutonomousLife,
 }: WizardControlPanelProps) {
-  const progress =
-    steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+  const [autonomousLife, setAutonomousLife] = React.useState(true);
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return { variant: "outline" as const, icon: Clock };
-      case "in_progress":
-        return { variant: "default" as const, icon: Play };
-      case "completed":
-        return { variant: "secondary" as const, icon: CheckCircle };
-      case "aborted":
-      case "failed":
-        return { variant: "destructive" as const, icon: X };
-      default:
-        return { variant: "outline" as const, icon: Clock };
+  const handleAutonomousLifeChange = async (checked: boolean) => {
+    setAutonomousLife(checked); // Optimistic update
+    if (onSetAutonomousLife) {
+      try {
+        const result = await onSetAutonomousLife(checked);
+        if (result === false) {
+          throw new Error("Service unavailable");
+        }
+      } catch (error) {
+        console.error("Failed to set autonomous life:", error);
+        setAutonomousLife(!checked); // Revert on failure
+        // Optional: Toast error?
+      }
     }
   };
 
-  const statusConfig = getStatusConfig(trial.status);
-  const StatusIcon = statusConfig.icon;
-
   return (
     <div className="flex h-full flex-col">
-      {/* Trial Info Header */}
-      <div className="border-b p-3">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Badge
-              variant={statusConfig.variant}
-              className="flex items-center gap-1"
-            >
-              <StatusIcon className="h-3 w-3" />
-              {trial.status.replace("_", " ")}
-            </Badge>
-            <span className="text-muted-foreground text-xs">
-              Session #{trial.sessionNumber}
-            </span>
-          </div>
-
-          <div className="text-sm font-medium">
-            {trial.participant.participantCode}
-          </div>
-
-          {trial.status === "in_progress" && steps.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Progress</span>
-                <span>
-                  {currentStepIndex + 1} of {steps.length}
-                </span>
-              </div>
-              <Progress value={progress} className="h-1.5" />
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Tabbed Content */}
       <Tabs
         value={activeTab}
@@ -275,17 +250,36 @@ export function WizardControlPanel({
                     </Alert>
                   )}
 
-                {/* Connection Status */}
                 <Separator />
-                <div className="space-y-2">
-                  <div className="text-xs font-medium">Connection</div>
+                <div className="space-y-4">
+                  <div className="text-xs font-medium">Robot Status</div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-xs">
-                      Status
+                      Connection
                     </span>
-                    <Badge variant="default" className="text-xs">
-                      Polling
-                    </Badge>
+                    {_isConnected ? (
+                      <Badge variant="default" className="bg-green-600 text-xs">
+                        Connected
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-600 text-xs">
+                        Polling...
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="autonomous-life" className="text-xs font-normal text-muted-foreground">Autonomous Life</Label>
+                    </div>
+                    <Switch
+                      id="autonomous-life"
+                      checked={autonomousLife}
+                      onCheckedChange={handleAutonomousLifeChange}
+                      disabled={!_isConnected}
+                      className="scale-75"
+                    />
                   </div>
                 </div>
               </div>

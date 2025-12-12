@@ -14,6 +14,17 @@ export interface RosMessage {
   values?: Record<string, unknown>;
 }
 
+export interface ServiceRequest {
+  service: string;
+  args?: Record<string, unknown>;
+}
+
+export interface ServiceResponse {
+  result: boolean;
+  values?: Record<string, unknown>;
+  error?: string;
+}
+
 export interface RobotStatus {
   connected: boolean;
   battery: number;
@@ -405,7 +416,8 @@ export class WizardRosService extends EventEmitter {
     let msg: Record<string, unknown>;
 
     if (
-      config.payloadMapping.type === "template" &&
+      (config.payloadMapping.type === "template" ||
+        config.payloadMapping.type === "static") &&
       config.payloadMapping.payload
     ) {
       // Template-based payload construction
@@ -451,8 +463,13 @@ export class WizardRosService extends EventEmitter {
         this.executeMovementAction(actionId, parameters);
         break;
 
+      case "move_head":
       case "turn_head":
         this.executeTurnHead(parameters);
+        break;
+
+      case "move_arm":
+        this.executeMoveArm(parameters);
         break;
 
       case "emergency_stop":
@@ -497,7 +514,7 @@ export class WizardRosService extends EventEmitter {
         break;
     }
 
-    this.publish("/cmd_vel", "geometry_msgs/Twist", { linear, angular });
+    this.publish("/naoqi_driver/cmd_vel", "geometry_msgs/Twist", { linear, angular });
   }
 
   /**
@@ -513,6 +530,139 @@ export class WizardRosService extends EventEmitter {
       joint_angles: [yaw, pitch],
       speed: speed,
     });
+  }
+
+  /**
+   * Execute arm movement
+   */
+  private executeMoveArm(parameters: Record<string, unknown>): void {
+    const arm = String(parameters.arm || "Right");
+    const roll = Number(parameters.roll) || 0;
+    const pitch = Number(parameters.pitch) || 0;
+    const speed = Number(parameters.speed) || 0.2;
+
+    const prefix = arm === "Left" ? "L" : "R";
+    const jointNames = [`${prefix}ShoulderPitch`, `${prefix}ShoulderRoll`];
+    const jointAngles = [pitch, roll];
+
+    this.publish("/naoqi_driver/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+      joint_names: jointNames,
+      joint_angles: jointAngles,
+      speed: speed,
+    });
+  }
+
+  /**
+   * Call a ROS service
+   */
+  async callService(
+    service: string,
+    args: Record<string, unknown> = {},
+  ): Promise<ServiceResponse> {
+    if (!this.isConnected) {
+      throw new Error("Not connected to ROS bridge");
+    }
+
+    const id = `call_${this.messageId++}`;
+
+    return new Promise((resolve, reject) => {
+      const handleResponse = (message: RosMessage) => {
+        if (message.op === "service_response" && message.id === id) {
+          this.off("message", handleResponse);
+          if (message.result === false) {
+            resolve({ result: false, error: String(message.values || "Service call failed") });
+          } else {
+            resolve({ result: true, values: message.values });
+          }
+        }
+      };
+
+      this.on("message", handleResponse);
+
+      this.send({
+        op: "call_service",
+        service,
+        args,
+        id,
+      });
+
+      setTimeout(() => {
+        this.off("message", handleResponse);
+        reject(new Error("Service call timed out"));
+      }, 5000);
+    });
+  }
+
+  /**
+   * Set Autonomous Life state with fallbacks
+   */
+  async setAutonomousLife(enabled: boolean): Promise<boolean> {
+    const desiredState = enabled ? "interactive" : "disabled";
+
+    // List of services to try in order
+    const attempts = [
+      // Standard NaoQi Bridge pattern
+      {
+        service: "/naoqi_driver/ALAutonomousLife/setState",
+        args: { state: desiredState }
+      },
+      {
+        service: "/naoqi_driver/ALAutonomousLife/set_state",
+        args: { state: desiredState }
+      },
+      // Direct module mapping
+      {
+        service: "/ALAutonomousLife/setState",
+        args: { state: desiredState }
+      },
+      // Shortcuts/Aliases
+      {
+        service: "/naoqi_driver/set_autonomous_life",
+        args: { state: desiredState }
+      },
+      {
+        service: "/autonomous_life/set_state",
+        args: { state: desiredState }
+      },
+      // Fallback: Enable/Disable topics/services
+      {
+        service: enabled ? "/life/enable" : "/life/disable",
+        args: {}
+      },
+      // Last resort: Generic proxy call (if available)
+      {
+        service: "/naoqi_driver/function_call",
+        args: {
+          service: "ALAutonomousLife",
+          function: "setState",
+          args: [desiredState]
+        }
+      }
+    ];
+
+    console.log(`[WizardROS] Setting Autonomous Life to: ${desiredState}`);
+
+    for (const attempt of attempts) {
+      try {
+        console.log(`[WizardROS] Trying service: ${attempt.service}`);
+        const response = await this.callService(attempt.service, attempt.args);
+
+        // If the service call didn't timeout (it resolved), check result
+        if (response.result) {
+          console.log(`[WizardROS] Success via ${attempt.service}`);
+          return true;
+        } else {
+          // Resolved but failed? (e.g. internal error)
+          console.warn(`[WizardROS] Service ${attempt.service} returned false result:`, response.error);
+        }
+      } catch (error) {
+        // Service call failed or timed out
+        console.warn(`[WizardROS] Service ${attempt.service} failed/timeout:`, error);
+      }
+    }
+
+    console.error("[WizardROS] All Autonomous Life service attempts failed.");
+    return false;
   }
 
   /**
@@ -574,11 +724,13 @@ export class WizardRosService extends EventEmitter {
         };
 
       case "naoSpeechTransform":
+      case "transformToStringMessage":
         return {
           data: String(parameters.text || "Hello"),
         };
 
       case "naoHeadTransform":
+      case "transformToHeadMovement":
         return {
           joint_names: ["HeadYaw", "HeadPitch"],
           joint_angles: [
@@ -586,6 +738,13 @@ export class WizardRosService extends EventEmitter {
             Number(parameters.pitch) || 0,
           ],
           speed: Number(parameters.speed) || 0.3,
+        };
+
+      case "transformToJointAngles":
+        return {
+          joint_names: [String(parameters.joint_name || "HeadYaw")],
+          joint_angles: [Number(parameters.angle) || 0],
+          speed: Number(parameters.speed) || 0.2,
         };
 
       default:

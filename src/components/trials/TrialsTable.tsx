@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Copy, Eye, Play, Gamepad2, LineChart, Ban } from "lucide-react";
 import * as React from "react";
 
 import { format, formatDistanceToNow } from "date-fns";
@@ -51,27 +51,22 @@ const statusConfig = {
   scheduled: {
     label: "Scheduled",
     className: "bg-blue-100 text-blue-800",
-    icon: "📅",
   },
   in_progress: {
     label: "In Progress",
     className: "bg-yellow-100 text-yellow-800",
-    icon: "▶️",
   },
   completed: {
     label: "Completed",
     className: "bg-green-100 text-green-800",
-    icon: "✅",
   },
   aborted: {
     label: "Aborted",
     className: "bg-gray-100 text-gray-800",
-    icon: "❌",
   },
   failed: {
     label: "Failed",
     className: "bg-red-100 text-red-800",
-    icon: "⚠️",
   },
 };
 
@@ -145,7 +140,7 @@ export const columns: ColumnDef<Trial>[] = [
         <div className="max-w-[250px]">
           <div className="truncate font-medium">
             <Link
-              href={`/experiments/${experimentId}`}
+              href={`/studies/${row.original.studyId}/experiments/${experimentId}`}
               className="hover:underline"
             >
               {String(experimentName)}
@@ -175,7 +170,7 @@ export const columns: ColumnDef<Trial>[] = [
         <div className="max-w-[150px]">
           {participantId ? (
             <Link
-              href={`/participants/${participantId}`}
+              href={`/studies/${row.original.studyId}/participants/${participantId}`}
               className="font-mono text-sm hover:underline"
             >
               {(participantCode ?? "Unknown") as string}
@@ -232,10 +227,10 @@ export const columns: ColumnDef<Trial>[] = [
 
       return (
         <Badge className={statusInfo.className}>
-          <span className="mr-1">{statusInfo.icon}</span>
           {statusInfo.label}
         </Badge>
       );
+
     },
   },
   {
@@ -366,78 +361,93 @@ export const columns: ColumnDef<Trial>[] = [
   {
     id: "actions",
     enableHiding: false,
-    cell: ({ row }) => {
-      const trial = row.original;
-
-      if (!trial?.id) {
-        return (
-          <span className="text-muted-foreground text-sm">No actions</span>
-        );
-      }
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(trial.id)}
-            >
-              Copy trial ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
-                View details
-              </Link>
-            </DropdownMenuItem>
-            {trial.status === "scheduled" && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}
-                >
-                  Start trial
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {trial.status === "in_progress" && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}
-                >
-                  Control trial
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {trial.status === "completed" && (
-              <DropdownMenuItem asChild>
-                <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
-                  View analysis
-                </Link>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
-                Edit trial
-              </Link>
-            </DropdownMenuItem>
-            {(trial.status === "scheduled" || trial.status === "failed") && (
-              <DropdownMenuItem className="text-red-600">
-                Cancel trial
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];
+
+function ActionsCell({ row }: { row: { original: Trial } }) {
+  const trial = row.original;
+  const router = React.useMemo(() => require("next/navigation").useRouter(), []); // Dynamic import to avoid hook rules in static context? No, this component is rendered in Table.
+  // Actually, hooks must be at top level. This ActionsCell will be a regular component.
+  // But useRouter might fail if columns is not in component tree?
+  // Table cells are rendered by flexRender in React, so they are components.
+  // importing useRouter is fine.
+
+  const utils = api.useUtils();
+  const duplicateMutation = api.trials.duplicate.useMutation({
+    onSuccess: () => {
+      utils.trials.list.invalidate();
+      // toast.success("Trial duplicated"); // We need toast
+    },
+  });
+
+  if (!trial?.id) {
+    return <span className="text-muted-foreground text-sm">No actions</span>;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => navigator.clipboard.writeText(trial.id)}
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          Copy ID
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
+            <Eye className="mr-2 h-4 w-4" />
+            Details
+          </Link>
+        </DropdownMenuItem>
+        {trial.status === "scheduled" && (
+          <DropdownMenuItem asChild>
+            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
+              <Play className="mr-2 h-4 w-4" />
+              Start Trial
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {trial.status === "in_progress" && (
+          <DropdownMenuItem asChild>
+            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
+              <Gamepad2 className="mr-2 h-4 w-4" />
+              Control Trial
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {trial.status === "completed" && (
+          <DropdownMenuItem asChild>
+            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/analysis`}>
+              <LineChart className="mr-2 h-4 w-4" />
+              Analysis
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => duplicateMutation.mutate({ id: trial.id })}>
+          <Copy className="mr-2 h-4 w-4" />
+          Duplicate
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {(trial.status === "scheduled" || trial.status === "failed") && (
+          <DropdownMenuItem className="text-red-600">
+            <Ban className="mr-2 h-4 w-4" />
+            Cancel
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 interface TrialsTableProps {
   studyId?: string;

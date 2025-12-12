@@ -284,14 +284,17 @@ export function InspectorPanel({
               <div className="flex-1 overflow-x-hidden overflow-y-auto">
                 <div className="w-full px-0 py-2 break-words whitespace-normal">
                   <PropertiesPanel
-                    design={{
-                      id: "design",
-                      name: "Design",
-                      description: "",
-                      version: 1,
-                      steps,
-                      lastSaved: new Date(),
-                    }}
+                    design={useMemo(
+                      () => ({
+                        id: "design",
+                        name: "Design",
+                        description: "",
+                        version: 1,
+                        steps,
+                        lastSaved: new Date(),
+                      }),
+                      [steps],
+                    )}
                     selectedStep={selectedStep}
                     selectedAction={selectedAction}
                     onActionUpdate={handleActionUpdate}

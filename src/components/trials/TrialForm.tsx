@@ -96,33 +96,33 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     { label: "Studies", href: "/studies" },
     ...(contextStudyId
       ? [
-          {
-            label: "Study",
-            href: `/studies/${contextStudyId}`,
-          },
-          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
-          ...(mode === "edit" && trial
-            ? [
-                {
-                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Trial" }]),
-        ]
+        {
+          label: "Study",
+          href: `/studies/${contextStudyId}`,
+        },
+        { label: "Trials", href: `/studies/${contextStudyId}/trials` },
+        ...(mode === "edit" && trial
+          ? [
+            {
+              label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+              href: `/studies/${contextStudyId}/trials/${trial.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Trial" }]),
+      ]
       : [
-          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
-          ...(mode === "edit" && trial
-            ? [
-                {
-                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Trial" }]),
-        ]),
+        { label: "Trials", href: `/studies/${contextStudyId}/trials` },
+        ...(mode === "edit" && trial
+          ? [
+            {
+              label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+              href: `/studies/${contextStudyId}/trials/${trial.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Trial" }]),
+      ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -161,7 +161,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
           sessionNumber: data.sessionNumber ?? 1,
           notes: data.notes ?? undefined,
         });
-        router.push(`/trials/${newTrial!.id}`);
+        router.push(`/studies/${contextStudyId}/trials/${newTrial!.id}`);
       } else {
         const updatedTrial = await updateTrialMutation.mutateAsync({
           id: trialId!,
@@ -170,7 +170,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
           sessionNumber: data.sessionNumber ?? 1,
           notes: data.notes ?? undefined,
         });
-        router.push(`/trials/${updatedTrial!.id}`);
+        router.push(`/studies/${contextStudyId}/trials/${updatedTrial!.id}`);
       }
     } catch (error) {
       setError(

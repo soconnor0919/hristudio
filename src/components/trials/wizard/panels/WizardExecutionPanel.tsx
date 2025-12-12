@@ -12,6 +12,10 @@ import {
   Zap,
   Eye,
   List,
+  Loader2,
+  ArrowRight,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -24,12 +28,21 @@ interface StepData {
   name: string;
   description: string | null;
   type:
-    | "wizard_action"
-    | "robot_action"
-    | "parallel_steps"
-    | "conditional_branch";
+  | "wizard_action"
+  | "robot_action"
+  | "parallel_steps"
+  | "conditional_branch";
   parameters: Record<string, unknown>;
   order: number;
+  actions?: {
+    id: string;
+    name: string;
+    description: string | null;
+    type: string;
+    parameters: Record<string, unknown>;
+    order: number;
+    pluginId: string | null;
+  }[];
 }
 
 interface TrialData {
@@ -75,8 +88,25 @@ interface WizardExecutionPanelProps {
     actionId: string,
     parameters?: Record<string, unknown>,
   ) => void;
-  activeTab: "current" | "timeline" | "events";
-  onTabChange: (tab: "current" | "timeline" | "events") => void;
+  onExecuteRobotAction: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+    options?: { autoAdvance?: boolean },
+  ) => Promise<void>;
+  activeTab: "current" | "timeline" | "events"; // Deprecated/Ignored
+  onTabChange: (tab: "current" | "timeline" | "events") => void; // Deprecated/Ignored
+  onSkipAction: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+    options?: { autoAdvance?: boolean },
+  ) => Promise<void>;
+  isExecuting?: boolean;
+  onNextStep?: () => void;
+  onCompleteTrial?: () => void;
+  completedActionsCount: number;
+  onActionCompleted: () => void;
 }
 
 export function WizardExecutionPanel({
@@ -87,9 +117,21 @@ export function WizardExecutionPanel({
   trialEvents,
   onStepSelect,
   onExecuteAction,
+  onExecuteRobotAction,
   activeTab,
   onTabChange,
+  onSkipAction,
+  isExecuting = false,
+  onNextStep,
+  onCompleteTrial,
+  completedActionsCount,
+  onActionCompleted,
 }: WizardExecutionPanelProps) {
+  // Local state removed in favor of parent state to prevent reset on re-render
+  // const [completedCount, setCompletedCount] = React.useState(0);
+
+  const activeActionIndex = completedActionsCount;
+
   const getStepIcon = (type: string) => {
     switch (type) {
       case "wizard_action":
@@ -169,7 +211,7 @@ export function WizardExecutionPanel({
           </h3>
           <p className="text-muted-foreground text-xs">
             {trial.completedAt &&
-              `Ended at ${new Date(trial.completedAt).toLocaleTimeString()}`}
+              `Ended at ${new Date(trial.completedAt).toLocaleTimeString()} `}
           </p>
         </div>
 
@@ -209,281 +251,228 @@ export function WizardExecutionPanel({
         )}
       </div>
 
-      {/* Tabbed Content */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(value: string) => {
-          if (
-            value === "current" ||
-            value === "timeline" ||
-            value === "events"
-          ) {
-            onTabChange(value);
-          }
-        }}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <div className="border-b px-2 py-1">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="current" className="text-xs">
-              <Eye className="mr-1 h-3 w-3" />
-              Current
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="text-xs">
-              <List className="mr-1 h-3 w-3" />
-              Timeline
-            </TabsTrigger>
-            <TabsTrigger value="events" className="text-xs">
-              <Activity className="mr-1 h-3 w-3" />
-              Events
-              {trialEvents.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {trialEvents.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <div className="min-h-0 flex-1">
-          {/* Current Step Tab */}
-          <TabsContent value="current" className="m-0 h-full">
-            <div className="h-full">
-              {currentStep ? (
-                <div className="flex h-full flex-col p-4">
-                  {/* Current Step Display */}
-                  <div className="flex-1 space-y-4 text-left">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full">
-                        {React.createElement(getStepIcon(currentStep.type), {
-                          className: "h-5 w-5 text-primary",
-                        })}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-sm font-medium">
-                          {currentStep.name}
-                        </h4>
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          {currentStep.type.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </div>
-
+      {/* Simplified Content - Sequential Focus */}
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          {currentStep ? (
+            <div className="flex flex-col gap-6 p-6">
+              {/* Header Info (Simplified) */}
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight">{currentStep.name}</h2>
                     {currentStep.description && (
-                      <div className="text-muted-foreground text-sm">
-                        {currentStep.description}
-                      </div>
-                    )}
-
-                    {/* Step-specific content */}
-                    {currentStep.type === "wizard_action" && (
-                      <div className="space-y-3">
-                        <div className="text-sm font-medium">
-                          Available Actions
-                        </div>
-                        <div className="space-y-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => onExecuteAction("acknowledge")}
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Acknowledge Step
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => onExecuteAction("intervene")}
-                          >
-                            <Zap className="mr-2 h-4 w-4" />
-                            Manual Intervention
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() =>
-                              onExecuteAction("note", {
-                                content: "Step observation",
-                              })
-                            }
-                          >
-                            <User className="mr-2 h-4 w-4" />
-                            Add Observation
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {currentStep.type === "robot_action" && (
-                      <Alert>
-                        <Bot className="h-4 w-4" />
-                        <AlertDescription className="text-sm">
-                          <div className="font-medium">
-                            Robot Action in Progress
-                          </div>
-                          <div className="mt-1 text-xs">
-                            The robot is executing this step. Monitor status in
-                            the monitoring panel.
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {currentStep.type === "parallel_steps" && (
-                      <Alert>
-                        <Activity className="h-4 w-4" />
-                        <AlertDescription className="text-sm">
-                          <div className="font-medium">Parallel Execution</div>
-                          <div className="mt-1 text-xs">
-                            Multiple actions are running simultaneously.
-                          </div>
-                        </AlertDescription>
-                      </Alert>
+                      <div className="text-muted-foreground text-sm mt-1">{currentStep.description}</div>
                     )}
                   </div>
                 </div>
-              ) : (
-                <div className="flex h-full items-center justify-center p-6">
-                  <div className="w-full max-w-md text-center">
-                    <div className="text-muted-foreground text-sm">
-                      No current step available
+              </div>
+
+              {/* Action Sequence */}
+              {currentStep.actions && currentStep.actions.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      Execution Sequence
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {currentStep.actions.map((action, idx) => {
+                      const isCompleted = idx < activeActionIndex;
+                      const isActive = idx === activeActionIndex;
+                      const isPending = idx > activeActionIndex;
+
+                      return (
+                        <div
+                          key={action.id}
+                          className={`group relative flex items-center gap-4 rounded-xl border p-5 transition-all ${isActive ? "bg-card border-primary ring-1 ring-primary shadow-md" :
+                            isCompleted ? "bg-muted/30 border-transparent opacity-70" :
+                              "bg-card border-border opacity-50"
+                            }`}
+                        >
+                          <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-sm font-medium ${isCompleted ? "bg-transparent text-green-600 border-green-600" :
+                            isActive ? "bg-transparent text-primary border-primary font-bold shadow-sm" :
+                              "bg-transparent text-muted-foreground border-transparent"
+                            }`}>
+                            {isCompleted ? <CheckCircle className="h-5 w-5" /> : idx + 1}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className={`font - medium truncate ${isCompleted ? "line-through text-muted-foreground" : ""} `}>{action.name}</div>
+                            {action.description && (
+                              <div className="text-xs text-muted-foreground line-clamp-1">
+                                {action.description}
+                              </div>
+                            )}
+                          </div>
+
+                          {action.pluginId && isActive && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-9 px-3 text-muted-foreground hover:text-foreground"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log("Skip clicked");
+                                  // Fire and forget
+                                  onSkipAction(
+                                    action.pluginId!,
+                                    action.type.includes(".")
+                                      ? action.type.split(".").pop()!
+                                      : action.type,
+                                    action.parameters || {},
+                                    { autoAdvance: false }
+                                  );
+                                  onActionCompleted();
+                                }}
+                              >
+                                Skip
+                              </Button>
+                              <Button
+                                size="default"
+                                className="h-10 px-4 shadow-sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log("Execute clicked");
+                                  onExecuteRobotAction(
+                                    action.pluginId!,
+                                    action.type.includes(".")
+                                      ? action.type.split(".").pop()!
+                                      : action.type,
+                                    action.parameters || {},
+                                    { autoAdvance: false },
+                                  );
+                                  onActionCompleted();
+                                }}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                Execute
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Fallback for actions with no plugin ID (e.g. manual steps) */}
+                          {!action.pluginId && isActive && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onActionCompleted();
+                                }}
+                              >
+                                Mark Done
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Completed State Indicator */}
+                          {isCompleted && (
+                            <div className="flex items-center gap-2 px-3">
+                              <div className="text-xs font-medium text-green-600">
+                                Done
+                              </div>
+                              {action.pluginId && (
+                                <>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    title="Retry Action"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      // Execute again without advancing count
+                                      onExecuteRobotAction(
+                                        action.pluginId!,
+                                        action.type.includes(".") ? action.type.split(".").pop()! : action.type,
+                                        action.parameters || {},
+                                        { autoAdvance: false },
+                                      );
+                                    }}
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-amber-500 hover:text-amber-600 hover:bg-amber-100"
+                                    title="Mark Issue"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      onExecuteAction("note", {
+                                        content: `Reported issue with action: ${action.name}`,
+                                        category: "system_issue"
+                                      });
+                                    }}
+                                  >
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Manual Advance Button */}
+                  {activeActionIndex >= (currentStep.actions?.length || 0) && (
+                    <div className="mt-6 flex justify-end">
+                      <Button
+                        size="lg"
+                        onClick={currentStepIndex === steps.length - 1 ? onCompleteTrial : onNextStep}
+                        className={`w-full text-white shadow-md transition-all hover:scale-[1.02] ${currentStepIndex === steps.length - 1
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : "bg-green-600 hover:bg-green-700"
+                          }`}
+                      >
+                        {currentStepIndex === steps.length - 1 ? "Complete Trial" : "Complete Step"}
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Manual Wizard Controls (If applicable) */}
+              {currentStep.type === "wizard_action" && (
+                <div className="rounded-xl border border-dashed p-6 space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Manual Controls</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-12 justify-start"
+                      onClick={() => onExecuteAction("acknowledge")}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Acknowledge
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-12 justify-start"
+                      onClick={() => onExecuteAction("intervene")}
+                    >
+                      <Zap className="mr-2 h-4 w-4" />
+                      Intervene
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
-          </TabsContent>
-
-          {/* Timeline Tab */}
-          <TabsContent value="timeline" className="m-0 h-full">
-            <ScrollArea className="h-full">
-              <div className="space-y-2 p-3">
-                {steps.map((step, index) => {
-                  const status = getStepStatus(index);
-                  const StepIcon = getStepIcon(step.type);
-                  const isActive = index === currentStepIndex;
-
-                  return (
-                    <div
-                      key={step.id}
-                      className={`hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-lg p-2 transition-colors ${
-                        isActive ? "bg-primary/5 border-primary/20 border" : ""
-                      }`}
-                      onClick={() => onStepSelect(index)}
-                    >
-                      {/* Step Number and Status */}
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                            status === "completed"
-                              ? "bg-green-100 text-green-700"
-                              : status === "active"
-                                ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {status === "completed" ? (
-                            <CheckCircle className="h-3 w-3" />
-                          ) : (
-                            index + 1
-                          )}
-                        </div>
-                        {index < steps.length - 1 && (
-                          <div
-                            className={`mt-1 h-4 w-0.5 ${
-                              status === "completed"
-                                ? "bg-green-200"
-                                : "bg-border"
-                            }`}
-                          />
-                        )}
-                      </div>
-
-                      {/* Step Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <StepIcon className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-                          <div className="truncate text-sm font-medium">
-                            {step.name}
-                          </div>
-                          <Badge
-                            variant={getStepVariant(status)}
-                            className="ml-auto flex-shrink-0 text-xs"
-                          >
-                            {step.type.replace("_", " ")}
-                          </Badge>
-                        </div>
-
-                        {step.description && (
-                          <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-                            {step.description}
-                          </p>
-                        )}
-
-                        {isActive && trial.status === "in_progress" && (
-                          <div className="mt-1 flex items-center gap-1">
-                            <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full" />
-                            <span className="text-primary text-xs">
-                              Executing
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Events Tab */}
-          <TabsContent value="events" className="m-0 h-full">
-            <ScrollArea className="h-full">
-              <div className="p-3">
-                {trialEvents.length === 0 ? (
-                  <div className="flex h-32 items-center justify-center">
-                    <div className="text-muted-foreground text-center text-sm">
-                      No events recorded yet
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {trialEvents
-                      .slice()
-                      .reverse()
-                      .map((event, index) => (
-                        <div
-                          key={`${event.timestamp.getTime()}-${index}`}
-                          className="border-border/50 flex items-start gap-2 rounded-lg border p-2"
-                        >
-                          <div className="bg-muted flex h-6 w-6 flex-shrink-0 items-center justify-center rounded">
-                            <Activity className="h-3 w-3" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium capitalize">
-                              {event.type.replace(/_/g, " ")}
-                            </div>
-                            {event.message && (
-                              <div className="text-muted-foreground mt-1 text-xs">
-                                {event.message}
-                              </div>
-                            )}
-                            <div className="text-muted-foreground mt-1 text-xs">
-                              {event.timestamp.toLocaleTimeString()}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
+          ) : (
+            <div className="flex h-full items-center justify-center text-muted-foreground">
+              No active step
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+    </div >
   );
 }

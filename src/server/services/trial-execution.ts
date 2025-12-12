@@ -507,6 +507,8 @@ export class TrialExecutionEngine {
       // Parse plugin.action format
       const [pluginName, actionId] = action.type.split(".");
 
+      console.log(`[TrialExecution] Parsed action: pluginName=${pluginName}, actionId=${actionId}`);
+
       if (!pluginName || !actionId) {
         throw new Error(
           `Invalid robot action format: ${action.type}. Expected format: plugin.action`,
@@ -516,8 +518,11 @@ export class TrialExecutionEngine {
       // Get plugin configuration from database
       const plugin = await this.getPluginDefinition(pluginName);
       if (!plugin) {
-        throw new Error(`Plugin not found: ${pluginName}`);
+        throw new Error(`Plugin '${pluginName}' not found`);
       }
+
+      console.log(`[TrialExecution] Plugin loaded: ${plugin.name} (ID: ${plugin.id})`);
+      console.log(`[TrialExecution] Available actions: ${plugin.actions?.map((a: any) => a.id).join(", ")}`);
 
       // Find action definition in plugin
       const actionDefinition = plugin.actions?.find(
@@ -582,14 +587,27 @@ export class TrialExecutionEngine {
     }
 
     try {
+      // Check if pluginName is a UUID
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          pluginName,
+        );
+
+      const query = isUuid
+        ? eq(plugins.id, pluginName)
+        : eq(plugins.name, pluginName);
+
       const [plugin] = await this.db
         .select()
         .from(plugins)
-        .where(eq(plugins.name, pluginName))
+        .where(query)
         .limit(1);
 
       if (plugin) {
         // Cache the plugin definition
+        // Use the actual name for cache key if we looked up by ID
+        const cacheKey = isUuid ? plugin.name : pluginName;
+
         const pluginData = {
           ...plugin,
           actions: plugin.actionDefinitions,
@@ -597,7 +615,12 @@ export class TrialExecutionEngine {
           ros2Config: (plugin.metadata as any)?.ros2Config,
         };
 
-        this.pluginCache.set(pluginName, pluginData);
+        this.pluginCache.set(cacheKey, pluginData);
+        // Also cache by ID if accessible
+        if (plugin.id) {
+          this.pluginCache.set(plugin.id, pluginData);
+        }
+
         return pluginData;
       }
 

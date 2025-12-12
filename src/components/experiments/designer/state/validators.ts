@@ -645,7 +645,7 @@ export function validateExecution(
         issues.push({
           severity: "warning",
           message:
-            "Multiple steps with trial_start trigger may cause execution conflicts",
+            "Multiple steps will start simultaneously. Ensure parallel execution is intended.",
           category: "execution",
           field: "trigger.type",
           stepId: step.id,

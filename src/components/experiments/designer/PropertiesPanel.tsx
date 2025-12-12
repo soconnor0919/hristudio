@@ -70,7 +70,7 @@ export interface PropertiesPanelProps {
   className?: string;
 }
 
-export function PropertiesPanel({
+export function PropertiesPanelBase({
   design,
   selectedStep,
   selectedAction,
@@ -198,8 +198,8 @@ export function PropertiesPanel({
     const ResolvedIcon: React.ComponentType<{ className?: string }> =
       def?.icon && iconComponents[def.icon]
         ? (iconComponents[def.icon] as React.ComponentType<{
-            className?: string;
-          }>)
+          className?: string;
+        }>)
         : Zap;
 
     return (
@@ -633,3 +633,5 @@ export function PropertiesPanel({
     </div>
   );
 }
+
+export const PropertiesPanel = React.memo(PropertiesPanelBase);

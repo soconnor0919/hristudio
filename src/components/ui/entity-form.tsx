@@ -119,8 +119,8 @@ export function EntityForm<T extends FieldValues = FieldValues>({
       {/* Form Layout */}
       <div
         className={cn(
-          "grid gap-8",
-          layout === "default" && "grid-cols-1 lg:grid-cols-3",
+          "grid gap-8 w-full",
+          layout === "default" && "grid-cols-1 lg:grid-cols-3", // Keep the column split but remove max-width
           layout === "full-width" && "grid-cols-1",
         )}
       >

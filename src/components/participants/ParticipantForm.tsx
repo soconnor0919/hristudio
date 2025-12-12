@@ -114,39 +114,39 @@ export function ParticipantForm({
     { label: "Studies", href: "/studies" },
     ...(contextStudyId
       ? [
-          {
-            label: participant?.study?.name ?? "Study",
-            href: `/studies/${contextStudyId}`,
-          },
-          {
-            label: "Participants",
-            href: `/studies/${contextStudyId}/participants`,
-          },
-          ...(mode === "edit" && participant
-            ? [
-                {
-                  label: participant.name ?? participant.participantCode,
-                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Participant" }]),
-        ]
+        {
+          label: participant?.study?.name ?? "Study",
+          href: `/studies/${contextStudyId}`,
+        },
+        {
+          label: "Participants",
+          href: `/studies/${contextStudyId}/participants`,
+        },
+        ...(mode === "edit" && participant
+          ? [
+            {
+              label: participant.name ?? participant.participantCode,
+              href: `/studies/${contextStudyId}/participants/${participant.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Participant" }]),
+      ]
       : [
-          {
-            label: "Participants",
-            href: `/studies/${contextStudyId}/participants`,
-          },
-          ...(mode === "edit" && participant
-            ? [
-                {
-                  label: participant.name ?? participant.participantCode,
-                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
-                },
-                { label: "Edit" },
-              ]
-            : [{ label: "New Participant" }]),
-        ]),
+        {
+          label: "Participants",
+          href: `/studies/${contextStudyId}/participants`,
+        },
+        ...(mode === "edit" && participant
+          ? [
+            {
+              label: participant.name ?? participant.participantCode,
+              href: `/studies/${contextStudyId}/participants/${participant.id}`,
+            },
+            { label: "Edit" },
+          ]
+          : [{ label: "New Participant" }]),
+      ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -203,7 +203,7 @@ export function ParticipantForm({
           email: data.email ?? undefined,
           demographics,
         });
-        router.push(`/participants/${newParticipant.id}`);
+        router.push(`/studies/${data.studyId}/participants/${newParticipant.id}`);
       } else {
         const updatedParticipant = await updateParticipantMutation.mutateAsync({
           id: participantId!,
@@ -212,7 +212,7 @@ export function ParticipantForm({
           email: data.email ?? undefined,
           demographics,
         });
-        router.push(`/participants/${updatedParticipant.id}`);
+        router.push(`/studies/${contextStudyId}/participants/${updatedParticipant.id}`);
       }
     } catch (error) {
       setError(
@@ -385,11 +385,11 @@ export function ParticipantForm({
               form.setValue(
                 "gender",
                 value as
-                  | "male"
-                  | "female"
-                  | "non_binary"
-                  | "prefer_not_to_say"
-                  | "other",
+                | "male"
+                | "female"
+                | "non_binary"
+                | "prefer_not_to_say"
+                | "other",
               )
             }
           >
@@ -505,7 +505,8 @@ export function ParticipantForm({
       error={error}
       onDelete={mode === "edit" ? onDelete : undefined}
       isDeleting={isDeleting}
-      sidebar={sidebar}
+      isDeleting={isDeleting}
+      // sidebar={sidebar} // Removed for cleaner UI per user request
       submitText={mode === "create" ? "Register Participant" : "Save Changes"}
     >
       {formFields}

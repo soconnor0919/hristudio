@@ -736,6 +736,16 @@ export function DesignerRoot({
         const targetStep = steps.find((s) => s.id === stepId);
         if (!targetStep) return;
 
+        const fullDef = actionRegistry.getAction(actionDef.type);
+        const defaultParams: Record<string, unknown> = {};
+        if (fullDef?.parameters) {
+          for (const param of fullDef.parameters) {
+            if (param.default !== undefined) {
+              defaultParams[param.id] = param.default;
+            }
+          }
+        }
+
         const execution: ExperimentAction["execution"] =
           actionDef.execution &&
             (actionDef.execution.transport === "internal" ||
@@ -754,7 +764,7 @@ export function DesignerRoot({
           type: actionDef.type,
           name: actionDef.name,
           category: actionDef.category as ExperimentAction["category"],
-          parameters: {},
+          parameters: defaultParams,
           source: actionDef.source as ExperimentAction["source"],
           execution,
         };
@@ -818,6 +828,7 @@ export function DesignerRoot({
         description={designMeta.description || "No description"}
         icon={Play}
         actions={actions}
+        className="pb-6"
       />
 
       <div className="relative flex flex-1 flex-col overflow-hidden">

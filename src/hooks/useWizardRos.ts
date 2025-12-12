@@ -39,7 +39,10 @@ export interface UseWizardRosReturn {
       };
     },
   ) => Promise<RobotActionExecution>;
+  callService: (service: string, args?: Record<string, unknown>) => Promise<any>;
+  setAutonomousLife: (enabled: boolean) => Promise<boolean>;
 }
+
 
 export function useWizardRos(
   options: UseWizardRosOptions = {},
@@ -288,6 +291,24 @@ export function useWizardRos(
     [isConnected],
   );
 
+  const callService = useCallback(
+    async (service: string, args?: Record<string, unknown>): Promise<any> => {
+      const srv = serviceRef.current;
+      if (!srv || !isConnected) throw new Error("Not connected");
+      return srv.callService(service, args);
+    },
+    [isConnected],
+  );
+
+  const setAutonomousLife = useCallback(
+    async (enabled: boolean): Promise<boolean> => {
+      const srv = serviceRef.current;
+      if (!srv || !isConnected) throw new Error("Not connected");
+      return srv.setAutonomousLife(enabled);
+    },
+    [isConnected],
+  );
+
   return {
     isConnected,
     isConnecting,
@@ -297,5 +318,7 @@ export function useWizardRos(
     connect,
     disconnect,
     executeRobotAction,
+    callService,
+    setAutonomousLife,
   };
 }
