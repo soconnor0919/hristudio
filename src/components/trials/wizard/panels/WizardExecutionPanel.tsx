@@ -10,18 +10,13 @@ import {
   User,
   Activity,
   Zap,
-  Eye,
-  List,
-  Loader2,
   ArrowRight,
   AlertTriangle,
   RotateCcw,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { Alert, AlertDescription } from "~/components/ui/alert";
 
 interface StepData {
   id: string;
@@ -107,6 +102,7 @@ interface WizardExecutionPanelProps {
   onCompleteTrial?: () => void;
   completedActionsCount: number;
   onActionCompleted: () => void;
+  readOnly?: boolean;
 }
 
 export function WizardExecutionPanel({
@@ -126,46 +122,12 @@ export function WizardExecutionPanel({
   onCompleteTrial,
   completedActionsCount,
   onActionCompleted,
+  readOnly = false,
 }: WizardExecutionPanelProps) {
   // Local state removed in favor of parent state to prevent reset on re-render
   // const [completedCount, setCompletedCount] = React.useState(0);
 
   const activeActionIndex = completedActionsCount;
-
-  const getStepIcon = (type: string) => {
-    switch (type) {
-      case "wizard_action":
-        return User;
-      case "robot_action":
-        return Bot;
-      case "parallel_steps":
-        return Activity;
-      case "conditional_branch":
-        return AlertCircle;
-      default:
-        return Play;
-    }
-  };
-
-  const getStepStatus = (stepIndex: number) => {
-    if (stepIndex < currentStepIndex) return "completed";
-    if (stepIndex === currentStepIndex && trial.status === "in_progress")
-      return "active";
-    return "pending";
-  };
-
-  const getStepVariant = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default";
-      case "active":
-        return "secondary";
-      case "pending":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
 
   // Pre-trial state
   if (trial.status === "scheduled") {
@@ -252,7 +214,7 @@ export function WizardExecutionPanel({
       </div>
 
       {/* Simplified Content - Sequential Focus */}
-      <div className="flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           {currentStep ? (
             <div className="flex flex-col gap-6 p-6">
@@ -281,7 +243,6 @@ export function WizardExecutionPanel({
                     {currentStep.actions.map((action, idx) => {
                       const isCompleted = idx < activeActionIndex;
                       const isActive = idx === activeActionIndex;
-                      const isPending = idx > activeActionIndex;
 
                       return (
                         <div
@@ -328,6 +289,7 @@ export function WizardExecutionPanel({
                                   );
                                   onActionCompleted();
                                 }}
+                                disabled={readOnly}
                               >
                                 Skip
                               </Button>
@@ -348,6 +310,7 @@ export function WizardExecutionPanel({
                                   );
                                   onActionCompleted();
                                 }}
+                                disabled={readOnly || isExecuting}
                               >
                                 <Play className="mr-2 h-4 w-4" />
                                 Execute
@@ -364,6 +327,7 @@ export function WizardExecutionPanel({
                                   e.preventDefault();
                                   onActionCompleted();
                                 }}
+                                disabled={readOnly || isExecuting}
                               >
                                 Mark Done
                               </Button>
@@ -394,6 +358,7 @@ export function WizardExecutionPanel({
                                         { autoAdvance: false },
                                       );
                                     }}
+                                    disabled={readOnly || isExecuting}
                                   >
                                     <RotateCcw className="h-3.5 w-3.5" />
                                   </Button>
@@ -410,6 +375,7 @@ export function WizardExecutionPanel({
                                         category: "system_issue"
                                       });
                                     }}
+                                    disabled={readOnly}
                                   >
                                     <AlertTriangle className="h-3.5 w-3.5" />
                                   </Button>
@@ -432,6 +398,7 @@ export function WizardExecutionPanel({
                           ? "bg-blue-600 hover:bg-blue-700"
                           : "bg-green-600 hover:bg-green-700"
                           }`}
+                        disabled={readOnly || isExecuting}
                       >
                         {currentStepIndex === steps.length - 1 ? "Complete Trial" : "Complete Step"}
                         <ArrowRight className="ml-2 h-5 w-5" />
@@ -445,22 +412,15 @@ export function WizardExecutionPanel({
               {currentStep.type === "wizard_action" && (
                 <div className="rounded-xl border border-dashed p-6 space-y-4">
                   <h3 className="text-sm font-medium text-muted-foreground">Manual Controls</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <Button
                       variant="outline"
-                      className="h-12 justify-start"
-                      onClick={() => onExecuteAction("acknowledge")}
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Acknowledge
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 justify-start"
+                      className="h-12 justify-start border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800"
                       onClick={() => onExecuteAction("intervene")}
+                      disabled={readOnly}
                     >
                       <Zap className="mr-2 h-4 w-4" />
-                      Intervene
+                      Flag Issue / Intervention
                     </Button>
                   </div>
                 </div>
@@ -472,6 +432,8 @@ export function WizardExecutionPanel({
             </div>
           )}
         </ScrollArea>
+        {/* Scroll Hint Fade */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent z-10" />
       </div>
     </div >
   );

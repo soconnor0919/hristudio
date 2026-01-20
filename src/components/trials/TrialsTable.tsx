@@ -367,10 +367,8 @@ export const columns: ColumnDef<Trial>[] = [
 
 function ActionsCell({ row }: { row: { original: Trial } }) {
   const trial = row.original;
-  const router = React.useMemo(() => require("next/navigation").useRouter(), []); // Dynamic import to avoid hook rules in static context? No, this component is rendered in Table.
-  // Actually, hooks must be at top level. This ActionsCell will be a regular component.
-  // But useRouter might fail if columns is not in component tree?
-  // Table cells are rendered by flexRender in React, so they are components.
+  // ActionsCell is a component rendered by the table.
+
   // importing useRouter is fine.
 
   const utils = api.useUtils();

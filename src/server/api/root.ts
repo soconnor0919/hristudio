@@ -11,6 +11,7 @@ import { robotsRouter } from "~/server/api/routers/robots";
 import { studiesRouter } from "~/server/api/routers/studies";
 import { trialsRouter } from "~/server/api/routers/trials";
 import { usersRouter } from "~/server/api/routers/users";
+import { storageRouter } from "~/server/api/routers/storage";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
   collaboration: collaborationRouter,
   admin: adminRouter,
   dashboard: dashboardRouter,
+  storage: storageRouter,
 });
 
 // export type definition of API

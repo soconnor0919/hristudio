@@ -12,6 +12,7 @@ import {
   useDndMonitor,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import {
   useSortable,
@@ -68,7 +69,7 @@ interface FlowWorkspaceProps {
   onActionCreate?: (stepId: string, action: ExperimentAction) => void;
 }
 
-interface VirtualItem {
+export interface VirtualItem {
   index: number;
   top: number;
   height: number;
@@ -76,6 +77,232 @@ interface VirtualItem {
   key: string;
   visible: boolean;
 }
+
+interface StepRowProps {
+  item: VirtualItem;
+  selectedStepId: string | null | undefined;
+  selectedActionId: string | null | undefined;
+  renamingStepId: string | null;
+  onSelectStep: (id: string | undefined) => void;
+  onSelectAction: (stepId: string, actionId: string | undefined) => void;
+  onToggleExpanded: (step: ExperimentStep) => void;
+  onRenameStep: (step: ExperimentStep, name: string) => void;
+  onDeleteStep: (step: ExperimentStep) => void;
+  onDeleteAction: (stepId: string, actionId: string) => void;
+  setRenamingStepId: (id: string | null) => void;
+  registerMeasureRef: (stepId: string, el: HTMLDivElement | null) => void;
+}
+
+const StepRow = React.memo(function StepRow({
+  item,
+  selectedStepId,
+  selectedActionId,
+  renamingStepId,
+  onSelectStep,
+  onSelectAction,
+  onToggleExpanded,
+  onRenameStep,
+  onDeleteStep,
+  onDeleteAction,
+  setRenamingStepId,
+  registerMeasureRef,
+}: StepRowProps) {
+  const step = item.step;
+  const insertionProjection = useDesignerStore((s) => s.insertionProjection);
+
+  const displayActions = useMemo(() => {
+    if (
+      insertionProjection?.stepId === step.id &&
+      insertionProjection.parentId === null
+    ) {
+      const copy = [...step.actions];
+      // Insert placeholder action
+      // Ensure specific ID doesn't crash keys if collision (collision unlikely for library items)
+      // Actually, standard array key is action.id.
+      copy.splice(insertionProjection.index, 0, insertionProjection.action);
+      return copy;
+    }
+    return step.actions;
+  }, [step.actions, step.id, insertionProjection]);
+
+  const {
+    setNodeRef,
+    transform,
+    transition,
+    attributes,
+    listeners,
+    isDragging,
+  } = useSortable({
+    id: sortableStepId(step.id),
+    data: {
+      type: "step",
+      step: step,
+    },
+  });
+
+  const style: React.CSSProperties = {
+    position: "absolute",
+    top: item.top,
+    left: 0,
+    right: 0,
+    width: "100%",
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 25 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} data-step-id={step.id}>
+      <div
+        ref={(el) => registerMeasureRef(step.id, el)}
+        className="relative px-3 py-4"
+        data-step-id={step.id}
+      >
+        <StepDroppableArea stepId={step.id} />
+        <div
+          className={cn(
+            "mb-2 rounded border shadow-sm transition-colors",
+            selectedStepId === step.id
+              ? "border-border bg-accent/30"
+              : "hover:bg-accent/30",
+            isDragging && "opacity-80 ring-1 ring-blue-300",
+          )}
+        >
+          <div
+            className="flex items-center justify-between gap-2 border-b px-2 py-1.5"
+            onClick={(e) => {
+              const tag = (e.target as HTMLElement).tagName.toLowerCase();
+              if (tag === "input" || tag === "textarea" || tag === "button")
+                return;
+              onSelectStep(step.id);
+              onSelectAction(step.id, undefined);
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpanded(step);
+                }}
+                className="text-muted-foreground hover:bg-accent/60 hover:text-foreground rounded p-1"
+                aria-label={step.expanded ? "Collapse step" : "Expand step"}
+              >
+                {step.expanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              <Badge
+                variant="outline"
+                className="h-5 px-1.5 text-[10px] font-normal"
+              >
+                {step.order + 1}
+              </Badge>
+              {renamingStepId === step.id ? (
+                <Input
+                  autoFocus
+                  defaultValue={step.name}
+                  className="h-7 w-40 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onRenameStep(
+                        step,
+                        (e.target as HTMLInputElement).value.trim() ||
+                        step.name,
+                      );
+                      setRenamingStepId(null);
+                    } else if (e.key === "Escape") {
+                      setRenamingStepId(null);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    onRenameStep(step, e.target.value.trim() || step.name);
+                    setRenamingStepId(null);
+                  }}
+                />
+              ) : (
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium">{step.name}</span>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground p-1 opacity-0 group-hover:opacity-100"
+                    aria-label="Rename step"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingStepId(step.id);
+                    }}
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+              <span className="text-muted-foreground hidden text-[11px] md:inline">
+                {step.actions.length} actions
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-[11px] text-red-500 hover:text-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteStep(step);
+                }}
+                aria-label="Delete step"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+              <div
+                className="text-muted-foreground cursor-grab p-1"
+                aria-label="Drag step"
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Action List (Collapsible/Virtual content) */}
+          {step.expanded && (
+            <div className="bg-background/40 min-h-[3rem] space-y-2 p-2 pb-8">
+              <SortableContext
+                items={displayActions.map((a) => sortableActionId(a.id))}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex w-full flex-col gap-2">
+                  {displayActions.length === 0 ? (
+                    <div className="flex h-12 items-center justify-center rounded border border-dashed text-xs text-muted-foreground">
+                      Drop actions here
+                    </div>
+                  ) : (
+                    displayActions.map((action) => (
+                      <SortableActionChip
+                        key={action.id}
+                        stepId={step.id}
+                        action={action}
+                        parentId={null}
+                        selectedActionId={selectedActionId}
+                        onSelectAction={onSelectAction}
+                        onDeleteAction={onDeleteAction}
+                      />
+                    ))
+                  )}
+                </div>
+              </SortableContext>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
 
 /* -------------------------------------------------------------------------- */
 /* Utility                                                                    */
@@ -122,36 +349,124 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
 /* -------------------------------------------------------------------------- */
 
 interface ActionChipProps {
+  stepId: string;
   action: ExperimentAction;
-  isSelected: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
+  parentId: string | null;
+  selectedActionId: string | null | undefined;
+  onSelectAction: (stepId: string, actionId: string | undefined) => void;
+  onDeleteAction: (stepId: string, actionId: string) => void;
   dragHandle?: boolean;
 }
 
 function SortableActionChip({
+  stepId,
   action,
-  isSelected,
-  onSelect,
-  onDelete,
+  parentId,
+  selectedActionId,
+  onSelectAction,
+  onDeleteAction,
+  dragHandle,
 }: ActionChipProps) {
   const def = actionRegistry.getAction(action.type);
+  const isSelected = selectedActionId === action.id;
+
+  const insertionProjection = useDesignerStore((s) => s.insertionProjection);
+  const displayChildren = useMemo(() => {
+    if (
+      insertionProjection?.stepId === stepId &&
+      insertionProjection.parentId === action.id
+    ) {
+      const copy = [...(action.children || [])];
+      copy.splice(insertionProjection.index, 0, insertionProjection.action);
+      return copy;
+    }
+    return action.children;
+  }, [action.children, action.id, stepId, insertionProjection]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Main Sortable Logic                                                      */
+  /* ------------------------------------------------------------------------ */
+  const isPlaceholder = action.id === "projection-placeholder";
+
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging,
+    isDragging: isSortableDragging,
   } = useSortable({
     id: sortableActionId(action.id),
+    disabled: isPlaceholder, // Disable sortable for placeholder
+    data: {
+      type: "action",
+      stepId,
+      parentId,
+      id: action.id,
+    },
   });
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+  // Use local dragging state or passed prop
+  const isDragging = isSortableDragging || dragHandle;
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
     transition,
-    zIndex: isDragging ? 30 : undefined,
   };
+
+  /* ------------------------------------------------------------------------ */
+  /* Nested Droppable (for control flow containers)                           */
+  /* ------------------------------------------------------------------------ */
+  const nestedDroppableId = `container-${action.id}`;
+  const {
+    isOver: isOverNested,
+    setNodeRef: setNestedNodeRef
+  } = useDroppable({
+    id: nestedDroppableId,
+    disabled: !def?.nestable || isPlaceholder, // Disable droppable for placeholder
+    data: {
+      type: "container",
+      stepId,
+      parentId: action.id,
+      action // Pass full action for projection logic
+    }
+  });
+
+  const shouldRenderChildren = def?.nestable;
+
+  if (isPlaceholder) {
+    const { setNodeRef: setPlaceholderRef } = useDroppable({
+      id: "projection-placeholder",
+      data: { type: "placeholder" }
+    });
+
+    // Render simplified placeholder without hooks refs
+    // We still render the content matching the action type for visual fidelity
+    return (
+      <div
+        ref={setPlaceholderRef}
+        className="group relative flex w-full flex-col items-start gap-1 rounded border-2 border-dashed border-blue-300 bg-blue-50/50 px-3 py-2 text-[11px] opacity-70"
+      >
+        <div className="flex w-full items-center gap-2">
+          <span className={cn(
+            "h-2.5 w-2.5 rounded-full",
+            def ? {
+              wizard: "bg-blue-500",
+              robot: "bg-emerald-500",
+              control: "bg-amber-500",
+              observation: "bg-purple-500",
+            }[def.category] : "bg-gray-400"
+          )} />
+          <span className="font-medium text-foreground">{def?.name ?? action.name}</span>
+        </div>
+        {def?.description && (
+          <div className="text-muted-foreground line-clamp-3 w-full text-[10px] leading-snug">
+            {def.description}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -162,8 +477,13 @@ function SortableActionChip({
         "bg-muted/40 hover:bg-accent/40 cursor-pointer",
         isSelected && "border-border bg-accent/30",
         isDragging && "opacity-70 shadow-lg",
+        // Visual feedback for nested drop
+        isOverNested && !isDragging && "ring-2 ring-blue-400 ring-offset-1 bg-blue-50/50"
       )}
-      onClick={onSelect}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelectAction(stepId, action.id);
+      }}
       {...attributes}
       role="button"
       aria-pressed={isSelected}
@@ -197,7 +517,7 @@ function SortableActionChip({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            onDeleteAction(stepId, action.id);
           }}
           className="text-muted-foreground hover:text-foreground rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
           aria-label="Delete action"
@@ -221,12 +541,45 @@ function SortableActionChip({
             </span>
           ))}
           {def.parameters.length > 4 && (
-            <span className="text-muted-foreground text-[9px]">
-              +{def.parameters.length - 4} more
-            </span>
+            <span className="text-[9px] text-muted-foreground">+{def.parameters.length - 4}</span>
           )}
         </div>
       ) : null}
+
+      {/* Nested Actions Container */}
+      {shouldRenderChildren && (
+        <div
+          ref={setNestedNodeRef}
+          className={cn(
+            "mt-2 w-full flex flex-col gap-2 pl-4 border-l-2 border-border/40 transition-all min-h-[0.5rem] pb-4",
+          )}
+        >
+          <SortableContext
+            items={(displayChildren ?? action.children ?? [])
+              .filter(c => c.id !== "projection-placeholder")
+              .map(c => sortableActionId(c.id))}
+            strategy={verticalListSortingStrategy}
+          >
+            {(displayChildren || action.children || []).map((child) => (
+              <SortableActionChip
+                key={child.id}
+                stepId={stepId}
+                action={child}
+                parentId={action.id}
+                selectedActionId={selectedActionId}
+                onSelectAction={onSelectAction}
+                onDeleteAction={onDeleteAction}
+              />
+            ))}
+            {(!displayChildren?.length && !action.children?.length) && (
+              <div className="text-[10px] text-muted-foreground/60 italic py-1">
+                Drag actions here
+              </div>
+            )}
+          </SortableContext>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -254,7 +607,7 @@ export function FlowWorkspace({
 
   const removeAction = useDesignerStore((s) => s.removeAction);
   const reorderStep = useDesignerStore((s) => s.reorderStep);
-  const reorderAction = useDesignerStore((s) => s.reorderAction);
+  const moveAction = useDesignerStore((s) => s.moveAction);
   const recomputeHash = useDesignerStore((s) => s.recomputeHash);
 
   /* Local state */
@@ -382,7 +735,10 @@ export function FlowWorkspace({
         description: "",
         type: "sequential",
         order: steps.length,
-        trigger: { type: "trial_start", conditions: {} },
+        trigger:
+          steps.length === 0
+            ? { type: "trial_start", conditions: {} }
+            : { type: "previous_step", conditions: {} },
         actions: [],
         expanded: true,
       };
@@ -472,34 +828,77 @@ export function FlowWorkspace({
           }
         }
       }
-      // Action reorder (within same parent only)
+      // Action reorder (supports nesting)
       if (activeId.startsWith("s-act-") && overId.startsWith("s-act-")) {
-        const fromActionId = parseSortableAction(activeId);
-        const toActionId = parseSortableAction(overId);
-        if (fromActionId && toActionId && fromActionId !== toActionId) {
-          const fromParent = actionParentMap.get(fromActionId);
-          const toParent = actionParentMap.get(toActionId);
-          if (fromParent && toParent && fromParent === toParent) {
-            const step = steps.find((s) => s.id === fromParent);
-            if (step) {
-              const fromIdx = step.actions.findIndex(
-                (a) => a.id === fromActionId,
-              );
-              const toIdx = step.actions.findIndex((a) => a.id === toActionId);
-              if (fromIdx >= 0 && toIdx >= 0) {
-                reorderAction(step.id, fromIdx, toIdx);
-                void recomputeHash();
-              }
-            }
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (
+          activeData && overData &&
+          activeData.stepId === overData.stepId &&
+          activeData.type === 'action' && overData.type === 'action'
+        ) {
+          const stepId = activeData.stepId as string;
+          const activeActionId = activeData.action.id;
+          const overActionId = overData.action.id;
+
+          if (activeActionId !== overActionId) {
+            const newParentId = overData.parentId as string | null;
+            const newIndex = overData.sortable.index; // index within that parent's list
+
+            moveAction(stepId, activeActionId, newParentId, newIndex);
+            void recomputeHash();
           }
         }
       }
     },
-    [steps, reorderStep, reorderAction, actionParentMap, recomputeHash],
+    [steps, reorderStep, moveAction, recomputeHash],
+  );
+
+  /* ------------------------------------------------------------------------ */
+  /* Drag Over (Live Sorting)                                                  */
+  /* ------------------------------------------------------------------------ */
+  const handleLocalDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      if (!over) return;
+
+      const activeId = active.id.toString();
+      const overId = over.id.toString();
+
+      // Only handle action reordering
+      if (activeId.startsWith("s-act-") && overId.startsWith("s-act-")) {
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (
+          activeData &&
+          overData &&
+          activeData.type === 'action' &&
+          overData.type === 'action'
+        ) {
+          const activeActionId = activeData.action.id;
+          const overActionId = overData.action.id;
+          const activeStepId = activeData.stepId;
+          const overStepId = overData.stepId;
+          const activeParentId = activeData.parentId;
+          const overParentId = overData.parentId;
+
+          // If moving between different lists (parents/steps), move immediately to visualize snap
+          if (activeParentId !== overParentId || activeStepId !== overStepId) {
+            // Determine new index
+            // verification of safe move handled by store
+            moveAction(overStepId, activeActionId, overParentId, overData.sortable.index);
+          }
+        }
+      }
+    },
+    [moveAction]
   );
 
   useDndMonitor({
     onDragStart: handleLocalDragStart,
+    onDragOver: handleLocalDragOver,
     onDragEnd: handleLocalDragEnd,
     onDragCancel: () => {
       // no-op
@@ -509,204 +908,22 @@ export function FlowWorkspace({
   /* ------------------------------------------------------------------------ */
   /* Step Row (Sortable + Virtualized)                                         */
   /* ------------------------------------------------------------------------ */
-  function StepRow({ item }: { item: VirtualItem }) {
-    const step = item.step;
-    const {
-      setNodeRef,
-      transform,
-      transition,
-      attributes,
-      listeners,
-      isDragging,
-    } = useSortable({
-      id: sortableStepId(step.id),
-    });
+  // StepRow moved outside of component to prevent re-mounting on every render (flashing fix)
 
-    const style: React.CSSProperties = {
-      position: "absolute",
-      top: item.top,
-      left: 0,
-      right: 0,
-      width: "100%",
-      transform: CSS.Transform.toString(transform),
-      transition,
-      zIndex: isDragging ? 25 : undefined,
-    };
-
-    const setMeasureRef = (el: HTMLDivElement | null) => {
-      const prev = measureRefs.current.get(step.id) ?? null;
+  const registerMeasureRef = useCallback(
+    (stepId: string, el: HTMLDivElement | null) => {
+      const prev = measureRefs.current.get(stepId) ?? null;
       if (prev && prev !== el) {
         roRef.current?.unobserve(prev);
-        measureRefs.current.delete(step.id);
+        measureRefs.current.delete(stepId);
       }
       if (el) {
-        measureRefs.current.set(step.id, el);
+        measureRefs.current.set(stepId, el);
         roRef.current?.observe(el);
       }
-    };
-
-    return (
-      <div ref={setNodeRef} style={style} data-step-id={step.id}>
-        <div
-          ref={setMeasureRef}
-          className="relative px-3 py-4"
-          data-step-id={step.id}
-        >
-          <StepDroppableArea stepId={step.id} />
-          <div
-            className={cn(
-              "mb-2 rounded border shadow-sm transition-colors",
-              selectedStepId === step.id
-                ? "border-border bg-accent/30"
-                : "hover:bg-accent/30",
-              isDragging && "opacity-80 ring-1 ring-blue-300",
-            )}
-          >
-            <div
-              className="flex items-center justify-between gap-2 border-b px-2 py-1.5"
-              onClick={(e) => {
-                // Avoid selecting step when interacting with controls or inputs
-                const tag = (e.target as HTMLElement).tagName.toLowerCase();
-                if (tag === "input" || tag === "textarea" || tag === "button")
-                  return;
-                selectStep(step.id);
-                selectAction(step.id, undefined);
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleExpanded(step);
-                  }}
-                  className="text-muted-foreground hover:bg-accent/60 hover:text-foreground rounded p-1"
-                  aria-label={step.expanded ? "Collapse step" : "Expand step"}
-                >
-                  {step.expanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </button>
-                <Badge
-                  variant="outline"
-                  className="h-5 px-1.5 text-[10px] font-normal"
-                >
-                  {step.order + 1}
-                </Badge>
-                {renamingStepId === step.id ? (
-                  <Input
-                    autoFocus
-                    defaultValue={step.name}
-                    className="h-7 w-40 text-xs"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        renameStep(
-                          step,
-                          (e.target as HTMLInputElement).value.trim() ||
-                          step.name,
-                        );
-                        setRenamingStepId(null);
-                        void recomputeHash();
-                      } else if (e.key === "Escape") {
-                        setRenamingStepId(null);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      renameStep(step, e.target.value.trim() || step.name);
-                      setRenamingStepId(null);
-                      void recomputeHash();
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-medium">{step.name}</span>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground p-1 opacity-0 group-hover:opacity-100"
-                      aria-label="Rename step"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRenamingStepId(step.id);
-                      }}
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-                <span className="text-muted-foreground hidden text-[11px] md:inline">
-                  {step.actions.length} actions
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-[11px] text-red-500 hover:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteStep(step);
-                  }}
-                  aria-label="Delete step"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-                <div
-                  className="text-muted-foreground cursor-grab p-1"
-                  aria-label="Drag step"
-                  {...attributes}
-                  {...listeners}
-                >
-                  <GripVertical className="h-4 w-4" />
-                </div>
-              </div>
-            </div>
-
-            {step.expanded && (
-              <div className="space-y-2 px-3 py-3">
-                <div className="flex flex-wrap gap-2">
-                  {step.actions.length > 0 && (
-                    <SortableContext
-                      items={step.actions.map((a) => sortableActionId(a.id))}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="flex w-full flex-col gap-2">
-                        {step.actions.map((action) => (
-                          <SortableActionChip
-                            key={action.id}
-                            action={action}
-                            isSelected={
-                              selectedStepId === step.id &&
-                              selectedActionId === action.id
-                            }
-                            onSelect={() => {
-                              selectStep(step.id);
-                              selectAction(step.id, action.id);
-                            }}
-                            onDelete={() => deleteAction(step.id, action.id)}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  )}
-                </div>
-                {/* Persistent centered bottom drop hint */}
-                <div className="mt-3 flex w-full items-center justify-center">
-                  <div className="text-muted-foreground border-muted-foreground/30 rounded border border-dashed px-2 py-1 text-[11px]">
-                    Drop actions here
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+    },
+    [],
+  );
 
   /* ------------------------------------------------------------------------ */
   /* Render                                                                    */
@@ -767,7 +984,27 @@ export function FlowWorkspace({
           >
             <div style={{ height: totalHeight, position: "relative" }}>
               {virtualItems.map(
-                (vi) => vi.visible && <StepRow key={vi.key} item={vi} />,
+                (vi) =>
+                  vi.visible && (
+                    <StepRow
+                      key={vi.key}
+                      item={vi}
+                      selectedStepId={selectedStepId}
+                      selectedActionId={selectedActionId}
+                      renamingStepId={renamingStepId}
+                      onSelectStep={selectStep}
+                      onSelectAction={selectAction}
+                      onToggleExpanded={toggleExpanded}
+                      onRenameStep={(step, name) => {
+                        renameStep(step, name);
+                        void recomputeHash();
+                      }}
+                      onDeleteStep={deleteStep}
+                      onDeleteAction={deleteAction}
+                      setRenamingStepId={setRenamingStepId}
+                      registerMeasureRef={registerMeasureRef}
+                    />
+                  ),
               )}
             </div>
           </SortableContext>

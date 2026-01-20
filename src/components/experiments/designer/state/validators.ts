@@ -643,13 +643,13 @@ export function validateExecution(
     if (trialStartSteps.length > 1) {
       trialStartSteps.slice(1).forEach((step) => {
         issues.push({
-          severity: "warning",
+          severity: "info",
           message:
-            "Multiple steps will start simultaneously. Ensure parallel execution is intended.",
+            "This step will start immediately at trial start. For sequential flow, use 'Previous Step' trigger.",
           category: "execution",
           field: "trigger.type",
           stepId: step.id,
-          suggestion: "Consider using sequential triggers for subsequent steps",
+          suggestion: "Change trigger to 'Previous Step' if this step should follow the previous one",
         });
       });
     }

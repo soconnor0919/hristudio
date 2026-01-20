@@ -155,8 +155,9 @@ function projectActionForDesign(
       pluginVersion: action.source.pluginVersion,
       baseActionId: action.source.baseActionId,
     },
-    execution: projectExecutionDescriptor(action.execution),
+    execution: action.execution ? projectExecutionDescriptor(action.execution) : null,
     parameterKeysOrValues: parameterProjection,
+    children: action.children?.map(c => projectActionForDesign(c, options)) ?? [],
   };
 
   if (options.includeActionNames) {

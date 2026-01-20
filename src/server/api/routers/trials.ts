@@ -30,6 +30,10 @@ import {
   TrialExecutionEngine,
   type ActionDefinition,
 } from "~/server/services/trial-execution";
+import { s3Client } from "~/server/storage";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "~/env";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -270,15 +274,34 @@ export const trialsRouter = createTRPCRouter({
         .from(trialEvents)
         .where(eq(trialEvents.trialId, input.id));
 
-      const mediaCount = await db
-        .select({ count: count() })
+      const media = await db
+        .select()
         .from(mediaCaptures)
-        .where(eq(mediaCaptures.trialId, input.id));
+        .where(eq(mediaCaptures.trialId, input.id))
+        .orderBy(desc(mediaCaptures.createdAt)); // Get latest first
 
       return {
         ...trial[0],
         eventCount: eventCount[0]?.count ?? 0,
-        mediaCount: mediaCount[0]?.count ?? 0,
+        mediaCount: media.length,
+        media: await Promise.all(media.map(async (m) => {
+          let url = "";
+          try {
+            // Generate Presigned GET URL
+            const command = new GetObjectCommand({
+              Bucket: env.MINIO_BUCKET_NAME ?? "hristudio-data",
+              Key: m.storagePath,
+            });
+            url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+          } catch (e) {
+            console.error("Failed to sign URL for media", m.id, e);
+          }
+          return {
+            ...m,
+            url, // Add the signed URL to the response
+            contentType: m.format === 'webm' ? 'video/webm' : 'application/octet-stream', // Infer or store content type
+          };
+        })),
       };
     }),
 

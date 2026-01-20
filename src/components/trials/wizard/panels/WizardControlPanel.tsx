@@ -98,6 +98,7 @@ interface WizardControlPanelProps {
   onTabChange: (tab: "control" | "step" | "actions" | "robot") => void;
   isStarting?: boolean;
   onSetAutonomousLife?: (enabled: boolean) => Promise<boolean | void>;
+  readOnly?: boolean;
 }
 
 export function WizardControlPanel({
@@ -118,6 +119,7 @@ export function WizardControlPanel({
   onTabChange,
   isStarting = false,
   onSetAutonomousLife,
+  readOnly = false,
 }: WizardControlPanelProps) {
   const [autonomousLife, setAutonomousLife] = React.useState(true);
 
@@ -187,7 +189,7 @@ export function WizardControlPanel({
                     }}
                     className="w-full"
                     size="sm"
-                    disabled={isStarting}
+                    disabled={isStarting || readOnly}
                   >
                     <Play className="mr-2 h-4 w-4" />
                     {isStarting ? "Starting..." : "Start Trial"}
@@ -201,14 +203,14 @@ export function WizardControlPanel({
                         onClick={onPauseTrial}
                         variant="outline"
                         size="sm"
-                        disabled={false}
+                        disabled={readOnly}
                       >
                         <Pause className="mr-1 h-3 w-3" />
                         Pause
                       </Button>
                       <Button
                         onClick={onNextStep}
-                        disabled={currentStepIndex >= steps.length - 1}
+                        disabled={(currentStepIndex >= steps.length - 1) || readOnly}
                         size="sm"
                       >
                         <SkipForward className="mr-1 h-3 w-3" />
@@ -223,6 +225,7 @@ export function WizardControlPanel({
                       variant="outline"
                       className="w-full"
                       size="sm"
+                      disabled={readOnly}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Complete Trial
@@ -233,6 +236,7 @@ export function WizardControlPanel({
                       variant="destructive"
                       className="w-full"
                       size="sm"
+                      disabled={readOnly}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Abort Trial
@@ -277,7 +281,7 @@ export function WizardControlPanel({
                       id="autonomous-life"
                       checked={autonomousLife}
                       onCheckedChange={handleAutonomousLifeChange}
-                      disabled={!_isConnected}
+                      disabled={!_isConnected || readOnly}
                       className="scale-75"
                     />
                   </div>
@@ -368,7 +372,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Acknowledge clicked");
                         onExecuteAction("acknowledge");
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <CheckCircle className="mr-2 h-3 w-3" />
                       Acknowledge
@@ -382,7 +386,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Intervene clicked");
                         onExecuteAction("intervene");
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <AlertCircle className="mr-2 h-3 w-3" />
                       Intervene
@@ -396,7 +400,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Add Note clicked");
                         onExecuteAction("note", { content: "Wizard note" });
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <User className="mr-2 h-3 w-3" />
                       Add Note
@@ -412,7 +416,7 @@ export function WizardControlPanel({
                           size="sm"
                           className="w-full justify-start"
                           onClick={() => onExecuteAction("step_complete")}
-                          disabled={false}
+                          disabled={readOnly}
                         >
                           <CheckCircle className="mr-2 h-3 w-3" />
                           Mark Complete
@@ -441,11 +445,13 @@ export function WizardControlPanel({
             <ScrollArea className="h-full">
               <div className="p-3">
                 {studyId && onExecuteRobotAction ? (
-                  <RobotActionsPanel
-                    studyId={studyId}
-                    trialId={trial.id}
-                    onExecuteAction={onExecuteRobotAction}
-                  />
+                  <div className={readOnly ? "pointer-events-none opacity-50" : ""}>
+                    <RobotActionsPanel
+                      studyId={studyId}
+                      trialId={trial.id}
+                      onExecuteAction={onExecuteRobotAction}
+                    />
+                  </div>
                 ) : (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />

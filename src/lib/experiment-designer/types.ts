@@ -53,15 +53,18 @@ export interface ActionDefinition {
   };
   execution?: ExecutionDescriptor;
   parameterSchemaRaw?: unknown; // snapshot of original schema for validation/audit
+  nestable?: boolean; // If true, this action can contain child actions
 }
 
 export interface ExperimentAction {
   id: string;
-  type: ActionType;
+  type: string; // e.g. "wizard_speak", "robot_move"
   name: string;
+  description?: string; // Optional description
   parameters: Record<string, unknown>;
-  duration?: number;
+  duration?: number; // Estimated duration in seconds
   category: ActionCategory;
+  // Provenance (where did this come from?)
   source: {
     kind: "core" | "plugin";
     pluginId?: string;
@@ -69,8 +72,14 @@ export interface ExperimentAction {
     robotId?: string | null;
     baseActionId?: string;
   };
-  execution: ExecutionDescriptor;
+  // Execution (how do we run this?)
+  execution?: ExecutionDescriptor;
+
+  // Snapshot of parameter schema at the time of addition (for drift detection)
   parameterSchemaRaw?: unknown;
+
+  // Nested actions (control flow)
+  children?: ExperimentAction[];
 }
 
 export interface StepTrigger {

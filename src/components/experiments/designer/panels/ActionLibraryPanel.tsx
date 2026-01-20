@@ -174,7 +174,7 @@ export function ActionLibraryPanel() {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<
     Set<ActionCategory>
-  >(new Set<ActionCategory>(["wizard"]));
+  >(new Set<ActionCategory>(["wizard", "robot", "control", "observation"]));
   const [favorites, setFavorites] = useState<FavoritesState>({
     favorites: new Set<string>(),
   });
@@ -293,9 +293,7 @@ export function ActionLibraryPanel() {
     setShowOnlyFavorites(false);
   }, [categories]);
 
-  useEffect(() => {
-    setSelectedCategories(new Set(categories.map((c) => c.key)));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const filtered = useMemo(() => {
     const activeCats = selectedCategories;

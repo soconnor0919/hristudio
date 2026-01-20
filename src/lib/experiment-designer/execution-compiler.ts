@@ -64,6 +64,7 @@ export interface CompiledExecutionAction {
   parameterSchemaRaw?: unknown;
   timeout?: number;
   retryable?: boolean;
+  children?: CompiledExecutionAction[];
 }
 
 /* ---------- Compile Entry Point ---------- */
@@ -136,11 +137,12 @@ function compileAction(
       robotId: action.source.robotId,
       baseActionId: action.source.baseActionId,
     },
-    execution: action.execution,
+    execution: action.execution!, // Assumes validation passed
     parameters: action.parameters,
     parameterSchemaRaw: action.parameterSchemaRaw,
-    timeout: action.execution.timeoutMs,
-    retryable: action.execution.retryable,
+    timeout: action.execution?.timeoutMs,
+    retryable: action.execution?.retryable,
+    children: action.children?.map((child, i) => compileAction(child, i)),
   };
 }
 
@@ -149,16 +151,23 @@ function compileAction(
 export function collectPluginDependencies(design: ExperimentDesign): string[] {
   const set = new Set<string>();
   for (const step of design.steps) {
-    for (const action of step.actions) {
-      if (action.source.kind === "plugin" && action.source.pluginId) {
-        const versionPart = action.source.pluginVersion
-          ? `@${action.source.pluginVersion}`
-          : "";
-        set.add(`${action.source.pluginId}${versionPart}`);
-      }
-    }
+    collectDependenciesFromActions(step.actions, set);
   }
   return Array.from(set).sort();
+}
+// Helper to recursively collect from actions list directly would be cleaner
+function collectDependenciesFromActions(actions: ExperimentAction[], set: Set<string>) {
+  for (const action of actions) {
+    if (action.source.kind === "plugin" && action.source.pluginId) {
+      const versionPart = action.source.pluginVersion
+        ? `@${action.source.pluginVersion}`
+        : "";
+      set.add(`${action.source.pluginId}${versionPart}`);
+    }
+    if (action.children) {
+      collectDependenciesFromActions(action.children, set);
+    }
+  }
 }
 
 /* ---------- Integrity Hash Generation ---------- */
@@ -199,6 +208,12 @@ function buildStructuralSignature(
         timeout: a.timeout,
         retryable: a.retryable ?? false,
         parameterKeys: summarizeParametersForHash(a.parameters),
+        children: a.children?.map(c => ({
+          id: c.id,
+          // Recurse structural signature for children
+          type: c.type,
+          parameterKeys: summarizeParametersForHash(c.parameters),
+        })),
       })),
     })),
     pluginDependencies,

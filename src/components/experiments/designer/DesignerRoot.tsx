@@ -26,8 +26,10 @@ import {
   MouseSensor,
   TouchSensor,
   KeyboardSensor,
+  closestCorners,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
@@ -599,11 +601,8 @@ export function DesignerRoot({
   // Serialize steps for stable comparison
   const stepsHash = useMemo(() => JSON.stringify(steps), [steps]);
 
-  useEffect(() => {
-    if (!initialized) return;
-    void recomputeHash();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepsHash, initialized]);
+  // Intentionally removed redundant recomputeHash useEffect that was causing excessive refreshes
+  // The debounced useEffect (lines 352-372) handles this correctly.
 
   useEffect(() => {
     if (selectedStepId || selectedActionId) {
@@ -628,18 +627,10 @@ export function DesignerRoot({
       ) {
         e.preventDefault();
         void persist();
-      } else if (e.key === "v" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        void validateDesign();
-      } else if (e.key === "e" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        void handleExport();
-      } else if (e.key === "n" && e.shiftKey) {
-        e.preventDefault();
-        createNewStep();
       }
+      // 'v' (validate), 'e' (export), 'Shift+N' (new step) shortcuts removed to prevent accidents
     },
-    [hasUnsavedChanges, persist, validateDesign, handleExport, createNewStep],
+    [hasUnsavedChanges, persist],
   );
 
   useEffect(() => {
@@ -687,43 +678,163 @@ export function DesignerRoot({
     [toggleLibraryScrollLock],
   );
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
-      console.debug("[DesignerRoot] dragEnd", {
-        active: active?.id,
-        over: over?.id ?? null,
-      });
-      // Clear overlay immediately
-      toggleLibraryScrollLock(false);
-      setDragOverlayAction(null);
-      if (!over) {
-        console.debug("[DesignerRoot] dragEnd: no drop target (ignored)");
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    const store = useDesignerStore.getState();
+
+    // Only handle Library -> Flow projection
+    if (!active.id.toString().startsWith("action-")) {
+      if (store.insertionProjection) {
+        store.setInsertionProjection(null);
+      }
+      return;
+    }
+
+    if (!over) {
+      if (store.insertionProjection) {
+        store.setInsertionProjection(null);
+      }
+      return;
+    }
+
+    const overId = over.id.toString();
+    const activeDef = active.data.current?.action;
+
+    if (!activeDef) return;
+
+    let stepId: string | null = null;
+    let parentId: string | null = null;
+    let index = 0;
+
+    // Detect target based on over id
+    if (overId.startsWith("s-act-")) {
+      const data = over.data.current;
+      if (data && data.stepId) {
+        stepId = data.stepId;
+        parentId = data.parentId ?? null; // Use parentId from the action we are hovering over
+        // Use sortable index (insertion point provided by dnd-kit sortable strategy)
+        index = data.sortable?.index ?? 0;
+      }
+    } else if (overId.startsWith("container-")) {
+      // Dropping into a container (e.g. Loop)
+      const data = over.data.current;
+      if (data && data.stepId) {
+        stepId = data.stepId;
+        parentId = data.parentId ?? overId.slice("container-".length);
+        // If dropping into container, appending is a safe default if specific index logic is missing
+        // But actually we can find length if we want. For now, 0 or append logic?
+        // If container is empty, index 0 is correct.
+        // If not empty, we are hitting the container *background*, so append?
+        // The projection logic will insert at 'index'. If index is past length, it appends.
+        // Let's set a large index to ensure append, or look up length.
+        // Lookup requires finding the action in store. Expensive?
+        // Let's assume index 0 for now (prepend) or implement lookup.
+        // Better: lookup action -> children length.
+        const actionId = parentId;
+        const step = store.steps.find(s => s.id === stepId);
+        // Find action recursive? Store has `findActionById` helper but it is not exported/accessible easily here?
+        // Actually, `store.steps` is available.
+        // We can implement a quick BFS/DFS or just assume 0. 
+        // If dragging over the container *background* (empty space), append is usually expected.
+        // Let's try 9999?
+        index = 9999;
+      }
+    } else if (overId.startsWith("s-step-") || overId.startsWith("step-")) {
+      // Container drop (Step)
+      stepId = overId.startsWith("s-step-")
+        ? overId.slice("s-step-".length)
+        : overId.slice("step-".length);
+      const step = store.steps.find((s) => s.id === stepId);
+      index = step ? step.actions.length : 0;
+
+    } else if (overId === "projection-placeholder") {
+      // Hovering over our own projection placeholder -> keep current state
+      return;
+    }
+
+    if (stepId) {
+      const current = store.insertionProjection;
+      // Optimization: avoid redundant updates if projection matches
+      if (
+        current &&
+        current.stepId === stepId &&
+        current.parentId === parentId &&
+        current.index === index
+      ) {
         return;
       }
 
-      // Expect dragged action (library) onto a step droppable
-      const activeId = active.id.toString();
-      const overId = over.id.toString();
+      store.setInsertionProjection({
+        stepId,
+        parentId,
+        index,
+        action: {
+          id: "projection-placeholder",
+          type: activeDef.type,
+          name: activeDef.name,
+          category: activeDef.category,
+          description: "Drop here",
+          source: activeDef.source || { kind: "library" },
+          parameters: {},
+          execution: activeDef.execution,
+        } as any,
+      });
+    } else {
+      if (store.insertionProjection) store.setInsertionProjection(null);
+    }
+  }, []);
 
-      if (activeId.startsWith("action-") && active.data.current?.action) {
-        // Resolve stepId from possible over ids: step-<id>, s-step-<id>, or s-act-<actionId>
-        let stepId: string | null = null;
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      // Clear overlay immediately
+      toggleLibraryScrollLock(false);
+      setDragOverlayAction(null);
+
+      // Capture and clear projection
+      const store = useDesignerStore.getState();
+      const projection = store.insertionProjection;
+      store.setInsertionProjection(null);
+
+      if (!over) {
+        return;
+      }
+
+      // 1. Determine Target (Step, Parent, Index)
+      let stepId: string | null = null;
+      let parentId: string | null = null;
+      let index: number | undefined = undefined;
+
+      if (projection) {
+        stepId = projection.stepId;
+        parentId = projection.parentId;
+        index = projection.index;
+      } else {
+        // Fallback: resolution from overId (if projection failed or raced)
+        const overId = over.id.toString();
         if (overId.startsWith("step-")) {
           stepId = overId.slice("step-".length);
         } else if (overId.startsWith("s-step-")) {
           stepId = overId.slice("s-step-".length);
         } else if (overId.startsWith("s-act-")) {
+          // This might fail if s-act-projection, but that should have covered by projection check above
           const actionId = overId.slice("s-act-".length);
           const parent = steps.find((s) =>
             s.actions.some((a) => a.id === actionId),
           );
           stepId = parent?.id ?? null;
         }
-        if (!stepId) return;
+      }
 
+      if (!stepId) return;
+      const targetStep = steps.find((s) => s.id === stepId);
+      if (!targetStep) return;
+
+      // 2. Instantiate Action
+      if (active.id.toString().startsWith("action-") && active.data.current?.action) {
         const actionDef = active.data.current.action as {
-          id: string;
+          id: string; // type
           type: string;
           name: string;
           category: string;
@@ -733,14 +844,13 @@ export function DesignerRoot({
           parameters: Array<{ id: string; name: string }>;
         };
 
-        const targetStep = steps.find((s) => s.id === stepId);
-        if (!targetStep) return;
-
         const fullDef = actionRegistry.getAction(actionDef.type);
         const defaultParams: Record<string, unknown> = {};
         if (fullDef?.parameters) {
           for (const param of fullDef.parameters) {
+            // @ts-expect-error - 'default' property access
             if (param.default !== undefined) {
+              // @ts-expect-error - 'default' property access
               defaultParams[param.id] = param.default;
             }
           }
@@ -755,39 +865,61 @@ export function DesignerRoot({
               transport: actionDef.execution.transport,
               retryable: actionDef.execution.retryable ?? false,
             }
-            : {
-              transport: "internal",
-              retryable: false,
-            };
+            : undefined;
+
         const newAction: ExperimentAction = {
-          id: `action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: actionDef.type,
+          id: crypto.randomUUID(),
+          type: actionDef.type, // this is the 'type' key
           name: actionDef.name,
-          category: actionDef.category as ExperimentAction["category"],
+          category: actionDef.category as any,
+          description: "",
           parameters: defaultParams,
-          source: actionDef.source as ExperimentAction["source"],
+          source: actionDef.source ? {
+            kind: actionDef.source.kind as any,
+            pluginId: actionDef.source.pluginId,
+            pluginVersion: actionDef.source.pluginVersion,
+            baseActionId: actionDef.id
+          } : { kind: "core" },
           execution,
+          children: [],
         };
 
-        upsertAction(stepId, newAction);
-        // Select the newly added action and open properties
-        selectStep(stepId);
+        // 3. Commit
+        upsertAction(stepId, newAction, parentId, index);
+
+        // Auto-select
         selectAction(stepId, newAction.id);
-        setInspectorTab("properties");
-        await recomputeHash();
-        toast.success(`Added ${actionDef.name} to ${targetStep.name}`);
+
+        void recomputeHash();
       }
     },
-    [
-      steps,
-      upsertAction,
-      recomputeHash,
-      selectStep,
-      selectAction,
-      toggleLibraryScrollLock,
-    ],
+    [steps, upsertAction, selectAction, recomputeHash, toggleLibraryScrollLock],
   );
   // validation status badges removed (unused)
+  /* ------------------------------- Panels ---------------------------------- */
+  const leftPanel = useMemo(
+    () => (
+      <div ref={libraryRootRef} data-library-root className="h-full">
+        <ActionLibraryPanel />
+      </div>
+    ),
+    [],
+  );
+
+  const centerPanel = useMemo(() => <FlowWorkspace />, []);
+
+  const rightPanel = useMemo(
+    () => (
+      <div className="h-full">
+        <InspectorPanel
+          activeTab={inspectorTab}
+          onTabChange={setInspectorTab}
+          studyPlugins={studyPlugins}
+        />
+      </div>
+    ),
+    [inspectorTab, studyPlugins],
+  );
 
   /* ------------------------------- Render ---------------------------------- */
   if (loadingExperiment && !initialized) {
@@ -852,33 +984,33 @@ export function DesignerRoot({
           <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
             <DndContext
               sensors={sensors}
-              collisionDetection={pointerWithin}
+              collisionDetection={closestCorners}
               onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
               onDragCancel={() => toggleLibraryScrollLock(false)}
             >
               <PanelsContainer
                 showDividers
                 className="min-h-0 flex-1"
-                left={
-                  <div ref={libraryRootRef} data-library-root className="h-full">
-                    <ActionLibraryPanel />
-                  </div>
-                }
-                center={<FlowWorkspace />}
-                right={
-                  <div className="h-full">
-                    <InspectorPanel
-                      activeTab={inspectorTab}
-                      onTabChange={setInspectorTab}
-                      studyPlugins={studyPlugins}
-                    />
-                  </div>
-                }
+                left={leftPanel}
+                center={centerPanel}
+                right={rightPanel}
               />
               <DragOverlay>
                 {dragOverlayAction ? (
-                  <div className="bg-background pointer-events-none rounded border px-2 py-1 text-xs shadow-lg select-none">
+                  <div className="bg-background flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none">
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 rounded-full",
+                        {
+                          wizard: "bg-blue-500",
+                          robot: "bg-emerald-600",
+                          control: "bg-amber-500",
+                          observation: "bg-purple-600",
+                        }[dragOverlayAction.category] || "bg-slate-400",
+                      )}
+                    />
                     {dragOverlayAction.name}
                   </div>
                 ) : null}

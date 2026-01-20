@@ -282,205 +282,22 @@ export function PropertiesPanelBase({
               Parameters
             </div>
             <div className="space-y-3">
-              {def.parameters.map((param) => {
-                const rawValue = selectedAction.parameters[param.id];
-                const commonLabel = (
-                  <Label className="flex items-center gap-2 text-xs">
-                    {param.name}
-                    <span className="text-muted-foreground font-normal">
-                      {param.type === "number" &&
-                        (param.min !== undefined || param.max !== undefined) &&
-                        typeof rawValue === "number" &&
-                        `( ${rawValue} )`}
-                    </span>
-                  </Label>
-                );
-
-                /* ---- Handlers ---- */
-                const updateParamValue = (value: unknown) => {
-                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
-                  debouncedParamUpdate(
-                    containingStep.id,
-                    selectedAction.id,
-                    param.id,
-                    value,
-                  );
-                };
-
-                const updateParamValueImmediate = (value: unknown) => {
-                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
-                  onActionUpdate(containingStep.id, selectedAction.id, {
-                    parameters: {
-                      ...selectedAction.parameters,
-                      [param.id]: value,
-                    },
-                  });
-                };
-
-                const updateParamLocal = (value: unknown) => {
-                  setLocalParams((prev) => ({ ...prev, [param.id]: value }));
-                };
-
-                const commitParamValue = () => {
-                  if (localParams[param.id] !== rawValue) {
+              {def.parameters.map((param) => (
+                <ParameterEditor
+                  key={param.id}
+                  param={param}
+                  value={selectedAction.parameters[param.id]}
+                  onUpdate={(val) => {
                     onActionUpdate(containingStep.id, selectedAction.id, {
                       parameters: {
                         ...selectedAction.parameters,
-                        [param.id]: localParams[param.id],
+                        [param.id]: val,
                       },
                     });
-                  }
-                };
-
-                /* ---- Control Rendering ---- */
-                let control: React.ReactNode = null;
-
-                if (param.type === "text") {
-                  const localValue = localParams[param.id] ?? rawValue ?? "";
-                  control = (
-                    <Input
-                      value={localValue as string}
-                      placeholder={param.placeholder}
-                      onChange={(e) => updateParamValue(e.target.value)}
-                      onBlur={() => {
-                        if (localParams[param.id] !== rawValue) {
-                          onActionUpdate(containingStep.id, selectedAction.id, {
-                            parameters: {
-                              ...selectedAction.parameters,
-                              [param.id]: localParams[param.id],
-                            },
-                          });
-                        }
-                      }}
-                      className="mt-1 h-7 w-full text-xs"
-                    />
-                  );
-                } else if (param.type === "select") {
-                  const localValue = localParams[param.id] ?? rawValue ?? "";
-                  control = (
-                    <Select
-                      value={localValue as string}
-                      onValueChange={(val) => updateParamValueImmediate(val)}
-                    >
-                      <SelectTrigger className="mt-1 h-7 w-full text-xs">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {param.options?.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  );
-                } else if (param.type === "boolean") {
-                  const localValue = localParams[param.id] ?? rawValue ?? false;
-                  control = (
-                    <div className="mt-1 flex h-7 items-center">
-                      <Switch
-                        checked={Boolean(localValue)}
-                        onCheckedChange={(val) =>
-                          updateParamValueImmediate(val)
-                        }
-                        aria-label={param.name}
-                      />
-                      <span className="text-muted-foreground ml-2 text-[11px]">
-                        {Boolean(localValue) ? "Enabled" : "Disabled"}
-                      </span>
-                    </div>
-                  );
-                } else if (param.type === "number") {
-                  const localValue = localParams[param.id] ?? rawValue;
-                  const numericVal =
-                    typeof localValue === "number"
-                      ? localValue
-                      : typeof param.value === "number"
-                        ? param.value
-                        : (param.min ?? 0);
-
-                  if (param.min !== undefined || param.max !== undefined) {
-                    const min = param.min ?? 0;
-                    const max =
-                      param.max ??
-                      Math.max(
-                        min + 1,
-                        Number.isFinite(numericVal) ? numericVal : min + 1,
-                      );
-                    // Step heuristic
-                    const range = max - min;
-                    const step =
-                      param.step ??
-                      (range <= 5
-                        ? 0.1
-                        : range <= 50
-                          ? 0.5
-                          : Math.max(1, Math.round(range / 100)));
-                    control = (
-                      <div className="mt-1">
-                        <div className="flex items-center gap-2">
-                          <Slider
-                            min={min}
-                            max={max}
-                            step={step}
-                            value={[Number(numericVal)]}
-                            onValueChange={(vals: number[]) =>
-                              updateParamLocal(vals[0])
-                            }
-                            onPointerUp={commitParamValue}
-                          />
-                          <span className="text-muted-foreground min-w-[2.5rem] text-right text-[10px] tabular-nums">
-                            {step < 1
-                              ? Number(numericVal).toFixed(2)
-                              : Number(numericVal).toString()}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
-                          <span>{min}</span>
-                          <span>{max}</span>
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    control = (
-                      <Input
-                        type="number"
-                        value={numericVal}
-                        onChange={(e) =>
-                          updateParamValue(parseFloat(e.target.value) || 0)
-                        }
-                        onBlur={() => {
-                          if (localParams[param.id] !== rawValue) {
-                            onActionUpdate(
-                              containingStep.id,
-                              selectedAction.id,
-                              {
-                                parameters: {
-                                  ...selectedAction.parameters,
-                                  [param.id]: localParams[param.id],
-                                },
-                              },
-                            );
-                          }
-                        }}
-                        className="mt-1 h-7 w-full text-xs"
-                      />
-                    );
-                  }
-                }
-
-                return (
-                  <div key={param.id} className="space-y-1">
-                    {commonLabel}
-                    {param.description && (
-                      <div className="text-muted-foreground text-[10px]">
-                        {param.description}
-                      </div>
-                    )}
-                    {control}
-                  </div>
-                );
-              })}
+                  }}
+                  onCommit={() => { }}
+                />
+              ))}
             </div>
           </div>
         ) : (
@@ -635,3 +452,156 @@ export function PropertiesPanelBase({
 }
 
 export const PropertiesPanel = React.memo(PropertiesPanelBase);
+
+/* -------------------------------------------------------------------------- */
+/* Isolated Parameter Editor (Optimized)                                      */
+/* -------------------------------------------------------------------------- */
+
+interface ParameterEditorProps {
+  param: any;
+  value: unknown;
+  onUpdate: (value: unknown) => void;
+  onCommit: () => void;
+}
+
+const ParameterEditor = React.memo(function ParameterEditor({
+  param,
+  value: rawValue,
+  onUpdate,
+  onCommit
+}: ParameterEditorProps) {
+  // Local state for immediate feedback
+  const [localValue, setLocalValue] = useState<unknown>(rawValue);
+  const debounceRef = useRef<NodeJS.Timeout | undefined>();
+
+  // Sync from prop if it changes externally
+  useEffect(() => {
+    setLocalValue(rawValue);
+  }, [rawValue]);
+
+  const handleUpdate = useCallback((newVal: unknown, immediate = false) => {
+    setLocalValue(newVal);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (immediate) {
+      onUpdate(newVal);
+    } else {
+      debounceRef.current = setTimeout(() => {
+        onUpdate(newVal);
+      }, 300);
+    }
+  }, [onUpdate]);
+
+  const handleCommit = useCallback(() => {
+    if (localValue !== rawValue) {
+      onUpdate(localValue);
+    }
+  }, [localValue, rawValue, onUpdate]);
+
+  let control: React.ReactNode = null;
+
+  if (param.type === "text") {
+    control = (
+      <Input
+        value={(localValue as string) ?? ""}
+        placeholder={param.placeholder}
+        onChange={(e) => handleUpdate(e.target.value)}
+        onBlur={handleCommit}
+        className="mt-1 h-7 w-full text-xs"
+      />
+    );
+  } else if (param.type === "select") {
+    control = (
+      <Select
+        value={(localValue as string) ?? ""}
+        onValueChange={(val) => handleUpdate(val, true)}
+      >
+        <SelectTrigger className="mt-1 h-7 w-full text-xs">
+          <SelectValue placeholder="Select…" />
+        </SelectTrigger>
+        <SelectContent>
+          {param.options?.map((opt: string) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  } else if (param.type === "boolean") {
+    control = (
+      <div className="mt-1 flex h-7 items-center">
+        <Switch
+          checked={Boolean(localValue)}
+          onCheckedChange={(val) => handleUpdate(val, true)}
+          aria-label={param.name}
+        />
+        <span className="text-muted-foreground ml-2 text-[11px]">
+          {Boolean(localValue) ? "Enabled" : "Disabled"}
+        </span>
+      </div>
+    );
+  } else if (param.type === "number") {
+    const numericVal = typeof localValue === "number" ? localValue : (param.min ?? 0);
+
+    if (param.min !== undefined || param.max !== undefined) {
+      const min = param.min ?? 0;
+      const max = param.max ?? Math.max(min + 1, Number.isFinite(numericVal) ? numericVal : min + 1);
+      const range = max - min;
+      const step = param.step ?? (range <= 5 ? 0.1 : range <= 50 ? 0.5 : Math.max(1, Math.round(range / 100)));
+
+      control = (
+        <div className="mt-1">
+          <div className="flex items-center gap-2">
+            <Slider
+              min={min}
+              max={max}
+              step={step}
+              value={[Number(numericVal)]}
+              onValueChange={(vals) => setLocalValue(vals[0])} // Update only local visual
+              onPointerUp={() => handleUpdate(localValue)} // Commit on release
+            />
+            <span className="text-muted-foreground min-w-[2.5rem] text-right text-[10px] tabular-nums">
+              {step < 1 ? Number(numericVal).toFixed(2) : Number(numericVal).toString()}
+            </span>
+          </div>
+          <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+            <span>{min}</span>
+            <span>{max}</span>
+          </div>
+        </div>
+      );
+    } else {
+      control = (
+        <Input
+          type="number"
+          value={numericVal}
+          onChange={(e) => handleUpdate(parseFloat(e.target.value) || 0)}
+          onBlur={handleCommit}
+          className="mt-1 h-7 w-full text-xs"
+        />
+      );
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label className="flex items-center gap-2 text-xs">
+        {param.name}
+        <span className="text-muted-foreground font-normal">
+          {param.type === "number" &&
+            (param.min !== undefined || param.max !== undefined) &&
+            typeof rawValue === "number" &&
+            `( ${rawValue} )`}
+        </span>
+      </Label>
+      {param.description && (
+        <div className="text-muted-foreground text-[10px]">
+          {param.description}
+        </div>
+      )}
+      {control}
+    </div>
+  );
+});

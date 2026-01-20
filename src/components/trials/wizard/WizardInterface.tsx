@@ -195,21 +195,28 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
   );
 
-  // Update local trial state from polling
+  // Update local trial state from polling only if changed
   useEffect(() => {
-    if (pollingData) {
-      setTrial((prev) => ({
-        ...prev,
-        status: pollingData.status,
-        startedAt: pollingData.startedAt
-          ? new Date(pollingData.startedAt)
-          : prev.startedAt,
-        completedAt: pollingData.completedAt
-          ? new Date(pollingData.completedAt)
-          : prev.completedAt,
-      }));
+    if (pollingData && JSON.stringify(pollingData) !== JSON.stringify(trial)) {
+      // Only update if specific fields we care about have changed to avoid
+      // unnecessary re-renders that might cause UI flashing
+      if (pollingData.status !== trial.status ||
+        pollingData.startedAt?.getTime() !== trial.startedAt?.getTime() ||
+        pollingData.completedAt?.getTime() !== trial.completedAt?.getTime()) {
+
+        setTrial((prev) => ({
+          ...prev,
+          status: pollingData.status,
+          startedAt: pollingData.startedAt
+            ? new Date(pollingData.startedAt)
+            : prev.startedAt,
+          completedAt: pollingData.completedAt
+            ? new Date(pollingData.completedAt)
+            : prev.completedAt,
+        }));
+      }
     }
-  }, [pollingData]);
+  }, [pollingData, trial]);
 
   // Auto-start trial on mount if scheduled
   useEffect(() => {
@@ -675,6 +682,7 @@ export const WizardInterface = React.memo(function WizardInterface({
                   onTabChange={setControlPanelTab}
                   isStarting={startTrialMutation.isPending}
                   onSetAutonomousLife={setAutonomousLife}
+                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
                 />
               }
               center={
@@ -695,6 +703,7 @@ export const WizardInterface = React.memo(function WizardInterface({
                   completedActionsCount={completedActionsCount}
                   onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
                   onCompleteTrial={handleCompleteTrial}
+                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
                 />
               }
               right={
@@ -706,6 +715,7 @@ export const WizardInterface = React.memo(function WizardInterface({
                   connectRos={connectRos}
                   disconnectRos={disconnectRos}
                   executeRosAction={executeRosAction}
+                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
                 />
               }
               showDividers={true}
@@ -720,6 +730,9 @@ export const WizardInterface = React.memo(function WizardInterface({
               onAddAnnotation={handleAddAnnotation}
               isSubmitting={addAnnotationMutation.isPending}
               trialEvents={trialEvents}
+              // Observation pane is where observers usually work, so not readOnly for them?
+              // But maybe we want 'readOnly' for completed trials.
+              readOnly={trial.status === 'completed'}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
