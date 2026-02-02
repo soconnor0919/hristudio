@@ -161,7 +161,7 @@ const StepRow = React.memo(function StepRow({
         <StepDroppableArea stepId={step.id} />
         <div
           className={cn(
-            "mb-2 rounded border shadow-sm transition-colors",
+            "mb-2 rounded-lg border shadow-sm transition-colors",
             selectedStepId === step.id
               ? "border-border bg-accent/30"
               : "hover:bg-accent/30",
@@ -956,7 +956,7 @@ export function FlowWorkspace({
       <div
         ref={containerRef}
         id="tour-designer-canvas"
-        className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+        className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border"
         onScroll={onScroll}
       >
         {steps.length === 0 ? (

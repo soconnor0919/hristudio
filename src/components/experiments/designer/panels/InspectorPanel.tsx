@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { Button } from "~/components/ui/button";
 
 import { cn } from "~/lib/utils";
 import { useDesignerStore } from "../state/store";
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   GitBranch,
   PackageSearch,
+  PanelRightClose,
 } from "lucide-react";
 
 /**
@@ -48,6 +50,11 @@ export interface InspectorPanelProps {
    */
   onTabChange?: (tab: "properties" | "issues" | "dependencies") => void;
   /**
+   * Collapse state and handler
+   */
+  collapsed?: boolean;
+  onCollapse?: (collapsed: boolean) => void;
+  /**
    * If true, auto-switch to "properties" when a selection occurs.
    */
   autoFocusOnSelection?: boolean;
@@ -68,6 +75,8 @@ export function InspectorPanel({
   onTabChange,
   autoFocusOnSelection = true,
   studyPlugins,
+  collapsed,
+  onCollapse,
 }: InspectorPanelProps) {
   /* ------------------------------------------------------------------------ */
   /* Store Selectors                                                          */

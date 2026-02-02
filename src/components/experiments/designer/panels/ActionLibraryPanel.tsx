@@ -22,6 +22,7 @@ import {
   Eye,
   X,
   Layers,
+  PanelLeftClose,
 } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -108,7 +109,7 @@ function DraggableAction({
       {...listeners}
       style={style}
       className={cn(
-        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab touch-none flex-col gap-1 rounded border px-2 text-left transition-colors select-none",
+        "group bg-background/60 hover:bg-accent/50 relative flex w-full cursor-grab touch-none flex-col gap-1 rounded-lg border px-2 text-left transition-colors select-none",
         compact ? "py-1.5 text-[11px]" : "py-2 text-[12px]",
         isDragging && "opacity-50",
       )}
@@ -168,7 +169,12 @@ function DraggableAction({
   );
 }
 
-export function ActionLibraryPanel() {
+export interface ActionLibraryPanelProps {
+  collapsed?: boolean;
+  onCollapse?: (collapsed: boolean) => void;
+}
+
+export function ActionLibraryPanel({ collapsed, onCollapse }: ActionLibraryPanelProps = {}) {
   const registry = useActionRegistry();
 
   const [search, setSearch] = useState("");

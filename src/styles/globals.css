@@ -241,3 +241,11 @@
     @apply bg-background text-foreground shadow;
   }
 }
+
+/* Viewport height constraint for proper flex layout */
+html,
+body,
+#__next {
+  height: 100%;
+  min-height: 100vh;
+}

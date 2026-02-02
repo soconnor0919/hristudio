@@ -38,6 +38,14 @@ export interface PanelsContainerProps {
 
   /** Keyboard resize step (fractional) per arrow press; Shift increases by 2x */
   keyboardStepPct?: number;
+
+  /**
+   * Controlled collapse state
+   */
+  leftCollapsed?: boolean;
+  rightCollapsed?: boolean;
+  onLeftCollapseChange?: (collapsed: boolean) => void;
+  onRightCollapseChange?: (collapsed: boolean) => void;
 }
 
 /**
@@ -45,6 +53,7 @@ export interface PanelsContainerProps {
  *
  * Tailwind-first, grid-based panel layout with:
  * - Drag-resizable left/right panels (no persistence)
+ * - Collapsible side panels
  * - Strict overflow containment (no page-level x-scroll)
  * - Internal y-scroll for each panel
  * - Optional visual dividers on the center panel only (prevents double borders)
@@ -66,7 +75,7 @@ const Panel: React.FC<React.PropsWithChildren<{
   children,
 }) => (
     <section
-      className={cn("min-w-0 overflow-hidden", panelCls, panelClassName)}
+      className={cn("min-w-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out", panelCls, panelClassName)}
     >
       <div
         className={cn(
@@ -93,6 +102,10 @@ export function PanelsContainer({
   minRightPct = 0.12,
   maxRightPct = 0.33,
   keyboardStepPct = 0.02,
+  leftCollapsed = false,
+  rightCollapsed = false,
+  onLeftCollapseChange,
+  onRightCollapseChange,
 }: PanelsContainerProps) {
   const hasLeft = Boolean(left);
   const hasRight = Boolean(right);
@@ -118,20 +131,39 @@ export function PanelsContainer({
     (lp: number, rp: number) => {
       if (!hasCenter) return { l: 0, c: 0, r: 0 };
 
+      // Effective widths (0 if collapsed)
+      const effectiveL = leftCollapsed ? 0 : lp;
+      const effectiveR = rightCollapsed ? 0 : rp;
+
+      // When logic runs, we must clamp the *underlying* percentages (lp, rp)
+      // but return 0 for the CSS vars if collapsed.
+
+      // Actually, if collapsed, we just want the CSS var to be 0.
+      // But we maintain the state `leftPct` so it restores correctly.
+
       if (hasLeft && hasRight) {
-        const l = clamp(lp, minLeftPct, maxLeftPct);
-        const r = clamp(rp, minRightPct, maxRightPct);
-        const c = Math.max(0.1, 1 - (l + r)); // always preserve some center space
+        // Standard clamp (on the state values)
+        const lState = clamp(lp, minLeftPct, maxLeftPct);
+        const rState = clamp(rp, minRightPct, maxRightPct);
+
+        // Effective output
+        const l = leftCollapsed ? 0 : lState;
+        const r = rightCollapsed ? 0 : rState;
+
+        // Center takes remainder
+        const c = 1 - (l + r);
         return { l, c, r };
       }
       if (hasLeft && !hasRight) {
-        const l = clamp(lp, minLeftPct, maxLeftPct);
-        const c = Math.max(0.2, 1 - l);
+        const lState = clamp(lp, minLeftPct, maxLeftPct);
+        const l = leftCollapsed ? 0 : lState;
+        const c = 1 - l;
         return { l, c, r: 0 };
       }
       if (!hasLeft && hasRight) {
-        const r = clamp(rp, minRightPct, maxRightPct);
-        const c = Math.max(0.2, 1 - r);
+        const rState = clamp(rp, minRightPct, maxRightPct);
+        const r = rightCollapsed ? 0 : rState;
+        const c = 1 - r;
         return { l: 0, c, r };
       }
       // Center only
@@ -145,6 +177,8 @@ export function PanelsContainer({
       maxLeftPct,
       minRightPct,
       maxRightPct,
+      leftCollapsed,
+      rightCollapsed
     ],
   );
 
@@ -159,10 +193,10 @@ export function PanelsContainer({
       const deltaPx = e.clientX - d.startX;
       const deltaPct = deltaPx / d.containerWidth;
 
-      if (d.edge === "left" && hasLeft) {
+      if (d.edge === "left" && hasLeft && !leftCollapsed) {
         const nextLeft = clamp(d.startLeft + deltaPct, minLeftPct, maxLeftPct);
         setLeftPct(nextLeft);
-      } else if (d.edge === "right" && hasRight) {
+      } else if (d.edge === "right" && hasRight && !rightCollapsed) {
         // Dragging the right edge moves leftwards as delta increases
         const nextRight = clamp(
           d.startRight - deltaPct,
@@ -172,7 +206,7 @@ export function PanelsContainer({
         setRightPct(nextRight);
       }
     },
-    [hasLeft, hasRight, minLeftPct, maxLeftPct, minRightPct, maxRightPct],
+    [hasLeft, hasRight, minLeftPct, maxLeftPct, minRightPct, maxRightPct, leftCollapsed, rightCollapsed],
   );
 
   const endDrag = React.useCallback(() => {
@@ -215,14 +249,14 @@ export function PanelsContainer({
 
       const step = (e.shiftKey ? 2 : 1) * keyboardStepPct;
 
-      if (edge === "left" && hasLeft) {
+      if (edge === "left" && hasLeft && !leftCollapsed) {
         const next = clamp(
           leftPct + (e.key === "ArrowRight" ? step : -step),
           minLeftPct,
           maxLeftPct,
         );
         setLeftPct(next);
-      } else if (edge === "right" && hasRight) {
+      } else if (edge === "right" && hasRight && !rightCollapsed) {
         const next = clamp(
           rightPct + (e.key === "ArrowLeft" ? step : -step),
           minRightPct,
@@ -233,23 +267,33 @@ export function PanelsContainer({
     };
 
   // CSS variables for the grid fractions
+  // We use FR units instead of % to let the browser handle exact pixel fitting without rounding errors causing overflow
   const styleVars: React.CSSProperties & Record<string, string> = hasCenter
     ? {
-      "--col-left": `${(hasLeft ? l : 0) * 100}%`,
-      "--col-center": `${c * 100}%`,
-      "--col-right": `${(hasRight ? r : 0) * 100}%`,
+      "--col-left": `${hasLeft ? l : 0}fr`,
+      "--col-center": `${c}fr`,
+      "--col-right": `${hasRight ? r : 0}fr`,
     }
     : {};
 
   // Explicit grid template depending on which side panels exist
+  const gridAreas =
+    hasLeft && hasRight
+      ? '"left center right"'
+      : hasLeft && !hasRight
+        ? '"left center"'
+        : !hasLeft && hasRight
+          ? '"center right"'
+          : '"center"';
+
   const gridCols =
     hasLeft && hasRight
-      ? "[grid-template-columns:minmax(0,var(--col-left))_minmax(0,var(--col-center))_minmax(0,var(--col-right))]"
+      ? "[grid-template-columns:var(--col-left)_var(--col-center)_var(--col-right)]"
       : hasLeft && !hasRight
-        ? "[grid-template-columns:minmax(0,var(--col-left))_minmax(0,var(--col-center))]"
+        ? "[grid-template-columns:var(--col-left)_var(--col-center)]"
         : !hasLeft && hasRight
-          ? "[grid-template-columns:minmax(0,var(--col-center))_minmax(0,var(--col-right))]"
-          : "[grid-template-columns:minmax(0,1fr)]";
+          ? "[grid-template-columns:var(--col-center)_var(--col-right)]"
+          : "[grid-template-columns:1fr]";
 
   // Dividers on the center panel only (prevents double borders if children have their own borders)
   const centerDividers =
@@ -303,7 +347,7 @@ export function PanelsContainer({
         </div>
 
         {/* Main Content (Center) */}
-        <div className="flex-1 min-h-0 overflow-hidden relative">
+        <div className="flex-1 min-h-0 min-w-0 overflow-hidden relative">
           {center}
         </div>
       </div>
@@ -312,14 +356,28 @@ export function PanelsContainer({
       <div
         ref={rootRef}
         aria-label={ariaLabel}
-        style={styleVars}
         className={cn(
-          "relative hidden md:grid h-full min-h-0 w-full overflow-hidden select-none",
-          gridCols,
+          "relative hidden md:grid h-full min-h-0 w-full max-w-full overflow-hidden select-none",
+          // 2-3-2 ratio for left-center-right panels when all visible
+          hasLeft && hasRight && !leftCollapsed && !rightCollapsed && "grid-cols-[2fr_3fr_2fr]",
+          // Left collapsed: center + right (3:2 ratio)
+          hasLeft && hasRight && leftCollapsed && !rightCollapsed && "grid-cols-[3fr_2fr]",
+          // Right collapsed: left + center (2:3 ratio)
+          hasLeft && hasRight && !leftCollapsed && rightCollapsed && "grid-cols-[2fr_3fr]",
+          // Both collapsed: center only
+          hasLeft && hasRight && leftCollapsed && rightCollapsed && "grid-cols-1",
+          // Only left and center
+          hasLeft && !hasRight && !leftCollapsed && "grid-cols-[2fr_3fr]",
+          hasLeft && !hasRight && leftCollapsed && "grid-cols-1",
+          // Only center and right
+          !hasLeft && hasRight && !rightCollapsed && "grid-cols-[3fr_2fr]",
+          !hasLeft && hasRight && rightCollapsed && "grid-cols-1",
+          // Only center
+          !hasLeft && !hasRight && "grid-cols-1",
           className,
         )}
       >
-        {hasLeft && (
+        {hasLeft && !leftCollapsed && (
           <Panel
             panelClassName={panelClassName}
             contentClassName={contentClassName}
@@ -338,50 +396,13 @@ export function PanelsContainer({
           </Panel>
         )}
 
-        {hasRight && (
+        {hasRight && !rightCollapsed && (
           <Panel
             panelClassName={panelClassName}
             contentClassName={contentClassName}
           >
             {right}
           </Panel>
-        )}
-
-        {/* Resize handles (only render where applicable) */}
-        {hasCenter && hasLeft && (
-          <button
-            type="button"
-            role="separator"
-            aria-label="Resize left panel"
-            aria-orientation="vertical"
-            onPointerDown={startDrag("left")}
-            onKeyDown={onKeyResize("left")}
-            className={cn(
-              "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
-              "focus-visible:ring-ring focus-visible:ring-2",
-            )}
-            // Position at the boundary between left and center
-            style={{ left: "var(--col-left)", transform: "translateX(-0.5px)" }}
-            tabIndex={0}
-          />
-        )}
-
-        {hasCenter && hasRight && (
-          <button
-            type="button"
-            role="separator"
-            aria-label="Resize right panel"
-            aria-orientation="vertical"
-            onPointerDown={startDrag("right")}
-            onKeyDown={onKeyResize("right")}
-            className={cn(
-              "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
-              "focus-visible:ring-ring focus-visible:ring-2",
-            )}
-            // Position at the boundary between center and right (offset from the right)
-            style={{ right: "var(--col-right)", transform: "translateX(0.5px)" }}
-            tabIndex={0}
-          />
         )}
       </div>
     </>

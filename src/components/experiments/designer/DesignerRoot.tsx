@@ -8,7 +8,17 @@ import React, {
   useState,
 } from "react";
 import { toast } from "sonner";
-import { Play, RefreshCw, HelpCircle } from "lucide-react";
+import {
+  Play,
+  RefreshCw,
+  HelpCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Maximize2,
+  Minimize2
+} from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { PageHeader } from "~/components/ui/page-header";
@@ -258,6 +268,23 @@ export function DesignerRoot({
   const [inspectorTab, setInspectorTab] = useState<
     "properties" | "issues" | "dependencies"
   >("properties");
+
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+
+  // Responsive initialization: Collapse left sidebar on smaller screens (<1280px)
+  useEffect(() => {
+    const checkWidth = () => {
+      if (window.innerWidth < 1280) {
+        setLeftCollapsed(true);
+      }
+    };
+    // Check once on mount
+    checkWidth();
+    // Optional: Add resize listener if we want live responsiveness
+    // window.addEventListener('resize', checkWidth);
+    // return () => window.removeEventListener('resize', checkWidth);
+  }, []);
   /**
    * Active action being dragged from the Action Library (for DragOverlay rendering).
    * Captures a lightweight subset for visual feedback.
@@ -982,82 +1009,76 @@ export function DesignerRoot({
   );
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-background">
       <PageHeader
         title={designMeta.name}
         description={designMeta.description || "No description"}
         icon={Play}
         actions={actions}
-        className="pb-6"
+        className="flex-none pb-4"
       />
 
-      <div className="relative flex flex-1 flex-col overflow-hidden">
-        {/* Loading Overlay */}
-        {!isReady && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background">
-            <div className="flex flex-col items-center gap-4">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground text-sm">Loading designer...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content - Fade in when ready */}
-        <div
-          className={cn(
-            "flex flex-1 flex-col overflow-hidden transition-opacity duration-500",
-            isReady ? "opacity-100" : "opacity-0"
-          )}
+      {/* Main Grid Container - 2-4-2 Split */}
+      {/* Main Grid Container - 2-4-2 Split */}
+      <div className="flex-1 min-h-0 w-full px-4 overflow-hidden">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => toggleLibraryScrollLock(false)}
         >
-          <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => toggleLibraryScrollLock(false)}
-            >
-              <PanelsContainer
-                showDividers
-                className="min-h-0 flex-1"
-                left={leftPanel}
-                center={centerPanel}
-                right={rightPanel}
-              />
-              <DragOverlay>
-                {dragOverlayAction ? (
-                  <div className="bg-background flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none">
-                    <span
-                      className={cn(
-                        "h-2.5 w-2.5 rounded-full",
-                        {
-                          wizard: "bg-blue-500",
-                          robot: "bg-emerald-600",
-                          control: "bg-amber-500",
-                          observation: "bg-purple-600",
-                        }[dragOverlayAction.category] || "bg-slate-400",
-                      )}
-                    />
-                    {dragOverlayAction.name}
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-            <div className="flex-shrink-0 border-t">
-              <BottomStatusBar
-                onSave={() => persist()}
-                onValidate={() => validateDesign()}
-                onExport={() => handleExport()}
-                onRecalculateHash={() => recomputeHash()}
-                lastSavedAt={lastSavedAt}
-                saving={isSaving}
-                validating={isValidating}
-                exporting={isExporting}
-              />
+          <div className="grid grid-cols-8 gap-4 h-full w-full">
+            {/* Left Panel (2/8) */}
+            <div className="col-span-2 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-red-300 bg-red-50/50 dark:bg-red-900/10">
+              <div className="flex items-center justify-between border-b border-red-200 bg-red-100/50 px-3 py-2 text-sm font-medium text-red-900 dark:border-red-800 dark:bg-red-900/20 dark:text-red-100">
+                Left Panel (2fr)
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {leftPanel}
+              </div>
+            </div>
+
+            {/* Center Panel (4/8) - The Workspace */}
+            <div className="col-span-4 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-green-300 bg-green-50/50 dark:bg-green-900/10">
+              <div className="flex items-center justify-between border-b border-green-200 bg-green-100/50 px-3 py-2 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/20 dark:text-green-100">
+                Center Workspace (4fr)
+              </div>
+              <div className="flex-1 overflow-hidden min-h-0 relative">
+                {/* Center content needs to be relative for absolute positioning children if any */}
+                {centerPanel}
+              </div>
+            </div>
+
+            {/* Right Panel (2/8) */}
+            <div className="col-span-2 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 dark:bg-blue-900/10">
+              <div className="flex items-center justify-between border-b border-blue-200 bg-blue-100/50 px-3 py-2 text-sm font-medium text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
+                Right Panel (2fr)
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {rightPanel}
+              </div>
             </div>
           </div>
-        </div>
+
+          <DragOverlay>
+            {dragOverlayAction ? (
+              <div className="bg-background flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none">
+                <div
+                  className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded text-white",
+                    dragOverlayAction.category === "robot" && "bg-emerald-600",
+                    dragOverlayAction.category === "control" && "bg-amber-500",
+                    dragOverlayAction.category === "observation" &&
+                    "bg-purple-600",
+                  )}
+                />
+                {dragOverlayAction.name}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>
   );

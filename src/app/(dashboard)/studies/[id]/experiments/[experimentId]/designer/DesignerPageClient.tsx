@@ -55,9 +55,5 @@ export function DesignerPageClient({
     },
   ]);
 
-  return (
-    <div className="h-[calc(100vh-4rem-2rem)] w-full overflow-hidden border rounded-lg bg-background">
-      <DesignerRoot experimentId={experiment.id} initialDesign={initialDesign} />
-    </div>
-  );
+  return <DesignerRoot experimentId={experiment.id} initialDesign={initialDesign} />;
 }
