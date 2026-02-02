@@ -25,6 +25,8 @@ import {
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import { useTour } from "~/components/onboarding/TourProvider";
+import { Button } from "../ui/button";
 
 const studySchema = z.object({
   name: z.string().min(1, "Study name is required").max(255, "Name too long"),
@@ -49,6 +51,7 @@ interface StudyFormProps {
 
 export function StudyForm({ mode, studyId }: StudyFormProps) {
   const router = useRouter();
+  const { startTour } = useTour();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,9 +170,9 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
       description="Basic information about your research study."
     >
       <FormField>
-        <Label htmlFor="name">Study Name *</Label>
+        <Label htmlFor="tour-study-name">Study Name *</Label>
         <Input
-          id="name"
+          id="tour-study-name"
           {...form.register("name")}
           placeholder="Enter study name..."
           className={form.formState.errors.name ? "border-red-500" : ""}
@@ -182,9 +185,9 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
       </FormField>
 
       <FormField>
-        <Label htmlFor="description">Description *</Label>
+        <Label htmlFor="tour-study-description">Description *</Label>
         <Textarea
-          id="description"
+          id="tour-study-description"
           {...form.register("description")}
           placeholder="Describe the research objectives, methodology, and expected outcomes..."
           rows={4}
@@ -322,6 +325,15 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
       onDelete={mode === "edit" ? onDelete : undefined}
       isDeleting={isDeleting}
       sidebar={sidebar}
+      submitButtonId="tour-study-submit"
+      extraActions={
+        <Button variant="ghost" size="sm" onClick={() => startTour("study_creation")}>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Help</span>
+            <div className="flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground">?</div>
+          </div>
+        </Button>
+      }
     >
       {formFields}
     </EntityForm>

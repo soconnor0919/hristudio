@@ -8,10 +8,11 @@ import React, {
   useState,
 } from "react";
 import { toast } from "sonner";
-import { Play, RefreshCw } from "lucide-react";
+import { Play, RefreshCw, HelpCircle } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { PageHeader } from "~/components/ui/page-header";
+import { useTour } from "~/components/onboarding/TourProvider";
 
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
@@ -151,6 +152,8 @@ export function DesignerRoot({
   autoCompile = true,
   onPersist,
 }: DesignerRootProps) {
+  const { startTour } = useTour();
+
   /* ----------------------------- Remote Experiment ------------------------- */
   const {
     data: experiment,
@@ -899,18 +902,25 @@ export function DesignerRoot({
   /* ------------------------------- Panels ---------------------------------- */
   const leftPanel = useMemo(
     () => (
-      <div ref={libraryRootRef} data-library-root className="h-full">
+      <div id="tour-designer-blocks" ref={libraryRootRef} data-library-root className="h-full">
         <ActionLibraryPanel />
       </div>
     ),
     [],
   );
 
-  const centerPanel = useMemo(() => <FlowWorkspace />, []);
+  const centerPanel = useMemo(
+    () => (
+      <div id="tour-designer-canvas" className="h-full">
+        <FlowWorkspace />
+      </div>
+    ),
+    [],
+  );
 
   const rightPanel = useMemo(
     () => (
-      <div className="h-full">
+      <div id="tour-designer-properties" className="h-full">
         <InspectorPanel
           activeTab={inspectorTab}
           onTabChange={setInspectorTab}
@@ -932,6 +942,14 @@ export function DesignerRoot({
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => startTour("designer")}
+        title="Start Tour"
+      >
+        <HelpCircle className="h-5 w-5" />
+      </Button>
       <Button
         size="sm"
         variant="default"

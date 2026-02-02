@@ -30,12 +30,14 @@ interface WizardObservationPaneProps {
         tags?: string[],
     ) => Promise<void>;
     isSubmitting?: boolean;
+    readOnly?: boolean;
 }
 
 export function WizardObservationPane({
     onAddAnnotation,
     isSubmitting = false,
     trialEvents = [],
+    readOnly = false,
 }: WizardObservationPaneProps & { trialEvents?: TrialEvent[] }) {
     const [note, setNote] = useState("");
     const [category, setCategory] = useState("observation");
@@ -82,15 +84,16 @@ export function WizardObservationPane({
                 <TabsContent value="notes" className="flex-1 flex flex-col p-4 m-0 data-[state=inactive]:hidden">
                     <div className="flex flex-1 flex-col gap-2">
                         <Textarea
-                            placeholder="Type your observation here..."
+                            placeholder={readOnly ? "Session is read-only" : "Type your observation here..."}
                             className="flex-1 resize-none font-mono text-sm"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             onKeyDown={handleKeyDown}
+                            disabled={readOnly}
                         />
 
                         <div className="flex items-center gap-2">
-                            <Select value={category} onValueChange={setCategory}>
+                            <Select value={category} onValueChange={setCategory} disabled={readOnly}>
                                 <SelectTrigger className="w-[140px] h-8 text-xs">
                                     <SelectValue placeholder="Category" />
                                 </SelectTrigger>
@@ -104,11 +107,11 @@ export function WizardObservationPane({
                             </Select>
 
                             <div className="flex flex-1 items-center gap-2 rounded-md border px-2 h-8">
-                                <Tag className="h-3 w-3 text-muted-foreground" />
+                                <Tag className={`h-3 w-3 ${readOnly ? "text-muted-foreground/50" : "text-muted-foreground"}`} />
                                 <input
                                     type="text"
-                                    placeholder="Add tags..."
-                                    className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                                    placeholder={readOnly ? "" : "Add tags..."}
+                                    className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
                                     value={currentTag}
                                     onChange={(e) => setCurrentTag(e.target.value)}
                                     onKeyDown={(e) => {
@@ -118,13 +121,14 @@ export function WizardObservationPane({
                                         }
                                     }}
                                     onBlur={addTag}
+                                    disabled={readOnly}
                                 />
                             </div>
 
                             <Button
                                 size="sm"
                                 onClick={handleSubmit}
-                                disabled={isSubmitting || !note.trim()}
+                                disabled={isSubmitting || !note.trim() || readOnly}
                                 className="h-8"
                             >
                                 <Send className="mr-2 h-3 w-3" />

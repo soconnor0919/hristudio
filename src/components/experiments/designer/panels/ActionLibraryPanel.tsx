@@ -333,7 +333,7 @@ export function ActionLibraryPanel() {
   ).length;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden" id="tour-designer-blocks">
       <div className="bg-background/60 flex-shrink-0 border-b p-2">
         <div className="relative mb-2">
           <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />

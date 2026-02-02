@@ -276,7 +276,7 @@ export function AppSidebar({
                       <TooltipTrigger asChild>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <SidebarMenuButton className="w-full">
+                            <SidebarMenuButton className="w-full" id="tour-sidebar-study-selector">
                               <Building className="h-4 w-4 flex-shrink-0" />
                               <span className="truncate">
                                 {selectedStudy?.name ?? "Select Study"}
@@ -325,7 +325,7 @@ export function AppSidebar({
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton className="w-full">
+                      <SidebarMenuButton className="w-full" id="tour-sidebar-study-selector">
                         <Building className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">
                           {selectedStudy?.name ?? "Select Study"}
@@ -383,7 +383,11 @@ export function AppSidebar({
                   (item.url !== "/dashboard" && pathname.startsWith(item.url));
 
                 const menuButton = (
-                  <SidebarMenuButton asChild isActive={isActive}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    id={`tour-sidebar-${item.title.toLowerCase()}`}
+                  >
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -425,7 +429,11 @@ export function AppSidebar({
                       pathname.startsWith(item.url));
 
                   const menuButton = (
-                    <SidebarMenuButton asChild isActive={isActive}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      id={`tour-sidebar-study-${item.title.toLowerCase()}`}
+                    >
                       <Link href={item.url}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>

@@ -52,6 +52,10 @@ interface EntityFormProps<T extends FieldValues = FieldValues> {
 
   // Custom submit button text
   submitText?: string;
+  submitButtonId?: string;
+
+  // Additional header actions
+  extraActions?: ReactNode;
 
   // Layout
   layout?: "default" | "full-width";
@@ -76,6 +80,8 @@ export function EntityForm<T extends FieldValues = FieldValues>({
   isDeleting = false,
   sidebar,
   submitText,
+  submitButtonId,
+  extraActions,
   layout = "default",
   className,
 }: EntityFormProps<T>) {
@@ -97,6 +103,7 @@ export function EntityForm<T extends FieldValues = FieldValues>({
         icon={Icon}
         actions={
           <div className="flex items-center space-x-2">
+            {extraActions}
             <Button variant="outline" asChild>
               <Link href={backUrl}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -161,6 +168,7 @@ export function EntityForm<T extends FieldValues = FieldValues>({
                     Cancel
                   </Button>
                   <Button
+                    id={submitButtonId}
                     type="submit"
                     disabled={
                       isSubmitting ||

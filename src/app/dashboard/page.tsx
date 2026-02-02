@@ -11,6 +11,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  HelpCircle,
   LayoutDashboard,
   MoreHorizontal,
   Play,
@@ -47,8 +48,10 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { api } from "~/trpc/react";
+import { useTour } from "~/components/onboarding/TourProvider";
 
 export default function DashboardPage() {
+  const { startTour } = useTour();
   const [studyFilter, setStudyFilter] = React.useState<string | null>(null);
 
   // --- Data Fetching ---
@@ -81,7 +84,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col space-y-8 animate-in fade-in duration-500">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div id="dashboard-header" className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -90,6 +93,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => startTour("dashboard")} title="Start Tour">
+            <HelpCircle className="h-5 w-5" />
+          </Button>
           <Select
             value={studyFilter ?? "all"}
             onValueChange={(value) =>
@@ -109,7 +115,7 @@ export default function DashboardPage() {
             </SelectContent>
           </Select>
 
-          <Button asChild>
+          <Button id="tour-new-study" asChild>
             <Link href="/studies/new">
               <Plus className="mr-2 h-4 w-4" /> New Study
             </Link>
@@ -118,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div id="tour-dashboard-stats" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Participants"
           value={stats?.totalParticipants ?? 0}
@@ -153,7 +159,7 @@ export default function DashboardPage() {
         <div className="col-span-4 space-y-4">
 
           {/* Scheduled Trials */}
-          <Card className="col-span-4 border-muted/40 shadow-sm">
+          <Card id="tour-scheduled-trials" className="col-span-4 border-muted/40 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -252,7 +258,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Activity */}
-          <Card className="border-muted/40 shadow-sm h-full">
+          <Card id="tour-recent-activity" className="border-muted/40 shadow-sm h-full">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>

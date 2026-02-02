@@ -955,6 +955,7 @@ export function FlowWorkspace({
 
       <div
         ref={containerRef}
+        id="tour-designer-canvas"
         className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
         onScroll={onScroll}
       >

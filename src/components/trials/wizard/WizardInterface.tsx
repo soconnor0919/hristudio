@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Play, CheckCircle, X, Clock, AlertCircle } from "lucide-react";
+import { Play, CheckCircle, X, Clock, AlertCircle, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
@@ -19,6 +19,7 @@ import {
 import { api } from "~/trpc/react";
 import { useWizardRos } from "~/hooks/useWizardRos";
 import { toast } from "sonner";
+import { useTour } from "~/components/onboarding/TourProvider";
 
 interface WizardInterfaceProps {
   trial: {
@@ -77,6 +78,7 @@ export const WizardInterface = React.memo(function WizardInterface({
   trial: initialTrial,
   userRole: _userRole,
 }: WizardInterfaceProps) {
+  const { startTour } = useTour();
   const [trial, setTrial] = useState(initialTrial);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [trialStartTime, setTrialStartTime] = useState<Date | null>(
@@ -654,6 +656,13 @@ export const WizardInterface = React.memo(function WizardInterface({
             >
               {rosConnected ? "ROS Connected" : "ROS Offline"}
             </Badge>
+            <button
+              onClick={() => startTour("wizard")}
+              className="hover:bg-muted p-1 rounded-full transition-colors"
+              title="Start Tour"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -664,59 +673,65 @@ export const WizardInterface = React.memo(function WizardInterface({
           <ResizablePanel defaultSize={75} minSize={30}>
             <PanelsContainer
               left={
-                <WizardControlPanel
-                  trial={trial}
-                  currentStep={currentStep}
-                  steps={steps}
-                  currentStepIndex={currentStepIndex}
-                  onStartTrial={handleStartTrial}
-                  onPauseTrial={handlePauseTrial}
-                  onNextStep={handleNextStep}
-                  onCompleteTrial={handleCompleteTrial}
-                  onAbortTrial={handleAbortTrial}
-                  onExecuteAction={handleExecuteAction}
-                  onExecuteRobotAction={handleExecuteRobotAction}
-                  studyId={trial.experiment.studyId}
-                  _isConnected={rosConnected}
-                  activeTab={controlPanelTab}
-                  onTabChange={setControlPanelTab}
-                  isStarting={startTrialMutation.isPending}
-                  onSetAutonomousLife={setAutonomousLife}
-                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                />
+                <div id="tour-wizard-controls" className="h-full">
+                  <WizardControlPanel
+                    trial={trial}
+                    currentStep={currentStep}
+                    steps={steps}
+                    currentStepIndex={currentStepIndex}
+                    onStartTrial={handleStartTrial}
+                    onPauseTrial={handlePauseTrial}
+                    onNextStep={handleNextStep}
+                    onCompleteTrial={handleCompleteTrial}
+                    onAbortTrial={handleAbortTrial}
+                    onExecuteAction={handleExecuteAction}
+                    onExecuteRobotAction={handleExecuteRobotAction}
+                    studyId={trial.experiment.studyId}
+                    _isConnected={rosConnected}
+                    activeTab={controlPanelTab}
+                    onTabChange={setControlPanelTab}
+                    isStarting={startTrialMutation.isPending}
+                    onSetAutonomousLife={setAutonomousLife}
+                    readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                  />
+                </div>
               }
               center={
-                <WizardExecutionPanel
-                  trial={trial}
-                  currentStep={currentStep}
-                  steps={steps}
-                  currentStepIndex={currentStepIndex}
-                  trialEvents={trialEvents}
-                  onStepSelect={(index: number) => setCurrentStepIndex(index)}
-                  onExecuteAction={handleExecuteAction}
-                  onExecuteRobotAction={handleExecuteRobotAction}
-                  activeTab={executionPanelTab}
-                  onTabChange={setExecutionPanelTab}
-                  onSkipAction={handleSkipAction}
-                  isExecuting={isExecutingAction}
-                  onNextStep={handleNextStep}
-                  completedActionsCount={completedActionsCount}
-                  onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
-                  onCompleteTrial={handleCompleteTrial}
-                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                />
+                <div id="tour-wizard-timeline" className="h-full">
+                  <WizardExecutionPanel
+                    trial={trial}
+                    currentStep={currentStep}
+                    steps={steps}
+                    currentStepIndex={currentStepIndex}
+                    trialEvents={trialEvents}
+                    onStepSelect={(index: number) => setCurrentStepIndex(index)}
+                    onExecuteAction={handleExecuteAction}
+                    onExecuteRobotAction={handleExecuteRobotAction}
+                    activeTab={executionPanelTab}
+                    onTabChange={setExecutionPanelTab}
+                    onSkipAction={handleSkipAction}
+                    isExecuting={isExecutingAction}
+                    onNextStep={handleNextStep}
+                    completedActionsCount={completedActionsCount}
+                    onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
+                    onCompleteTrial={handleCompleteTrial}
+                    readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                  />
+                </div>
               }
               right={
-                <WizardMonitoringPanel
-                  rosConnected={rosConnected}
-                  rosConnecting={rosConnecting}
-                  rosError={rosError ?? undefined}
-                  robotStatus={robotStatus}
-                  connectRos={connectRos}
-                  disconnectRos={disconnectRos}
-                  executeRosAction={executeRosAction}
-                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                />
+                <div id="tour-wizard-robot-status" className="h-full">
+                  <WizardMonitoringPanel
+                    rosConnected={rosConnected}
+                    rosConnecting={rosConnecting}
+                    rosError={rosError ?? undefined}
+                    robotStatus={robotStatus}
+                    connectRos={connectRos}
+                    disconnectRos={disconnectRos}
+                    executeRosAction={executeRosAction}
+                    readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                  />
+                </div>
               }
               showDividers={true}
               className="h-full"

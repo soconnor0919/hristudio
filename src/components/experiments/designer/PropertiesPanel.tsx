@@ -203,7 +203,7 @@ export function PropertiesPanelBase({
         : Zap;
 
     return (
-      <div className={cn("w-full min-w-0 space-y-3 px-3", className)}>
+      <div className={cn("w-full min-w-0 space-y-3 px-3", className)} id="tour-designer-properties">
         {/* Header / Metadata */}
         <div className="border-b pb-3">
           <div className="mb-2 flex items-center gap-2">
@@ -312,7 +312,7 @@ export function PropertiesPanelBase({
   /* --------------------------- Step Properties View --------------------------- */
   if (selectedStep) {
     return (
-      <div className={cn("w-full min-w-0 space-y-3 px-3", className)}>
+      <div className={cn("w-full min-w-0 space-y-3 px-3", className)} id="tour-designer-properties">
         <div className="border-b pb-2">
           <h3 className="flex items-center gap-2 text-sm font-medium">
             <div
@@ -439,6 +439,7 @@ export function PropertiesPanelBase({
         "flex h-24 items-center justify-center text-center",
         className,
       )}
+      id="tour-designer-properties"
     >
       <div>
         <Settings className="text-muted-foreground/50 mx-auto mb-2 h-6 w-6" />
