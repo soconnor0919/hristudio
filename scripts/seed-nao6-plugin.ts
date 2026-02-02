@@ -112,11 +112,10 @@ async function seedNAO6Plugin() {
           description:
             "Official NAO6 robot plugins for ROS2-based Human-Robot Interaction experiments",
           trustLevel: "official",
-          isActive: true,
-          isPublic: true,
+          isEnabled: true,
+          isOfficial: true,
           createdBy: userId,
-          status: "active",
-          lastSyncedAt: new Date(),
+          lastSyncAt: new Date(),
           metadata: {
             author: {
               name: "HRIStudio Team",
@@ -487,10 +486,83 @@ async function seedNAO6Plugin() {
           serviceType: "naoqi_bridge_msgs/srv/GetRobotInfo",
         },
       },
+      {
+        id: "nao_nod",
+        name: "Nod Head",
+        description: "Make the robot nod its head (Yes)",
+        category: "interaction",
+        icon: "check-circle",
+        parametersSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+        implementation: {
+          type: "ros2_service",
+          service: "/naoqi_driver/animation_player/run_animation",
+          serviceType: "naoqi_bridge_msgs/srv/SetString",
+        },
+      },
+      {
+        id: "nao_shake_head",
+        name: "Shake Head",
+        description: "Make the robot shake its head (No)",
+        category: "interaction",
+        icon: "x-circle",
+        parametersSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+        implementation: {
+          type: "ros2_service",
+          service: "/naoqi_driver/animation_player/run_animation",
+          serviceType: "naoqi_bridge_msgs/srv/SetString",
+        },
+      },
+      {
+        id: "nao_bow",
+        name: "Bow",
+        description: "Make the robot bow",
+        category: "interaction",
+        icon: "user-check",
+        parametersSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+        implementation: {
+          type: "ros2_service",
+          service: "/naoqi_driver/animation_player/run_animation",
+          serviceType: "naoqi_bridge_msgs/srv/SetString",
+        },
+      },
+      {
+        id: "nao_open_hand",
+        name: "Present (Open Hand)",
+        description: "Make the robot gesture with an open hand",
+        category: "interaction",
+        icon: "hand",
+        parametersSchema: {
+          type: "object",
+          properties: {
+            hand: {
+              type: "string",
+              enum: ["left", "right", "both"],
+              default: "right",
+            },
+          },
+          required: ["hand"],
+        },
+        implementation: {
+          type: "ros2_service",
+          service: "/naoqi_driver/animation_player/run_animation",
+          serviceType: "naoqi_bridge_msgs/srv/SetString",
+        },
+      },
     ];
 
     const pluginData: InsertPlugin = {
-      repositoryId: repoId,
       robotId: robotId,
       name: "NAO6 Robot (Enhanced ROS2 Integration)",
       version: "2.0.0",

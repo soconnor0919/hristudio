@@ -1230,6 +1230,11 @@ export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
   }),
 }));
 
+
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
+
+export type InsertPlugin = typeof plugins.$inferInsert;
+export type InsertPluginRepository = typeof pluginRepositories.$inferInsert;
+export type InsertRobot = typeof robots.$inferInsert;
