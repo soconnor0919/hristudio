@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Copy, Eye, Edit, LayoutTemplate, PlayCircle, Archive } from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -103,7 +103,7 @@ export const columns: ColumnDef<Experiment>[] = [
         <div className="max-w-[200px]">
           <div className="truncate font-medium">
             <Link
-              href={`/experiments/${row.original.id}`}
+              href={`/studies/${row.original.studyId}/experiments/${row.original.id}`}
               className="hover:underline"
             >
               {String(name)}
@@ -259,20 +259,26 @@ export const columns: ColumnDef<Experiment>[] = [
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(experiment.id)}
             >
-              Copy experiment ID
+              <Copy className="mr-2 h-4 w-4" />
+              Copy ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}`}>View details</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}/edit`}>
-                Edit experiment
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                Details
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/experiments/${experiment.id}/designer`}>
-                Open designer
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+                <LayoutTemplate className="mr-2 h-4 w-4" />
+                Designer
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -280,12 +286,14 @@ export const columns: ColumnDef<Experiment>[] = [
               <Link
                 href={`/studies/${experiment.studyId}/trials/new?experimentId=${experiment.id}`}
               >
-                Create trial
+                <PlayCircle className="mr-2 h-4 w-4" />
+                Start Trial
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600">
-              Archive experiment
+              <Archive className="mr-2 h-4 w-4" />
+              Archive
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

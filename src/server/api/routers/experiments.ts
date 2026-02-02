@@ -152,10 +152,10 @@ export const experimentsRouter = createTRPCRouter({
           .select({
             experimentId: trials.experimentId,
             latest: sql`max(GREATEST(
-              COALESCE(${trials.completedAt}, 'epoch'::timestamptz),
-              COALESCE(${trials.startedAt}, 'epoch'::timestamptz),
-              COALESCE(${trials.createdAt}, 'epoch'::timestamptz)
-            ))`.as("latest"),
+  COALESCE(${trials.completedAt}, 'epoch':: timestamptz),
+  COALESCE(${trials.startedAt}, 'epoch':: timestamptz),
+  COALESCE(${trials.createdAt}, 'epoch':: timestamptz)
+))`.as("latest"),
           })
           .from(trials)
           .where(inArray(trials.experimentId, experimentIds))
@@ -360,24 +360,24 @@ export const experimentsRouter = createTRPCRouter({
 
       const executionGraphSummary = stepsArray
         ? {
-            steps: stepsArray.length,
-            actions: stepsArray.reduce((total, step) => {
-              const acts = step.actions;
-              return (
-                total +
-                (Array.isArray(acts)
-                  ? acts.reduce(
-                      (aTotal, a) =>
-                        aTotal +
-                        (Array.isArray(a?.actions) ? a.actions.length : 0),
-                      0,
-                    )
-                  : 0)
-              );
-            }, 0),
-            generatedAt: eg?.generatedAt ?? null,
-            version: eg?.version ?? null,
-          }
+          steps: stepsArray.length,
+          actions: stepsArray.reduce((total, step) => {
+            const acts = step.actions;
+            return (
+              total +
+              (Array.isArray(acts)
+                ? acts.reduce(
+                  (aTotal, a) =>
+                    aTotal +
+                    (Array.isArray(a?.actions) ? a.actions.length : 0),
+                  0,
+                )
+                : 0)
+            );
+          }, 0),
+          generatedAt: eg?.generatedAt ?? null,
+          version: eg?.version ?? null,
+        }
         : null;
 
       return {
@@ -511,8 +511,7 @@ export const experimentsRouter = createTRPCRouter({
           return {
             valid: false,
             issues: [
-              `Compilation failed: ${
-                err instanceof Error ? err.message : "Unknown error"
+              `Compilation failed: ${err instanceof Error ? err.message : "Unknown error"
               }`,
             ],
             pluginDependencies: [],
@@ -541,13 +540,13 @@ export const experimentsRouter = createTRPCRouter({
         integrityHash: compiledGraph?.hash ?? null,
         compiled: compiledGraph
           ? {
-              steps: compiledGraph.steps.length,
-              actions: compiledGraph.steps.reduce(
-                (acc, s) => acc + s.actions.length,
-                0,
-              ),
-              transportSummary: summarizeTransports(compiledGraph.steps),
-            }
+            steps: compiledGraph.steps.length,
+            actions: compiledGraph.steps.reduce(
+              (acc, s) => acc + s.actions.length,
+              0,
+            ),
+            transportSummary: summarizeTransports(compiledGraph.steps),
+          }
           : null,
       };
     }),
@@ -570,6 +569,7 @@ export const experimentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id, createSteps, compileExecution, ...updateData } = input;
       const userId = ctx.session.user.id;
+      console.log("[DEBUG] experiments.update called", { id, visualDesign: updateData.visualDesign, createSteps });
 
       // Get experiment to check study access
       const experiment = await ctx.db.query.experiments.findFirst({
@@ -607,7 +607,7 @@ export const experimentsRouter = createTRPCRouter({
           if (issues.length) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: `Visual design validation failed:\n- ${issues.join("\n- ")}`,
+              message: `Visual design validation failed: \n - ${issues.join("\n- ")}`,
             });
           }
           normalizedSteps = guardedSteps;
@@ -637,11 +637,10 @@ export const experimentsRouter = createTRPCRouter({
             } catch (compileErr) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `Execution graph compilation failed: ${
-                  compileErr instanceof Error
-                    ? compileErr.message
-                    : "Unknown error"
-                }`,
+                message: `Execution graph compilation failed: ${compileErr instanceof Error
+                  ? compileErr.message
+                  : "Unknown error"
+                  }`,
               });
             }
           }
@@ -735,11 +734,13 @@ export const experimentsRouter = createTRPCRouter({
 
       const updatedExperiment = updatedExperimentResults[0];
       if (!updatedExperiment) {
+        console.error("[DEBUG] Failed to update experiment - no result returned");
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update experiment",
         });
       }
+      console.log("[DEBUG] Experiment updated successfully", { updatedAt: updatedExperiment.updatedAt });
 
       // Log activity
       await ctx.db.insert(activityLogs).values({
@@ -1541,6 +1542,15 @@ export const experimentsRouter = createTRPCRouter({
         parameters: step.conditions as Record<string, unknown>,
         parentId: undefined, // Not supported in current schema
         children: [], // TODO: implement hierarchical steps if needed
+        actions: step.actions.map((action) => ({
+          id: action.id,
+          name: action.name,
+          description: action.description,
+          type: action.type,
+          order: action.orderIndex,
+          parameters: action.parameters as Record<string, unknown>,
+          pluginId: action.pluginId,
+        })),
       }));
     }),
 

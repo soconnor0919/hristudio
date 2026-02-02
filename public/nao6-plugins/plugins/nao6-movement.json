@@ -1,0 +1,342 @@
+{
+  "name": "NAO6 Movement Control",
+  "version": "1.0.0",
+  "description": "Complete movement control for NAO6 robot including walking, turning, and joint manipulation",
+  "platform": "NAO6",
+  "category": "movement",
+  "manufacturer": {
+    "name": "SoftBank Robotics",
+    "website": "https://www.softbankrobotics.com"
+  },
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.com/robots/nao6/movement",
+    "quickStart": "https://docs.hristudio.com/robots/nao6/movement/quickstart"
+  },
+  "ros2Config": {
+    "namespace": "/naoqi_driver",
+    "topics": {
+      "cmd_vel": {
+        "type": "geometry_msgs/Twist",
+        "description": "Velocity commands for robot base movement"
+      },
+      "joint_angles": {
+        "type": "naoqi_bridge_msgs/JointAnglesWithSpeed",
+        "description": "Individual joint angle control with speed"
+      },
+      "joint_states": {
+        "type": "sensor_msgs/JointState",
+        "description": "Current joint positions and velocities"
+      }
+    }
+  },
+  "actions": [
+    {
+      "id": "walk_forward",
+      "name": "Walk Forward",
+      "description": "Make the robot walk forward at specified speed",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Walking speed in m/s",
+          "required": true,
+          "min": 0.01,
+          "max": 0.3,
+          "default": 0.1,
+          "step": 0.01
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "description": "Duration to walk in seconds (0 = indefinite)",
+          "required": false,
+          "min": 0,
+          "max": 30,
+          "default": 0,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageTemplate": {
+          "linear": { "x": "{{speed}}", "y": 0, "z": 0 },
+          "angular": { "x": 0, "y": 0, "z": 0 }
+        }
+      }
+    },
+    {
+      "id": "walk_backward",
+      "name": "Walk Backward",
+      "description": "Make the robot walk backward at specified speed",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Walking speed in m/s",
+          "required": true,
+          "min": 0.01,
+          "max": 0.3,
+          "default": 0.1,
+          "step": 0.01
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "description": "Duration to walk in seconds (0 = indefinite)",
+          "required": false,
+          "min": 0,
+          "max": 30,
+          "default": 0,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageTemplate": {
+          "linear": { "x": "-{{speed}}", "y": 0, "z": 0 },
+          "angular": { "x": 0, "y": 0, "z": 0 }
+        }
+      }
+    },
+    {
+      "id": "turn_left",
+      "name": "Turn Left",
+      "description": "Make the robot turn left at specified angular speed",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Angular speed in rad/s",
+          "required": true,
+          "min": 0.1,
+          "max": 1.0,
+          "default": 0.3,
+          "step": 0.1
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "description": "Duration to turn in seconds (0 = indefinite)",
+          "required": false,
+          "min": 0,
+          "max": 30,
+          "default": 0,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageTemplate": {
+          "linear": { "x": 0, "y": 0, "z": 0 },
+          "angular": { "x": 0, "y": 0, "z": "{{speed}}" }
+        }
+      }
+    },
+    {
+      "id": "turn_right",
+      "name": "Turn Right",
+      "description": "Make the robot turn right at specified angular speed",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Angular speed in rad/s",
+          "required": true,
+          "min": 0.1,
+          "max": 1.0,
+          "default": 0.3,
+          "step": 0.1
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "description": "Duration to turn in seconds (0 = indefinite)",
+          "required": false,
+          "min": 0,
+          "max": 30,
+          "default": 0,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageTemplate": {
+          "linear": { "x": 0, "y": 0, "z": 0 },
+          "angular": { "x": 0, "y": 0, "z": "-{{speed}}" }
+        }
+      }
+    },
+    {
+      "id": "stop_movement",
+      "name": "Stop Movement",
+      "description": "Immediately stop all robot movement",
+      "category": "movement",
+      "parameters": [],
+      "implementation": {
+        "topic": "/naoqi_driver/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageTemplate": {
+          "linear": { "x": 0, "y": 0, "z": 0 },
+          "angular": { "x": 0, "y": 0, "z": 0 }
+        }
+      }
+    },
+    {
+      "id": "move_head",
+      "name": "Move Head",
+      "description": "Control head orientation (yaw and pitch)",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "yaw",
+          "type": "number",
+          "description": "Head yaw angle in radians",
+          "required": true,
+          "min": -2.09,
+          "max": 2.09,
+          "default": 0,
+          "step": 0.1
+        },
+        {
+          "name": "pitch",
+          "type": "number",
+          "description": "Head pitch angle in radians",
+          "required": true,
+          "min": -0.67,
+          "max": 0.51,
+          "default": 0,
+          "step": 0.1
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Movement speed (0.1 = slow, 1.0 = fast)",
+          "required": false,
+          "min": 0.1,
+          "max": 1.0,
+          "default": 0.3,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/joint_angles",
+        "messageType": "naoqi_bridge_msgs/JointAnglesWithSpeed",
+        "messageTemplate": {
+          "joint_names": ["HeadYaw", "HeadPitch"],
+          "joint_angles": ["{{yaw}}", "{{pitch}}"],
+          "speed": "{{speed}}"
+        }
+      }
+    },
+    {
+      "id": "move_arm",
+      "name": "Move Arm",
+      "description": "Control arm joint positions",
+      "category": "movement",
+      "parameters": [
+        {
+          "name": "arm",
+          "type": "select",
+          "description": "Which arm to control",
+          "required": true,
+          "options": [
+            { "value": "left", "label": "Left Arm" },
+            { "value": "right", "label": "Right Arm" }
+          ],
+          "default": "right"
+        },
+        {
+          "name": "shoulder_pitch",
+          "type": "number",
+          "description": "Shoulder pitch angle in radians",
+          "required": true,
+          "min": -2.09,
+          "max": 2.09,
+          "default": 1.4,
+          "step": 0.1
+        },
+        {
+          "name": "shoulder_roll",
+          "type": "number",
+          "description": "Shoulder roll angle in radians",
+          "required": true,
+          "min": -0.31,
+          "max": 1.33,
+          "default": 0.2,
+          "step": 0.1
+        },
+        {
+          "name": "elbow_yaw",
+          "type": "number",
+          "description": "Elbow yaw angle in radians",
+          "required": true,
+          "min": -2.09,
+          "max": 2.09,
+          "default": 0,
+          "step": 0.1
+        },
+        {
+          "name": "elbow_roll",
+          "type": "number",
+          "description": "Elbow roll angle in radians",
+          "required": true,
+          "min": -1.54,
+          "max": -0.03,
+          "default": -0.5,
+          "step": 0.1
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "description": "Movement speed (0.1 = slow, 1.0 = fast)",
+          "required": false,
+          "min": 0.1,
+          "max": 1.0,
+          "default": 0.3,
+          "step": 0.1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/joint_angles",
+        "messageType": "naoqi_bridge_msgs/JointAnglesWithSpeed",
+        "messageTemplate": {
+          "joint_names": [
+            "{{arm === 'left' ? 'L' : 'R'}}ShoulderPitch",
+            "{{arm === 'left' ? 'L' : 'R'}}ShoulderRoll",
+            "{{arm === 'left' ? 'L' : 'R'}}ElbowYaw",
+            "{{arm === 'left' ? 'L' : 'R'}}ElbowRoll"
+          ],
+          "joint_angles": ["{{shoulder_pitch}}", "{{shoulder_roll}}", "{{elbow_yaw}}", "{{elbow_roll}}"],
+          "speed": "{{speed}}"
+        }
+      }
+    }
+  ],
+  "safety": {
+    "maxSpeed": 0.3,
+    "emergencyStop": {
+      "action": "stop_movement",
+      "description": "Immediately stops all movement"
+    },
+    "jointLimits": {
+      "HeadYaw": { "min": -2.09, "max": 2.09 },
+      "HeadPitch": { "min": -0.67, "max": 0.51 },
+      "LShoulderPitch": { "min": -2.09, "max": 2.09 },
+      "RShoulderPitch": { "min": -2.09, "max": 2.09 },
+      "LShoulderRoll": { "min": -0.31, "max": 1.33 },
+      "RShoulderRoll": { "min": -1.33, "max": 0.31 },
+      "LElbowYaw": { "min": -2.09, "max": 2.09 },
+      "RElbowYaw": { "min": -2.09, "max": 2.09 },
+      "LElbowRoll": { "min": 0.03, "max": 1.54 },
+      "RElbowRoll": { "min": -1.54, "max": -0.03 }
+    }
+  }
+}

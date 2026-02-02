@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
-import { Play } from "lucide-react";
+import { Play, RefreshCw } from "lucide-react";
 
+import { cn } from "~/lib/utils";
 import { PageHeader } from "~/components/ui/page-header";
 
 import { Button } from "~/components/ui/button";
@@ -19,8 +26,10 @@ import {
   MouseSensor,
   TouchSensor,
   KeyboardSensor,
+  closestCorners,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
@@ -150,18 +159,26 @@ export function DesignerRoot({
   } = api.experiments.get.useQuery({ id: experimentId });
 
   const updateExperiment = api.experiments.update.useMutation({
-    onSuccess: async () => {
-      toast.success("Experiment saved");
-      await refetchExperiment();
-    },
     onError: (err) => {
       toast.error(`Save failed: ${err.message}`);
     },
   });
 
-  const { data: studyPlugins } = api.robots.plugins.getStudyPlugins.useQuery(
+  const { data: studyPluginsRaw } = api.robots.plugins.getStudyPlugins.useQuery(
     { studyId: experiment?.studyId ?? "" },
     { enabled: !!experiment?.studyId },
+  );
+
+  // Map studyPlugins to format expected by DependencyInspector
+  const studyPlugins = useMemo(
+    () =>
+      studyPluginsRaw?.map((sp) => ({
+        id: sp.plugin.id,
+        robotId: sp.plugin.robotId ?? "",
+        name: sp.plugin.name,
+        version: sp.plugin.version,
+      })),
+    [studyPluginsRaw],
   );
 
   /* ------------------------------ Store Access ----------------------------- */
@@ -230,6 +247,7 @@ export function DesignerRoot({
   const [isSaving, setIsSaving] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isReady, setIsReady] = useState(false); // Track when everything is loaded
 
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined);
   const [inspectorTab, setInspectorTab] = useState<
@@ -250,6 +268,13 @@ export function DesignerRoot({
   useEffect(() => {
     if (initialized) return;
     if (loadingExperiment && !initialDesign) return;
+
+    console.log('[DesignerRoot] 🚀 INITIALIZING', {
+      hasExperiment: !!experiment,
+      hasInitialDesign: !!initialDesign,
+      loadingExperiment,
+    });
+
     const adapted =
       initialDesign ??
       (experiment
@@ -274,8 +299,9 @@ export function DesignerRoot({
       setValidatedHash(ih);
     }
     setInitialized(true);
-    // Kick initial hash
-    void recomputeHash();
+    // NOTE: We don't call recomputeHash() here because the automatic
+    // hash recomputation useEffect will trigger when setSteps() updates the steps array
+    console.log('[DesignerRoot] 🚀 Initialization complete, steps set');
   }, [
     initialized,
     loadingExperiment,
@@ -299,25 +325,68 @@ export function DesignerRoot({
   // Load plugin actions when study plugins available
   useEffect(() => {
     if (!experiment?.studyId) return;
-    if (!studyPlugins || studyPlugins.length === 0) return;
-    actionRegistry.loadPluginActions(
-      experiment.studyId,
-      studyPlugins.map((sp) => ({
-        plugin: {
-          id: sp.plugin.id,
-          robotId: sp.plugin.robotId,
-          version: sp.plugin.version,
-          actionDefinitions: Array.isArray(sp.plugin.actionDefinitions)
-            ? sp.plugin.actionDefinitions
-            : undefined,
-        },
-      })),
-    );
-  }, [experiment?.studyId, studyPlugins]);
+    if (!studyPluginsRaw) return;
+    // @ts-expect-error - studyPluginsRaw type from tRPC is compatible but TypeScript can't infer it
+    actionRegistry.loadPluginActions(experiment.studyId, studyPluginsRaw);
+  }, [experiment?.studyId, studyPluginsRaw]);
+
+  /* ------------------------- Ready State Management ------------------------ */
+  // Mark as ready once initialized and plugins are loaded
+  useEffect(() => {
+    if (!initialized || isReady) return;
+
+    // Check if plugins are loaded by verifying the action registry has plugin actions
+    const debugInfo = actionRegistry.getDebugInfo();
+    const hasPlugins = debugInfo.pluginActionsLoaded;
+
+    if (hasPlugins) {
+      // Small delay to ensure all components have rendered
+      const timer = setTimeout(() => {
+        setIsReady(true);
+        console.log('[DesignerRoot] ✅ Designer ready (plugins loaded), fading in');
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [initialized, isReady, studyPluginsRaw]);
+
+  /* ----------------------- Automatic Hash Recomputation -------------------- */
+  // Automatically recompute hash when steps change (debounced to avoid excessive computation)
+  useEffect(() => {
+    if (!initialized) return;
+
+    console.log('[DesignerRoot] Steps changed, scheduling hash recomputation', {
+      stepsCount: steps.length,
+      actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
+    });
+
+    const timeoutId = setTimeout(async () => {
+      console.log('[DesignerRoot] Executing debounced hash recomputation');
+      const result = await recomputeHash();
+      if (result) {
+        console.log('[DesignerRoot] Hash recomputed:', {
+          newHash: result.designHash.slice(0, 16),
+          fullHash: result.designHash,
+        });
+      }
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [steps, initialized, recomputeHash]);
+
 
   /* ----------------------------- Derived State ----------------------------- */
   const hasUnsavedChanges =
     !!currentDesignHash && lastPersistedHash !== currentDesignHash;
+
+  // Debug logging to track hash updates and save button state
+  useEffect(() => {
+    console.log('[DesignerRoot] Hash State:', {
+      currentDesignHash: currentDesignHash?.slice(0, 10),
+      lastPersistedHash: lastPersistedHash?.slice(0, 10),
+      hasUnsavedChanges,
+      stepsCount: steps.length,
+    });
+  }, [currentDesignHash, lastPersistedHash, hasUnsavedChanges, steps.length]);
 
   /* ------------------------------- Step Ops -------------------------------- */
   const createNewStep = useCallback(() => {
@@ -386,8 +455,7 @@ export function DesignerRoot({
       }
     } catch (err) {
       toast.error(
-        `Validation error: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Validation error: ${err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -404,6 +472,14 @@ export function DesignerRoot({
   /* --------------------------------- Save ---------------------------------- */
   const persist = useCallback(async () => {
     if (!initialized) return;
+
+    console.log('[DesignerRoot] 💾 SAVE initiated', {
+      stepsCount: steps.length,
+      actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
+      currentHash: currentDesignHash?.slice(0, 16),
+      lastPersistedHash: lastPersistedHash?.slice(0, 16),
+    });
+
     setIsSaving(true);
     try {
       const visualDesign = {
@@ -411,15 +487,43 @@ export function DesignerRoot({
         version: designMeta.version,
         lastSaved: new Date().toISOString(),
       };
-      updateExperiment.mutate({
+
+      console.log('[DesignerRoot] 💾 Sending to server...', {
+        experimentId,
+        stepsCount: steps.length,
+        version: designMeta.version,
+      });
+
+      // Wait for mutation to complete
+      await updateExperiment.mutateAsync({
         id: experimentId,
         visualDesign,
         createSteps: true,
         compileExecution: autoCompile,
       });
-      // Optimistic hash recompute
-      await recomputeHash();
+
+      console.log('[DesignerRoot] 💾 Server save successful');
+
+      // NOTE: We do NOT refetch here because it would reset the local steps state
+      // to the server state, which would cause the hash to match the persisted hash,
+      // preventing the save button from re-enabling on subsequent changes.
+      // The local state is already the source of truth after a successful save.
+
+      // Recompute hash and update persisted hash
+      const hashResult = await recomputeHash();
+      if (hashResult?.designHash) {
+        console.log('[DesignerRoot] 💾 Updated persisted hash:', {
+          newPersistedHash: hashResult.designHash.slice(0, 16),
+          fullHash: hashResult.designHash,
+        });
+        setPersistedHash(hashResult.designHash);
+      }
+
       setLastSavedAt(new Date());
+      toast.success("Experiment saved");
+
+      console.log('[DesignerRoot] 💾 SAVE complete');
+
       onPersist?.({
         id: experimentId,
         name: designMeta.name,
@@ -428,16 +532,22 @@ export function DesignerRoot({
         version: designMeta.version,
         lastSaved: new Date(),
       });
+    } catch (error) {
+      console.error('[DesignerRoot] 💾 SAVE failed:', error);
+      // Error already handled by mutation onError
     } finally {
       setIsSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialized,
     steps,
     designMeta,
     experimentId,
-    updateExperiment,
     recomputeHash,
+    currentDesignHash,
+    setPersistedHash,
+    refetchExperiment,
     onPersist,
     autoCompile,
   ]);
@@ -479,8 +589,7 @@ export function DesignerRoot({
       toast.success("Exported design bundle");
     } catch (err) {
       toast.error(
-        `Export failed: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Export failed: ${err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -489,10 +598,11 @@ export function DesignerRoot({
   }, [currentDesignHash, steps, experimentId, designMeta, experiment]);
 
   /* ---------------------------- Incremental Hash --------------------------- */
-  useEffect(() => {
-    if (!initialized) return;
-    void recomputeHash();
-  }, [steps.length, initialized, recomputeHash]);
+  // Serialize steps for stable comparison
+  const stepsHash = useMemo(() => JSON.stringify(steps), [steps]);
+
+  // Intentionally removed redundant recomputeHash useEffect that was causing excessive refreshes
+  // The debounced useEffect (lines 352-372) handles this correctly.
 
   useEffect(() => {
     if (selectedStepId || selectedActionId) {
@@ -517,18 +627,10 @@ export function DesignerRoot({
       ) {
         e.preventDefault();
         void persist();
-      } else if (e.key === "v" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        void validateDesign();
-      } else if (e.key === "e" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        void handleExport();
-      } else if (e.key === "n" && e.shiftKey) {
-        e.preventDefault();
-        createNewStep();
       }
+      // 'v' (validate), 'e' (export), 'Shift+N' (new step) shortcuts removed to prevent accidents
     },
-    [hasUnsavedChanges, persist, validateDesign, handleExport, createNewStep],
+    [hasUnsavedChanges, persist],
   );
 
   useEffect(() => {
@@ -576,43 +678,163 @@ export function DesignerRoot({
     [toggleLibraryScrollLock],
   );
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
-      console.debug("[DesignerRoot] dragEnd", {
-        active: active?.id,
-        over: over?.id ?? null,
-      });
-      // Clear overlay immediately
-      toggleLibraryScrollLock(false);
-      setDragOverlayAction(null);
-      if (!over) {
-        console.debug("[DesignerRoot] dragEnd: no drop target (ignored)");
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    const store = useDesignerStore.getState();
+
+    // Only handle Library -> Flow projection
+    if (!active.id.toString().startsWith("action-")) {
+      if (store.insertionProjection) {
+        store.setInsertionProjection(null);
+      }
+      return;
+    }
+
+    if (!over) {
+      if (store.insertionProjection) {
+        store.setInsertionProjection(null);
+      }
+      return;
+    }
+
+    const overId = over.id.toString();
+    const activeDef = active.data.current?.action;
+
+    if (!activeDef) return;
+
+    let stepId: string | null = null;
+    let parentId: string | null = null;
+    let index = 0;
+
+    // Detect target based on over id
+    if (overId.startsWith("s-act-")) {
+      const data = over.data.current;
+      if (data && data.stepId) {
+        stepId = data.stepId;
+        parentId = data.parentId ?? null; // Use parentId from the action we are hovering over
+        // Use sortable index (insertion point provided by dnd-kit sortable strategy)
+        index = data.sortable?.index ?? 0;
+      }
+    } else if (overId.startsWith("container-")) {
+      // Dropping into a container (e.g. Loop)
+      const data = over.data.current;
+      if (data && data.stepId) {
+        stepId = data.stepId;
+        parentId = data.parentId ?? overId.slice("container-".length);
+        // If dropping into container, appending is a safe default if specific index logic is missing
+        // But actually we can find length if we want. For now, 0 or append logic?
+        // If container is empty, index 0 is correct.
+        // If not empty, we are hitting the container *background*, so append?
+        // The projection logic will insert at 'index'. If index is past length, it appends.
+        // Let's set a large index to ensure append, or look up length.
+        // Lookup requires finding the action in store. Expensive?
+        // Let's assume index 0 for now (prepend) or implement lookup.
+        // Better: lookup action -> children length.
+        const actionId = parentId;
+        const step = store.steps.find(s => s.id === stepId);
+        // Find action recursive? Store has `findActionById` helper but it is not exported/accessible easily here?
+        // Actually, `store.steps` is available.
+        // We can implement a quick BFS/DFS or just assume 0. 
+        // If dragging over the container *background* (empty space), append is usually expected.
+        // Let's try 9999?
+        index = 9999;
+      }
+    } else if (overId.startsWith("s-step-") || overId.startsWith("step-")) {
+      // Container drop (Step)
+      stepId = overId.startsWith("s-step-")
+        ? overId.slice("s-step-".length)
+        : overId.slice("step-".length);
+      const step = store.steps.find((s) => s.id === stepId);
+      index = step ? step.actions.length : 0;
+
+    } else if (overId === "projection-placeholder") {
+      // Hovering over our own projection placeholder -> keep current state
+      return;
+    }
+
+    if (stepId) {
+      const current = store.insertionProjection;
+      // Optimization: avoid redundant updates if projection matches
+      if (
+        current &&
+        current.stepId === stepId &&
+        current.parentId === parentId &&
+        current.index === index
+      ) {
         return;
       }
 
-      // Expect dragged action (library) onto a step droppable
-      const activeId = active.id.toString();
-      const overId = over.id.toString();
+      store.setInsertionProjection({
+        stepId,
+        parentId,
+        index,
+        action: {
+          id: "projection-placeholder",
+          type: activeDef.type,
+          name: activeDef.name,
+          category: activeDef.category,
+          description: "Drop here",
+          source: activeDef.source || { kind: "library" },
+          parameters: {},
+          execution: activeDef.execution,
+        } as any,
+      });
+    } else {
+      if (store.insertionProjection) store.setInsertionProjection(null);
+    }
+  }, []);
 
-      if (activeId.startsWith("action-") && active.data.current?.action) {
-        // Resolve stepId from possible over ids: step-<id>, s-step-<id>, or s-act-<actionId>
-        let stepId: string | null = null;
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      // Clear overlay immediately
+      toggleLibraryScrollLock(false);
+      setDragOverlayAction(null);
+
+      // Capture and clear projection
+      const store = useDesignerStore.getState();
+      const projection = store.insertionProjection;
+      store.setInsertionProjection(null);
+
+      if (!over) {
+        return;
+      }
+
+      // 1. Determine Target (Step, Parent, Index)
+      let stepId: string | null = null;
+      let parentId: string | null = null;
+      let index: number | undefined = undefined;
+
+      if (projection) {
+        stepId = projection.stepId;
+        parentId = projection.parentId;
+        index = projection.index;
+      } else {
+        // Fallback: resolution from overId (if projection failed or raced)
+        const overId = over.id.toString();
         if (overId.startsWith("step-")) {
           stepId = overId.slice("step-".length);
         } else if (overId.startsWith("s-step-")) {
           stepId = overId.slice("s-step-".length);
         } else if (overId.startsWith("s-act-")) {
+          // This might fail if s-act-projection, but that should have covered by projection check above
           const actionId = overId.slice("s-act-".length);
           const parent = steps.find((s) =>
             s.actions.some((a) => a.id === actionId),
           );
           stepId = parent?.id ?? null;
         }
-        if (!stepId) return;
+      }
 
+      if (!stepId) return;
+      const targetStep = steps.find((s) => s.id === stepId);
+      if (!targetStep) return;
+
+      // 2. Instantiate Action
+      if (active.id.toString().startsWith("action-") && active.data.current?.action) {
         const actionDef = active.data.current.action as {
-          id: string;
+          id: string; // type
           type: string;
           name: string;
           category: string;
@@ -622,51 +844,82 @@ export function DesignerRoot({
           parameters: Array<{ id: string; name: string }>;
         };
 
-        const targetStep = steps.find((s) => s.id === stepId);
-        if (!targetStep) return;
+        const fullDef = actionRegistry.getAction(actionDef.type);
+        const defaultParams: Record<string, unknown> = {};
+        if (fullDef?.parameters) {
+          for (const param of fullDef.parameters) {
+            // @ts-expect-error - 'default' property access
+            if (param.default !== undefined) {
+              // @ts-expect-error - 'default' property access
+              defaultParams[param.id] = param.default;
+            }
+          }
+        }
 
         const execution: ExperimentAction["execution"] =
           actionDef.execution &&
-          (actionDef.execution.transport === "internal" ||
-            actionDef.execution.transport === "rest" ||
-            actionDef.execution.transport === "ros2")
+            (actionDef.execution.transport === "internal" ||
+              actionDef.execution.transport === "rest" ||
+              actionDef.execution.transport === "ros2")
             ? {
-                transport: actionDef.execution.transport,
-                retryable: actionDef.execution.retryable ?? false,
-              }
-            : {
-                transport: "internal",
-                retryable: false,
-              };
+              transport: actionDef.execution.transport,
+              retryable: actionDef.execution.retryable ?? false,
+            }
+            : undefined;
+
         const newAction: ExperimentAction = {
-          id: `action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: actionDef.type,
+          id: crypto.randomUUID(),
+          type: actionDef.type, // this is the 'type' key
           name: actionDef.name,
-          category: actionDef.category as ExperimentAction["category"],
-          parameters: {},
-          source: actionDef.source as ExperimentAction["source"],
+          category: actionDef.category as any,
+          description: "",
+          parameters: defaultParams,
+          source: actionDef.source ? {
+            kind: actionDef.source.kind as any,
+            pluginId: actionDef.source.pluginId,
+            pluginVersion: actionDef.source.pluginVersion,
+            baseActionId: actionDef.id
+          } : { kind: "core" },
           execution,
+          children: [],
         };
 
-        upsertAction(stepId, newAction);
-        // Select the newly added action and open properties
-        selectStep(stepId);
+        // 3. Commit
+        upsertAction(stepId, newAction, parentId, index);
+
+        // Auto-select
         selectAction(stepId, newAction.id);
-        setInspectorTab("properties");
-        await recomputeHash();
-        toast.success(`Added ${actionDef.name} to ${targetStep.name}`);
+
+        void recomputeHash();
       }
     },
-    [
-      steps,
-      upsertAction,
-      recomputeHash,
-      selectStep,
-      selectAction,
-      toggleLibraryScrollLock,
-    ],
+    [steps, upsertAction, selectAction, recomputeHash, toggleLibraryScrollLock],
   );
   // validation status badges removed (unused)
+  /* ------------------------------- Panels ---------------------------------- */
+  const leftPanel = useMemo(
+    () => (
+      <div ref={libraryRootRef} data-library-root className="h-full">
+        <ActionLibraryPanel />
+      </div>
+    ),
+    [],
+  );
+
+  const centerPanel = useMemo(() => <FlowWorkspace />, []);
+
+  const rightPanel = useMemo(
+    () => (
+      <div className="h-full">
+        <InspectorPanel
+          activeTab={inspectorTab}
+          onTabChange={setInspectorTab}
+          studyPlugins={studyPlugins}
+        />
+      </div>
+    ),
+    [inspectorTab, studyPlugins],
+  );
 
   /* ------------------------------- Render ---------------------------------- */
   if (loadingExperiment && !initialized) {
@@ -677,80 +930,105 @@ export function DesignerRoot({
     );
   }
 
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        size="sm"
+        variant="default"
+        className="h-8 px-3 text-xs"
+        onClick={() => validateDesign()}
+        disabled={isValidating}
+      >
+        Validate
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="h-8 px-3 text-xs"
+        onClick={() => persist()}
+        disabled={!hasUnsavedChanges || isSaving}
+      >
+        Save
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <PageHeader
         title={designMeta.name}
-        description="Compose ordered steps with provenance-aware actions."
+        description={designMeta.description || "No description"}
         icon={Play}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              className="h-8 px-3 text-xs"
-              onClick={() => validateDesign()}
-              disabled={isValidating}
-            >
-              Validate
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 px-3 text-xs"
-              onClick={() => persist()}
-              disabled={!hasUnsavedChanges || isSaving}
-            >
-              Save
-            </Button>
-          </div>
-        }
+        actions={actions}
+        className="pb-6"
       />
 
-      <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => toggleLibraryScrollLock(false)}
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        {/* Loading Overlay */}
+        {!isReady && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-sm">Loading designer...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content - Fade in when ready */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col overflow-hidden transition-opacity duration-500",
+            isReady ? "opacity-100" : "opacity-0"
+          )}
         >
-          <PanelsContainer
-            showDividers
-            className="min-h-0 flex-1"
-            left={
-              <div ref={libraryRootRef} data-library-root className="h-full">
-                <ActionLibraryPanel />
-              </div>
-            }
-            center={<FlowWorkspace />}
-            right={
-              <div className="h-full">
-                <InspectorPanel
-                  activeTab={inspectorTab}
-                  onTabChange={setInspectorTab}
-                />
-              </div>
-            }
-          />
-          <DragOverlay>
-            {dragOverlayAction ? (
-              <div className="bg-background pointer-events-none rounded border px-2 py-1 text-xs shadow-lg select-none">
-                {dragOverlayAction.name}
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-        <div className="flex-shrink-0 border-t">
-          <BottomStatusBar
-            onSave={() => persist()}
-            onValidate={() => validateDesign()}
-            onExport={() => handleExport()}
-            lastSavedAt={lastSavedAt}
-            saving={isSaving}
-            validating={isValidating}
-            exporting={isExporting}
-          />
+          <div className="flex h-[calc(100vh-12rem)] w-full max-w-full flex-col overflow-hidden rounded-md border">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => toggleLibraryScrollLock(false)}
+            >
+              <PanelsContainer
+                showDividers
+                className="min-h-0 flex-1"
+                left={leftPanel}
+                center={centerPanel}
+                right={rightPanel}
+              />
+              <DragOverlay>
+                {dragOverlayAction ? (
+                  <div className="bg-background flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none">
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 rounded-full",
+                        {
+                          wizard: "bg-blue-500",
+                          robot: "bg-emerald-600",
+                          control: "bg-amber-500",
+                          observation: "bg-purple-600",
+                        }[dragOverlayAction.category] || "bg-slate-400",
+                      )}
+                    />
+                    {dragOverlayAction.name}
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+            <div className="flex-shrink-0 border-t">
+              <BottomStatusBar
+                onSave={() => persist()}
+                onValidate={() => validateDesign()}
+                onExport={() => handleExport()}
+                onRecalculateHash={() => recomputeHash()}
+                lastSavedAt={lastSavedAt}
+                saving={isSaving}
+                validating={isValidating}
+                exporting={isExporting}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

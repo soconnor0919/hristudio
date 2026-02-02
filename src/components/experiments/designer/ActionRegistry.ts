@@ -78,6 +78,7 @@ export class ActionRegistry {
       parameters?: CoreBlockParam[];
       timeoutMs?: number;
       retryable?: boolean;
+      nestable?: boolean;
     }
 
     try {
@@ -139,6 +140,7 @@ export class ActionRegistry {
               parameterSchemaRaw: {
                 parameters: block.parameters ?? [],
               },
+              nestable: block.nestable,
             };
 
             this.actions.set(actionDef.id, actionDef);
@@ -180,31 +182,33 @@ export class ActionRegistry {
   private loadFallbackActions(): void {
     const fallbackActions: ActionDefinition[] = [
       {
-        id: "wizard_speak",
-        type: "wizard_speak",
+        id: "wizard_say",
+        type: "wizard_say",
         name: "Wizard Says",
         description: "Wizard speaks to participant",
         category: "wizard",
         icon: "MessageSquare",
-        color: "#3b82f6",
+        color: "#a855f7",
         parameters: [
           {
-            id: "text",
-            name: "Text to say",
+            id: "message",
+            name: "Message",
             type: "text",
             placeholder: "Hello, participant!",
             required: true,
           },
-        ],
-        source: { kind: "core", baseActionId: "wizard_speak" },
-        execution: { transport: "internal", timeoutMs: 30000 },
-        parameterSchemaRaw: {
-          type: "object",
-          properties: {
-            text: { type: "string" },
+          {
+            id: "tone",
+            name: "Tone",
+            type: "select",
+            options: ["neutral", "friendly", "encouraging"],
+            value: "neutral",
           },
-          required: ["text"],
-        },
+        ],
+        source: { kind: "core", baseActionId: "wizard_say" },
+        execution: { transport: "internal", timeoutMs: 30000 },
+        parameterSchemaRaw: {},
+        nestable: false,
       },
       {
         id: "wait",
@@ -366,34 +370,34 @@ export class ActionRegistry {
 
         const execution = action.ros2
           ? {
-              transport: "ros2" as const,
-              timeoutMs: action.timeout,
-              retryable: action.retryable,
-              ros2: {
-                topic: action.ros2.topic,
-                messageType: action.ros2.messageType,
-                service: action.ros2.service,
-                action: action.ros2.action,
-                qos: action.ros2.qos,
-                payloadMapping: action.ros2.payloadMapping,
-              },
-            }
+            transport: "ros2" as const,
+            timeoutMs: action.timeout,
+            retryable: action.retryable,
+            ros2: {
+              topic: action.ros2.topic,
+              messageType: action.ros2.messageType,
+              service: action.ros2.service,
+              action: action.ros2.action,
+              qos: action.ros2.qos,
+              payloadMapping: action.ros2.payloadMapping,
+            },
+          }
           : action.rest
             ? {
-                transport: "rest" as const,
-                timeoutMs: action.timeout,
-                retryable: action.retryable,
-                rest: {
-                  method: action.rest.method,
-                  path: action.rest.path,
-                  headers: action.rest.headers,
-                },
-              }
+              transport: "rest" as const,
+              timeoutMs: action.timeout,
+              retryable: action.retryable,
+              rest: {
+                method: action.rest.method,
+                path: action.rest.path,
+                headers: action.rest.headers,
+              },
+            }
             : {
-                transport: "internal" as const,
-                timeoutMs: action.timeout,
-                retryable: action.retryable,
-              };
+              transport: "internal" as const,
+              timeoutMs: action.timeout,
+              retryable: action.retryable,
+            };
 
         const actionDef: ActionDefinition = {
           id: `${plugin.robotId ?? plugin.id}.${action.id}`,

@@ -4,12 +4,14 @@ import { authRouter } from "~/server/api/routers/auth";
 import { collaborationRouter } from "~/server/api/routers/collaboration";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { experimentsRouter } from "~/server/api/routers/experiments";
+import { filesRouter } from "~/server/api/routers/files";
 import { mediaRouter } from "~/server/api/routers/media";
 import { participantsRouter } from "~/server/api/routers/participants";
 import { robotsRouter } from "~/server/api/routers/robots";
 import { studiesRouter } from "~/server/api/routers/studies";
 import { trialsRouter } from "~/server/api/routers/trials";
 import { usersRouter } from "~/server/api/routers/users";
+import { storageRouter } from "~/server/api/routers/storage";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -25,11 +27,13 @@ export const appRouter = createTRPCRouter({
   participants: participantsRouter,
   trials: trialsRouter,
   robots: robotsRouter,
+  files: filesRouter,
   media: mediaRouter,
   analytics: analyticsRouter,
   collaboration: collaborationRouter,
   admin: adminRouter,
   dashboard: dashboardRouter,
+  storage: storageRouter,
 });
 
 // export type definition of API

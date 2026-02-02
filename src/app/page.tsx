@@ -5,561 +5,290 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Logo } from "~/components/ui/logo";
 import { auth } from "~/server/auth";
+import {
+  ArrowRight,
+  Beaker,
+  Bot,
+  Database,
+  LayoutTemplate,
+  Lock,
+  Network,
+  PlayCircle,
+  Settings2,
+  Share2,
+} from "lucide-react";
 
 export default async function Home() {
   const session = await auth();
 
-  // Redirect authenticated users to their dashboard
   if (session?.user) {
     redirect("/dashboard");
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="border-b bg-white/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Logo iconSize="md" showText={true} />
-
-            <div className="flex items-center gap-4">
-              <Button asChild variant="outline">
-                <Link href="/auth/signin">Sign In</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/auth/signup">Get Started</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="mx-auto max-w-4xl text-center">
-          <Badge variant="secondary" className="mb-4">
-            🤖 Human-Robot Interaction Research Platform
-          </Badge>
-          <h1 className="mb-6 text-5xl font-bold tracking-tight text-slate-900">
-            Standardize Your
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {" "}
-              Wizard of Oz{" "}
-            </span>
-            Studies
-          </h1>
-          <p className="mb-8 text-xl leading-relaxed text-slate-600">
-            A comprehensive web-based platform that enhances the scientific
-            rigor of Human-Robot Interaction experiments while remaining
-            accessible to researchers with varying levels of technical
-            expertise.
-          </p>
-          <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <Button size="lg" asChild>
-              <Link href="/auth/signup">Start Your Research</Link>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {/* Navbar */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <Logo iconSize="md" showText={true} />
+          <nav className="flex items-center gap-4">
+            <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Link href="#features">Features</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="#features">Learn More</Link>
+            <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Link href="#architecture">Architecture</Link>
             </Button>
-          </div>
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <Button variant="ghost" asChild>
+              <Link href="/auth/signin">Sign In</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/auth/signup">Get Started</Link>
+            </Button>
+          </nav>
         </div>
-      </section>
+      </header>
 
-      {/* Problem Section */}
-      <section className="bg-white/50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-slate-900">
-                The Challenge of WoZ Studies
-              </h2>
-              <p className="text-lg text-slate-600">
-                While Wizard of Oz is a powerful paradigm for HRI research, it
-                faces significant challenges
-              </p>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden pt-20 pb-32 md:pt-32">
+          {/* Background Gradients */}
+          <div className="absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl opacity-30 dark:opacity-20" />
+
+          <div className="container mx-auto flex flex-col items-center px-4 text-center">
+            <Badge variant="secondary" className="mb-6 rounded-full px-4 py-1.5 text-sm font-medium">
+              ✨ The Modern Standard for HRI Research
+            </Badge>
+
+            <h1 className="max-w-4xl text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl">
+              Reproducible WoZ Studies <br className="hidden md:block" />
+              <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-violet-400">
+                Made Simple
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+              HRIStudio is the open-source platform that bridges the gap between
+              ease of use and scientific rigor. Design, execute, and analyze
+              human-robot interaction experiments with zero friction.
+            </p>
+
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center">
+              <Button size="lg" className="h-12 px-8 text-base" asChild>
+                <Link href="/auth/signup">
+                  Start Researching
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="h-12 px-8 text-base" asChild>
+                <Link href="https://github.com/robolab/hristudio" target="_blank">
+                  View on GitHub
+                </Link>
+              </Button>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-red-600">
-                    Reproducibility Issues
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-slate-600">
-                    <li>• Wizard behavior variability across trials</li>
-                    <li>• Inconsistent experimental conditions</li>
-                    <li>• Lack of standardized terminology</li>
-                    <li>• Insufficient documentation</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-red-600">
-                    Technical Barriers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-slate-600">
-                    <li>• Platform-specific robot control systems</li>
-                    <li>• Extensive custom coding requirements</li>
-                    <li>• Limited to domain experts</li>
-                    <li>• Fragmented data collection</li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-slate-900">
-                Six Key Design Principles
-              </h2>
-              <p className="text-lg text-slate-600">
-                Our platform addresses these challenges through comprehensive
-                design principles
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="border-blue-200 bg-blue-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                    <svg
-                      className="h-6 w-6 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Integrated Environment</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    All functionalities unified in a single web-based platform
-                    with intuitive interfaces
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-green-200 bg-green-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-                    <svg
-                      className="h-6 w-6 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Visual Experiment Design</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Minimal-to-no coding required with drag-and-drop visual
-                    programming capabilities
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-purple-200 bg-purple-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
-                    <svg
-                      className="h-6 w-6 text-purple-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Real-time Control</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Fine-grained, real-time control of scripted experimental
-                    runs with multiple robot platforms
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-orange-200 bg-orange-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-                    <svg
-                      className="h-6 w-6 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Data Management</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Comprehensive data collection and logging with structured
-                    storage and retrieval
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-teal-200 bg-teal-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100">
-                    <svg
-                      className="h-6 w-6 text-teal-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Platform Agnostic</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Support for wide range of robot hardware through RESTful
-                    APIs, ROS, and custom plugins
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-indigo-200 bg-indigo-50/50">
-                <CardHeader>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
-                    <svg
-                      className="h-6 w-6 text-indigo-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  </div>
-                  <CardTitle>Collaboration Support</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Role-based access control and data sharing for effective
-                    research team collaboration
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Architecture Section */}
-      <section className="bg-white/50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-slate-900">
-                Three-Layer Architecture
-              </h2>
-              <p className="text-lg text-slate-600">
-                Modular web application with clear separation of concerns
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-                    <span>User Interface Layer</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-lg bg-blue-50 p-4 text-center">
-                      <h4 className="font-semibold text-blue-900">
-                        Experiment Designer
-                      </h4>
-                      <p className="mt-1 text-sm text-blue-700">
-                        Visual programming for experimental protocols
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-blue-50 p-4 text-center">
-                      <h4 className="font-semibold text-blue-900">
-                        Wizard Interface
-                      </h4>
-                      <p className="mt-1 text-sm text-blue-700">
-                        Real-time control during trial execution
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-blue-50 p-4 text-center">
-                      <h4 className="font-semibold text-blue-900">
-                        Playback & Analysis
-                      </h4>
-                      <p className="mt-1 text-sm text-blue-700">
-                        Data exploration and visualization
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                    <span>Data Management Layer</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="mb-4 text-slate-600">
-                    Secure database functionality with role-based access control
-                    (Researcher, Wizard, Observer) for organizing experiment
-                    definitions, metadata, and media assets.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">PostgreSQL</Badge>
-                    <Badge variant="secondary">MinIO Storage</Badge>
-                    <Badge variant="secondary">Role-based Access</Badge>
-                    <Badge variant="secondary">Cloud/On-premise</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <div className="h-3 w-3 rounded-full bg-purple-500"></div>
-                    <span>Robot Integration Layer</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="mb-4 text-slate-600">
-                    Robot-agnostic communication layer supporting multiple
-                    integration methods for diverse hardware platforms.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">RESTful APIs</Badge>
-                    <Badge variant="secondary">ROS Integration</Badge>
-                    <Badge variant="secondary">Custom Plugins</Badge>
-                    <Badge variant="secondary">Docker Deployment</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Workflow Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-slate-900">
-                Hierarchical Experiment Structure
-              </h2>
-              <p className="text-lg text-slate-600">
-                Standardized terminology and organization for reproducible
-                research
-              </p>
-            </div>
-
-            <div className="relative">
-              {/* Hierarchy visualization */}
-              <div className="space-y-6">
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
-                        1
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Study</h3>
-                        <p className="text-sm text-slate-600">
-                          Top-level container comprising one or more experiments
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="ml-8 border-l-4 border-l-green-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-600">
-                        2
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Experiment</h3>
-                        <p className="text-sm text-slate-600">
-                          Parameterized template specifying experimental
-                          protocol
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="ml-16 border-l-4 border-l-orange-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-sm font-semibold text-orange-600">
-                        3
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Trial</h3>
-                        <p className="text-sm text-slate-600">
-                          Executable instance with specific participant and
-                          conditions
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="ml-24 border-l-4 border-l-purple-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-600">
-                        4
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Step</h3>
-                        <p className="text-sm text-slate-600">
-                          Distinct phase containing wizard or robot instructions
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="ml-32 border-l-4 border-l-pink-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-sm font-semibold text-pink-600">
-                        5
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Action</h3>
-                        <p className="text-sm text-slate-600">
-                          Specific atomic task (speech, movement, input
-                          gathering, etc.)
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Mockup / Visual Interest */}
+            <div className="relative mt-20 w-full max-w-5xl rounded-xl border bg-background/50 p-2 shadow-2xl backdrop-blur-sm lg:rounded-2xl lg:p-4">
+              <div className="absolute inset-x-0 -top-px mx-auto h-px w-3/4 bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-lg border bg-muted/50 flex items-center justify-center relative">
+                {/* Placeholder for actual app screenshot */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-violet-500/10" />
+                <div className="text-center p-8">
+                  <LayoutTemplate className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground font-medium">Interactive Experiment Designer</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl text-center text-white">
-            <h2 className="mb-4 text-3xl font-bold">
-              Ready to Revolutionize Your HRI Research?
-            </h2>
-            <p className="mb-8 text-xl opacity-90">
-              Join researchers worldwide who are using our platform to conduct
-              more rigorous, reproducible Wizard of Oz studies.
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button size="lg" variant="secondary" asChild>
-                <Link href="/auth/signup">Get Started Free</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-blue-600"
-                asChild
-              >
-                <Link href="/auth/signin">Sign In</Link>
-              </Button>
+        {/* Features Bento Grid */}
+        <section id="features" className="container mx-auto px-4 py-24">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything You Need</h2>
+            <p className="mt-4 text-lg text-muted-foreground">Built for the specific needs of HRI researchers and wizards.</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4 lg:grid-rows-2">
+            {/* Visual Designer - Large Item */}
+            <Card className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 flex flex-col overflow-hidden bg-gradient-to-br from-blue-500/5 to-violet-500/5 dark:from-blue-900/10 dark:to-violet-900/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutTemplate className="h-5 w-5 text-blue-500" />
+                  Visual Experiment Designer
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <p className="text-muted-foreground mb-6">
+                  Construct complex branching narratives without writing a single line of code.
+                  Our node-based editor handles logic, timing, and robot actions automatically.
+                </p>
+                <div className="rounded-lg border bg-background/50 p-4 h-full min-h-[200px] flex items-center justify-center shadow-inner">
+                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                    <span className="rounded bg-accent p-2">Start</span>
+                    <ArrowRight className="h-4 w-4" />
+                    <span className="rounded bg-primary/10 p-2 border border-primary/20 text-primary font-medium">Robot: Greet</span>
+                    <ArrowRight className="h-4 w-4" />
+                    <span className="rounded bg-accent p-2">Wait: 5s</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Robot Agnostic */}
+            <Card className="col-span-1 md:col-span-1 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-green-500" />
+                  Robot Agnostic
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Switch between robots instantly. Whether it's a NAO, Pepper, or a custom ROS2 bot,
+                  your experiment logic remains strictly separated from hardware implementation.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Role Based */}
+            <Card className="col-span-1 md:col-span-1 lg:col-span-1 bg-muted/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Lock className="h-4 w-4 text-orange-500" />
+                  Role-Based Access
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Granular permissions for Principal Investigators, Wizards, and Observers.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Data Logging */}
+            <Card className="col-span-1 md:col-span-1 lg:col-span-1 bg-muted/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Database className="h-4 w-4 text-rose-500" />
+                  Full Traceability
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Every wizard action, automated response, and sensor reading is time-stamped and logged.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Architecture Section */}
+        <section id="architecture" className="border-t bg-muted/30 py-24">
+          <div className="container mx-auto px-4">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 items-center">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight">Enterprise-Grade Architecture</h2>
+                <p className="mt-4 text-lg text-muted-foreground">
+                  Designed for reliability and scale. HRIStudio uses a modern stack to ensure your data is safe and your experiments run smoothly.
+                </p>
+
+                <div className="mt-8 space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background border shadow-sm">
+                      <Network className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">3-Layer Design</h3>
+                      <p className="text-muted-foreground">Clear separation between UI, Data, and Hardware layers for maximum stability.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background border shadow-sm">
+                      <Share2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Collaborative by Default</h3>
+                      <p className="text-muted-foreground">Real-time state synchronization allows multiple researchers to monitor a single trial.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background border shadow-sm">
+                      <Settings2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">ROS2 Integration</h3>
+                      <p className="text-muted-foreground">Native support for ROS2 nodes, topics, and actions right out of the box.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative mx-auto w-full max-w-[500px]">
+                {/* Abstract representation of architecture */}
+                <div className="space-y-4 relative z-10">
+                  <Card className="border-blue-500/20 bg-blue-500/5 relative left-0 hover:left-2 transition-all cursor-default">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-blue-600 dark:text-blue-400 text-sm font-mono">APP LAYER</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-semibold">Next.js Dashboard + Experiment Designer</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-violet-500/20 bg-violet-500/5 relative left-4 hover:left-6 transition-all cursor-default">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-violet-600 dark:text-violet-400 text-sm font-mono">DATA LAYER</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-semibold">PostgreSQL + MinIO + TRPC API</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-green-500/20 bg-green-500/5 relative left-8 hover:left-10 transition-all cursor-default">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-green-600 dark:text-green-400 text-sm font-mono">HARDWARE LAYER</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-semibold">ROS2 Bridge + Robot Plugins</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                {/* Decorative blobs */}
+                <div className="absolute top-1/2 left-1/2 -z-10 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-slate-400">
-            <div className="mb-4 flex items-center justify-center">
-              <Logo
-                iconSize="md"
-                showText={true}
-                className="text-white [&>div]:bg-white [&>div]:text-blue-600"
-              />
-            </div>
-            <p className="mb-4">
-              Advancing Human-Robot Interaction research through standardized
-              Wizard of Oz methodologies
+        {/* CTA Section */}
+        <section className="container mx-auto px-4 py-24 text-center">
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Ready to upgrade your lab?</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Join the community of researchers building the future of HRI with reproducible, open-source tools.
+          </p>
+          <div className="mt-8">
+            <Button size="lg" className="h-12 px-8 text-base shadow-lg shadow-primary/20" asChild>
+              <Link href="/auth/signup">Get Started for Free</Link>
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t bg-muted/40 py-12">
+        <div className="container mx-auto px-4 flex flex-col items-center justify-between gap-6 md:flex-row text-center md:text-left">
+          <div className="flex flex-col gap-2">
+            <Logo iconSize="sm" showText={true} />
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} HRIStudio. All rights reserved.
             </p>
-            <div className="flex justify-center space-x-6 text-sm">
-              <Link href="#" className="transition-colors hover:text-white">
-                Documentation
-              </Link>
-              <Link href="#" className="transition-colors hover:text-white">
-                API Reference
-              </Link>
-              <Link href="#" className="transition-colors hover:text-white">
-                Research Papers
-              </Link>
-              <Link href="#" className="transition-colors hover:text-white">
-                Support
-              </Link>
-            </div>
+          </div>
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <Link href="#" className="hover:text-foreground">Privacy</Link>
+            <Link href="#" className="hover:text-foreground">Terms</Link>
+            <Link href="#" className="hover:text-foreground">GitHub</Link>
+            <Link href="#" className="hover:text-foreground">Documentation</Link>
           </div>
         </div>
       </footer>
-    </main>
+    </div>
   );
 }

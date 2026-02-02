@@ -1,0 +1,927 @@
+                                     jsonb_pretty                                      
+---------------------------------------------------------------------------------------
+ [                                                                                    +
+     {                                                                                +
+         "id": "walk_velocity",                                                       +
+         "icon": "navigation",                                                        +
+         "name": "Walk with Velocity",                                                +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "depth": 1,                                                          +
+                 "history": "keep_last",                                              +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "transformToTwist"                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 5000,                                                             +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Control robot walking with linear and angular velocities",   +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "linear",                                                            +
+                 "angular"                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "linear": {                                                          +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 0.55,                                                 +
+                     "minimum": -0.55,                                                +
+                     "description": "Forward velocity in m/s"                         +
+                 },                                                                   +
+                 "angular": {                                                         +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 2,                                                    +
+                     "minimum": -2,                                                   +
+                     "description": "Angular velocity in rad/s"                       +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "walk_forward",                                                        +
+         "icon": "arrow-up",                                                          +
+         "name": "Walk Forward",                                                      +
+         "ros2": {                                                                    +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "linear": {                                                      +
+                         "x": "{{speed}}",                                            +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     },                                                               +
+                     "angular": {                                                     +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     }                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 30000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Make the robot walk forward at specified speed",             +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "speed"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.1,                                                  +
+                     "maximum": 0.3,                                                  +
+                     "minimum": 0.01,                                                 +
+                     "description": "Walking speed in m/s"                            +
+                 },                                                                   +
+                 "duration": {                                                        +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 30,                                                   +
+                     "minimum": 0,                                                    +
+                     "description": "Duration to walk in seconds (0 = indefinite)"    +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "walk_backward",                                                       +
+         "icon": "arrow-down",                                                        +
+         "name": "Walk Backward",                                                     +
+         "ros2": {                                                                    +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "linear": {                                                      +
+                         "x": "-{{speed}}",                                           +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     },                                                               +
+                     "angular": {                                                     +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     }                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 30000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Make the robot walk backward at specified speed",            +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "speed"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.1,                                                  +
+                     "maximum": 0.3,                                                  +
+                     "minimum": 0.01,                                                 +
+                     "description": "Walking speed in m/s"                            +
+                 },                                                                   +
+                 "duration": {                                                        +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 30,                                                   +
+                     "minimum": 0,                                                    +
+                     "description": "Duration to walk in seconds (0 = indefinite)"    +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "turn_left",                                                           +
+         "icon": "rotate-ccw",                                                        +
+         "name": "Turn Left",                                                         +
+         "ros2": {                                                                    +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "linear": {                                                      +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     },                                                               +
+                     "angular": {                                                     +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": "{{speed}}"                                             +
+                     }                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 30000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Make the robot turn left at specified angular speed",        +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "speed"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.3,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.1,                                                  +
+                     "description": "Angular speed in rad/s"                          +
+                 },                                                                   +
+                 "duration": {                                                        +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 30,                                                   +
+                     "minimum": 0,                                                    +
+                     "description": "Duration to turn in seconds (0 = indefinite)"    +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "turn_right",                                                          +
+         "icon": "rotate-cw",                                                         +
+         "name": "Turn Right",                                                        +
+         "ros2": {                                                                    +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "linear": {                                                      +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     },                                                               +
+                     "angular": {                                                     +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": "-{{speed}}"                                            +
+                     }                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 30000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Make the robot turn right at specified angular speed",       +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "speed"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.3,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.1,                                                  +
+                     "description": "Angular speed in rad/s"                          +
+                 },                                                                   +
+                 "duration": {                                                        +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 30,                                                   +
+                     "minimum": 0,                                                    +
+                     "description": "Duration to turn in seconds (0 = indefinite)"    +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "stop_walking",                                                        +
+         "icon": "square",                                                            +
+         "name": "Stop Walking",                                                      +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "depth": 1,                                                          +
+                 "history": "keep_last",                                              +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/cmd_vel",                                                     +
+             "messageType": "geometry_msgs/msg/Twist",                                +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "linear": {                                                      +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     },                                                               +
+                     "angular": {                                                     +
+                         "x": 0,                                                      +
+                         "y": 0,                                                      +
+                         "z": 0                                                       +
+                     }                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "movement",                                                      +
+         "retryable": false,                                                          +
+         "description": "Immediately stop robot movement",                            +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "say_text",                                                            +
+         "icon": "volume-2",                                                          +
+         "name": "Say Text",                                                          +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/speech",                                                      +
+             "messageType": "std_msgs/msg/String",                                    +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "transformToStringMessage"                            +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 15000,                                                            +
+         "category": "interaction",                                                   +
+         "retryable": true,                                                           +
+         "description": "Make the robot speak using text-to-speech",                  +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "text"                                                               +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "text": {                                                            +
+                     "type": "string",                                                +
+                     "default": "Hello from NAO!",                                    +
+                     "description": "Text to speak"                                   +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "say_with_emotion",                                                    +
+         "icon": "heart",                                                             +
+         "name": "Say Text with Emotion",                                             +
+         "ros2": {                                                                    +
+             "topic": "/speech",                                                      +
+             "messageType": "std_msgs/msg/String",                                    +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "data": "\\rspd={{speed}}\\\\rst={{emotion}}\\{{text}}"          +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 15000,                                                            +
+         "category": "interaction",                                                   +
+         "retryable": true,                                                           +
+         "description": "Speak text with emotional expression using SSML-like markup",+
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "text"                                                               +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "text": {                                                            +
+                     "type": "string",                                                +
+                     "default": "Hello! I'm feeling great today!",                    +
+                     "description": "Text for the robot to speak"                     +
+                 },                                                                   +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 1,                                                    +
+                     "maximum": 2,                                                    +
+                     "minimum": 0.5,                                                  +
+                     "description": "Speech speed multiplier"                         +
+                 },                                                                   +
+                 "emotion": {                                                         +
+                     "enum": [                                                        +
+                         "neutral",                                                   +
+                         "happy",                                                     +
+                         "sad",                                                       +
+                         "excited",                                                   +
+                         "calm"                                                       +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "neutral",                                            +
+                     "description": "Emotional tone for speech"                       +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "set_volume",                                                          +
+         "icon": "volume-x",                                                          +
+         "name": "Set Volume",                                                        +
+         "ros2": {                                                                    +
+             "topic": "/audio_volume",                                                +
+             "messageType": "std_msgs/msg/Float32",                                   +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "data": "{{volume}}"                                             +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 5000,                                                             +
+         "category": "interaction",                                                   +
+         "retryable": true,                                                           +
+         "description": "Adjust the robot's audio volume level",                      +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "volume"                                                             +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "volume": {                                                          +
+                     "type": "number",                                                +
+                     "default": 0.5,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0,                                                    +
+                     "description": "Volume level (0.0 = silent, 1.0 = maximum)"      +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "set_language",                                                        +
+         "icon": "globe",                                                             +
+         "name": "Set Language",                                                      +
+         "ros2": {                                                                    +
+             "topic": "/set_language",                                                +
+             "messageType": "std_msgs/msg/String",                                    +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "data": "{{language}}"                                           +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 5000,                                                             +
+         "category": "interaction",                                                   +
+         "retryable": true,                                                           +
+         "description": "Change the robot's speech language",                         +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "language"                                                           +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "language": {                                                        +
+                     "enum": [                                                        +
+                         "en-US",                                                     +
+                         "en-GB",                                                     +
+                         "fr-FR",                                                     +
+                         "de-DE",                                                     +
+                         "es-ES",                                                     +
+                         "it-IT",                                                     +
+                         "ja-JP",                                                     +
+                         "ko-KR",                                                     +
+                         "zh-CN"                                                      +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "en-US",                                              +
+                     "description": "Speech language"                                 +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "move_head",                                                           +
+         "icon": "eye",                                                               +
+         "name": "Move Head",                                                         +
+         "ros2": {                                                                    +
+             "topic": "/joint_angles",                                                +
+             "messageType": "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",             +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "speed": "{{speed}}",                                            +
+                     "joint_names": [                                                 +
+                         "HeadYaw",                                                   +
+                         "HeadPitch"                                                  +
+                     ],                                                               +
+                     "joint_angles": [                                                +
+                         "{{yaw}}",                                                   +
+                         "{{pitch}}"                                                  +
+                     ]                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 10000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Control head orientation (yaw and pitch)",                   +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "yaw",                                                               +
+                 "pitch"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "yaw": {                                                             +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 2.09,                                                 +
+                     "minimum": -2.09,                                                +
+                     "description": "Head yaw angle in radians"                       +
+                 },                                                                   +
+                 "pitch": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 0.51,                                                 +
+                     "minimum": -0.67,                                                +
+                     "description": "Head pitch angle in radians"                     +
+                 },                                                                   +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.3,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.1,                                                  +
+                     "description": "Movement speed (0.1 = slow, 1.0 = fast)"         +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "move_arm",                                                            +
+         "icon": "hand",                                                              +
+         "name": "Move Arm",                                                          +
+         "ros2": {                                                                    +
+             "topic": "/joint_angles",                                                +
+             "messageType": "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",             +
+             "payloadMapping": {                                                      +
+                 "type": "static",                                                    +
+                 "payload": {                                                         +
+                     "speed": "{{speed}}",                                            +
+                     "joint_names": [                                                 +
+                         "{{arm === 'left' ? 'L' : 'R'}}ShoulderPitch",               +
+                         "{{arm === 'left' ? 'L' : 'R'}}ShoulderRoll",                +
+                         "{{arm === 'left' ? 'L' : 'R'}}ElbowYaw",                    +
+                         "{{arm === 'left' ? 'L' : 'R'}}ElbowRoll"                    +
+                     ],                                                               +
+                     "joint_angles": [                                                +
+                         "{{shoulder_pitch}}",                                        +
+                         "{{shoulder_roll}}",                                         +
+                         "{{elbow_yaw}}",                                             +
+                         "{{elbow_roll}}"                                             +
+                     ]                                                                +
+                 }                                                                    +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 10000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Control arm joint positions",                                +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "arm",                                                               +
+                 "shoulder_pitch",                                                    +
+                 "shoulder_roll",                                                     +
+                 "elbow_yaw",                                                         +
+                 "elbow_roll"                                                         +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "arm": {                                                             +
+                     "enum": [                                                        +
+                         "left",                                                      +
+                         "right"                                                      +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "right",                                              +
+                     "description": "Which arm to control"                            +
+                 },                                                                   +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.3,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.1,                                                  +
+                     "description": "Movement speed (0.1 = slow, 1.0 = fast)"         +
+                 },                                                                   +
+                 "elbow_yaw": {                                                       +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 2.09,                                                 +
+                     "minimum": -2.09,                                                +
+                     "description": "Elbow yaw angle in radians"                      +
+                 },                                                                   +
+                 "elbow_roll": {                                                      +
+                     "type": "number",                                                +
+                     "default": -0.5,                                                 +
+                     "maximum": -0.03,                                                +
+                     "minimum": -1.54,                                                +
+                     "description": "Elbow roll angle in radians"                     +
+                 },                                                                   +
+                 "shoulder_roll": {                                                   +
+                     "type": "number",                                                +
+                     "default": 0.2,                                                  +
+                     "maximum": 1.33,                                                 +
+                     "minimum": -0.31,                                                +
+                     "description": "Shoulder roll angle in radians"                  +
+                 },                                                                   +
+                 "shoulder_pitch": {                                                  +
+                     "type": "number",                                                +
+                     "default": 1.4,                                                  +
+                     "maximum": 2.09,                                                 +
+                     "minimum": -2.09,                                                +
+                     "description": "Shoulder pitch angle in radians"                 +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "set_joint_angle",                                                     +
+         "icon": "settings",                                                          +
+         "name": "Set Joint Angle",                                                   +
+         "ros2": {                                                                    +
+             "topic": "/joint_angles",                                                +
+             "messageType": "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",             +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "transformToJointAngles"                              +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 10000,                                                            +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Control individual joint angles",                            +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "joint_name",                                                        +
+                 "angle"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "angle": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 3.14159,                                              +
+                     "minimum": -3.14159,                                             +
+                     "description": "Target angle in radians"                         +
+                 },                                                                   +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.2,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.01,                                                 +
+                     "description": "Movement speed (fraction of max)"                +
+                 },                                                                   +
+                 "joint_name": {                                                      +
+                     "enum": [                                                        +
+                         "HeadYaw",                                                   +
+                         "HeadPitch",                                                 +
+                         "LShoulderPitch",                                            +
+                         "LShoulderRoll",                                             +
+                         "LElbowYaw",                                                 +
+                         "LElbowRoll",                                                +
+                         "LWristYaw",                                                 +
+                         "RShoulderPitch",                                            +
+                         "RShoulderRoll",                                             +
+                         "RElbowYaw",                                                 +
+                         "RElbowRoll",                                                +
+                         "RWristYaw",                                                 +
+                         "LHipYawPitch",                                              +
+                         "LHipRoll",                                                  +
+                         "LHipPitch",                                                 +
+                         "LKneePitch",                                                +
+                         "LAnklePitch",                                               +
+                         "LAnkleRoll",                                                +
+                         "RHipRoll",                                                  +
+                         "RHipPitch",                                                 +
+                         "RKneePitch",                                                +
+                         "RAnklePitch",                                               +
+                         "RAnkleRoll"                                                 +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "HeadYaw",                                            +
+                     "description": "Joint to control"                                +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "turn_head",                                                           +
+         "icon": "rotate-ccw",                                                        +
+         "name": "Turn Head",                                                         +
+         "ros2": {                                                                    +
+             "topic": "/joint_angles",                                                +
+             "messageType": "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",             +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "transformToHeadMovement"                             +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 8000,                                                             +
+         "category": "movement",                                                      +
+         "retryable": true,                                                           +
+         "description": "Control head orientation",                                   +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "yaw",                                                               +
+                 "pitch"                                                              +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "yaw": {                                                             +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 2.0857,                                               +
+                     "minimum": -2.0857,                                              +
+                     "description": "Head yaw angle in radians (left-right)"          +
+                 },                                                                   +
+                 "pitch": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0,                                                    +
+                     "maximum": 0.5149,                                               +
+                     "minimum": -0.672,                                               +
+                     "description": "Head pitch angle in radians (up-down)"           +
+                 },                                                                   +
+                 "speed": {                                                           +
+                     "type": "number",                                                +
+                     "default": 0.3,                                                  +
+                     "maximum": 1,                                                    +
+                     "minimum": 0.1,                                                  +
+                     "description": "Movement speed fraction"                         +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_camera_image",                                                    +
+         "icon": "camera",                                                            +
+         "name": "Get Camera Image",                                                  +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/camera/{camera}/image_raw",                                   +
+             "messageType": "sensor_msgs/msg/Image",                                  +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getCameraImage"                                      +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 5000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Capture image from front or bottom camera",                  +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "camera"                                                             +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "camera": {                                                          +
+                     "enum": [                                                        +
+                         "front",                                                     +
+                         "bottom"                                                     +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "front",                                              +
+                     "description": "Camera to use"                                   +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_joint_states",                                                    +
+         "icon": "activity",                                                          +
+         "name": "Get Joint States",                                                  +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/joint_states",                                                +
+             "messageType": "sensor_msgs/msg/JointState",                             +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getJointStates"                                      +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read current joint positions and velocities",                +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_imu_data",                                                        +
+         "icon": "compass",                                                           +
+         "name": "Get IMU Data",                                                      +
+         "ros2": {                                                                    +
+             "qos": {                                                                 +
+                 "durability": "volatile",                                            +
+                 "reliability": "reliable"                                            +
+             },                                                                       +
+             "topic": "/imu/torso",                                                   +
+             "messageType": "sensor_msgs/msg/Imu",                                    +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getImuData"                                          +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read inertial measurement unit data from torso",             +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_bumper_status",                                                   +
+         "icon": "zap",                                                               +
+         "name": "Get Bumper Status",                                                 +
+         "ros2": {                                                                    +
+             "topic": "/bumper",                                                      +
+             "messageType": "naoqi_bridge_msgs/msg/Bumper",                           +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getBumperStatus"                                     +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read foot bumper contact sensors",                           +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_touch_sensors",                                                   +
+         "icon": "hand",                                                              +
+         "name": "Get Touch Sensors",                                                 +
+         "ros2": {                                                                    +
+             "topic": "/{sensor_type}_touch",                                         +
+             "messageType": "naoqi_bridge_msgs/msg/HandTouch",                        +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getTouchSensors"                                     +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read hand and head touch sensor states",                     +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "sensor_type"                                                        +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "sensor_type": {                                                     +
+                     "enum": [                                                        +
+                         "hand",                                                      +
+                         "head"                                                       +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "hand",                                               +
+                     "description": "Touch sensor type to read"                       +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_sonar_range",                                                     +
+         "icon": "radio",                                                             +
+         "name": "Get Sonar Range",                                                   +
+         "ros2": {                                                                    +
+             "topic": "/sonar/{sensor}",                                              +
+             "messageType": "sensor_msgs/msg/Range",                                  +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getSonarRange"                                       +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read ultrasonic range sensor data",                          +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+                 "sensor"                                                             +
+             ],                                                                       +
+             "properties": {                                                          +
+                 "sensor": {                                                          +
+                     "enum": [                                                        +
+                         "left",                                                      +
+                         "right",                                                     +
+                         "both"                                                       +
+                     ],                                                               +
+                     "type": "string",                                                +
+                     "default": "both",                                               +
+                     "description": "Sonar sensor to read"                            +
+                 }                                                                    +
+             }                                                                        +
+         }                                                                            +
+     },                                                                               +
+     {                                                                                +
+         "id": "get_robot_info",                                                      +
+         "icon": "info",                                                              +
+         "name": "Get Robot Info",                                                    +
+         "ros2": {                                                                    +
+             "topic": "/info",                                                        +
+             "messageType": "naoqi_bridge_msgs/msg/RobotInfo",                        +
+             "payloadMapping": {                                                      +
+                 "type": "transform",                                                 +
+                 "transformFn": "getRobotInfo"                                        +
+             }                                                                        +
+         },                                                                           +
+         "timeout": 3000,                                                             +
+         "category": "sensors",                                                       +
+         "retryable": true,                                                           +
+         "description": "Read general robot information and status",                  +
+         "parameterSchema": {                                                         +
+             "type": "object",                                                        +
+             "required": [                                                            +
+             ],                                                                       +
+             "properties": {                                                          +
+             }                                                                        +
+         }                                                                            +
+     }                                                                                +
+ ]
+(1 row)
+

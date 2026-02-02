@@ -12,26 +12,40 @@ import {
   Settings,
   Zap,
   User,
+  Bot,
+  Eye,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { RobotActionsPanel } from "../RobotActionsPanel";
 
 interface StepData {
   id: string;
   name: string;
   description: string | null;
   type:
-    | "wizard_action"
-    | "robot_action"
-    | "parallel_steps"
-    | "conditional_branch";
+  | "wizard_action"
+  | "robot_action"
+  | "parallel_steps"
+  | "conditional_branch";
   parameters: Record<string, unknown>;
   order: number;
+  actions?: {
+    id: string;
+    name: string;
+    description: string | null;
+    type: string;
+    parameters: Record<string, unknown>;
+    order: number;
+    pluginId: string | null;
+  }[];
 }
 
 interface TrialData {
@@ -73,10 +87,18 @@ interface WizardControlPanelProps {
     actionId: string,
     parameters?: Record<string, unknown>,
   ) => void;
+  onExecuteRobotAction?: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<void>;
+  studyId?: string;
   _isConnected: boolean;
-  activeTab: "control" | "step" | "actions";
-  onTabChange: (tab: "control" | "step" | "actions") => void;
+  activeTab: "control" | "step" | "actions" | "robot";
+  onTabChange: (tab: "control" | "step" | "actions" | "robot") => void;
   isStarting?: boolean;
+  onSetAutonomousLife?: (enabled: boolean) => Promise<boolean | void>;
+  readOnly?: boolean;
 }
 
 export function WizardControlPanel({
@@ -90,75 +112,46 @@ export function WizardControlPanel({
   onCompleteTrial,
   onAbortTrial,
   onExecuteAction,
+  onExecuteRobotAction,
+  studyId,
   _isConnected,
   activeTab,
   onTabChange,
   isStarting = false,
+  onSetAutonomousLife,
+  readOnly = false,
 }: WizardControlPanelProps) {
-  const progress =
-    steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+  const [autonomousLife, setAutonomousLife] = React.useState(true);
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return { variant: "outline" as const, icon: Clock };
-      case "in_progress":
-        return { variant: "default" as const, icon: Play };
-      case "completed":
-        return { variant: "secondary" as const, icon: CheckCircle };
-      case "aborted":
-      case "failed":
-        return { variant: "destructive" as const, icon: X };
-      default:
-        return { variant: "outline" as const, icon: Clock };
+  const handleAutonomousLifeChange = async (checked: boolean) => {
+    setAutonomousLife(checked); // Optimistic update
+    if (onSetAutonomousLife) {
+      try {
+        const result = await onSetAutonomousLife(checked);
+        if (result === false) {
+          throw new Error("Service unavailable");
+        }
+      } catch (error) {
+        console.error("Failed to set autonomous life:", error);
+        setAutonomousLife(!checked); // Revert on failure
+        // Optional: Toast error?
+      }
     }
   };
 
-  const statusConfig = getStatusConfig(trial.status);
-  const StatusIcon = statusConfig.icon;
-
   return (
     <div className="flex h-full flex-col">
-      {/* Trial Info Header */}
-      <div className="border-b p-3">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Badge
-              variant={statusConfig.variant}
-              className="flex items-center gap-1"
-            >
-              <StatusIcon className="h-3 w-3" />
-              {trial.status.replace("_", " ")}
-            </Badge>
-            <span className="text-muted-foreground text-xs">
-              Session #{trial.sessionNumber}
-            </span>
-          </div>
-
-          <div className="text-sm font-medium">
-            {trial.participant.participantCode}
-          </div>
-
-          {trial.status === "in_progress" && steps.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Progress</span>
-                <span>
-                  {currentStepIndex + 1} of {steps.length}
-                </span>
-              </div>
-              <Progress value={progress} className="h-1.5" />
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Tabbed Content */}
       <Tabs
         value={activeTab}
         onValueChange={(value: string) => {
-          if (value === "control" || value === "step" || value === "actions") {
-            onTabChange(value);
+          if (
+            value === "control" ||
+            value === "step" ||
+            value === "actions" ||
+            value === "robot"
+          ) {
+            onTabChange(value as "control" | "step" | "actions");
           }
         }}
         className="flex min-h-0 flex-1 flex-col"
@@ -166,11 +159,11 @@ export function WizardControlPanel({
         <div className="border-b px-2 py-1">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="control" className="text-xs">
-              <Settings className="mr-1 h-3 w-3" />
+              <Play className="mr-1 h-3 w-3" />
               Control
             </TabsTrigger>
             <TabsTrigger value="step" className="text-xs">
-              <Play className="mr-1 h-3 w-3" />
+              <Eye className="mr-1 h-3 w-3" />
               Step
             </TabsTrigger>
             <TabsTrigger value="actions" className="text-xs">
@@ -196,7 +189,7 @@ export function WizardControlPanel({
                     }}
                     className="w-full"
                     size="sm"
-                    disabled={isStarting}
+                    disabled={isStarting || readOnly}
                   >
                     <Play className="mr-2 h-4 w-4" />
                     {isStarting ? "Starting..." : "Start Trial"}
@@ -210,14 +203,14 @@ export function WizardControlPanel({
                         onClick={onPauseTrial}
                         variant="outline"
                         size="sm"
-                        disabled={false}
+                        disabled={readOnly}
                       >
                         <Pause className="mr-1 h-3 w-3" />
                         Pause
                       </Button>
                       <Button
                         onClick={onNextStep}
-                        disabled={currentStepIndex >= steps.length - 1}
+                        disabled={(currentStepIndex >= steps.length - 1) || readOnly}
                         size="sm"
                       >
                         <SkipForward className="mr-1 h-3 w-3" />
@@ -232,6 +225,7 @@ export function WizardControlPanel({
                       variant="outline"
                       className="w-full"
                       size="sm"
+                      disabled={readOnly}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Complete Trial
@@ -242,6 +236,7 @@ export function WizardControlPanel({
                       variant="destructive"
                       className="w-full"
                       size="sm"
+                      disabled={readOnly}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Abort Trial
@@ -251,25 +246,44 @@ export function WizardControlPanel({
 
                 {(trial.status === "completed" ||
                   trial.status === "aborted") && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      Trial has ended. All controls are disabled.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        Trial has ended. All controls are disabled.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-                {/* Connection Status */}
                 <Separator />
-                <div className="space-y-2">
-                  <div className="text-xs font-medium">Connection</div>
+                <div className="space-y-4">
+                  <div className="text-xs font-medium">Robot Status</div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-xs">
-                      Status
+                      Connection
                     </span>
-                    <Badge variant="default" className="text-xs">
-                      Polling
-                    </Badge>
+                    {_isConnected ? (
+                      <Badge variant="default" className="bg-green-600 text-xs">
+                        Connected
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-600 text-xs">
+                        Polling...
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="autonomous-life" className="text-xs font-normal text-muted-foreground">Autonomous Life</Label>
+                    </div>
+                    <Switch
+                      id="autonomous-life"
+                      checked={autonomousLife}
+                      onCheckedChange={handleAutonomousLifeChange}
+                      disabled={!_isConnected || readOnly}
+                      className="scale-75"
+                    />
                   </div>
                 </div>
               </div>
@@ -358,7 +372,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Acknowledge clicked");
                         onExecuteAction("acknowledge");
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <CheckCircle className="mr-2 h-3 w-3" />
                       Acknowledge
@@ -372,7 +386,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Intervene clicked");
                         onExecuteAction("intervene");
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <AlertCircle className="mr-2 h-3 w-3" />
                       Intervene
@@ -386,7 +400,7 @@ export function WizardControlPanel({
                         console.log("[WizardControlPanel] Add Note clicked");
                         onExecuteAction("note", { content: "Wizard note" });
                       }}
-                      disabled={false}
+                      disabled={readOnly}
                     >
                       <User className="mr-2 h-3 w-3" />
                       Add Note
@@ -402,7 +416,7 @@ export function WizardControlPanel({
                           size="sm"
                           className="w-full justify-start"
                           onClick={() => onExecuteAction("step_complete")}
-                          disabled={false}
+                          disabled={readOnly}
                         >
                           <CheckCircle className="mr-2 h-3 w-3" />
                           Mark Complete
@@ -418,6 +432,34 @@ export function WizardControlPanel({
                         : "Actions unavailable - trial not active"}
                     </div>
                   </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Robot Actions Tab */}
+          <TabsContent
+            value="robot"
+            className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+          >
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                {studyId && onExecuteRobotAction ? (
+                  <div className={readOnly ? "pointer-events-none opacity-50" : ""}>
+                    <RobotActionsPanel
+                      studyId={studyId}
+                      trialId={trial.id}
+                      onExecuteAction={onExecuteRobotAction}
+                    />
+                  </div>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Robot actions are not available. Study ID or action
+                      handler is missing.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             </ScrollArea>

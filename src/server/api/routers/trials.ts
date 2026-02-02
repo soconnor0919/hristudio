@@ -24,8 +24,16 @@ import {
   wizardInterventions,
   mediaCaptures,
   users,
+  annotations,
 } from "~/server/db/schema";
-import { TrialExecutionEngine } from "~/server/services/trial-execution";
+import {
+  TrialExecutionEngine,
+  type ActionDefinition,
+} from "~/server/services/trial-execution";
+import { s3Client } from "~/server/storage";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "~/env";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -260,7 +268,41 @@ export const trialsRouter = createTRPCRouter({
         });
       }
 
-      return trial[0];
+      // Fetch additional stats
+      const eventCount = await db
+        .select({ count: count() })
+        .from(trialEvents)
+        .where(eq(trialEvents.trialId, input.id));
+
+      const media = await db
+        .select()
+        .from(mediaCaptures)
+        .where(eq(mediaCaptures.trialId, input.id))
+        .orderBy(desc(mediaCaptures.createdAt)); // Get latest first
+
+      return {
+        ...trial[0],
+        eventCount: eventCount[0]?.count ?? 0,
+        mediaCount: media.length,
+        media: await Promise.all(media.map(async (m) => {
+          let url = "";
+          try {
+            // Generate Presigned GET URL
+            const command = new GetObjectCommand({
+              Bucket: env.MINIO_BUCKET_NAME ?? "hristudio-data",
+              Key: m.storagePath,
+            });
+            url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+          } catch (e) {
+            console.error("Failed to sign URL for media", m.id, e);
+          }
+          return {
+            ...m,
+            url, // Add the signed URL to the response
+            contentType: m.format === 'webm' ? 'video/webm' : 'application/octet-stream', // Infer or store content type
+          };
+        })),
+      };
     }),
 
   create: protectedProcedure
@@ -381,6 +423,58 @@ export const trialsRouter = createTRPCRouter({
       return trial;
     }),
 
+  duplicate: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.id, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      // Get source trial
+      const sourceTrial = await db
+        .select()
+        .from(trials)
+        .where(eq(trials.id, input.id))
+        .limit(1);
+
+      if (!sourceTrial[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Source trial not found",
+        });
+      }
+
+      // Create new trial based on source
+      const [newTrial] = await db
+        .insert(trials)
+        .values({
+          experimentId: sourceTrial[0].experimentId,
+          participantId: sourceTrial[0].participantId,
+          // Scheduled for now + 1 hour by default, or null? Let's use null or source time?
+          // New duplicate usually implies "planning to run soon".
+          // I'll leave scheduledAt null or same as source if future?
+          // Let's set it to tomorrow by default to avoid confusion
+          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          wizardId: sourceTrial[0].wizardId,
+          sessionNumber: (sourceTrial[0].sessionNumber || 0) + 1, // Increment session
+          status: "scheduled",
+          notes: `Duplicate of trial ${sourceTrial[0].id}. ${sourceTrial[0].notes || ""}`,
+          metadata: sourceTrial[0].metadata,
+        })
+        .returning();
+
+      return newTrial;
+    }),
+
   start: protectedProcedure
     .input(
       z.object({
@@ -411,10 +505,15 @@ export const trialsRouter = createTRPCRouter({
         });
       }
 
+      // Idempotency: If already in progress, return success
+      if (currentTrial[0].status === "in_progress") {
+        return currentTrial[0];
+      }
+
       if (currentTrial[0].status !== "scheduled") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Trial can only be started from scheduled status",
+          message: `Trial is in ${currentTrial[0].status} status and cannot be started`,
         });
       }
 
@@ -596,6 +695,61 @@ export const trialsRouter = createTRPCRouter({
       return intervention;
     }),
 
+  addAnnotation: protectedProcedure
+    .input(
+      z.object({
+        trialId: z.string(),
+        category: z.string().optional(),
+        label: z.string().optional(),
+        description: z.string().optional(),
+        timestampStart: z.date().optional(),
+        tags: z.array(z.string()).optional(),
+        metadata: z.any().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.trialId, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      const [annotation] = await db
+        .insert(annotations)
+        .values({
+          trialId: input.trialId,
+          annotatorId: userId,
+          category: input.category,
+          label: input.label,
+          description: input.description,
+          timestampStart: input.timestampStart ?? new Date(),
+          tags: input.tags,
+          metadata: input.metadata,
+        })
+        .returning();
+
+      // Also create a trial event so it appears in the timeline
+      if (annotation) {
+        await db.insert(trialEvents).values({
+          trialId: input.trialId,
+          eventType: `annotation_${input.category || 'note'}`,
+          timestamp: input.timestampStart ?? new Date(),
+          data: {
+            annotationId: annotation.id,
+            description: input.description,
+            category: input.category,
+            label: input.label,
+            tags: input.tags,
+          },
+        });
+      }
+
+      return annotation;
+    }),
+
   getEvents: protectedProcedure
     .input(
       z.object({
@@ -722,51 +876,51 @@ export const trialsRouter = createTRPCRouter({
       const filteredTrials =
         trialIds.length > 0
           ? await ctx.db.query.trials.findMany({
-              where: inArray(trials.id, trialIds),
-              with: {
-                experiment: {
-                  with: {
-                    study: {
-                      columns: {
-                        id: true,
-                        name: true,
-                      },
+            where: inArray(trials.id, trialIds),
+            with: {
+              experiment: {
+                with: {
+                  study: {
+                    columns: {
+                      id: true,
+                      name: true,
                     },
                   },
-                  columns: {
-                    id: true,
-                    name: true,
-                    studyId: true,
-                  },
                 },
-                participant: {
-                  columns: {
-                    id: true,
-                    participantCode: true,
-                    email: true,
-                    name: true,
-                  },
-                },
-                wizard: {
-                  columns: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  },
-                },
-                events: {
-                  columns: {
-                    id: true,
-                  },
-                },
-                mediaCaptures: {
-                  columns: {
-                    id: true,
-                  },
+                columns: {
+                  id: true,
+                  name: true,
+                  studyId: true,
                 },
               },
-              orderBy: [desc(trials.scheduledAt)],
-            })
+              participant: {
+                columns: {
+                  id: true,
+                  participantCode: true,
+                  email: true,
+                  name: true,
+                },
+              },
+              wizard: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              events: {
+                columns: {
+                  id: true,
+                },
+              },
+              mediaCaptures: {
+                columns: {
+                  id: true,
+                },
+              },
+            },
+            orderBy: [desc(trials.scheduledAt)],
+          })
           : [];
 
       // Get total count
@@ -890,6 +1044,118 @@ export const trialsRouter = createTRPCRouter({
         data: input.data,
         timestamp: new Date(),
         createdBy: ctx.session.user.id,
+      });
+
+      return { success: true };
+    }),
+
+  executeRobotAction: protectedProcedure
+    .input(
+      z.object({
+        trialId: z.string(),
+        pluginName: z.string(),
+        actionId: z.string(),
+        parameters: z.record(z.string(), z.unknown()).optional().default({}),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.trialId, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      // Use execution engine to execute robot action
+      const executionEngine = getExecutionEngine();
+
+      // Create action definition for execution
+      const actionDefinition: ActionDefinition = {
+        id: `${input.pluginName}.${input.actionId}`,
+        stepId: "manual", // Manual execution
+        name: input.actionId,
+        type: `${input.pluginName}.${input.actionId}`,
+        orderIndex: 0,
+        parameters: input.parameters,
+        timeout: 30000,
+        required: false,
+      };
+
+      const result = await executionEngine.executeAction(
+        input.trialId,
+        actionDefinition,
+      );
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: result.error ?? "Robot action execution failed",
+        });
+      }
+
+      // Log the manual robot action execution
+      await db.insert(trialEvents).values({
+        trialId: input.trialId,
+        eventType: "manual_robot_action",
+        actionId: actionDefinition.id,
+        data: {
+          userId,
+          pluginName: input.pluginName,
+          actionId: input.actionId,
+          parameters: input.parameters,
+          result: result.data,
+          duration: result.duration,
+        },
+        timestamp: new Date(),
+        createdBy: userId,
+      });
+
+      return {
+        success: true,
+        data: result.data,
+        duration: result.duration,
+      };
+    }),
+
+  logRobotAction: protectedProcedure
+    .input(
+      z.object({
+        trialId: z.string(),
+        pluginName: z.string(),
+        actionId: z.string(),
+        parameters: z.record(z.string(), z.unknown()).optional().default({}),
+        duration: z.number().optional(),
+        result: z.any().optional(),
+        error: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.trialId, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      await db.insert(trialEvents).values({
+        trialId: input.trialId,
+        eventType: "manual_robot_action",
+        data: {
+          userId,
+          pluginName: input.pluginName,
+          actionId: input.actionId,
+          parameters: input.parameters,
+          result: input.result,
+          duration: input.duration,
+          error: input.error,
+          executionMode: "websocket_client",
+        },
+        timestamp: new Date(),
+        createdBy: userId,
       });
 
       return { success: true };

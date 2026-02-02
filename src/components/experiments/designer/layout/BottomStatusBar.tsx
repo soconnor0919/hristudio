@@ -40,7 +40,7 @@ export interface BottomStatusBarProps {
   onValidate?: () => void;
   onExport?: () => void;
   onOpenCommandPalette?: () => void;
-  onToggleVersionStrategy?: () => void;
+  onRecalculateHash?: () => void;
   className?: string;
   saving?: boolean;
   validating?: boolean;
@@ -56,7 +56,7 @@ export function BottomStatusBar({
   onValidate,
   onExport,
   onOpenCommandPalette,
-  onToggleVersionStrategy,
+  onRecalculateHash,
   className,
   saving,
   validating,
@@ -198,9 +198,9 @@ export function BottomStatusBar({
     if (onOpenCommandPalette) onOpenCommandPalette();
   }, [onOpenCommandPalette]);
 
-  const handleToggleVersionStrategy = useCallback(() => {
-    if (onToggleVersionStrategy) onToggleVersionStrategy();
-  }, [onToggleVersionStrategy]);
+  const handleRecalculateHash = useCallback(() => {
+    if (onRecalculateHash) onRecalculateHash();
+  }, [onRecalculateHash]);
 
   /* ------------------------------------------------------------------------ */
   /* Render                                                                    */
@@ -265,12 +265,21 @@ export function BottomStatusBar({
           {autoSaveEnabled ? "auto-save on" : "auto-save off"}
         </div>
         <div
-          className="hidden cursor-pointer items-center gap-1 sm:flex"
-          title={`Version strategy: ${versionStrategy}`}
-          onClick={handleToggleVersionStrategy}
+          className="hidden items-center gap-1 font-mono text-[10px] sm:flex"
+          title={`Current design hash: ${currentDesignHash ?? 'Not computed'}`}
         >
-          <Wand2 className="h-3 w-3" />
-          {versionStrategy.replace(/_/g, " ")}
+          <Hash className="h-3 w-3" />
+          {currentDesignHash?.slice(0, 16) ?? '—'}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 px-1 ml-1"
+            onClick={handleRecalculateHash}
+            aria-label="Recalculate hash"
+            title="Recalculate hash"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
         </div>
         <div
           className="text-muted-foreground/80 hidden items-center gap-1 text-[10px] font-normal tracking-wide md:flex"

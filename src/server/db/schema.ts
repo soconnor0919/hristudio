@@ -438,6 +438,29 @@ export const participants = createTable(
   }),
 );
 
+export const participantDocuments = createTable(
+  "participant_document",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => participants.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    type: varchar("type", { length: 100 }), // MIME type or custom category
+    storagePath: text("storage_path").notNull(),
+    fileSize: integer("file_size"),
+    uploadedBy: uuid("uploaded_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => ({
+    participantDocIdx: index("participant_document_participant_idx").on(
+      table.participantId,
+    ),
+  }),
+);
+
 export const trials = createTable("trial", {
   id: uuid("id").notNull().primaryKey().defaultRandom(),
   experimentId: uuid("experiment_id")
@@ -1207,6 +1230,11 @@ export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
   }),
 }));
 
+
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
+
+export type InsertPlugin = typeof plugins.$inferInsert;
+export type InsertPluginRepository = typeof pluginRepositories.$inferInsert;
+export type InsertRobot = typeof robots.$inferInsert;

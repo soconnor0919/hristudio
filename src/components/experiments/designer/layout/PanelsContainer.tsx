@@ -53,6 +53,30 @@ export interface PanelsContainerProps {
  * - Resize handles are absolutely positioned over the grid at the left and right boundaries.
  * - Fractions are clamped with configurable min/max so panels remain usable at all sizes.
  */
+const Panel: React.FC<React.PropsWithChildren<{
+  className?: string;
+  panelClassName?: string;
+  contentClassName?: string;
+}>> = ({
+  className: panelCls,
+  panelClassName,
+  contentClassName,
+  children,
+}) => (
+    <section
+      className={cn("min-w-0 overflow-hidden", panelCls, panelClassName)}
+    >
+      <div
+        className={cn(
+          "h-full min-h-0 w-full overflow-x-hidden overflow-y-auto",
+          contentClassName,
+        )}
+      >
+        {children}
+      </div>
+    </section>
+  );
+
 export function PanelsContainer({
   left,
   center,
@@ -209,10 +233,10 @@ export function PanelsContainer({
   // CSS variables for the grid fractions
   const styleVars: React.CSSProperties & Record<string, string> = hasCenter
     ? {
-        "--col-left": `${(hasLeft ? l : 0) * 100}%`,
-        "--col-center": `${c * 100}%`,
-        "--col-right": `${(hasRight ? r : 0) * 100}%`,
-      }
+      "--col-left": `${(hasLeft ? l : 0) * 100}%`,
+      "--col-center": `${c * 100}%`,
+      "--col-right": `${(hasRight ? r : 0) * 100}%`,
+    }
     : {};
 
   // Explicit grid template depending on which side panels exist
@@ -229,28 +253,12 @@ export function PanelsContainer({
   const centerDividers =
     showDividers && hasCenter
       ? cn({
-          "border-l": hasLeft,
-          "border-r": hasRight,
-        })
+        "border-l": hasLeft,
+        "border-r": hasRight,
+      })
       : undefined;
 
-  const Panel: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
-    className: panelCls,
-    children,
-  }) => (
-    <section
-      className={cn("min-w-0 overflow-hidden", panelCls, panelClassName)}
-    >
-      <div
-        className={cn(
-          "h-full min-h-0 w-full overflow-x-hidden overflow-y-auto",
-          contentClassName,
-        )}
-      >
-        {children}
-      </div>
-    </section>
-  );
+
 
   return (
     <div
@@ -263,11 +271,33 @@ export function PanelsContainer({
         className,
       )}
     >
-      {hasLeft && <Panel>{left}</Panel>}
+      {hasLeft && (
+        <Panel
+          panelClassName={panelClassName}
+          contentClassName={contentClassName}
+        >
+          {left}
+        </Panel>
+      )}
 
-      {hasCenter && <Panel className={centerDividers}>{center}</Panel>}
+      {hasCenter && (
+        <Panel
+          className={centerDividers}
+          panelClassName={panelClassName}
+          contentClassName={contentClassName}
+        >
+          {center}
+        </Panel>
+      )}
 
-      {hasRight && <Panel>{right}</Panel>}
+      {hasRight && (
+        <Panel
+          panelClassName={panelClassName}
+          contentClassName={contentClassName}
+        >
+          {right}
+        </Panel>
+      )}
 
       {/* Resize handles (only render where applicable) */}
       {hasCenter && hasLeft && (

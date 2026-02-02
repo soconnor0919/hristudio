@@ -1,0 +1,464 @@
+{
+  "name": "NAO6 Sensors & Feedback",
+  "version": "1.0.0",
+  "description": "Complete sensor suite for NAO6 robot including touch sensors, sonar, IMU, cameras, and joint state monitoring",
+  "platform": "NAO6",
+  "category": "sensors",
+  "manufacturer": {
+    "name": "SoftBank Robotics",
+    "website": "https://www.softbankrobotics.com"
+  },
+  "documentation": {
+    "mainUrl": "https://docs.hristudio.com/robots/nao6/sensors",
+    "quickStart": "https://docs.hristudio.com/robots/nao6/sensors/quickstart"
+  },
+  "ros2Config": {
+    "namespace": "/naoqi_driver",
+    "topics": {
+      "joint_states": {
+        "type": "sensor_msgs/JointState",
+        "description": "Current positions, velocities, and efforts of all joints"
+      },
+      "imu": {
+        "type": "sensor_msgs/Imu",
+        "description": "Inertial measurement unit data (acceleration, angular velocity, orientation)"
+      },
+      "bumper": {
+        "type": "naoqi_bridge_msgs/Bumper",
+        "description": "Foot bumper sensor states"
+      },
+      "hand_touch": {
+        "type": "naoqi_bridge_msgs/HandTouch",
+        "description": "Hand tactile sensor states"
+      },
+      "head_touch": {
+        "type": "naoqi_bridge_msgs/HeadTouch",
+        "description": "Head tactile sensor states"
+      },
+      "sonar/left": {
+        "type": "sensor_msgs/Range",
+        "description": "Left ultrasonic range sensor"
+      },
+      "sonar/right": {
+        "type": "sensor_msgs/Range",
+        "description": "Right ultrasonic range sensor"
+      },
+      "camera/front/image_raw": {
+        "type": "sensor_msgs/Image",
+        "description": "Front camera image feed"
+      },
+      "camera/bottom/image_raw": {
+        "type": "sensor_msgs/Image",
+        "description": "Bottom camera image feed"
+      },
+      "battery": {
+        "type": "sensor_msgs/BatteryState",
+        "description": "Battery level and charging status"
+      }
+    }
+  },
+  "actions": [
+    {
+      "id": "get_joint_states",
+      "name": "Get Joint States",
+      "description": "Read current positions and velocities of all robot joints",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "specific_joints",
+          "type": "multiselect",
+          "description": "Specific joints to monitor (empty = all joints)",
+          "required": false,
+          "options": [
+            { "value": "HeadYaw", "label": "Head Yaw" },
+            { "value": "HeadPitch", "label": "Head Pitch" },
+            { "value": "LShoulderPitch", "label": "Left Shoulder Pitch" },
+            { "value": "LShoulderRoll", "label": "Left Shoulder Roll" },
+            { "value": "LElbowYaw", "label": "Left Elbow Yaw" },
+            { "value": "LElbowRoll", "label": "Left Elbow Roll" },
+            { "value": "RShoulderPitch", "label": "Right Shoulder Pitch" },
+            { "value": "RShoulderRoll", "label": "Right Shoulder Roll" },
+            { "value": "RElbowYaw", "label": "Right Elbow Yaw" },
+            { "value": "RElbowRoll", "label": "Right Elbow Roll" }
+          ]
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/joint_states",
+        "messageType": "sensor_msgs/JointState",
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "get_touch_sensors",
+      "name": "Get Touch Sensors",
+      "description": "Monitor all tactile sensors on head and hands",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "sensor_type",
+          "type": "select",
+          "description": "Type of touch sensors to monitor",
+          "required": false,
+          "options": [
+            { "value": "all", "label": "All Touch Sensors" },
+            { "value": "head", "label": "Head Touch Only" },
+            { "value": "hands", "label": "Hand Touch Only" }
+          ],
+          "default": "all"
+        }
+      ],
+      "implementation": {
+        "topics": [
+          "/naoqi_driver/head_touch",
+          "/naoqi_driver/hand_touch"
+        ],
+        "messageTypes": [
+          "naoqi_bridge_msgs/HeadTouch",
+          "naoqi_bridge_msgs/HandTouch"
+        ],
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "get_sonar_distance",
+      "name": "Get Sonar Distance",
+      "description": "Read ultrasonic distance sensors for obstacle detection",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "sensor_side",
+          "type": "select",
+          "description": "Which sonar sensor to read",
+          "required": false,
+          "options": [
+            { "value": "both", "label": "Both Sensors" },
+            { "value": "left", "label": "Left Sensor Only" },
+            { "value": "right", "label": "Right Sensor Only" }
+          ],
+          "default": "both"
+        },
+        {
+          "name": "min_range",
+          "type": "number",
+          "description": "Minimum detection range in meters",
+          "required": false,
+          "min": 0.1,
+          "max": 1.0,
+          "default": 0.25,
+          "step": 0.05
+        },
+        {
+          "name": "max_range",
+          "type": "number",
+          "description": "Maximum detection range in meters",
+          "required": false,
+          "min": 1.0,
+          "max": 3.0,
+          "default": 2.55,
+          "step": 0.05
+        }
+      ],
+      "implementation": {
+        "topics": [
+          "/naoqi_driver/sonar/left",
+          "/naoqi_driver/sonar/right"
+        ],
+        "messageType": "sensor_msgs/Range",
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "get_imu_data",
+      "name": "Get IMU Data",
+      "description": "Read inertial measurement unit data (acceleration, gyroscope, orientation)",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "data_type",
+          "type": "select",
+          "description": "Type of IMU data to monitor",
+          "required": false,
+          "options": [
+            { "value": "all", "label": "All IMU Data" },
+            { "value": "orientation", "label": "Orientation Only" },
+            { "value": "acceleration", "label": "Linear Acceleration" },
+            { "value": "angular_velocity", "label": "Angular Velocity" }
+          ],
+          "default": "all"
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/imu",
+        "messageType": "sensor_msgs/Imu",
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "get_camera_image",
+      "name": "Get Camera Image",
+      "description": "Capture image from robot's cameras",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "camera",
+          "type": "select",
+          "description": "Which camera to use",
+          "required": true,
+          "options": [
+            { "value": "front", "label": "Front Camera" },
+            { "value": "bottom", "label": "Bottom Camera" }
+          ],
+          "default": "front"
+        },
+        {
+          "name": "resolution",
+          "type": "select",
+          "description": "Image resolution",
+          "required": false,
+          "options": [
+            { "value": "160x120", "label": "QQVGA (160x120)" },
+            { "value": "320x240", "label": "QVGA (320x240)" },
+            { "value": "640x480", "label": "VGA (640x480)" }
+          ],
+          "default": "320x240"
+        },
+        {
+          "name": "fps",
+          "type": "number",
+          "description": "Frames per second",
+          "required": false,
+          "min": 1,
+          "max": 30,
+          "default": 15,
+          "step": 1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/camera/{{camera}}/image_raw",
+        "messageType": "sensor_msgs/Image",
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "get_battery_status",
+      "name": "Get Battery Status",
+      "description": "Monitor robot battery level and charging status",
+      "category": "sensors",
+      "parameters": [],
+      "implementation": {
+        "topic": "/naoqi_driver/battery",
+        "messageType": "sensor_msgs/BatteryState",
+        "mode": "subscribe"
+      }
+    },
+    {
+      "id": "detect_obstacle",
+      "name": "Detect Obstacle",
+      "description": "Check for obstacles using sonar sensors with customizable thresholds",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "detection_distance",
+          "type": "number",
+          "description": "Distance threshold for obstacle detection (meters)",
+          "required": true,
+          "min": 0.1,
+          "max": 2.0,
+          "default": 0.5,
+          "step": 0.1
+        },
+        {
+          "name": "sensor_side",
+          "type": "select",
+          "description": "Which sensors to use for detection",
+          "required": false,
+          "options": [
+            { "value": "both", "label": "Both Sensors" },
+            { "value": "left", "label": "Left Sensor Only" },
+            { "value": "right", "label": "Right Sensor Only" }
+          ],
+          "default": "both"
+        }
+      ],
+      "implementation": {
+        "topics": [
+          "/naoqi_driver/sonar/left",
+          "/naoqi_driver/sonar/right"
+        ],
+        "messageType": "sensor_msgs/Range",
+        "mode": "subscribe",
+        "processing": "obstacle_detection"
+      }
+    },
+    {
+      "id": "monitor_fall_detection",
+      "name": "Monitor Fall Detection",
+      "description": "Monitor robot stability using IMU data to detect potential falls",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "tilt_threshold",
+          "type": "number",
+          "description": "Maximum tilt angle before fall alert (degrees)",
+          "required": false,
+          "min": 10,
+          "max": 45,
+          "default": 25,
+          "step": 5
+        },
+        {
+          "name": "acceleration_threshold",
+          "type": "number",
+          "description": "Acceleration threshold for impact detection (m/s²)",
+          "required": false,
+          "min": 5,
+          "max": 20,
+          "default": 10,
+          "step": 1
+        }
+      ],
+      "implementation": {
+        "topic": "/naoqi_driver/imu",
+        "messageType": "sensor_msgs/Imu",
+        "mode": "subscribe",
+        "processing": "fall_detection"
+      }
+    },
+    {
+      "id": "wait_for_touch",
+      "name": "Wait for Touch",
+      "description": "Wait for user to touch a specific sensor before continuing",
+      "category": "sensors",
+      "parameters": [
+        {
+          "name": "sensor_location",
+          "type": "select",
+          "description": "Which sensor to wait for",
+          "required": true,
+          "options": [
+            { "value": "head_front", "label": "Head Front" },
+            { "value": "head_middle", "label": "Head Middle" },
+            { "value": "head_rear", "label": "Head Rear" },
+            { "value": "left_hand", "label": "Left Hand" },
+            { "value": "right_hand", "label": "Right Hand" },
+            { "value": "any_head", "label": "Any Head Sensor" },
+            { "value": "any_hand", "label": "Any Hand Sensor" },
+            { "value": "any_touch", "label": "Any Touch Sensor" }
+          ],
+          "default": "head_front"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "description": "Maximum time to wait for touch (seconds, 0 = infinite)",
+          "required": false,
+          "min": 0,
+          "max": 300,
+          "default": 30,
+          "step": 5
+        }
+      ],
+      "implementation": {
+        "topics": [
+          "/naoqi_driver/head_touch",
+          "/naoqi_driver/hand_touch"
+        ],
+        "messageTypes": [
+          "naoqi_bridge_msgs/HeadTouch",
+          "naoqi_bridge_msgs/HandTouch"
+        ],
+        "mode": "wait_for_condition",
+        "condition": "touch_detected"
+      }
+    }
+  ],
+  "sensorSpecifications": {
+    "touchSensors": {
+      "head": {
+        "locations": ["front", "middle", "rear"],
+        "sensitivity": "capacitive",
+        "responseTime": "< 50ms"
+      },
+      "hands": {
+        "locations": ["left", "right"],
+        "sensitivity": "capacitive",
+        "responseTime": "< 50ms"
+      }
+    },
+    "sonarSensors": {
+      "count": 2,
+      "locations": ["left", "right"],
+      "minRange": "0.25m",
+      "maxRange": "2.55m",
+      "fieldOfView": "60°",
+      "frequency": "40kHz"
+    },
+    "cameras": {
+      "front": {
+        "resolution": "640x480",
+        "maxFps": 30,
+        "fieldOfView": "60.9° x 47.6°"
+      },
+      "bottom": {
+        "resolution": "640x480",
+        "maxFps": 30,
+        "fieldOfView": "60.9° x 47.6°"
+      }
+    },
+    "imu": {
+      "accelerometer": {
+        "range": "±2g",
+        "sensitivity": "high"
+      },
+      "gyroscope": {
+        "range": "±500°/s",
+        "sensitivity": "high"
+      },
+      "magnetometer": {
+        "available": false
+      }
+    },
+    "joints": {
+      "count": 25,
+      "encoderResolution": "12-bit",
+      "positionAccuracy": "±0.1°"
+    }
+  },
+  "dataTypes": {
+    "jointState": {
+      "position": "radians",
+      "velocity": "radians/second",
+      "effort": "arbitrary units"
+    },
+    "imu": {
+      "orientation": "quaternion",
+      "angularVelocity": "radians/second",
+      "linearAcceleration": "m/s²"
+    },
+    "range": {
+      "distance": "meters",
+      "minRange": "meters",
+      "maxRange": "meters"
+    },
+    "image": {
+      "encoding": "rgb8",
+      "width": "pixels",
+      "height": "pixels"
+    }
+  },
+  "safety": {
+    "fallDetection": {
+      "enabled": true,
+      "defaultThreshold": "25°"
+    },
+    "obstacleDetection": {
+      "enabled": true,
+      "safeDistance": "0.3m"
+    },
+    "batteryMonitoring": {
+      "lowBatteryWarning": "20%",
+      "criticalBatteryShutdown": "5%"
+    }
+  }
+}

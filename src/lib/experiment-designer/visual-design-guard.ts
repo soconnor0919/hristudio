@@ -90,17 +90,26 @@ const executionDescriptorSchema = z
 // Action parameter snapshot is a free-form structure retained for audit
 const parameterSchemaRawSchema = z.unknown().optional();
 
-// Action schema (loose input → normalized internal)
-const visualActionInputSchema = z
-  .object({
-    id: z.string().min(1),
-    type: z.string().min(1),
-    name: z.string().min(1),
-    category: actionCategoryEnum.optional(),
-    parameters: z.record(z.string(), z.unknown()).default({}),
-    source: actionSourceSchema.optional(),
-    execution: executionDescriptorSchema.optional(),
-    parameterSchemaRaw: parameterSchemaRawSchema,
+// Base action schema (without recursion)
+const baseActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  category: actionCategoryEnum.optional(),
+  parameters: z.record(z.string(), z.unknown()).default({}),
+  source: actionSourceSchema.optional(),
+  execution: executionDescriptorSchema.optional(),
+  parameterSchemaRaw: parameterSchemaRawSchema,
+});
+
+type VisualActionInput = z.infer<typeof baseActionSchema> & {
+  children?: VisualActionInput[];
+};
+
+const visualActionInputSchema: z.ZodType<VisualActionInput> = baseActionSchema
+  .extend({
+    children: z.lazy(() => z.array(visualActionInputSchema)).optional(),
   })
   .strict();
 
@@ -144,8 +153,7 @@ export function parseVisualDesignSteps(raw: unknown): {
     issues.push(
       ...zodErr.issues.map(
         (issue) =>
-          `steps${
-            issue.path.length ? "." + issue.path.join(".") : ""
+          `steps${issue.path.length ? "." + issue.path.join(".") : ""
           }: ${issue.message} (code=${issue.code})`,
       ),
     );
@@ -155,69 +163,73 @@ export function parseVisualDesignSteps(raw: unknown): {
   // Normalize to internal ExperimentStep[] shape
   const inputSteps = parsed.data;
 
-  const normalized: ExperimentStep[] = inputSteps.map((s, idx) => {
-    const actions: ExperimentAction[] = s.actions.map((a) => {
-      // Default provenance
-      const source: {
-        kind: "core" | "plugin";
-        pluginId?: string;
-        pluginVersion?: string;
-        robotId?: string | null;
-        baseActionId?: string;
-      } = a.source
+  const normalizeAction = (a: VisualActionInput): ExperimentAction => {
+    // Default provenance
+    const source: {
+      kind: "core" | "plugin";
+      pluginId?: string;
+      pluginVersion?: string;
+      robotId?: string | null;
+      baseActionId?: string;
+    } = a.source
         ? {
-            kind: a.source.kind,
-            pluginId: a.source.pluginId,
-            pluginVersion: a.source.pluginVersion,
-            robotId: a.source.robotId ?? null,
-            baseActionId: a.source.baseActionId,
-          }
+          kind: a.source.kind,
+          pluginId: a.source.pluginId,
+          pluginVersion: a.source.pluginVersion,
+          robotId: a.source.robotId ?? null,
+          baseActionId: a.source.baseActionId,
+        }
         : { kind: "core" };
 
-      // Default execution
-      const execution: ExecutionDescriptor = a.execution
-        ? {
-            transport: a.execution.transport,
-            timeoutMs: a.execution.timeoutMs,
-            retryable: a.execution.retryable,
-            ros2: a.execution.ros2,
-            rest: a.execution.rest
-              ? {
-                  method: a.execution.rest.method,
-                  path: a.execution.rest.path,
-                  headers: a.execution.rest.headers
-                    ? Object.fromEntries(
-                        Object.entries(a.execution.rest.headers).filter(
-                          (kv): kv is [string, string] =>
-                            typeof kv[1] === "string",
-                        ),
-                      )
-                    : undefined,
-                }
+    // Default execution
+    const execution: ExecutionDescriptor = a.execution
+      ? {
+        transport: a.execution.transport,
+        timeoutMs: a.execution.timeoutMs,
+        retryable: a.execution.retryable,
+        ros2: a.execution.ros2,
+        rest: a.execution.rest
+          ? {
+            method: a.execution.rest.method,
+            path: a.execution.rest.path,
+            headers: a.execution.rest.headers
+              ? Object.fromEntries(
+                Object.entries(a.execution.rest.headers).filter(
+                  (kv): kv is [string, string] =>
+                    typeof kv[1] === "string",
+                ),
+              )
               : undefined,
           }
-        : { transport: "internal" };
+          : undefined,
+      }
+      : { transport: "internal" };
 
-      return {
-        id: a.id,
-        type: a.type, // dynamic (pluginId.actionId)
-        name: a.name,
-        parameters: a.parameters ?? {},
-        duration: undefined,
-        category: (a.category ?? "wizard") as ActionCategory,
-        source: {
-          kind: source.kind,
-          pluginId: source.kind === "plugin" ? source.pluginId : undefined,
-          pluginVersion:
-            source.kind === "plugin" ? source.pluginVersion : undefined,
-          robotId: source.kind === "plugin" ? (source.robotId ?? null) : null,
-          baseActionId:
-            source.kind === "plugin" ? source.baseActionId : undefined,
-        },
-        execution,
-        parameterSchemaRaw: a.parameterSchemaRaw,
-      };
-    });
+    return {
+      id: a.id,
+      type: a.type,
+      name: a.name,
+      description: a.description,
+      parameters: a.parameters ?? {},
+      duration: undefined,
+      category: (a.category ?? "wizard") as ActionCategory,
+      source: {
+        kind: source.kind,
+        pluginId: source.kind === "plugin" ? source.pluginId : undefined,
+        pluginVersion:
+          source.kind === "plugin" ? source.pluginVersion : undefined,
+        robotId: source.kind === "plugin" ? (source.robotId ?? null) : null,
+        baseActionId:
+          source.kind === "plugin" ? source.baseActionId : undefined,
+      },
+      execution,
+      parameterSchemaRaw: a.parameterSchemaRaw,
+      children: a.children?.map(normalizeAction) ?? [],
+    };
+  };
+
+  const normalized: ExperimentStep[] = inputSteps.map((s, idx) => {
+    const actions: ExperimentAction[] = s.actions.map(normalizeAction);
 
     // Construct step
     return {

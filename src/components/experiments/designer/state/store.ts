@@ -79,6 +79,23 @@ export interface DesignerState {
   busyHashing: boolean;
   busyValidating: boolean;
 
+  /* ---------------------- DnD Projection (Transient) ----------------------- */
+  insertionProjection: {
+    stepId: string;
+    parentId: string | null;
+    index: number;
+    action: ExperimentAction;
+  } | null;
+
+  setInsertionProjection: (
+    projection: {
+      stepId: string;
+      parentId: string | null;
+      index: number;
+      action: ExperimentAction;
+    } | null
+  ) => void;
+
   /* ------------------------------ Mutators --------------------------------- */
 
   // Selection
@@ -92,9 +109,10 @@ export interface DesignerState {
   reorderStep: (from: number, to: number) => void;
 
   // Actions
-  upsertAction: (stepId: string, action: ExperimentAction) => void;
+  upsertAction: (stepId: string, action: ExperimentAction, parentId?: string | null, index?: number) => void;
   removeAction: (stepId: string, actionId: string) => void;
   reorderAction: (stepId: string, from: number, to: number) => void;
+  moveAction: (stepId: string, actionId: string, newParentId: string | null, newIndex: number) => void;
 
   // Dirty
   markDirty: (id: string) => void;
@@ -159,17 +177,73 @@ function reindexActions(actions: ExperimentAction[]): ExperimentAction[] {
   return actions.map((a) => ({ ...a }));
 }
 
-function updateActionList(
-  existing: ExperimentAction[],
+function findActionById(
+  list: ExperimentAction[],
+  id: string,
+): ExperimentAction | null {
+  for (const action of list) {
+    if (action.id === id) return action;
+    if (action.children) {
+      const found = findActionById(action.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function updateActionInTree(
+  list: ExperimentAction[],
   action: ExperimentAction,
 ): ExperimentAction[] {
-  const idx = existing.findIndex((a) => a.id === action.id);
-  if (idx >= 0) {
-    const copy = [...existing];
-    copy[idx] = { ...action };
+  return list.map((a) => {
+    if (a.id === action.id) return { ...action };
+    if (a.children) {
+      return { ...a, children: updateActionInTree(a.children, action) };
+    }
+    return a;
+  });
+}
+
+// Immutable removal
+function removeActionFromTree(
+  list: ExperimentAction[],
+  id: string,
+): ExperimentAction[] {
+  return list
+    .filter((a) => a.id !== id)
+    .map((a) => ({
+      ...a,
+      children: a.children ? removeActionFromTree(a.children, id) : undefined,
+    }));
+}
+
+// Immutable insertion
+function insertActionIntoTree(
+  list: ExperimentAction[],
+  action: ExperimentAction,
+  parentId: string | null,
+  index: number,
+): ExperimentAction[] {
+  if (!parentId) {
+    // Insert at root level
+    const copy = [...list];
+    copy.splice(index, 0, action);
     return copy;
   }
-  return [...existing, { ...action }];
+  return list.map((a) => {
+    if (a.id === parentId) {
+      const children = a.children ? [...a.children] : [];
+      children.splice(index, 0, action);
+      return { ...a, children };
+    }
+    if (a.children) {
+      return {
+        ...a,
+        children: insertActionIntoTree(a.children, action, parentId, index),
+      };
+    }
+    return a;
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -187,6 +261,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   autoSaveEnabled: true,
   busyHashing: false,
   busyValidating: false,
+  insertionProjection: null,
 
   /* ------------------------------ Selection -------------------------------- */
   selectStep: (id) =>
@@ -263,16 +338,31 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }),
 
   /* ------------------------------- Actions --------------------------------- */
-  upsertAction: (stepId: string, action: ExperimentAction) =>
+  upsertAction: (stepId: string, action: ExperimentAction, parentId: string | null = null, index?: number) =>
     set((state: DesignerState) => {
-      const stepsDraft: ExperimentStep[] = state.steps.map((s) =>
-        s.id === stepId
-          ? {
-              ...s,
-              actions: reindexActions(updateActionList(s.actions, action)),
-            }
-          : s,
-      );
+      const stepsDraft: ExperimentStep[] = state.steps.map((s) => {
+        if (s.id !== stepId) return s;
+
+        // Check if exists (update)
+        const exists = findActionById(s.actions, action.id);
+        if (exists) {
+          // If updating, we don't (currently) support moving via upsert.
+          // Use moveAction for moving.
+          return {
+            ...s,
+            actions: updateActionInTree(s.actions, action)
+          };
+        }
+
+        // Add new
+        // If index is provided, use it. Otherwise append.
+        const insertIndex = index ?? s.actions.length;
+
+        return {
+          ...s,
+          actions: insertActionIntoTree(s.actions, action, parentId, insertIndex)
+        };
+      });
       return {
         steps: stepsDraft,
         dirtyEntities: new Set<string>([
@@ -288,11 +378,9 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       const stepsDraft: ExperimentStep[] = state.steps.map((s) =>
         s.id === stepId
           ? {
-              ...s,
-              actions: reindexActions(
-                s.actions.filter((a) => a.id !== actionId),
-              ),
-            }
+            ...s,
+            actions: removeActionFromTree(s.actions, actionId),
+          }
           : s,
       );
       const dirty = new Set<string>(state.dirtyEntities);
@@ -308,30 +396,28 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       };
     }),
 
-  reorderAction: (stepId: string, from: number, to: number) =>
+  moveAction: (stepId: string, actionId: string, newParentId: string | null, newIndex: number) =>
     set((state: DesignerState) => {
-      const stepsDraft: ExperimentStep[] = state.steps.map((s) => {
+      const stepsDraft = state.steps.map((s) => {
         if (s.id !== stepId) return s;
-        if (
-          from < 0 ||
-          to < 0 ||
-          from >= s.actions.length ||
-          to >= s.actions.length ||
-          from === to
-        ) {
-          return s;
-        }
-        const actionsDraft = [...s.actions];
-        const [moved] = actionsDraft.splice(from, 1);
-        if (!moved) return s;
-        actionsDraft.splice(to, 0, moved);
-        return { ...s, actions: reindexActions(actionsDraft) };
+
+        const actionToMove = findActionById(s.actions, actionId);
+        if (!actionToMove) return s;
+
+        const pruned = removeActionFromTree(s.actions, actionId);
+        const inserted = insertActionIntoTree(pruned, actionToMove, newParentId, newIndex);
+        return { ...s, actions: inserted };
       });
       return {
         steps: stepsDraft,
-        dirtyEntities: new Set<string>([...state.dirtyEntities, stepId]),
+        dirtyEntities: new Set<string>([...state.dirtyEntities, stepId, actionId]),
       };
     }),
+
+  reorderAction: (stepId: string, from: number, to: number) =>
+    get().moveAction(stepId, get().steps.find(s => s.id === stepId)?.actions[from]?.id!, null, to), // Legacy compat support (only works for root level reorder)
+
+  setInsertionProjection: (projection) => set({ insertionProjection: projection }),
 
   /* -------------------------------- Dirty ---------------------------------- */
   markDirty: (id: string) =>

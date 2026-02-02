@@ -114,14 +114,14 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>
-          <Link href={`/experiments/${experiment.id}`}>
+          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View Details
           </Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link href={`/experiments/${experiment.id}/designer`}>
+          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
             <FlaskConical className="mr-2 h-4 w-4" />
             Open Designer
           </Link>
@@ -129,7 +129,7 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
 
         {experiment.canEdit && (
           <DropdownMenuItem asChild>
-            <Link href={`/experiments/${experiment.id}/edit`}>
+            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Experiment
             </Link>
@@ -202,7 +202,7 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
       return (
         <div className="max-w-[200px] min-w-0 space-y-1">
           <Link
-            href={`/experiments/${experiment.id}`}
+            href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}
             className="block truncate font-medium hover:underline"
             title={experiment.name}
           >

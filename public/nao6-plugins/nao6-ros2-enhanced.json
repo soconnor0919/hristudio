@@ -1,0 +1,769 @@
+{
+  "id": "nao6-ros2-enhanced",
+  "name": "NAO6 Robot (Enhanced ROS2 Integration)",
+  "version": "2.0.0",
+  "description": "Comprehensive NAO6 robot integration for HRIStudio experiments via ROS2. Provides full robot control including movement, speech synthesis, posture control, sensor monitoring, and safety features. Optimized for human-robot interaction research with production-ready reliability.",
+  "author": {
+    "name": "HRIStudio RoboLab Team",
+    "email": "robolab@hristudio.com",
+    "organization": "HRIStudio Research Platform"
+  },
+  "license": "MIT",
+  "repositoryUrl": "https://github.com/hristudio/nao6-ros2-plugins",
+  "documentationUrl": "https://docs.hristudio.com/robots/nao6",
+  "trustLevel": "official",
+  "status": "active",
+  "tags": ["nao6", "ros2", "speech", "movement", "sensors", "hri", "production"],
+  "robotId": "nao6-softbank",
+  "communicationProtocol": "ros2_websocket",
+  "metadata": {
+    "robotModel": "NAO V6.0",
+    "manufacturer": "SoftBank Robotics",
+    "naoqiVersion": "2.8.7.4",
+    "ros2Distro": "humble",
+    "websocketUrl": "ws://localhost:9090",
+    "launchPackage": "nao_launch",
+    "requiredPackages": [
+      "naoqi_driver2",
+      "naoqi_bridge_msgs",
+      "rosbridge_server",
+      "rosapi"
+    ],
+    "safetyFeatures": {
+      "emergencyStop": true,
+      "velocityLimits": true,
+      "fallDetection": true,
+      "batteryMonitoring": true,
+      "automaticWakeup": true
+    },
+    "capabilities": [
+      "bipedal_walking",
+      "speech_synthesis",
+      "head_movement",
+      "arm_gestures",
+      "touch_sensors",
+      "visual_sensors",
+      "audio_sensors",
+      "posture_control",
+      "balance_control"
+    ]
+  },
+  "configurationSchema": {
+    "type": "object",
+    "properties": {
+      "robotIp": {
+        "type": "string",
+        "default": "nao.local",
+        "title": "Robot IP Address",
+        "description": "IP address or hostname of the NAO6 robot"
+      },
+      "robotPassword": {
+        "type": "string",
+        "default": "robolab",
+        "title": "Robot Password",
+        "description": "Password for robot authentication",
+        "format": "password"
+      },
+      "websocketUrl": {
+        "type": "string",
+        "default": "ws://localhost:9090",
+        "title": "WebSocket URL",
+        "description": "ROS bridge WebSocket URL for robot communication"
+      },
+      "maxLinearVelocity": {
+        "type": "number",
+        "default": 0.2,
+        "minimum": 0.01,
+        "maximum": 0.5,
+        "title": "Max Linear Velocity (m/s)",
+        "description": "Maximum allowed linear movement speed for safety"
+      },
+      "maxAngularVelocity": {
+        "type": "number",
+        "default": 0.8,
+        "minimum": 0.1,
+        "maximum": 2.0,
+        "title": "Max Angular Velocity (rad/s)",
+        "description": "Maximum allowed rotational speed for safety"
+      },
+      "defaultMovementSpeed": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "title": "Default Movement Speed",
+        "description": "Speed factor for posture and gesture movements (0.1-1.0)"
+      },
+      "speechVolume": {
+        "type": "number",
+        "default": 0.7,
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "title": "Speech Volume",
+        "description": "Default volume for speech synthesis (0.1-1.0)"
+      },
+      "enableSafetyMonitoring": {
+        "type": "boolean",
+        "default": true,
+        "title": "Enable Safety Monitoring",
+        "description": "Enable automatic safety monitoring and emergency stops"
+      },
+      "autoWakeUp": {
+        "type": "boolean",
+        "default": true,
+        "title": "Auto Wake-up Robot",
+        "description": "Automatically wake up robot when experiment starts"
+      },
+      "monitorBattery": {
+        "type": "boolean",
+        "default": true,
+        "title": "Monitor Battery",
+        "description": "Monitor robot battery level during experiments"
+      }
+    },
+    "required": ["robotIp", "websocketUrl"]
+  },
+  "actionDefinitions": [
+    {
+      "id": "nao_speak",
+      "name": "Speak Text",
+      "description": "Make the NAO robot speak the specified text using text-to-speech synthesis",
+      "category": "speech",
+      "icon": "volume2",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text to Speak",
+            "description": "The text that the robot should speak aloud",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume",
+            "description": "Speech volume level (0.1 = quiet, 1.0 = loud)",
+            "default": 0.7,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speech Speed",
+            "description": "Speech rate multiplier (0.5 = slow, 2.0 = fast)",
+            "default": 1.0,
+            "minimum": 0.5,
+            "maximum": 2.0,
+            "step": 0.1
+          },
+          "waitForCompletion": {
+            "type": "boolean",
+            "title": "Wait for Speech to Complete",
+            "description": "Wait until speech finishes before continuing to next action",
+            "default": true
+          }
+        },
+        "required": ["text"]
+      },
+      "implementation": {
+        "type": "ros2_topic",
+        "topic": "/speech",
+        "messageType": "std_msgs/String",
+        "messageMapping": {
+          "data": "{{text}}"
+        }
+      }
+    },
+    {
+      "id": "nao_move",
+      "name": "Move Robot",
+      "description": "Move the NAO robot with specified linear and angular velocities",
+      "category": "movement",
+      "icon": "move",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "direction": {
+            "type": "string",
+            "title": "Movement Direction",
+            "description": "Predefined movement direction",
+            "enum": ["forward", "backward", "left", "right", "turn_left", "turn_right", "custom"],
+            "enumNames": ["Forward", "Backward", "Step Left", "Step Right", "Turn Left", "Turn Right", "Custom"],
+            "default": "forward"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance/Angle",
+            "description": "Distance in meters for linear movement, or angle in degrees for rotation",
+            "default": 0.1,
+            "minimum": 0.01,
+            "maximum": 2.0,
+            "step": 0.01
+          },
+          "speed": {
+            "type": "number",
+            "title": "Movement Speed",
+            "description": "Speed factor (0.1 = very slow, 1.0 = normal speed)",
+            "default": 0.5,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "customX": {
+            "type": "number",
+            "title": "Custom X Velocity (m/s)",
+            "description": "Forward/backward velocity (positive = forward)",
+            "default": 0.0,
+            "minimum": -0.3,
+            "maximum": 0.3,
+            "step": 0.01
+          },
+          "customY": {
+            "type": "number",
+            "title": "Custom Y Velocity (m/s)",
+            "description": "Left/right velocity (positive = left)",
+            "default": 0.0,
+            "minimum": -0.3,
+            "maximum": 0.3,
+            "step": 0.01
+          },
+          "customTheta": {
+            "type": "number",
+            "title": "Custom Angular Velocity (rad/s)",
+            "description": "Rotational velocity (positive = counter-clockwise)",
+            "default": 0.0,
+            "minimum": -1.5,
+            "maximum": 1.5,
+            "step": 0.01
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration (seconds)",
+            "description": "How long to maintain the movement",
+            "default": 2.0,
+            "minimum": 0.1,
+            "maximum": 10.0,
+            "step": 0.1
+          }
+        },
+        "required": ["direction"]
+      },
+      "implementation": {
+        "type": "ros2_topic",
+        "topic": "/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageMapping": {
+          "linear": {
+            "x": "{{#eq direction 'forward'}}{{multiply distance speed 0.1}}{{/eq}}{{#eq direction 'backward'}}{{multiply distance speed -0.1}}{{/eq}}{{#eq direction 'custom'}}{{customX}}{{/eq}}{{#default}}0.0{{/default}}",
+            "y": "{{#eq direction 'left'}}{{multiply distance speed 0.1}}{{/eq}}{{#eq direction 'right'}}{{multiply distance speed -0.1}}{{/eq}}{{#eq direction 'custom'}}{{customY}}{{/eq}}{{#default}}0.0{{/default}}",
+            "z": 0.0
+          },
+          "angular": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": "{{#eq direction 'turn_left'}}{{multiply distance speed 0.1}}{{/eq}}{{#eq direction 'turn_right'}}{{multiply distance speed -0.1}}{{/eq}}{{#eq direction 'custom'}}{{customTheta}}{{/eq}}{{#default}}0.0{{/default}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "nao_pose",
+      "name": "Set Posture",
+      "description": "Set the NAO robot to a specific posture or pose",
+      "category": "movement",
+      "icon": "user",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "posture": {
+            "type": "string",
+            "title": "Posture",
+            "description": "Target posture for the robot",
+            "enum": ["Stand", "Sit", "SitRelax", "StandInit", "StandZero", "Crouch", "LyingBack", "LyingBelly"],
+            "enumNames": ["Stand", "Sit", "Sit Relaxed", "Stand Initial", "Stand Zero", "Crouch", "Lying on Back", "Lying on Belly"],
+            "default": "Stand"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Movement Speed",
+            "description": "Speed of posture transition (0.1 = slow, 1.0 = fast)",
+            "default": 0.5,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "waitForCompletion": {
+            "type": "boolean",
+            "title": "Wait for Completion",
+            "description": "Wait until posture change is complete before continuing",
+            "default": true
+          }
+        },
+        "required": ["posture"]
+      },
+      "implementation": {
+        "type": "ros2_service",
+        "service": "/naoqi_driver/robot_posture/go_to_posture",
+        "serviceType": "naoqi_bridge_msgs/srv/SetString",
+        "requestMapping": {
+          "data": "{{posture}}"
+        }
+      }
+    },
+    {
+      "id": "nao_head_movement",
+      "name": "Move Head",
+      "description": "Control NAO robot head movement for gaze direction and attention",
+      "category": "movement",
+      "icon": "eye",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "headYaw": {
+            "type": "number",
+            "title": "Head Yaw (degrees)",
+            "description": "Left/right head rotation (-90° = right, +90° = left)",
+            "default": 0.0,
+            "minimum": -90.0,
+            "maximum": 90.0,
+            "step": 1.0
+          },
+          "headPitch": {
+            "type": "number",
+            "title": "Head Pitch (degrees)",
+            "description": "Up/down head rotation (-25° = down, +25° = up)",
+            "default": 0.0,
+            "minimum": -25.0,
+            "maximum": 25.0,
+            "step": 1.0
+          },
+          "speed": {
+            "type": "number",
+            "title": "Movement Speed",
+            "description": "Speed of head movement (0.1 = slow, 1.0 = fast)",
+            "default": 0.3,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "presetDirection": {
+            "type": "string",
+            "title": "Preset Direction",
+            "description": "Use preset head direction instead of custom angles",
+            "enum": ["none", "center", "left", "right", "up", "down", "look_left", "look_right"],
+            "enumNames": ["Custom Angles", "Center", "Left", "Right", "Up", "Down", "Look Left", "Look Right"],
+            "default": "none"
+          }
+        },
+        "required": []
+      },
+      "implementation": {
+        "type": "ros2_topic",
+        "topic": "/joint_angles",
+        "messageType": "naoqi_bridge_msgs/JointAnglesWithSpeed",
+        "messageMapping": {
+          "joint_names": ["HeadYaw", "HeadPitch"],
+          "joint_angles": [
+            "{{#ne presetDirection 'none'}}{{#eq presetDirection 'left'}}1.57{{/eq}}{{#eq presetDirection 'right'}}-1.57{{/eq}}{{#eq presetDirection 'center'}}0.0{{/eq}}{{#eq presetDirection 'look_left'}}0.78{{/eq}}{{#eq presetDirection 'look_right'}}-0.78{{/eq}}{{#default}}{{multiply headYaw 0.0175}}{{/default}}{{/ne}}{{#eq presetDirection 'none'}}{{multiply headYaw 0.0175}}{{/eq}}",
+            "{{#ne presetDirection 'none'}}{{#eq presetDirection 'up'}}0.44{{/eq}}{{#eq presetDirection 'down'}}-0.44{{/eq}}{{#eq presetDirection 'center'}}0.0{{/eq}}{{#default}}{{multiply headPitch 0.0175}}{{/default}}{{/ne}}{{#eq presetDirection 'none'}}{{multiply headPitch 0.0175}}{{/eq}}"
+          ],
+          "speed": "{{speed}}"
+        }
+      }
+    },
+    {
+      "id": "nao_gesture",
+      "name": "Perform Gesture",
+      "description": "Make NAO robot perform predefined gestures and animations",
+      "category": "interaction",
+      "icon": "hand",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "gesture": {
+            "type": "string",
+            "title": "Gesture Type",
+            "description": "Select a predefined gesture or animation",
+            "enum": ["wave", "point_left", "point_right", "applause", "thumbs_up", "open_arms", "bow", "celebration", "thinking", "custom"],
+            "enumNames": ["Wave Hello", "Point Left", "Point Right", "Applause", "Thumbs Up", "Open Arms", "Bow", "Celebration", "Thinking Pose", "Custom Joint Movement"],
+            "default": "wave"
+          },
+          "intensity": {
+            "type": "number",
+            "title": "Gesture Intensity",
+            "description": "Intensity of the gesture movement (0.5 = subtle, 1.0 = full)",
+            "default": 0.8,
+            "minimum": 0.3,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "speed": {
+            "type": "number",
+            "title": "Gesture Speed",
+            "description": "Speed of gesture execution (0.1 = slow, 1.0 = fast)",
+            "default": 0.5,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "repeatCount": {
+            "type": "integer",
+            "title": "Repeat Count",
+            "description": "Number of times to repeat the gesture",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "required": ["gesture"]
+      },
+      "implementation": {
+        "type": "ros2_service",
+        "service": "/naoqi_driver/animation_player/run_animation",
+        "serviceType": "naoqi_bridge_msgs/srv/SetString",
+        "requestMapping": {
+          "data": "{{#eq gesture 'wave'}}animations/Stand/Gestures/Hey_1{{/eq}}{{#eq gesture 'point_left'}}animations/Stand/Gestures/YouKnowWhat_1{{/eq}}{{#eq gesture 'point_right'}}animations/Stand/Gestures/YouKnowWhat_2{{/eq}}{{#eq gesture 'applause'}}animations/Stand/Gestures/Applause_1{{/eq}}{{#eq gesture 'thumbs_up'}}animations/Stand/Gestures/Yes_1{{/eq}}{{#eq gesture 'open_arms'}}animations/Stand/Gestures/Everything_1{{/eq}}{{#eq gesture 'bow'}}animations/Stand/Gestures/BowShort_1{{/eq}}{{#eq gesture 'celebration'}}animations/Stand/Gestures/Excited_1{{/eq}}{{#eq gesture 'thinking'}}animations/Stand/Gestures/Thinking_1{{/eq}}"
+        }
+      }
+    },
+    {
+      "id": "nao_led_control",
+      "name": "Control LEDs",
+      "description": "Control NAO robot LED colors and patterns for visual feedback",
+      "category": "interaction",
+      "icon": "lightbulb",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "ledGroup": {
+            "type": "string",
+            "title": "LED Group",
+            "description": "Which LED group to control",
+            "enum": ["eyes", "ears", "chest", "feet", "all"],
+            "enumNames": ["Eyes", "Ears", "Chest", "Feet", "All LEDs"],
+            "default": "eyes"
+          },
+          "color": {
+            "type": "string",
+            "title": "LED Color",
+            "description": "Color for the LEDs",
+            "enum": ["red", "green", "blue", "yellow", "cyan", "magenta", "white", "orange", "purple", "off"],
+            "enumNames": ["Red", "Green", "Blue", "Yellow", "Cyan", "Magenta", "White", "Orange", "Purple", "Off"],
+            "default": "blue"
+          },
+          "intensity": {
+            "type": "number",
+            "title": "LED Intensity",
+            "description": "Brightness of the LEDs (0.0 = off, 1.0 = maximum)",
+            "default": 0.8,
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "pattern": {
+            "type": "string",
+            "title": "LED Pattern",
+            "description": "LED animation pattern",
+            "enum": ["solid", "blink", "fade", "pulse", "rainbow"],
+            "enumNames": ["Solid", "Blink", "Fade In/Out", "Pulse", "Rainbow Cycle"],
+            "default": "solid"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration (seconds)",
+            "description": "How long to maintain the LED state (0 = indefinite)",
+            "default": 0,
+            "minimum": 0,
+            "maximum": 60,
+            "step": 1
+          }
+        },
+        "required": ["ledGroup", "color"]
+      },
+      "implementation": {
+        "type": "ros2_topic",
+        "topic": "/led_control",
+        "messageType": "naoqi_bridge_msgs/Led",
+        "messageMapping": {
+          "name": "{{ledGroup}}",
+          "color": "{{color}}",
+          "intensity": "{{intensity}}"
+        }
+      }
+    },
+    {
+      "id": "nao_sensor_monitor",
+      "name": "Monitor Sensors",
+      "description": "Monitor NAO robot sensors for interaction detection and environmental awareness",
+      "category": "sensors",
+      "icon": "activity",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "sensorType": {
+            "type": "string",
+            "title": "Sensor Type",
+            "description": "Which sensors to monitor",
+            "enum": ["touch", "bumper", "sonar", "camera", "audio", "all"],
+            "enumNames": ["Touch Sensors", "Foot Bumpers", "Ultrasonic Sensors", "Cameras", "Audio", "All Sensors"],
+            "default": "touch"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Monitoring Duration (seconds)",
+            "description": "How long to monitor sensors (0 = continuous)",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 300,
+            "step": 1
+          },
+          "sensitivity": {
+            "type": "number",
+            "title": "Detection Sensitivity",
+            "description": "Sensitivity level for sensor detection (0.1 = low, 1.0 = high)",
+            "default": 0.7,
+            "minimum": 0.1,
+            "maximum": 1.0,
+            "step": 0.1
+          },
+          "logEvents": {
+            "type": "boolean",
+            "title": "Log Sensor Events",
+            "description": "Log all sensor events to experiment data",
+            "default": true
+          },
+          "triggerAction": {
+            "type": "string",
+            "title": "Trigger Action",
+            "description": "Action to take when sensor is activated",
+            "enum": ["none", "speak", "gesture", "move", "led"],
+            "enumNames": ["No Action", "Speak Response", "Perform Gesture", "Move Robot", "LED Feedback"],
+            "default": "none"
+          }
+        },
+        "required": ["sensorType"]
+      },
+      "implementation": {
+        "type": "ros2_subscription",
+        "topics": [
+          "/naoqi_driver/bumper",
+          "/naoqi_driver/hand_touch",
+          "/naoqi_driver/head_touch",
+          "/naoqi_driver/sonar/left",
+          "/naoqi_driver/sonar/right"
+        ],
+        "messageTypes": [
+          "naoqi_bridge_msgs/Bumper",
+          "naoqi_bridge_msgs/HandTouch",
+          "naoqi_bridge_msgs/HeadTouch",
+          "sensor_msgs/Range",
+          "sensor_msgs/Range"
+        ]
+      }
+    },
+    {
+      "id": "nao_emergency_stop",
+      "name": "Emergency Stop",
+      "description": "Immediately stop all robot movement and animations for safety",
+      "category": "safety",
+      "icon": "stop-circle",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "stopType": {
+            "type": "string",
+            "title": "Stop Type",
+            "description": "Type of emergency stop to perform",
+            "enum": ["movement", "all", "freeze"],
+            "enumNames": ["Stop Movement Only", "Stop All Actions", "Freeze in Place"],
+            "default": "all"
+          },
+          "safePosture": {
+            "type": "boolean",
+            "title": "Move to Safe Posture",
+            "description": "Automatically move to a safe posture after stopping",
+            "default": true
+          }
+        },
+        "required": []
+      },
+      "implementation": {
+        "type": "ros2_topic",
+        "topic": "/cmd_vel",
+        "messageType": "geometry_msgs/Twist",
+        "messageMapping": {
+          "linear": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "angular": {"x": 0.0, "y": 0.0, "z": 0.0}
+        }
+      }
+    },
+    {
+      "id": "nao_wake_rest",
+      "name": "Wake Up / Rest Robot",
+      "description": "Wake up the robot or put it to rest position for power management",
+      "category": "system",
+      "icon": "power",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Wake up robot or put to rest",
+            "enum": ["wake", "rest"],
+            "enumNames": ["Wake Up Robot", "Put Robot to Rest"],
+            "default": "wake"
+          },
+          "waitForCompletion": {
+            "type": "boolean",
+            "title": "Wait for Completion",
+            "description": "Wait until wake/rest action is complete",
+            "default": true
+          }
+        },
+        "required": ["action"]
+      },
+      "implementation": {
+        "type": "ros2_service",
+        "service": "/naoqi_driver/motion/{{action}}_up",
+        "serviceType": "std_srvs/srv/Empty",
+        "requestMapping": {}
+      }
+    },
+    {
+      "id": "nao_status_check",
+      "name": "Check Robot Status",
+      "description": "Get current robot status including battery, temperature, and system health",
+      "category": "system",
+      "icon": "info",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "statusType": {
+            "type": "string",
+            "title": "Status Information",
+            "description": "What status information to retrieve",
+            "enum": ["basic", "battery", "sensors", "joints", "all"],
+            "enumNames": ["Basic Status", "Battery Info", "Sensor Status", "Joint Status", "Complete Status"],
+            "default": "basic"
+          },
+          "logToExperiment": {
+            "type": "boolean",
+            "title": "Log to Experiment Data",
+            "description": "Save status information to experiment logs",
+            "default": true
+          }
+        },
+        "required": ["statusType"]
+      },
+      "implementation": {
+        "type": "ros2_service",
+        "service": "/naoqi_driver/get_robot_config",
+        "serviceType": "naoqi_bridge_msgs/srv/GetRobotInfo",
+        "requestMapping": {}
+      }
+    }
+  ],
+  "installation": {
+    "requirements": [
+      "ROS2 Humble or compatible",
+      "NAO6 robot with NAOqi 2.8.7.4+",
+      "Network connectivity to robot",
+      "naoqi_driver2 package",
+      "rosbridge_suite package"
+    ],
+    "setup": [
+      {
+        "step": 1,
+        "description": "Install NAO ROS2 packages",
+        "command": "cd ~/naoqi_ros2_ws && colcon build"
+      },
+      {
+        "step": 2,
+        "description": "Start NAO integration",
+        "command": "ros2 launch nao_launch nao6_production.launch.py nao_ip:=nao.local password:=robolab"
+      },
+      {
+        "step": 3,
+        "description": "Configure HRIStudio plugin",
+        "description_detail": "Set WebSocket URL to ws://localhost:9090 in plugin configuration"
+      }
+    ],
+    "verification": [
+      {
+        "description": "Test robot connectivity",
+        "command": "ping nao.local"
+      },
+      {
+        "description": "Verify ROS topics",
+        "command": "ros2 topic list | grep naoqi"
+      },
+      {
+        "description": "Test WebSocket bridge",
+        "command": "ros2 node list | grep rosbridge"
+      }
+    ]
+  },
+  "troubleshooting": {
+    "commonIssues": [
+      {
+        "issue": "Robot not responding to commands",
+        "solution": "Ensure robot is awake. Use 'Wake Up / Rest Robot' action or press chest button for 3 seconds."
+      },
+      {
+        "issue": "WebSocket connection failed",
+        "solution": "Check that rosbridge is running: ros2 node list | grep rosbridge. Restart if needed."
+      },
+      {
+        "issue": "Robot movements too fast/unsafe",
+        "solution": "Adjust maxLinearVelocity and maxAngularVelocity in plugin configuration."
+      },
+      {
+        "issue": "Speech not working",
+        "solution": "Check robot volume settings and ensure speech synthesis service is active."
+      }
+    ],
+    "safetyNotes": [
+      "Always ensure clear space around robot during movement",
+      "Use Emergency Stop action if robot behaves unexpectedly",
+      "Monitor battery level during long experiments",
+      "Start with slow movements to test robot response",
+      "Keep robot on stable, level surfaces"
+    ]
+  },
+  "examples": [
+    {
+      "name": "Basic Greeting Interaction",
+      "description": "Simple greeting sequence with speech and gesture",
+      "actions": [
+        {"action": "nao_wake_rest", "parameters": {"action": "wake"}},
+        {"action": "nao_speak", "parameters": {"text": "Hello! Welcome to our experiment."}},
+        {"action": "nao_gesture", "parameters": {"gesture": "wave"}},
+        {"action": "nao_pose", "parameters": {"posture": "Stand"}}
+      ]
+    },
+    {
+      "name": "Attention and Pointing",
+      "description": "Direct attention using head movement and pointing",
+      "actions": [
+        {"action": "nao_head_movement", "parameters": {"presetDirection": "left"}},
+        {"action": "nao_speak", "parameters": {"text": "Please look over there."}},
+        {"action": "nao_gesture", "parameters": {"gesture": "point_left"}},
+        {"action": "nao_head_movement", "parameters": {"presetDirection": "center"}}
+      ]
+    },
+    {
+      "name": "Interactive Sensor Monitoring",
+      "description": "Monitor for touch interactions and respond",
+      "actions": [
+        {"action": "nao_speak", "parameters": {"text": "Touch my head when you're ready to continue."}},
+        {"action": "nao_sensor_monitor", "parameters": {"sensorType": "touch", "triggerAction": "speak"}},
+        {"action": "nao_speak", "parameters": {"text": "Thank you! Let's continue."}}
+      ]
+    }
+  ],
+  "createdAt": "2024-12-16T00:00:00Z",
+  "updatedAt": "2024-12-16T00:00:00Z"
+}

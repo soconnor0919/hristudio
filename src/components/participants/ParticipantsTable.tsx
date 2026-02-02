@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Copy, Eye, Edit, Mail, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -27,6 +27,7 @@ import { api } from "~/trpc/react";
 
 export type Participant = {
   id: string;
+  studyId: string;
   participantCode: string;
   email: string | null;
   name: string | null;
@@ -75,7 +76,7 @@ export const columns: ColumnDef<Participant>[] = [
     cell: ({ row }) => (
       <div className="font-mono text-sm">
         <Link
-          href={`/participants/${row.original.id}`}
+          href={`/studies/${row.original.studyId ?? ""}/participants/${row.original.id}`}
           className="hover:underline"
         >
           {row.getValue("participantCode")}
@@ -176,6 +177,13 @@ export const columns: ColumnDef<Participant>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const participant = row.original;
+      // Use studyId from participant or fallback might be needed but for now presume row has it?
+      // Wait, the Participant type definition above doesn't have studyId!
+      // I need to add studyId to the type definition in this file or rely on context if I'm inside the component,
+      // but 'columns' is defined outside.
+      // Best practice: Add studyId to the Participant type.
+
+      const studyId = participant.studyId;
 
       return (
         <DropdownMenu>
@@ -190,26 +198,27 @@ export const columns: ColumnDef<Participant>[] = [
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(participant.id)}
             >
-              Copy participant ID
+              <Copy className="mr-2 h-4 w-4" />
+              Copy ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/participants/${participant.id}`}>View details</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/participants/${participant.id}/edit`}>
+              <Link href={`/studies/${studyId}/participants/${participant.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
                 Edit participant
-              </Link>
+              </Link >
+            </DropdownMenuItem >
+            <DropdownMenuItem disabled>
+              <Mail className="mr-2 h-4 w-4" />
+              Send consent
             </DropdownMenuItem>
-            {!participant.consentGiven && (
-              <DropdownMenuItem>Send consent form</DropdownMenuItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600">
-              Remove participant
+              <Trash2 className="mr-2 h-4 w-4" />
+              Remove
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenuContent >
+        </DropdownMenu >
       );
     },
   },
@@ -250,6 +259,7 @@ export function ParticipantsTable({ studyId }: ParticipantsTableProps = {}) {
     return participantsData.participants.map(
       (p): Participant => ({
         id: p.id,
+        studyId: p.studyId,
         participantCode: p.participantCode,
         email: p.email,
         name: p.name,

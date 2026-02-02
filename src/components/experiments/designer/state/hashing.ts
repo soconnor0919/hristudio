@@ -130,7 +130,7 @@ export interface DesignHashOptions {
 }
 
 const DEFAULT_OPTIONS: Required<DesignHashOptions> = {
-  includeParameterValues: false,
+  includeParameterValues: true, // Changed to true so parameter changes trigger hash updates
   includeActionNames: true,
   includeStepNames: true,
 };
@@ -155,8 +155,9 @@ function projectActionForDesign(
       pluginVersion: action.source.pluginVersion,
       baseActionId: action.source.baseActionId,
     },
-    execution: projectExecutionDescriptor(action.execution),
+    execution: action.execution ? projectExecutionDescriptor(action.execution) : null,
     parameterKeysOrValues: parameterProjection,
+    children: action.children?.map(c => projectActionForDesign(c, options)) ?? [],
   };
 
   if (options.includeActionNames) {
@@ -175,16 +176,16 @@ function projectExecutionDescriptor(
     timeoutMs: exec.timeoutMs ?? null,
     ros2: exec.ros2
       ? {
-          topic: exec.ros2.topic ?? null,
-          service: exec.ros2.service ?? null,
-          action: exec.ros2.action ?? null,
-        }
+        topic: exec.ros2.topic ?? null,
+        service: exec.ros2.service ?? null,
+        action: exec.ros2.action ?? null,
+      }
       : null,
     rest: exec.rest
       ? {
-          method: exec.rest.method,
-          path: exec.rest.path,
-        }
+        method: exec.rest.method,
+        path: exec.rest.path,
+      }
       : null,
   };
 }
@@ -244,10 +245,10 @@ export async function computeActionSignature(
     baseActionId: def.baseActionId ?? null,
     execution: def.execution
       ? {
-          transport: def.execution.transport,
-          retryable: def.execution.retryable ?? false,
-          timeoutMs: def.execution.timeoutMs ?? null,
-        }
+        transport: def.execution.transport,
+        retryable: def.execution.retryable ?? false,
+        timeoutMs: def.execution.timeoutMs ?? null,
+      }
       : null,
     schema: def.parameterSchemaRaw ? canonicalize(def.parameterSchemaRaw) : null,
   };
@@ -301,7 +302,12 @@ export async function computeIncrementalDesignHash(
   // First compute per-action hashes
   for (const step of steps) {
     for (const action of step.actions) {
-      const existing = previous?.actionHashes.get(action.id);
+      // Only reuse cached hash if we're NOT including parameter values
+      // (because parameter values can change without changing the action ID)
+      const existing = !options.includeParameterValues
+        ? previous?.actionHashes.get(action.id)
+        : undefined;
+
       if (existing) {
         // Simple heuristic: if shallow structural keys unchanged, reuse
         // (We still project to confirm minimal structure; deeper diff omitted for performance.)
@@ -316,7 +322,12 @@ export async function computeIncrementalDesignHash(
 
   // Then compute step hashes (including ordered list of action hashes)
   for (const step of steps) {
-    const existing = previous?.stepHashes.get(step.id);
+    // Only reuse cached hash if we're NOT including parameter values
+    // (because parameter values in actions can change without changing the step ID)
+    const existing = !options.includeParameterValues
+      ? previous?.stepHashes.get(step.id)
+      : undefined;
+
     if (existing) {
       stepHashes.set(step.id, existing);
       continue;

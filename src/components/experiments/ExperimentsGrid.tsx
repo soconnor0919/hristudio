@@ -78,7 +78,7 @@ function ExperimentCard({ experiment }: ExperimentCardProps) {
           <div className="min-w-0 flex-1">
             <CardTitle className="truncate text-lg font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
               <Link
-                href={`/experiments/${experiment.id}`}
+                href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}
                 className="hover:underline"
               >
                 {experiment.name}
@@ -158,10 +158,10 @@ function ExperimentCard({ experiment }: ExperimentCardProps) {
         {/* Actions */}
         <div className="flex gap-2 pt-2">
           <Button asChild size="sm" className="flex-1">
-            <Link href={`/experiments/${experiment.id}`}>View Details</Link>
+            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>View Details</Link>
           </Button>
           <Button asChild size="sm" variant="outline" className="flex-1">
-            <Link href={`/experiments/${experiment.id}/designer`}>
+            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
               <Settings className="mr-1 h-3 w-3" />
               Design
             </Link>

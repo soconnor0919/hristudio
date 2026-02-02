@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Logo } from "~/components/ui/logo";
 import { api } from "~/trpc/react";
 
 export default function SignUpPage() {
@@ -55,30 +56,35 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-      <div className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl opacity-30 dark:opacity-20" />
+      <div className="absolute bottom-0 left-0 -z-10 h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-3xl" />
+
+      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
         {/* Header */}
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-slate-900">HRIStudio</h1>
+          <Link href="/" className="inline-flex items-center justify-center transition-opacity hover:opacity-80">
+            <Logo iconSize="lg" showText={false} />
           </Link>
-          <p className="mt-2 text-slate-600">
-            Create your research account
+          <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">Create an account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Start your journey in HRI research
           </p>
         </div>
 
         {/* Sign Up Card */}
-        <Card>
+        <Card className="border-muted/40 bg-card/50 backdrop-blur-sm shadow-xl">
           <CardHeader>
-            <CardTitle>Get started</CardTitle>
+            <CardTitle>Sign Up</CardTitle>
             <CardDescription>
-              Create your account to begin your HRI research
+              Enter your details to create your research account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
                   {error}
                 </div>
               )}
@@ -88,11 +94,12 @@ export default function SignUpPage() {
                 <Input
                   id="name"
                   type="text"
-                  placeholder="Your full name"
+                  placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={createUser.isPending}
+                  className="bg-background/50"
                 />
               </div>
 
@@ -101,67 +108,73 @@ export default function SignUpPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your.email@example.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={createUser.isPending}
+                  className="bg-background/50"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={createUser.isPending}
-                  minLength={6}
-                />
-              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="******"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={createUser.isPending}
+                    minLength={6}
+                    className="bg-background/50"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={createUser.isPending}
-                  minLength={6}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="******"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={createUser.isPending}
+                    minLength={6}
+                    className="bg-background/50"
+                  />
+                </div>
               </div>
 
               <Button
                 type="submit"
                 className="w-full"
                 disabled={createUser.isPending}
+                size="lg"
               >
                 {createUser.isPending ? "Creating account..." : "Create Account"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-slate-600">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link
                 href="/auth/signin"
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="font-medium text-primary hover:text-primary/80"
               >
-                Sign in here
+                Sign in
               </Link>
             </div>
           </CardContent>
         </Card>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-slate-500">
+        <div className="mt-8 text-center text-xs text-muted-foreground">
           <p>
-            © 2024 HRIStudio. A platform for Human-Robot Interaction research.
+            &copy; {new Date().getFullYear()} HRIStudio. All rights reserved.
           </p>
         </div>
       </div>

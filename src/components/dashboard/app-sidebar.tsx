@@ -143,9 +143,9 @@ export function AppSidebar({
   // Build study work items with proper URLs when study is selected
   const studyWorkItemsWithUrls = selectedStudyId
     ? studyWorkItems.map((item) => ({
-        ...item,
-        url: `/studies/${selectedStudyId}${item.url}`,
-      }))
+      ...item,
+      url: `/studies/${selectedStudyId}${item.url}`,
+    }))
     : [];
 
   const handleSignOut = async () => {
@@ -232,6 +232,22 @@ export function AppSidebar({
 
   // Show debug info in development
   const showDebug = process.env.NODE_ENV === "development";
+
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Sidebar collapsible="icon" variant="sidebar" {...props}>
+        <SidebarHeader />
+        <SidebarContent />
+        <SidebarFooter />
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
