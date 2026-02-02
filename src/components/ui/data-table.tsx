@@ -211,7 +211,7 @@ export function DataTable<TData, TValue>({
           </DropdownMenu>
         </div>
       </div>
-      <div className="min-w-0 overflow-hidden rounded-md border">
+      <div className="min-w-0 overflow-hidden rounded-md border shadow-sm bg-card">
         <div className="min-w-0 overflow-x-auto overflow-y-hidden">
           <Table className="min-w-[600px]">
             <TableHeader>

@@ -43,7 +43,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
         {/* Profile Information */}
         <div className="space-y-6 lg:col-span-2">
           {/* Basic Information */}
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
               <CardDescription>
@@ -63,7 +63,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
           </Card>
 
           {/* Password Change */}
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader>
               <CardTitle>Password</CardTitle>
               <CardDescription>Change your account password</CardDescription>
@@ -116,7 +116,7 @@ function ProfileContent({ user }: { user: ProfileUser }) {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* User Summary */}
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader>
               <CardTitle>Account Summary</CardTitle>
             </CardHeader>

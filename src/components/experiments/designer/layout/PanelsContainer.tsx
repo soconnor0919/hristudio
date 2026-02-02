@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { cn } from "~/lib/utils";
-
+import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
+import { Button } from "~/components/ui/button";
+import { PanelLeft, Settings2 } from "lucide-react";
 type Edge = "left" | "right";
 
 export interface PanelsContainerProps {
@@ -261,81 +263,128 @@ export function PanelsContainer({
 
 
   return (
-    <div
-      ref={rootRef}
-      aria-label={ariaLabel}
-      style={styleVars}
-      className={cn(
-        "relative grid h-full min-h-0 w-full overflow-hidden select-none",
-        gridCols,
-        className,
-      )}
-    >
-      {hasLeft && (
-        <Panel
-          panelClassName={panelClassName}
-          contentClassName={contentClassName}
-        >
-          {left}
-        </Panel>
-      )}
+    <>
+      {/* Mobile Layout (Flex + Sheets) */}
+      <div className={cn("flex flex-col h-full w-full md:hidden", className)}>
+        {/* Mobile Header/Toolbar for access to panels */}
+        <div className="flex items-center justify-between border-b px-4 py-2 bg-background">
+          <div className="flex items-center gap-2">
+            {hasLeft && (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-8 w-8">
+                    <PanelLeft className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[85vw] p-0 sm:max-w-md">
+                  <div className="h-full overflow-hidden">
+                    {left}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+            <span className="text-sm font-medium">Designer</span>
+          </div>
 
-      {hasCenter && (
-        <Panel
-          className={centerDividers}
-          panelClassName={panelClassName}
-          contentClassName={contentClassName}
-        >
+          {hasRight && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] p-0 sm:max-w-md">
+                <div className="h-full overflow-hidden">
+                  {right}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+        </div>
+
+        {/* Main Content (Center) */}
+        <div className="flex-1 min-h-0 overflow-hidden relative">
           {center}
-        </Panel>
-      )}
+        </div>
+      </div>
 
-      {hasRight && (
-        <Panel
-          panelClassName={panelClassName}
-          contentClassName={contentClassName}
-        >
-          {right}
-        </Panel>
-      )}
+      {/* Desktop Layout (Grid) */}
+      <div
+        ref={rootRef}
+        aria-label={ariaLabel}
+        style={styleVars}
+        className={cn(
+          "relative hidden md:grid h-full min-h-0 w-full overflow-hidden select-none",
+          gridCols,
+          className,
+        )}
+      >
+        {hasLeft && (
+          <Panel
+            panelClassName={panelClassName}
+            contentClassName={contentClassName}
+          >
+            {left}
+          </Panel>
+        )}
 
-      {/* Resize handles (only render where applicable) */}
-      {hasCenter && hasLeft && (
-        <button
-          type="button"
-          role="separator"
-          aria-label="Resize left panel"
-          aria-orientation="vertical"
-          onPointerDown={startDrag("left")}
-          onKeyDown={onKeyResize("left")}
-          className={cn(
-            "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
-            "focus-visible:ring-ring focus-visible:ring-2",
-          )}
-          // Position at the boundary between left and center
-          style={{ left: "var(--col-left)", transform: "translateX(-0.5px)" }}
-          tabIndex={0}
-        />
-      )}
+        {hasCenter && (
+          <Panel
+            className={centerDividers}
+            panelClassName={panelClassName}
+            contentClassName={contentClassName}
+          >
+            {center}
+          </Panel>
+        )}
 
-      {hasCenter && hasRight && (
-        <button
-          type="button"
-          role="separator"
-          aria-label="Resize right panel"
-          aria-orientation="vertical"
-          onPointerDown={startDrag("right")}
-          onKeyDown={onKeyResize("right")}
-          className={cn(
-            "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
-            "focus-visible:ring-ring focus-visible:ring-2",
-          )}
-          // Position at the boundary between center and right (offset from the right)
-          style={{ right: "var(--col-right)", transform: "translateX(0.5px)" }}
-          tabIndex={0}
-        />
-      )}
-    </div>
+        {hasRight && (
+          <Panel
+            panelClassName={panelClassName}
+            contentClassName={contentClassName}
+          >
+            {right}
+          </Panel>
+        )}
+
+        {/* Resize handles (only render where applicable) */}
+        {hasCenter && hasLeft && (
+          <button
+            type="button"
+            role="separator"
+            aria-label="Resize left panel"
+            aria-orientation="vertical"
+            onPointerDown={startDrag("left")}
+            onKeyDown={onKeyResize("left")}
+            className={cn(
+              "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
+              "focus-visible:ring-ring focus-visible:ring-2",
+            )}
+            // Position at the boundary between left and center
+            style={{ left: "var(--col-left)", transform: "translateX(-0.5px)" }}
+            tabIndex={0}
+          />
+        )}
+
+        {hasCenter && hasRight && (
+          <button
+            type="button"
+            role="separator"
+            aria-label="Resize right panel"
+            aria-orientation="vertical"
+            onPointerDown={startDrag("right")}
+            onKeyDown={onKeyResize("right")}
+            className={cn(
+              "absolute inset-y-0 z-10 w-1 cursor-col-resize outline-none",
+              "focus-visible:ring-ring focus-visible:ring-2",
+            )}
+            // Position at the boundary between center and right (offset from the right)
+            style={{ right: "var(--col-right)", transform: "translateX(0.5px)" }}
+            tabIndex={0}
+          />
+        )}
+      </div>
+    </>
   );
 }
 

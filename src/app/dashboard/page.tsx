@@ -185,7 +185,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {scheduledTrials.map((trial) => (
-                    <div key={trial.id} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                    <div key={trial.id} className="flex items-center justify-between rounded-lg border p-3 bg-muted/10 hover:bg-muted/50 hover:shadow-sm transition-all duration-200">
                       <div className="flex items-center gap-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
                           <Calendar className="h-5 w-5" />
@@ -302,7 +302,7 @@ function StatsCard({
   trend?: string;
 }) {
   return (
-    <Card className="border-muted/40 shadow-sm">
+    <Card className="border-muted/40 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />

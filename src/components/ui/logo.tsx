@@ -20,7 +20,7 @@ export function Logo({
 }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square items-center justify-center rounded-lg p-1">
+      <div className="bg-primary text-primary-foreground flex aspect-square items-center justify-center rounded-lg p-1">
         <Bot className={iconSizes[iconSize]} />
       </div>
       {showText && (
