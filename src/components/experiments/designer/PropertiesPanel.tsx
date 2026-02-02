@@ -232,9 +232,9 @@ export function PropertiesPanelBase({
             </Badge>
             {/* internal plugin identifiers hidden from UI */}
             <Badge variant="outline" className="h-4 text-[10px]">
-              {selectedAction.execution.transport}
+              {selectedAction.execution?.transport}
             </Badge>
-            {selectedAction.execution.retryable && (
+            {selectedAction.execution?.retryable && (
               <Badge variant="outline" className="h-4 text-[10px]">
                 retryable
               </Badge>
@@ -473,7 +473,7 @@ const ParameterEditor = React.memo(function ParameterEditor({
 }: ParameterEditorProps) {
   // Local state for immediate feedback
   const [localValue, setLocalValue] = useState<unknown>(rawValue);
-  const debounceRef = useRef<NodeJS.Timeout | undefined>();
+  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Sync from prop if it changes externally
   useEffect(() => {

@@ -505,7 +505,7 @@ export function ParticipantForm({
       error={error}
       onDelete={mode === "edit" ? onDelete : undefined}
       isDeleting={isDeleting}
-      isDeleting={isDeleting}
+
       // sidebar={sidebar} // Removed for cleaner UI per user request
       submitText={mode === "create" ? "Register Participant" : "Save Changes"}
     >

@@ -47,10 +47,13 @@ async function verify() {
     // Verify Step Names
     const expectedSteps = ["The Hook", "The Narrative - Part 1", "Comprehension Check", "Positive Feedback", "Conclusion"];
     for (let i = 0; i < expectedSteps.length; i++) {
-        if (steps[i].name !== expectedSteps[i]) {
-            console.error(`❌ Step mismatch at index ${i}. Expected '${expectedSteps[i]}', got '${steps[i].name}'`);
+        const step = steps[i];
+        if (!step) continue;
+
+        if (step.name !== expectedSteps[i]) {
+            console.error(`❌ Step mismatch at index ${i}. Expected '${expectedSteps[i]}', got '${step.name}'`);
         } else {
-            console.log(`✅ Step ${i + 1}: ${steps[i].name}`);
+            console.log(`✅ Step ${i + 1}: ${step.name}`);
         }
     }
 

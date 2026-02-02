@@ -318,20 +318,11 @@ export class ActionRegistry {
             headers?: Record<string, string>;
           };
         }>;
+        metadata?: Record<string, any>;
       };
     }>,
   ): void {
-    console.log("ActionRegistry.loadPluginActions called with:", {
-      studyId,
-      pluginCount: studyPlugins?.length ?? 0,
-      plugins: studyPlugins?.map((sp) => ({
-        id: sp.plugin.id,
-        actionCount: Array.isArray(sp.plugin.actionDefinitions)
-          ? sp.plugin.actionDefinitions.length
-          : 0,
-        hasActionDefs: !!sp.plugin.actionDefinitions,
-      })),
-    });
+    // console.log("ActionRegistry.loadPluginActions called with:", { studyId, pluginCount: studyPlugins?.length ?? 0 });
 
     if (this.pluginActionsLoaded && this.loadedStudyId === studyId) return;
 
@@ -347,11 +338,7 @@ export class ActionRegistry {
         ? plugin.actionDefinitions
         : undefined;
 
-      console.log(`Plugin ${plugin.id}:`, {
-        actionDefinitions: plugin.actionDefinitions,
-        isArray: Array.isArray(plugin.actionDefinitions),
-        actionCount: actionDefs?.length ?? 0,
-      });
+      // console.log(`Plugin ${plugin.id}:`, { actionCount: actionDefs?.length ?? 0 });
 
       if (!actionDefs) return;
 
@@ -399,9 +386,13 @@ export class ActionRegistry {
               retryable: action.retryable,
             };
 
+        // Extract semantic ID from metadata if available, otherwise fall back to database IDs (which typically causes mismatch if seed uses semantic)
+        // Ideally, plugin.metadata.robotId should populate this.
+        const semanticRobotId = plugin.metadata?.robotId || plugin.robotId || plugin.id;
+
         const actionDef: ActionDefinition = {
-          id: `${plugin.robotId ?? plugin.id}.${action.id}`,
-          type: `${plugin.robotId ?? plugin.id}.${action.id}`,
+          id: `${semanticRobotId}.${action.id}`,
+          type: `${semanticRobotId}.${action.id}`,
           name: action.name,
           description: action.description ?? "",
           category,
@@ -412,7 +403,7 @@ export class ActionRegistry {
           ),
           source: {
             kind: "plugin",
-            pluginId: plugin.robotId ?? plugin.id,
+            pluginId: semanticRobotId, // Use semantic ID here too
             robotId: plugin.robotId,
             pluginVersion: plugin.version ?? undefined,
             baseActionId: action.id,
@@ -439,15 +430,8 @@ export class ActionRegistry {
     console.log(
       `ActionRegistry: Loaded ${totalActionsLoaded} plugin actions for study ${studyId}`,
     );
-    console.log("Current action registry state:", {
-      totalActions: this.actions.size,
-      actionsByCategory: {
-        wizard: this.getActionsByCategory("wizard").length,
-        robot: this.getActionsByCategory("robot").length,
-        control: this.getActionsByCategory("control").length,
-        observation: this.getActionsByCategory("observation").length,
-      },
-    });
+    // console.log("Current action registry state:", { totalActions: this.actions.size });
+
 
     this.pluginActionsLoaded = true;
     this.loadedStudyId = studyId;

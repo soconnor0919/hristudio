@@ -114,8 +114,8 @@ export function PlaybackPlayer({ src }: PlaybackPlayerProps) {
                                 step={0.1}
                                 onValueChange={([val]) => {
                                     if (videoRef.current) {
-                                        videoRef.current.currentTime = val;
-                                        setCurrentTime(val);
+                                        videoRef.current.currentTime = val ?? 0;
+                                        setCurrentTime(val ?? 0);
                                     }
                                 }}
                                 className="cursor-pointer"

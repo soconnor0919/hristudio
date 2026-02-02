@@ -255,10 +255,10 @@ export function RobotActionsPanel({
           // Look for ROS2 configuration in the action definition
           const actionConfig = (actionDef as any).ros2
             ? {
-                topic: (actionDef as any).ros2.topic,
-                messageType: (actionDef as any).ros2.messageType,
-                payloadMapping: (actionDef as any).ros2.payloadMapping,
-              }
+              topic: (actionDef as any).ros2.topic,
+              messageType: (actionDef as any).ros2.messageType,
+              payloadMapping: (actionDef as any).ros2.payloadMapping,
+            }
             : undefined;
 
           await executeRosAction(
@@ -635,7 +635,7 @@ export function RobotActionsPanel({
           <CardContent className="space-y-4">
             {/* Parameters */}
             {selectedAction.parameters &&
-            selectedAction.parameters.length > 0 ? (
+              selectedAction.parameters.length > 0 ? (
               <div className="space-y-4">
                 <Label className="text-base">Parameters</Label>
                 {selectedAction.parameters.map((param, index) =>
@@ -662,9 +662,9 @@ export function RobotActionsPanel({
               className="w-full"
             >
               {selectedPluginData &&
-              executingActions.has(
-                `${selectedPluginData.plugin.name}.${selectedAction.id}`,
-              ) ? (
+                executingActions.has(
+                  `${selectedPluginData.plugin.name}.${selectedAction.id}`,
+                ) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Executing...
@@ -900,50 +900,50 @@ export function RobotActionsPanel({
               {selectedPluginData &&
                 Object.entries(
                   groupActionsByCategory(
-                    (selectedPluginData.plugin
+                    (selectedPluginData?.plugin
                       .actionDefinitions as RobotAction[]) ?? [],
                   ),
                 ).map(([category, actions]) => {
-                const CategoryIcon = getCategoryIcon(category);
-                const isExpanded = expandedCategories.has(category);
+                  const CategoryIcon = getCategoryIcon(category);
+                  const isExpanded = expandedCategories.has(category);
 
-                return (
-                  <Collapsible
-                    key={category}
-                    open={isExpanded}
-                    onOpenChange={() => toggleCategory(category)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start p-2"
-                      >
-                        <CategoryIcon className="mr-2 h-4 w-4" />
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                        <Badge variant="secondary" className="ml-auto">
-                          {actions.length}
-                        </Badge>
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="ml-6 space-y-1">
-                      {actions.map((action) => (
+                  return (
+                    <Collapsible
+                      key={category}
+                      open={isExpanded}
+                      onOpenChange={() => toggleCategory(category)}
+                    >
+                      <CollapsibleTrigger asChild>
                         <Button
-                          key={action.id}
-                          variant={
-                            selectedAction?.id === action.id
-                              ? "default"
-                              : "ghost"
-                          }
-                          className="w-full justify-start text-sm"
-                          onClick={() => setSelectedAction(action)}
+                          variant="ghost"
+                          className="w-full justify-start p-2"
                         >
-                          {action.name}
+                          <CategoryIcon className="mr-2 h-4 w-4" />
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                          <Badge variant="secondary" className="ml-auto">
+                            {actions.length}
+                          </Badge>
                         </Button>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="ml-6 space-y-1">
+                        {actions.map((action) => (
+                          <Button
+                            key={action.id}
+                            variant={
+                              selectedAction?.id === action.id
+                                ? "default"
+                                : "ghost"
+                            }
+                            className="w-full justify-start text-sm"
+                            onClick={() => setSelectedAction(action)}
+                          >
+                            {action.name}
+                          </Button>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })}
             </div>
           </ScrollArea>
         </div>
@@ -962,7 +962,7 @@ export function RobotActionsPanel({
           <CardContent className="space-y-4">
             {/* Parameters */}
             {selectedAction?.parameters &&
-            (selectedAction.parameters?.length ?? 0) > 0 ? (
+              (selectedAction?.parameters?.length ?? 0) > 0 ? (
               <div className="space-y-4">
                 <Label className="text-base">Parameters</Label>
                 {selectedAction?.parameters?.map((param, index) =>
@@ -990,10 +990,10 @@ export function RobotActionsPanel({
               className="w-full"
             >
               {selectedPluginData &&
-              selectedAction &&
-              executingActions.has(
-                `${selectedPluginData?.plugin.name}.${selectedAction?.id}`,
-              ) ? (
+                selectedAction &&
+                executingActions.has(
+                  `${selectedPluginData?.plugin.name}.${selectedAction?.id}`,
+                ) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Executing...

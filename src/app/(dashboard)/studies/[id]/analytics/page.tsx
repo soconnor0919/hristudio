@@ -260,7 +260,6 @@ export default function StudyAnalyticsPage() {
             setSelectedTrialId={setSelectedTrialId}
             trialsList={trialsList ?? []}
             isLoadingList={isLoadingList}
-            studyId={studyId}
           />
         </Suspense>
       </div>

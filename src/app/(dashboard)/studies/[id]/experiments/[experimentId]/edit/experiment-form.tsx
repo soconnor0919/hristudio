@@ -26,21 +26,17 @@ import {
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
-import { type Experiment } from "~/lib/experiments/types";
+import { type experiments, experimentStatusEnum } from "~/server/db/schema";
+import { type InferSelectModel } from "drizzle-orm";
+
+type Experiment = InferSelectModel<typeof experiments>;
 
 const formSchema = z.object({
     name: z.string().min(2, {
         message: "Name must be at least 2 characters.",
     }),
     description: z.string().optional(),
-    status: z.enum([
-        "draft",
-        "ready",
-        "data_collection",
-        "analysis",
-        "completed",
-        "archived",
-    ]),
+    status: z.enum(experimentStatusEnum.enumValues),
 });
 
 interface ExperimentFormProps {
@@ -133,11 +129,9 @@ export function ExperimentForm({ experiment }: ExperimentFormProps) {
                                 </FormControl>
                                 <SelectContent>
                                     <SelectItem value="draft">Draft</SelectItem>
+                                    <SelectItem value="testing">Testing</SelectItem>
                                     <SelectItem value="ready">Ready</SelectItem>
-                                    <SelectItem value="data_collection">Data Collection</SelectItem>
-                                    <SelectItem value="analysis">Analysis</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="archived">Archived</SelectItem>
+                                    <SelectItem value="deprecated">Deprecated</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormDescription>

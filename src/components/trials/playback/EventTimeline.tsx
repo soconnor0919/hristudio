@@ -188,7 +188,7 @@ export function EventTimeline() {
                                     <div className="text-[10px] font-mono opacity-70 mb-1">
                                         {new Date(event.timestamp).toLocaleTimeString()}
                                     </div>
-                                    {event.data && (
+                                    {!!event.data && (
                                         <div className="bg-muted/50 p-1 rounded font-mono text-[9px] max-w-[200px] break-all">
                                             {JSON.stringify(event.data as object).slice(0, 100)}
                                         </div>

@@ -267,7 +267,7 @@ export function parseVisualDesignSteps(raw: unknown): {
       if (!act.source.kind) {
         issues.push(`Action "${act.id}" missing source.kind`);
       }
-      if (!act.execution.transport) {
+      if (!act.execution?.transport) {
         issues.push(`Action "${act.id}" missing execution transport`);
       }
     }

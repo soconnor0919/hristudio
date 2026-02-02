@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { type Experiment } from "~/lib/experiments/types";
+import { type experiments } from "~/server/db/schema";
+import { type InferSelectModel } from "drizzle-orm";
+
+type Experiment = InferSelectModel<typeof experiments>;
 import { api } from "~/trpc/server";
 import { ExperimentForm } from "./experiment-form";
 import {
@@ -43,14 +46,6 @@ export default async function ExperimentEditPage({
                 title="Edit Experiment"
                 subtitle={`Update settings for ${experiment.name}`}
                 icon="Edit"
-                backButton={
-                    <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-                        <Link href={`/studies/${studyId}/experiments/${experimentId}`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Experiment
-                        </Link>
-                    </Button>
-                }
             />
 
             <div className="max-w-2xl">

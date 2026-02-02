@@ -471,6 +471,7 @@ export const robotsRouter = createTRPCRouter({
               actionDefinitions: plugins.actionDefinitions,
               createdAt: plugins.createdAt,
               updatedAt: plugins.updatedAt,
+              metadata: plugins.metadata,
             },
             installation: {
               id: studyPlugins.id,

@@ -39,11 +39,10 @@ export default async function ParticipantDetailPage({
                 title={participant.participantCode}
                 subtitle={participant.name ?? "Unnamed Participant"}
                 icon="Users"
-                badge={
-                    <Badge variant={participant.consentGiven ? "default" : "secondary"}>
-                        {participant.consentGiven ? "Consent Given" : "No Consent"}
-                    </Badge>
-                }
+                status={{
+                    label: participant.consentGiven ? "Consent Given" : "No Consent",
+                    variant: participant.consentGiven ? "default" : "secondary"
+                }}
                 actions={
                     <Button asChild variant="outline" size="sm">
                         <Link href={`/studies/${studyId}/participants/${participantId}/edit`}>

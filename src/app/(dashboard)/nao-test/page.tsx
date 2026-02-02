@@ -161,7 +161,7 @@ export default function NaoTestPage() {
       data.topic?.includes("touch") ||
       data.topic?.includes("sonar")
     ) {
-      setSensorData((prev) => ({
+      setSensorData((prev: any) => ({
         ...prev,
         [data.topic]: data.msg,
       }));
@@ -196,14 +196,14 @@ export default function NaoTestPage() {
 
   const walkForward = () => {
     publishMessage("/cmd_vel", "geometry_msgs/Twist", {
-      linear: { x: walkSpeed[0], y: 0, z: 0 },
+      linear: { x: walkSpeed[0] ?? 0, y: 0, z: 0 },
       angular: { x: 0, y: 0, z: 0 },
     });
   };
 
   const walkBackward = () => {
     publishMessage("/cmd_vel", "geometry_msgs/Twist", {
-      linear: { x: -walkSpeed[0], y: 0, z: 0 },
+      linear: { x: -(walkSpeed[0] ?? 0), y: 0, z: 0 },
       angular: { x: 0, y: 0, z: 0 },
     });
   };
@@ -211,14 +211,14 @@ export default function NaoTestPage() {
   const turnLeft = () => {
     publishMessage("/cmd_vel", "geometry_msgs/Twist", {
       linear: { x: 0, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: turnSpeed[0] },
+      angular: { x: 0, y: 0, z: turnSpeed[0] ?? 0 },
     });
   };
 
   const turnRight = () => {
     publishMessage("/cmd_vel", "geometry_msgs/Twist", {
       linear: { x: 0, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: -turnSpeed[0] },
+      angular: { x: 0, y: 0, z: -(turnSpeed[0] ?? 0) },
     });
   };
 
@@ -232,7 +232,7 @@ export default function NaoTestPage() {
   const moveHead = () => {
     publishMessage("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
       joint_names: ["HeadYaw", "HeadPitch"],
-      joint_angles: [headYaw[0], headPitch[0]],
+      joint_angles: [headYaw[0] ?? 0, headPitch[0] ?? 0],
       speed: 0.3,
     });
   };
@@ -365,7 +365,7 @@ export default function NaoTestPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Walk Speed: {walkSpeed[0].toFixed(2)} m/s</Label>
+                      <Label>Walk Speed: {(walkSpeed[0] ?? 0).toFixed(2)} m/s</Label>
                       <Slider
                         value={walkSpeed}
                         onValueChange={setWalkSpeed}
@@ -375,7 +375,7 @@ export default function NaoTestPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Turn Speed: {turnSpeed[0].toFixed(2)} rad/s</Label>
+                      <Label>Turn Speed: {(turnSpeed[0] ?? 0).toFixed(2)} rad/s</Label>
                       <Slider
                         value={turnSpeed}
                         onValueChange={setTurnSpeed}
@@ -415,7 +415,7 @@ export default function NaoTestPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Head Yaw: {headYaw[0].toFixed(2)} rad</Label>
+                      <Label>Head Yaw: {(headYaw[0] ?? 0).toFixed(2)} rad</Label>
                       <Slider
                         value={headYaw}
                         onValueChange={setHeadYaw}
@@ -425,7 +425,7 @@ export default function NaoTestPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Head Pitch: {headPitch[0].toFixed(2)} rad</Label>
+                      <Label>Head Pitch: {(headPitch[0] ?? 0).toFixed(2)} rad</Label>
                       <Slider
                         value={headPitch}
                         onValueChange={setHeadPitch}

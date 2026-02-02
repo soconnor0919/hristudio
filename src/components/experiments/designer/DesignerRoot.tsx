@@ -180,6 +180,8 @@ export function DesignerRoot({
         robotId: sp.plugin.robotId ?? "",
         name: sp.plugin.name,
         version: sp.plugin.version,
+        actionDefinitions: sp.plugin.actionDefinitions as any[],
+        metadata: sp.plugin.metadata as Record<string, any>,
       })),
     [studyPluginsRaw],
   );
@@ -272,11 +274,11 @@ export function DesignerRoot({
     if (initialized) return;
     if (loadingExperiment && !initialDesign) return;
 
-    console.log('[DesignerRoot] 🚀 INITIALIZING', {
-      hasExperiment: !!experiment,
-      hasInitialDesign: !!initialDesign,
-      loadingExperiment,
-    });
+    // console.log('[DesignerRoot] 🚀 INITIALIZING', {
+    //   hasExperiment: !!experiment,
+    //   hasInitialDesign: !!initialDesign,
+    //   loadingExperiment,
+    // });
 
     const adapted =
       initialDesign ??
@@ -304,7 +306,7 @@ export function DesignerRoot({
     setInitialized(true);
     // NOTE: We don't call recomputeHash() here because the automatic
     // hash recomputation useEffect will trigger when setSteps() updates the steps array
-    console.log('[DesignerRoot] 🚀 Initialization complete, steps set');
+    // console.log('[DesignerRoot] 🚀 Initialization complete, steps set');
   }, [
     initialized,
     loadingExperiment,
@@ -346,7 +348,7 @@ export function DesignerRoot({
       // Small delay to ensure all components have rendered
       const timer = setTimeout(() => {
         setIsReady(true);
-        console.log('[DesignerRoot] ✅ Designer ready (plugins loaded), fading in');
+        // console.log('[DesignerRoot] ✅ Designer ready (plugins loaded), fading in');
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -357,19 +359,13 @@ export function DesignerRoot({
   useEffect(() => {
     if (!initialized) return;
 
-    console.log('[DesignerRoot] Steps changed, scheduling hash recomputation', {
-      stepsCount: steps.length,
-      actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
-    });
+    // console.log('[DesignerRoot] Steps changed, scheduling hash recomputation');
 
     const timeoutId = setTimeout(async () => {
-      console.log('[DesignerRoot] Executing debounced hash recomputation');
+      // console.log('[DesignerRoot] Executing debounced hash recomputation');
       const result = await recomputeHash();
       if (result) {
-        console.log('[DesignerRoot] Hash recomputed:', {
-          newHash: result.designHash.slice(0, 16),
-          fullHash: result.designHash,
-        });
+        // console.log('[DesignerRoot] Hash recomputed:', result.designHash.slice(0, 16));
       }
     }, 300); // Debounce 300ms
 
@@ -383,13 +379,12 @@ export function DesignerRoot({
 
   // Debug logging to track hash updates and save button state
   useEffect(() => {
-    console.log('[DesignerRoot] Hash State:', {
-      currentDesignHash: currentDesignHash?.slice(0, 10),
-      lastPersistedHash: lastPersistedHash?.slice(0, 10),
-      hasUnsavedChanges,
-      stepsCount: steps.length,
-    });
-  }, [currentDesignHash, lastPersistedHash, hasUnsavedChanges, steps.length]);
+    // console.log('[DesignerRoot] Hash State:', {
+    //   currentDesignHash: currentDesignHash?.slice(0, 10),
+    //   lastPersistedHash: lastPersistedHash?.slice(0, 10),
+    //   hasUnsavedChanges,
+    // });
+  }, [currentDesignHash, lastPersistedHash, hasUnsavedChanges]);
 
   /* ------------------------------- Step Ops -------------------------------- */
   const createNewStep = useCallback(() => {
@@ -426,13 +421,28 @@ export function DesignerRoot({
       });
       // Debug: log validation results for troubleshooting
 
-      console.debug("[DesignerRoot] validation", {
-        valid: result.valid,
-        errors: result.errorCount,
-        warnings: result.warningCount,
-        infos: result.infoCount,
-        issues: result.issues,
-      });
+      // Debug: Improved structured logging for validation results
+      console.group("🧪 Experiment Validation Results");
+      if (result.valid) {
+        console.log(`%c✓ VALID (0 errors, ${result.warningCount} warnings, ${result.infoCount} hints)`, "color: green; font-weight: bold; font-size: 12px;");
+      } else {
+        console.log(`%c✗ INVALID (${result.errorCount} errors, ${result.warningCount} warnings)`, "color: red; font-weight: bold; font-size: 12px;");
+      }
+
+      if (result.issues.length > 0) {
+        console.table(
+          result.issues.map(i => ({
+            Severity: i.severity.toUpperCase(),
+            Category: i.category,
+            Message: i.message,
+            Suggest: i.suggestion,
+            Location: i.actionId ? `Action ${i.actionId}` : (i.stepId ? `Step ${i.stepId}` : 'Global')
+          }))
+        );
+      } else {
+        console.log("No issues found. Design is perfectly compliant.");
+      }
+      console.groupEnd();
       // Persist issues to store for inspector rendering
       const grouped = groupIssuesByEntity(result.issues);
       clearAllValidationIssues();

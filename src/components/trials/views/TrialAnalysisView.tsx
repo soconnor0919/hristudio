@@ -156,7 +156,7 @@ export function TrialAnalysisView({ trial }: TrialAnalysisViewProps) {
                                                             {event.eventType.replace(/_/g, " ")}
                                                         </span>
                                                     </div>
-                                                    {event.data && (
+                                                    {!!event.data && (
                                                         <div className="text-[10px] text-muted-foreground bg-muted p-1.5 rounded border font-mono whitespace-pre-wrap break-all opacity-80 group-hover:opacity-100">
                                                             {JSON.stringify(event.data as object, null, 1).replace(/"/g, '').replace(/[{}]/g, '').trim()}
                                                         </div>

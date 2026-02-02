@@ -659,8 +659,8 @@ export function validateExecution(
   const robotActions = steps.flatMap((step) =>
     step.actions.filter(
       (action) =>
-        action.execution.transport === "ros2" ||
-        action.execution.transport === "rest",
+        action.execution?.transport === "ros2" ||
+        action.execution?.transport === "rest",
     ),
   );
 
