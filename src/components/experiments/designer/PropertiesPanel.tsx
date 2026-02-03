@@ -388,17 +388,18 @@ export function PropertiesPanelBase({
                   onValueChange={(val) => {
                     onStepUpdate(selectedStep.id, { type: val as StepType });
                   }}
+                  disabled={true}
                 >
                   <SelectTrigger className="mt-1 h-7 w-full text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="sequential">Sequential</SelectItem>
-                    <SelectItem value="parallel">Parallel</SelectItem>
-                    <SelectItem value="conditional">Conditional</SelectItem>
-                    <SelectItem value="loop">Loop</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-muted-foreground mt-1 text-[10px]">
+                  Steps always execute sequentially. Use control flow actions for parallel/conditional logic.
+                </p>
               </div>
               <div>
                 <Label className="text-xs">Trigger</Label>

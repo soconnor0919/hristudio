@@ -5,35 +5,17 @@ import {
   Save,
   RefreshCw,
   Download,
-  Hash,
   AlertTriangle,
   CheckCircle2,
-  UploadCloud,
-  Wand2,
-  Sparkles,
+  Hash,
   GitBranch,
-  Keyboard,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 import { useDesignerStore } from "../state/store";
-
-/**
- * BottomStatusBar
- *
- * Compact, persistent status + quick-action bar for the Experiment Designer.
- * Shows:
- *  - Validation / drift / unsaved state
- *  - Short design hash & version
- *  - Aggregate counts (steps / actions)
- *  - Last persisted hash (if available)
- *  - Quick actions (Save, Validate, Export, Command Palette)
- *
- * The bar is intentionally UI-only: callback props are used so that higher-level
- * orchestration (e.g. DesignerRoot / Shell) controls actual side effects.
- */
 
 export interface BottomStatusBarProps {
   onSave?: () => void;
@@ -45,9 +27,6 @@ export interface BottomStatusBarProps {
   saving?: boolean;
   validating?: boolean;
   exporting?: boolean;
-  /**
-   * Optional externally supplied last saved Date for relative display.
-   */
   lastSavedAt?: Date;
 }
 
@@ -55,24 +34,16 @@ export function BottomStatusBar({
   onSave,
   onValidate,
   onExport,
-  onOpenCommandPalette,
-  onRecalculateHash,
   className,
   saving,
   validating,
   exporting,
-  lastSavedAt,
 }: BottomStatusBarProps) {
-  /* ------------------------------------------------------------------------ */
-  /* Store Selectors                                                          */
-  /* ------------------------------------------------------------------------ */
   const steps = useDesignerStore((s) => s.steps);
   const lastPersistedHash = useDesignerStore((s) => s.lastPersistedHash);
   const currentDesignHash = useDesignerStore((s) => s.currentDesignHash);
   const lastValidatedHash = useDesignerStore((s) => s.lastValidatedHash);
   const pendingSave = useDesignerStore((s) => s.pendingSave);
-  const versionStrategy = useDesignerStore((s) => s.versionStrategy);
-  const autoSaveEnabled = useDesignerStore((s) => s.autoSaveEnabled);
 
   const actionCount = useMemo(
     () => steps.reduce((sum, st) => sum + st.actions.length, 0),
@@ -93,64 +64,28 @@ export function BottomStatusBar({
     return "valid";
   }, [currentDesignHash, lastValidatedHash]);
 
-  const shortHash = useMemo(
-    () => (currentDesignHash ? currentDesignHash.slice(0, 8) : "—"),
-    [currentDesignHash],
-  );
-
-  const lastPersistedShort = useMemo(
-    () => (lastPersistedHash ? lastPersistedHash.slice(0, 8) : null),
-    [lastPersistedHash],
-  );
-
-  /* ------------------------------------------------------------------------ */
-  /* Derived Display Helpers                                                  */
-  /* ------------------------------------------------------------------------ */
-  function formatRelative(date?: Date): string {
-    if (!date) return "—";
-    const now = Date.now();
-    const diffMs = now - date.getTime();
-    if (diffMs < 30_000) return "just now";
-    const mins = Math.floor(diffMs / 60_000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
-  }
-
-  const relSaved = formatRelative(lastSavedAt);
-
   const validationBadge = (() => {
     switch (validationStatus) {
       case "valid":
         return (
-          <Badge
-            variant="outline"
-            className="border-green-400 text-green-600 dark:text-green-400"
-            title="Validated (hash stable)"
-          >
-            <CheckCircle2 className="mr-1 h-3 w-3" />
-            <span className="hidden sm:inline">Validated</span>
-          </Badge>
+          <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Valid</span>
+          </div>
         );
       case "drift":
         return (
-          <Badge
-            variant="destructive"
-            className="border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
-            title="Drift since last validation"
-          >
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            <span className="hidden sm:inline">Drift</span>
-          </Badge>
+          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Modified</span>
+          </div>
         );
       default:
         return (
-          <Badge variant="outline" title="Not validated yet">
-            <Hash className="mr-1 h-3 w-3" />
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Hash className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Unvalidated</span>
-          </Badge>
+          </div>
         );
     }
   })();
@@ -159,190 +94,63 @@ export function BottomStatusBar({
     hasUnsaved && !pendingSave ? (
       <Badge
         variant="outline"
-        className="border-orange-300 text-orange-600 dark:text-orange-400"
-        title="Unsaved changes"
+        className="h-5 gap-1 border-orange-300 px-1.5 text-[10px] font-normal text-orange-600 dark:text-orange-400"
       >
-        <AlertTriangle className="mr-1 h-3 w-3" />
-        <span className="hidden sm:inline">Unsaved</span>
+        Unsaved
       </Badge>
     ) : null;
 
   const savingIndicator =
     pendingSave || saving ? (
-      <Badge
-        variant="secondary"
-        className="animate-pulse"
-        title="Saving changes"
-      >
-        <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
-        Saving…
-      </Badge>
+      <div className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
+        <RefreshCw className="h-3 w-3 animate-spin" />
+        <span>Saving...</span>
+      </div>
     ) : null;
-
-  /* ------------------------------------------------------------------------ */
-  /* Handlers                                                                  */
-  /* ------------------------------------------------------------------------ */
-  const handleSave = useCallback(() => {
-    if (onSave) onSave();
-  }, [onSave]);
-
-  const handleValidate = useCallback(() => {
-    if (onValidate) onValidate();
-  }, [onValidate]);
-
-  const handleExport = useCallback(() => {
-    if (onExport) onExport();
-  }, [onExport]);
-
-  const handlePalette = useCallback(() => {
-    if (onOpenCommandPalette) onOpenCommandPalette();
-  }, [onOpenCommandPalette]);
-
-  const handleRecalculateHash = useCallback(() => {
-    if (onRecalculateHash) onRecalculateHash();
-  }, [onRecalculateHash]);
-
-  /* ------------------------------------------------------------------------ */
-  /* Render                                                                    */
-  /* ------------------------------------------------------------------------ */
 
   return (
     <div
       className={cn(
         "border-border/60 bg-muted/40 supports-[backdrop-filter]:bg-muted/30 backdrop-blur",
-        "flex h-10 w-full flex-shrink-0 items-center gap-3 border-t px-3 text-xs",
-        "font-medium",
+        "flex h-9 w-full flex-shrink-0 items-center gap-4 border-t px-3 text-xs font-medium",
         className,
       )}
-      aria-label="Designer status bar"
     >
-      {/* Left Cluster: Validation & Hash */}
-      <div className="flex min-w-0 items-center gap-2">
+      {/* Status Indicators */}
+      <div className="flex items-center gap-3 min-w-0">
         {validationBadge}
         {unsavedBadge}
         {savingIndicator}
-        <Separator orientation="vertical" className="h-4" />
-        <div
-          className="flex items-center gap-1 font-mono text-[11px]"
-          title="Current design hash"
-        >
-          <Hash className="text-muted-foreground h-3 w-3" />
-          {shortHash}
-          {lastPersistedShort && lastPersistedShort !== shortHash && (
-            <span
-              className="text-muted-foreground/70"
-              title="Last persisted hash"
-            >
-              / {lastPersistedShort}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Middle Cluster: Aggregate Counts */}
-      <div className="text-muted-foreground flex min-w-0 items-center gap-3 truncate">
-        <div
-          className="flex items-center gap-1"
-          title="Steps in current design"
-        >
-          <GitBranch className="h-3 w-3" />
+      <Separator orientation="vertical" className="h-4 opacity-50" />
+
+      {/* Stats */}
+      <div className="text-muted-foreground flex items-center gap-3 truncate">
+        <span className="flex items-center gap-1.5">
+          <GitBranch className="h-3.5 w-3.5 opacity-70" />
           {steps.length}
-          <span className="hidden sm:inline"> steps</span>
-        </div>
-        <div
-          className="flex items-center gap-1"
-          title="Total actions across all steps"
-        >
-          <Sparkles className="h-3 w-3" />
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 opacity-70" />
           {actionCount}
-          <span className="hidden sm:inline"> actions</span>
-        </div>
-        <div
-          className="hidden items-center gap-1 sm:flex"
-          title="Auto-save setting"
-        >
-          <UploadCloud className="h-3 w-3" />
-          {autoSaveEnabled ? "auto-save on" : "auto-save off"}
-        </div>
-        <div
-          className="hidden items-center gap-1 font-mono text-[10px] sm:flex"
-          title={`Current design hash: ${currentDesignHash ?? 'Not computed'}`}
-        >
-          <Hash className="h-3 w-3" />
-          {currentDesignHash?.slice(0, 16) ?? '—'}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 px-1 ml-1"
-            onClick={handleRecalculateHash}
-            aria-label="Recalculate hash"
-            title="Recalculate hash"
-          >
-            <RefreshCw className="h-3 w-3" />
-          </Button>
-        </div>
-        <div
-          className="text-muted-foreground/80 hidden items-center gap-1 text-[10px] font-normal tracking-wide md:flex"
-          title="Relative time since last save"
-        >
-          Saved {relSaved}
-        </div>
+        </span>
       </div>
 
-      {/* Flexible Spacer */}
       <div className="flex-1" />
 
-      {/* Right Cluster: Quick Actions */}
+      {/* Actions */}
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2"
-          disabled={!hasUnsaved && !pendingSave}
-          onClick={handleSave}
-          aria-label="Save (s)"
-          title="Save (s)"
-        >
-          <Save className="mr-1 h-3 w-3" />
-          <span className="hidden sm:inline">Save</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2"
-          onClick={handleValidate}
-          disabled={validating}
-          aria-label="Validate (v)"
-          title="Validate (v)"
-        >
-          <RefreshCw
-            className={cn("mr-1 h-3 w-3", validating && "animate-spin")}
-          />
-          <span className="hidden sm:inline">Validate</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2"
-          onClick={handleExport}
+          className="h-7 px-2 text-xs"
+          onClick={onExport}
           disabled={exporting}
-          aria-label="Export (e)"
-          title="Export (e)"
+          title="Export JSON"
         >
-          <Download className="mr-1 h-3 w-3" />
-          <span className="hidden sm:inline">Export</span>
-        </Button>
-        <Separator orientation="vertical" className="mx-1 h-4" />
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2"
-          onClick={handlePalette}
-          aria-label="Command Palette (⌘K)"
-          title="Command Palette (⌘K)"
-        >
-          <Keyboard className="mr-1 h-3 w-3" />
-          <span className="hidden sm:inline">Commands</span>
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          Export
         </Button>
       </div>
     </div>

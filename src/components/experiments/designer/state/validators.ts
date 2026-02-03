@@ -49,11 +49,10 @@ export interface ValidationResult {
 /* Validation Rule Sets                                                       */
 /* -------------------------------------------------------------------------- */
 
+// Steps should ALWAYS execute sequentially
+// Parallel/conditional/loop execution happens at the ACTION level, not step level
 const VALID_STEP_TYPES: StepType[] = [
   "sequential",
-  "parallel",
-  "conditional",
-  "loop",
 ];
 const VALID_TRIGGER_TYPES: TriggerType[] = [
   "trial_start",
@@ -144,48 +143,8 @@ export function validateStructural(
       });
     }
 
-    // Conditional step must have conditions
-    if (step.type === "conditional") {
-      const conditionKeys = Object.keys(step.trigger.conditions || {});
-      if (conditionKeys.length === 0) {
-        issues.push({
-          severity: "error",
-          message: "Conditional step must define at least one condition",
-          category: "structural",
-          field: "trigger.conditions",
-          stepId,
-          suggestion: "Add conditions to define when this step should execute",
-        });
-      }
-    }
-
-    // Loop step should have termination conditions
-    if (step.type === "loop") {
-      const conditionKeys = Object.keys(step.trigger.conditions || {});
-      if (conditionKeys.length === 0) {
-        issues.push({
-          severity: "warning",
-          message:
-            "Loop step should define termination conditions to prevent infinite loops",
-          category: "structural",
-          field: "trigger.conditions",
-          stepId,
-          suggestion: "Add conditions to control when the loop should exit",
-        });
-      }
-    }
-
-    // Parallel step should have multiple actions
-    if (step.type === "parallel" && step.actions.length < 2) {
-      issues.push({
-        severity: "warning",
-        message:
-          "Parallel step has fewer than 2 actions - consider using sequential type",
-        category: "structural",
-        stepId,
-        suggestion: "Add more actions or change to sequential execution",
-      });
-    }
+    // All steps must be sequential type (parallel/conditional/loop removed)
+    // Control flow and parallelism should be implemented at the ACTION level
 
     // Action-level structural validation
     step.actions.forEach((action) => {
@@ -234,6 +193,7 @@ export function validateStructural(
       }
 
       // Plugin actions need plugin metadata
+      /* VALIDATION DISABLED BY USER REQUEST
       if (action.source?.kind === "plugin") {
         if (!action.source.pluginId) {
           issues.push({
@@ -258,6 +218,7 @@ export function validateStructural(
           });
         }
       }
+      */
 
       // Execution descriptor validation
       if (!action.execution?.transport) {
@@ -532,10 +493,9 @@ export function validateSemantic(
   // Check for empty steps
   steps.forEach((step) => {
     if (step.actions.length === 0) {
-      const severity = step.type === "parallel" ? "error" : "warning";
       issues.push({
-        severity,
-        message: `${step.type} step has no actions`,
+        severity: "warning",
+        message: "Step has no actions",
         category: "semantic",
         stepId: step.id,
         suggestion: "Add actions to this step or remove it",
@@ -635,25 +595,9 @@ export function validateExecution(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // Check for unreachable steps (basic heuristic)
-  if (steps.length > 1) {
-    const trialStartSteps = steps.filter(
-      (s) => s.trigger.type === "trial_start",
-    );
-    if (trialStartSteps.length > 1) {
-      trialStartSteps.slice(1).forEach((step) => {
-        issues.push({
-          severity: "info",
-          message:
-            "This step will start immediately at trial start. For sequential flow, use 'Previous Step' trigger.",
-          category: "execution",
-          field: "trigger.type",
-          stepId: step.id,
-          suggestion: "Change trigger to 'Previous Step' if this step should follow the previous one",
-        });
-      });
-    }
-  }
+  // Note: Trigger validation removed - convertDatabaseToSteps() automatically assigns
+  // correct triggers (trial_start for first step, previous_step for others) based on orderIndex.
+  // Manual trigger configuration is intentional for advanced workflows.
 
   // Check for missing robot dependencies
   const robotActions = steps.flatMap((step) =>

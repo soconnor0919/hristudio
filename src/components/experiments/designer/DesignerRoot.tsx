@@ -37,7 +37,7 @@ import {
   MouseSensor,
   TouchSensor,
   KeyboardSensor,
-  closestCorners,
+  closestCenter,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
@@ -45,7 +45,8 @@ import {
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
-import { FlowWorkspace } from "./flow/FlowWorkspace";
+import { FlowWorkspace, SortableActionChip, StepCardPreview } from "./flow/FlowWorkspace";
+import { GripVertical } from "lucide-react";
 
 import {
   type ExperimentDesign,
@@ -54,12 +55,13 @@ import {
 } from "~/lib/experiment-designer/types";
 
 import { useDesignerStore } from "./state/store";
-import { actionRegistry } from "./ActionRegistry";
+import { actionRegistry, useActionRegistry } from "./ActionRegistry";
 import { computeDesignHash } from "./state/hashing";
 import {
   validateExperimentDesign,
   groupIssuesByEntity,
 } from "./state/validators";
+import { convertDatabaseToSteps } from "~/lib/experiment-designer/block-converter";
 
 /**
  * DesignerRoot
@@ -104,6 +106,7 @@ interface RawExperiment {
   integrityHash?: string | null;
   pluginDependencies?: string[] | null;
   visualDesign?: unknown;
+  steps?: unknown[]; // DB steps from relation
 }
 
 /* -------------------------------------------------------------------------- */
@@ -111,6 +114,26 @@ interface RawExperiment {
 /* -------------------------------------------------------------------------- */
 
 function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
+  // 1. Prefer database steps (Source of Truth) if valid, to ensure we have the latest
+  //    plugin provenance data (which might be missing from stale visualDesign snapshots).
+  if (Array.isArray(exp.steps) && exp.steps.length > 0) {
+    try {
+      // console.log('[DesignerRoot] Hydrating design from Database Steps (Source of Truth)');
+      const dbSteps = convertDatabaseToSteps(exp.steps);
+      return {
+        id: exp.id,
+        name: exp.name,
+        description: exp.description ?? "",
+        steps: dbSteps,
+        version: 1, // Reset version on re-hydration
+        lastSaved: new Date(),
+      };
+    } catch (err) {
+      console.warn('[DesignerRoot] Failed to convert DB steps, falling back to visualDesign:', err);
+    }
+  }
+
+  // 2. Fallback to visualDesign blob if DB steps unavailable or conversion failed
   if (
     !exp.visualDesign ||
     typeof exp.visualDesign !== "object" ||
@@ -124,6 +147,7 @@ function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
     lastSaved?: string;
   };
   if (!Array.isArray(vd.steps)) return undefined;
+
   return {
     id: exp.id,
     name: exp.name,
@@ -162,6 +186,9 @@ export function DesignerRoot({
   autoCompile = true,
   onPersist,
 }: DesignerRootProps) {
+  // Subscribe to registry updates to ensure re-renders when actions load
+  useActionRegistry();
+
   const { startTour } = useTour();
 
   /* ----------------------------- Remote Experiment ------------------------- */
@@ -169,7 +196,18 @@ export function DesignerRoot({
     data: experiment,
     isLoading: loadingExperiment,
     refetch: refetchExperiment,
-  } = api.experiments.get.useQuery({ id: experimentId });
+  } = api.experiments.get.useQuery(
+    { id: experimentId },
+    {
+      // Debug Mode: Disable all caching to ensure fresh data from DB
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      gcTime: 0, // Garbage collect immediately
+    }
+  );
+
+
 
   const updateExperiment = api.experiments.update.useMutation({
     onError: (err) => {
@@ -209,6 +247,7 @@ export function DesignerRoot({
   const upsertAction = useDesignerStore((s) => s.upsertAction);
   const selectStep = useDesignerStore((s) => s.selectStep);
   const selectAction = useDesignerStore((s) => s.selectAction);
+  const reorderStep = useDesignerStore((s) => s.reorderStep);
   const setValidationIssues = useDesignerStore((s) => s.setValidationIssues);
   const clearAllValidationIssues = useDesignerStore(
     (s) => s.clearAllValidationIssues,
@@ -296,6 +335,11 @@ export function DesignerRoot({
     description?: string;
   } | null>(null);
 
+  const [activeSortableItem, setActiveSortableItem] = useState<{
+    type: 'step' | 'action';
+    data: any;
+  } | null>(null);
+
   /* ----------------------------- Initialization ---------------------------- */
   useEffect(() => {
     if (initialized) return;
@@ -354,13 +398,14 @@ export function DesignerRoot({
       .catch((err) => console.error("Core action load failed:", err));
   }, []);
 
-  // Load plugin actions when study plugins available
+  // Load plugin actions only after we have the flattened, processed plugin list
   useEffect(() => {
     if (!experiment?.studyId) return;
-    if (!studyPluginsRaw) return;
-    // @ts-expect-error - studyPluginsRaw type from tRPC is compatible but TypeScript can't infer it
-    actionRegistry.loadPluginActions(experiment.studyId, studyPluginsRaw);
-  }, [experiment?.studyId, studyPluginsRaw]);
+    if (!studyPlugins) return;
+
+    // Pass the flattened plugins which match the structure ActionRegistry expects
+    actionRegistry.loadPluginActions(experiment.studyId, studyPlugins);
+  }, [experiment?.studyId, studyPlugins]);
 
   /* ------------------------- Ready State Management ------------------------ */
   // Mark as ready once initialized and plugins are loaded
@@ -375,11 +420,10 @@ export function DesignerRoot({
       // Small delay to ensure all components have rendered
       const timer = setTimeout(() => {
         setIsReady(true);
-        // console.log('[DesignerRoot] ✅ Designer ready (plugins loaded), fading in');
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [initialized, isReady, studyPluginsRaw]);
+  }, [initialized, isReady, studyPlugins]);
 
   /* ----------------------- Automatic Hash Recomputation -------------------- */
   // Automatically recompute hash when steps change (debounced to avoid excessive computation)
@@ -442,6 +486,7 @@ export function DesignerRoot({
       const currentSteps = [...steps];
       // Ensure core actions are loaded before validating
       await actionRegistry.loadCoreActions();
+
       const result = validateExperimentDesign(currentSteps, {
         steps: currentSteps,
         actionDefinitions: actionRegistry.getAllActions(),
@@ -508,6 +553,15 @@ export function DesignerRoot({
     setValidationIssues,
     clearAllValidationIssues,
   ]);
+
+  // Trigger initial validation when ready (plugins loaded) to ensure no stale errors
+  // Trigger initial validation when ready (plugins loaded) to ensure no stale errors
+  // DISABLED: User prefers manual validation to avoid noise on improved sequential architecture
+  // useEffect(() => {
+  //   if (isReady) {
+  //     void validateDesign();
+  //   }
+  // }, [isReady, validateDesign]);
 
   /* --------------------------------- Save ---------------------------------- */
   const persist = useCallback(async () => {
@@ -692,14 +746,20 @@ export function DesignerRoot({
   );
 
   /* ----------------------------- Drag Handlers ----------------------------- */
+  /* ----------------------------- Drag Handlers ----------------------------- */
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event;
+      const activeId = active.id.toString();
+      const activeData = active.data.current;
+
+      console.log("[DesignerRoot] DragStart", { activeId, activeData });
+
       if (
-        active.id.toString().startsWith("action-") &&
-        active.data.current?.action
+        activeId.startsWith("action-") &&
+        activeData?.action
       ) {
-        const a = active.data.current.action as {
+        const a = activeData.action as {
           id: string;
           name: string;
           category: string;
@@ -713,6 +773,18 @@ export function DesignerRoot({
           category: a.category,
           description: a.description,
         });
+      } else if (activeId.startsWith("s-step-")) {
+        console.log("[DesignerRoot] Setting active sortable STEP", activeData);
+        setActiveSortableItem({
+          type: 'step',
+          data: activeData
+        });
+      } else if (activeId.startsWith("s-act-")) {
+        console.log("[DesignerRoot] Setting active sortable ACTION", activeData);
+        setActiveSortableItem({
+          type: 'action',
+          data: activeData
+        });
       }
     },
     [toggleLibraryScrollLock],
@@ -721,14 +793,7 @@ export function DesignerRoot({
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
     const store = useDesignerStore.getState();
-
-    // Only handle Library -> Flow projection
-    if (!active.id.toString().startsWith("action-")) {
-      if (store.insertionProjection) {
-        store.setInsertionProjection(null);
-      }
-      return;
-    }
+    const activeId = active.id.toString();
 
     if (!over) {
       if (store.insertionProjection) {
@@ -736,6 +801,16 @@ export function DesignerRoot({
       }
       return;
     }
+
+    // 3. Library -> Flow Projection (Action)
+    if (!activeId.startsWith("action-")) {
+      if (store.insertionProjection) {
+        store.setInsertionProjection(null);
+      }
+      return;
+    }
+
+
 
     const overId = over.id.toString();
     const activeDef = active.data.current?.action;
@@ -831,6 +906,7 @@ export function DesignerRoot({
       // Clear overlay immediately
       toggleLibraryScrollLock(false);
       setDragOverlayAction(null);
+      setActiveSortableItem(null);
 
       // Capture and clear projection
       const store = useDesignerStore.getState();
@@ -838,6 +914,32 @@ export function DesignerRoot({
       store.setInsertionProjection(null);
 
       if (!over) {
+        return;
+      }
+
+      const activeId = active.id.toString();
+
+      // Handle Step Reordering (Active is a sortable step)
+      if (activeId.startsWith("s-step-")) {
+        const overId = over.id.toString();
+        // Allow reordering over both sortable steps (s-step-) and drop zones (step-)
+        if (!overId.startsWith("s-step-") && !overId.startsWith("step-")) return;
+
+        // Strip prefixes to get raw IDs
+        const rawActiveId = activeId.replace(/^s-step-/, "");
+        const rawOverId = overId.replace(/^s-step-/, "").replace(/^step-/, "");
+
+        console.log("[DesignerRoot] DragEnd - Step Sort", { activeId, overId, rawActiveId, rawOverId });
+
+        const oldIndex = steps.findIndex((s) => s.id === rawActiveId);
+        const newIndex = steps.findIndex((s) => s.id === rawOverId);
+
+        console.log("[DesignerRoot] Indices", { oldIndex, newIndex });
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          console.log("[DesignerRoot] Reordering...");
+          reorderStep(oldIndex, newIndex);
+        }
         return;
       }
 
@@ -907,8 +1009,9 @@ export function DesignerRoot({
             }
             : undefined;
 
+        const newId = `action-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
         const newAction: ExperimentAction = {
-          id: crypto.randomUUID(),
+          id: newId,
           type: actionDef.type, // this is the 'type' key
           name: actionDef.name,
           category: actionDef.category as any,
@@ -933,7 +1036,7 @@ export function DesignerRoot({
         void recomputeHash();
       }
     },
-    [steps, upsertAction, selectAction, recomputeHash, toggleLibraryScrollLock],
+    [steps, upsertAction, selectAction, recomputeHash, toggleLibraryScrollLock, reorderStep],
   );
   // validation status badges removed (unused)
   /* ------------------------------- Panels ---------------------------------- */
@@ -962,10 +1065,11 @@ export function DesignerRoot({
           activeTab={inspectorTab}
           onTabChange={setInspectorTab}
           studyPlugins={studyPlugins}
+          onClearAll={clearAllValidationIssues}
         />
       </div>
     ),
-    [inspectorTab, studyPlugins],
+    [inspectorTab, studyPlugins, clearAllValidationIssues],
   );
 
   /* ------------------------------- Render ---------------------------------- */
@@ -1020,51 +1124,117 @@ export function DesignerRoot({
 
       {/* Main Grid Container - 2-4-2 Split */}
       {/* Main Grid Container - 2-4-2 Split */}
-      <div className="flex-1 min-h-0 w-full px-4 overflow-hidden">
+      <div className="flex-1 min-h-0 w-full px-2 overflow-hidden">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
           onDragCancel={() => toggleLibraryScrollLock(false)}
         >
-          <div className="grid grid-cols-8 gap-4 h-full w-full">
-            {/* Left Panel (2/8) */}
-            <div className="col-span-2 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-red-300 bg-red-50/50 dark:bg-red-900/10">
-              <div className="flex items-center justify-between border-b border-red-200 bg-red-100/50 px-3 py-2 text-sm font-medium text-red-900 dark:border-red-800 dark:bg-red-900/20 dark:text-red-100">
-                Left Panel (2fr)
+          <div className="grid grid-cols-8 gap-4 h-full w-full transition-all duration-300 ease-in-out">
+            {/* Left Panel (Library) */}
+            {!leftCollapsed && (
+              <div className={cn(
+                "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
+                rightCollapsed ? "col-span-3" : "col-span-2"
+              )}>
+                <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+                  <span className="text-sm font-medium">Action Library</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setLeftCollapsed(true)}
+                  >
+                    <PanelLeftClose className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-hidden min-h-0 bg-muted/10">
+                  {leftPanel}
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                {leftPanel}
-              </div>
-            </div>
+            )}
 
-            {/* Center Panel (4/8) - The Workspace */}
-            <div className="col-span-4 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-green-300 bg-green-50/50 dark:bg-green-900/10">
-              <div className="flex items-center justify-between border-b border-green-200 bg-green-100/50 px-3 py-2 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/20 dark:text-green-100">
-                Center Workspace (4fr)
+            {/* Center Panel (Workspace) */}
+            <div className={cn(
+              "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
+              leftCollapsed && rightCollapsed ? "col-span-8" :
+                leftCollapsed ? "col-span-6" :
+                  rightCollapsed ? "col-span-5" :
+                    "col-span-4"
+            )}>
+              <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+                {leftCollapsed && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 mr-2"
+                    onClick={() => setLeftCollapsed(false)}
+                    title="Open Library"
+                  >
+                    <PanelLeftOpen className="h-4 w-4" />
+                  </Button>
+                )}
+                <span className="text-sm font-medium">Flow Workspace</span>
+                {rightCollapsed && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-2"
+                    onClick={() => setRightCollapsed(false)}
+                    title="Open Inspector"
+                  >
+                    <PanelRightOpen className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               <div className="flex-1 overflow-hidden min-h-0 relative">
-                {/* Center content needs to be relative for absolute positioning children if any */}
                 {centerPanel}
               </div>
+              <div className="border-t">
+                <BottomStatusBar
+                  onSave={() => persist()}
+                  onValidate={() => validateDesign()}
+                  onExport={() => handleExport()}
+                  onRecalculateHash={() => recomputeHash()}
+                  lastSavedAt={lastSavedAt}
+                  saving={isSaving}
+                  validating={isValidating}
+                  exporting={isExporting}
+                />
+              </div>
             </div>
 
-            {/* Right Panel (2/8) */}
-            <div className="col-span-2 flex flex-col overflow-hidden rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 dark:bg-blue-900/10">
-              <div className="flex items-center justify-between border-b border-blue-200 bg-blue-100/50 px-3 py-2 text-sm font-medium text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
-                Right Panel (2fr)
+            {/* Right Panel (Inspector) */}
+            {!rightCollapsed && (
+              <div className={cn(
+                "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
+                leftCollapsed ? "col-span-2" : "col-span-2"
+              )}>
+                <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+                  <span className="text-sm font-medium">Inspector</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setRightCollapsed(true)}
+                  >
+                    <PanelRightClose className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-hidden min-h-0 bg-muted/10">
+                  {rightPanel}
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                {rightPanel}
-              </div>
-            </div>
+            )}
           </div>
 
-          <DragOverlay>
+          <DragOverlay dropAnimation={null}>
             {dragOverlayAction ? (
-              <div className="bg-background flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none">
+              // Library Item Drag
+              <div className="bg-background pointer-events-none flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none ring-2 ring-blue-500/20">
                 <div
                   className={cn(
                     "flex h-4 w-4 items-center justify-center rounded text-white",
@@ -1075,6 +1245,24 @@ export function DesignerRoot({
                   )}
                 />
                 {dragOverlayAction.name}
+              </div>
+            ) : activeSortableItem?.type === 'action' ? (
+              // Existing Action Sort
+              <div className="w-[300px] opacity-90 pointer-events-none">
+                <SortableActionChip
+                  stepId={activeSortableItem.data.stepId}
+                  action={activeSortableItem.data.action}
+                  parentId={activeSortableItem.data.parentId}
+                  selectedActionId={selectedActionId}
+                  onSelectAction={() => { }}
+                  onDeleteAction={() => { }}
+                  dragHandle={true}
+                />
+              </div>
+            ) : activeSortableItem?.type === 'step' ? (
+              // Existing Step Sort
+              <div className="w-[400px] pointer-events-none opacity-90">
+                <StepCardPreview step={activeSortableItem.data.step} dragHandle />
               </div>
             ) : null}
           </DragOverlay>

@@ -47,6 +47,10 @@ export interface ValidationPanelProps {
    */
   onEntityClear?: (entityId: string) => void;
   /**
+   * Called to clear all issues globally.
+   */
+  onClearAll?: () => void;
+  /**
    * Optional function to map entity IDs to human-friendly names (e.g., step/action names).
    */
   entityLabelForId?: (entityId: string) => string;
@@ -60,25 +64,25 @@ export interface ValidationPanelProps {
 const severityConfig = {
   error: {
     icon: AlertCircle,
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-950/60",
-    borderColor: "border-red-300 dark:border-red-700",
+    color: "text-validation-error-text",
+    bgColor: "bg-validation-error-bg",
+    borderColor: "border-validation-error-border",
     badgeVariant: "destructive" as const,
     label: "Error",
   },
   warning: {
     icon: AlertTriangle,
-    color: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-100 dark:bg-amber-950/60",
-    borderColor: "border-amber-300 dark:border-amber-700",
-    badgeVariant: "secondary" as const,
+    color: "text-validation-warning-text",
+    bgColor: "bg-validation-warning-bg",
+    borderColor: "border-validation-warning-border",
+    badgeVariant: "outline" as const,
     label: "Warning",
   },
   info: {
     icon: Info,
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-950/60",
-    borderColor: "border-blue-300 dark:border-blue-700",
+    color: "text-validation-info-text",
+    bgColor: "bg-validation-info-bg",
+    borderColor: "border-validation-info-border",
     badgeVariant: "outline" as const,
     label: "Info",
   },
@@ -141,7 +145,7 @@ function IssueItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] leading-snug break-words whitespace-normal">
+            <p className="text-[12px] leading-snug break-words whitespace-normal text-foreground">
               {issue.message}
             </p>
 
@@ -199,6 +203,7 @@ export function ValidationPanel({
   onIssueClick,
   onIssueClear,
   onEntityClear: _onEntityClear,
+  onClearAll,
   entityLabelForId,
   className,
 }: ValidationPanelProps) {
@@ -284,7 +289,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "error" &&
-                "bg-red-600 text-white hover:opacity-90",
+              "bg-red-600 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("error")}
             aria-pressed={severityFilter === "error"}
@@ -300,7 +305,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "warning" &&
-                "bg-amber-500 text-white hover:opacity-90",
+              "bg-amber-500 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("warning")}
             aria-pressed={severityFilter === "warning"}
@@ -316,7 +321,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "info" &&
-                "bg-blue-600 text-white hover:opacity-90",
+              "bg-blue-600 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("info")}
             aria-pressed={severityFilter === "info"}

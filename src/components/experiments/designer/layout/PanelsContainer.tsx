@@ -404,6 +404,28 @@ export function PanelsContainer({
             {right}
           </Panel>
         )}
+
+        {/* Resize Handles */}
+        {hasLeft && !leftCollapsed && (
+          <button
+            type="button"
+            className="absolute top-0 bottom-0 w-1.5 -ml-0.75 z-50 cursor-col-resize hover:bg-blue-400/50 transition-colors focus:outline-none"
+            style={{ left: "var(--col-left)" }}
+            onPointerDown={startDrag("left")}
+            onKeyDown={onKeyResize("left")}
+            aria-label="Resize left panel"
+          />
+        )}
+        {hasRight && !rightCollapsed && (
+          <button
+            type="button"
+            className="absolute top-0 bottom-0 w-1.5 -mr-0.75 z-50 cursor-col-resize hover:bg-blue-400/50 transition-colors focus:outline-none"
+            style={{ right: "var(--col-right)" }}
+            onPointerDown={startDrag("right")}
+            onKeyDown={onKeyResize("right")}
+            aria-label="Resize right panel"
+          />
+        )}
       </div>
     </>
   );

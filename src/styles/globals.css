@@ -69,6 +69,17 @@
   --shadow-opacity: var(--shadow-opacity);
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Validation Colors */
+  --color-validation-error-bg: var(--validation-error-bg);
+  --color-validation-error-text: var(--validation-error-text);
+  --color-validation-error-border: var(--validation-error-border);
+  --color-validation-warning-bg: var(--validation-warning-bg);
+  --color-validation-warning-text: var(--validation-warning-text);
+  --color-validation-warning-border: var(--validation-warning-border);
+  --color-validation-info-bg: var(--validation-info-bg);
+  --color-validation-info-text: var(--validation-info-text);
+  --color-validation-info-border: var(--validation-info-border);
 }
 
 :root {
@@ -140,14 +151,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode (Inverted: Lighter BG, Black Cards) */
-    --background: hsl(240 3.7% 15.9%);
-    /* Lighter Dark BG */
+    --background: hsl(240 10% 3.9%);
     --foreground: hsl(0 0% 98%);
-    --card: hsl(240 10% 3.9%);
-    /* Deep Black Card */
+    /* Distinct Card Background for better contrast */
+    --card: hsl(240 5% 9%);
     --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(240 10% 3.9%);
+    --popover: hsl(240 5% 9%);
     --popover-foreground: hsl(0 0% 98%);
     --primary: hsl(0 0% 98%);
     --primary-foreground: hsl(240 5.9% 10%);
@@ -180,27 +189,25 @@
 
 @layer base {
   .dark {
-    /* Dark Mode (Zinc) */
     --background: hsl(240 10% 3.9%);
     --foreground: hsl(0 0% 98%);
-    --card: hsl(240 3.7% 15.9%);
+    --card: hsl(240 5% 9%);
     --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(240 10% 3.9%);
+    --popover: hsl(240 5% 9%);
     --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(217.2 91.2% 59.8%);
-    /* Indigo-400 */
-    --primary-foreground: hsl(222.2 47.4% 11.2%);
-    --secondary: hsl(217.2 32.6% 17.5%);
-    --secondary-foreground: hsl(210 40% 98%);
-    --muted: hsl(217.2 32.6% 17.5%);
-    --muted-foreground: hsl(215 20.2% 65.1%);
-    --accent: hsl(217.2 32.6% 17.5%);
-    --accent-foreground: hsl(210 40% 98%);
+    --primary: hsl(0 0% 98%);
+    --primary-foreground: hsl(240 5.9% 10%);
+    --secondary: hsl(240 3.7% 15.9%);
+    --secondary-foreground: hsl(0 0% 98%);
+    --muted: hsl(240 3.7% 15.9%);
+    --muted-foreground: hsl(240 5% 64.9%);
+    --accent: hsl(240 3.7% 15.9%);
+    --accent-foreground: hsl(0 0% 98%);
     --destructive: hsl(0 62.8% 30.6%);
-    --destructive-foreground: hsl(210 40% 98%);
-    --border: hsl(217.2 32.6% 17.5%);
-    --input: hsl(217.2 32.6% 17.5%);
-    --ring: hsl(217.2 91.2% 59.8%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(240 3.7% 15.9%);
+    --input: hsl(240 3.7% 15.9%);
+    --ring: hsl(240 4.9% 83.9%);
     --chart-1: hsl(220 70% 50%);
     --chart-2: hsl(160 60% 45%);
     --chart-3: hsl(30 80% 55%);
@@ -213,9 +220,51 @@
     --sidebar-accent: hsl(240 3.7% 15.9%);
     --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
     --sidebar-border: hsl(240 3.7% 15.9%);
+    --sidebar-border: hsl(240 3.7% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
+    /* Validation Dark Mode */
+    --validation-error-bg: hsl(0 75% 15%);
+    /* Red 950-ish */
+    --validation-error-text: hsl(0 100% 90%);
+    /* Red 100 */
+    --validation-error-border: hsl(0 50% 30%);
+    /* Red 900 */
+    --validation-warning-bg: hsl(30 90% 10%);
+    /* Amber 950-ish */
+    --validation-warning-text: hsl(30 100% 90%);
+    /* Amber 100 */
+    --validation-warning-border: hsl(30 60% 30%);
+    /* Amber 900 */
+    --validation-info-bg: hsl(210 50% 15%);
+    /* Blue 950-ish */
+    --validation-info-text: hsl(210 100% 90%);
+    /* Blue 100 */
+    --validation-info-border: hsl(210 40% 30%);
+    /* Blue 900 */
   }
+}
+
+:root {
+  /* Validation Light Mode Defaults */
+  --validation-error-bg: hsl(0 85% 97%);
+  /* Red 50 */
+  --validation-error-text: hsl(0 72% 45%);
+  /* Red 700 */
+  --validation-error-border: hsl(0 80% 90%);
+  /* Red 200 */
+  --validation-warning-bg: hsl(40 85% 97%);
+  /* Amber 50 */
+  --validation-warning-text: hsl(35 90% 35%);
+  /* Amber 700 */
+  --validation-warning-border: hsl(40 80% 90%);
+  /* Amber 200 */
+  --validation-info-bg: hsl(210 85% 97%);
+  /* Blue 50 */
+  --validation-info-text: hsl(220 80% 45%);
+  /* Blue 700 */
+  --validation-info-border: hsl(210 80% 90%);
+  /* Blue 200 */
 }
 
 @layer base {

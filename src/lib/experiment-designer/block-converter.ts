@@ -158,3 +158,89 @@ export function convertActionToDatabase(
     category: action.category,
   };
 }
+
+// Reconstruct designer steps from database records
+export function convertDatabaseToSteps(
+  dbSteps: any[] // Typing as any[] because Drizzle types are complex to import here without circular deps
+): ExperimentStep[] {
+  // Paranoid Sort: Ensure steps are strictly ordered by index before assigning Triggers.
+  // This safeguards against API returning unsorted data.
+  const sortedSteps = [...dbSteps].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+
+  return sortedSteps.map((dbStep, idx) => {
+    // console.log(`[block-converter] Step ${dbStep.name} OrderIndex:`, dbStep.orderIndex, dbStep.order_index);
+    return {
+      id: dbStep.id,
+      name: dbStep.name,
+      description: dbStep.description ?? undefined,
+      type: mapDatabaseToStepType(dbStep.type),
+      order: dbStep.orderIndex ?? idx, // Fallback to array index if missing
+      trigger: {
+        // Enforce Sequential Architecture: Validated by user requirement.
+        // Index 0 is Trial Start, all others are Previous Step.
+        type: idx === 0 ? "trial_start" : "previous_step",
+        conditions: (dbStep.conditions as Record<string, unknown>) || {},
+      },
+      expanded: true, // Default to expanded in designer
+      actions: (dbStep.actions || []).map((dbAction: any) =>
+        convertDatabaseToAction(dbAction)
+      ),
+    };
+  });
+}
+
+function mapDatabaseToStepType(type: string): ExperimentStep["type"] {
+  switch (type) {
+    case "wizard":
+      return "sequential";
+    case "parallel":
+      return "parallel";
+    case "conditional":
+      return "conditional"; // Loop is also stored as conditional, distinction lost unless encoded in metadata
+    default:
+      return "sequential";
+  }
+}
+
+export function convertDatabaseToAction(dbAction: any): ExperimentAction {
+  // Reconstruct nested source object
+  const source: ExperimentAction["source"] = {
+    kind: (dbAction.sourceKind || dbAction.source_kind || "core") as "core" | "plugin",
+    pluginId: dbAction.pluginId || dbAction.plugin_id || undefined,
+    pluginVersion: dbAction.pluginVersion || dbAction.plugin_version || undefined,
+    robotId: dbAction.robotId || dbAction.robot_id || undefined,
+    baseActionId: dbAction.baseActionId || dbAction.base_action_id || undefined,
+  };
+
+  // Robust Inference: If properties are missing but Type suggests a plugin (e.g., "nao6-ros2.say_text"),
+  // assume/infer the pluginId to ensure validation passes.
+  if (dbAction.type && dbAction.type.includes(".") && !source.pluginId) {
+    const parts = dbAction.type.split(".");
+    if (parts.length === 2) {
+      source.kind = "plugin";
+      source.pluginId = parts[0];
+      // Fallback robotId if missing
+      if (!source.robotId) source.robotId = parts[0];
+    }
+  }
+
+  // Reconstruct execution object
+  const execution: ExecutionDescriptor = {
+    transport: dbAction.transport as ExecutionDescriptor["transport"],
+    ros2: dbAction.ros2 as ExecutionDescriptor["ros2"],
+    rest: dbAction.rest as ExecutionDescriptor["rest"],
+    retryable: dbAction.retryable ?? false,
+  };
+
+  return {
+    id: dbAction.id,
+    name: dbAction.name,
+    description: dbAction.description ?? undefined,
+    type: dbAction.type,
+    category: dbAction.category ?? "general",
+    parameters: (dbAction.parameters as Record<string, unknown>) || {},
+    source,
+    execution,
+    parameterSchemaRaw: dbAction.parameterSchemaRaw,
+  };
+}

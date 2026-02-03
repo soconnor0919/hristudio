@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import {
+  useDndContext,
   useDroppable,
   useDndMonitor,
   type DragEndEvent,
@@ -80,21 +81,27 @@ export interface VirtualItem {
 
 interface StepRowProps {
   item: VirtualItem;
+  step: ExperimentStep; // Explicit pass for freshness
+  totalSteps: number;
   selectedStepId: string | null | undefined;
   selectedActionId: string | null | undefined;
   renamingStepId: string | null;
   onSelectStep: (id: string | undefined) => void;
   onSelectAction: (stepId: string, actionId: string | undefined) => void;
   onToggleExpanded: (step: ExperimentStep) => void;
-  onRenameStep: (step: ExperimentStep, name: string) => void;
+  onRenameStep: (step: ExperimentStep, newName: string) => void;
   onDeleteStep: (step: ExperimentStep) => void;
   onDeleteAction: (stepId: string, actionId: string) => void;
   setRenamingStepId: (id: string | null) => void;
   registerMeasureRef: (stepId: string, el: HTMLDivElement | null) => void;
+  onReorderStep: (stepId: string, direction: 'up' | 'down') => void;
+  onReorderAction?: (stepId: string, actionId: string, direction: 'up' | 'down') => void;
 }
 
-const StepRow = React.memo(function StepRow({
+function StepRow({
   item,
+  step,
+  totalSteps,
   selectedStepId,
   selectedActionId,
   renamingStepId,
@@ -106,8 +113,10 @@ const StepRow = React.memo(function StepRow({
   onDeleteAction,
   setRenamingStepId,
   registerMeasureRef,
+  onReorderStep,
+  onReorderAction,
 }: StepRowProps) {
-  const step = item.step;
+  // const step = item.step; // Removed local derivation
   const insertionProjection = useDesignerStore((s) => s.insertionProjection);
 
   const displayActions = useMemo(() => {
@@ -125,34 +134,19 @@ const StepRow = React.memo(function StepRow({
     return step.actions;
   }, [step.actions, step.id, insertionProjection]);
 
-  const {
-    setNodeRef,
-    transform,
-    transition,
-    attributes,
-    listeners,
-    isDragging,
-  } = useSortable({
-    id: sortableStepId(step.id),
-    data: {
-      type: "step",
-      step: step,
-    },
-  });
-
   const style: React.CSSProperties = {
     position: "absolute",
     top: item.top,
     left: 0,
     right: 0,
     width: "100%",
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 25 : undefined,
+    transition: "top 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+    // transform: CSS.Transform.toString(transform), // Removed
+    // zIndex: isDragging ? 25 : undefined,
   };
 
   return (
-    <div ref={setNodeRef} style={style} data-step-id={step.id}>
+    <div style={style} data-step-id={step.id}>
       <div
         ref={(el) => registerMeasureRef(step.id, el)}
         className="relative px-3 py-4"
@@ -164,8 +158,7 @@ const StepRow = React.memo(function StepRow({
             "mb-2 rounded-lg border shadow-sm transition-colors",
             selectedStepId === step.id
               ? "border-border bg-accent/30"
-              : "hover:bg-accent/30",
-            isDragging && "opacity-80 ring-1 ring-blue-300",
+              : "hover:bg-accent/30"
           )}
         >
           <div
@@ -258,14 +251,33 @@ const StepRow = React.memo(function StepRow({
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
-              <div
-                className="text-muted-foreground cursor-grab p-1"
-                aria-label="Drag step"
-                {...attributes}
-                {...listeners}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReorderStep(step.id, 'up');
+                }}
+                disabled={item.index === 0}
+                aria-label="Move step up"
               >
-                <GripVertical className="h-4 w-4" />
-              </div>
+                <ChevronRight className="h-4 w-4 -rotate-90" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReorderStep(step.id, 'down');
+                }}
+                disabled={item.index === totalSteps - 1}
+                aria-label="Move step down"
+              >
+                <ChevronRight className="h-4 w-4 rotate-90" />
+              </Button>
+
             </div>
           </div>
 
@@ -282,7 +294,7 @@ const StepRow = React.memo(function StepRow({
                       Drop actions here
                     </div>
                   ) : (
-                    displayActions.map((action) => (
+                    displayActions.map((action, index) => (
                       <SortableActionChip
                         key={action.id}
                         stepId={step.id}
@@ -291,6 +303,9 @@ const StepRow = React.memo(function StepRow({
                         selectedActionId={selectedActionId}
                         onSelectAction={onSelectAction}
                         onDeleteAction={onDeleteAction}
+                        onReorderAction={onReorderAction}
+                        isFirst={index === 0}
+                        isLast={index === displayActions.length - 1}
                       />
                     ))
                   )}
@@ -302,7 +317,51 @@ const StepRow = React.memo(function StepRow({
       </div>
     </div>
   );
-});
+}
+
+/* -------------------------------------------------------------------------- */
+/* Step Card Preview (for DragOverlay)                                         */
+/* -------------------------------------------------------------------------- */
+
+export function StepCardPreview({ step, dragHandle }: { step: ExperimentStep; dragHandle?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-background shadow-xl ring-2 ring-blue-500/20",
+        dragHandle && "cursor-grabbing"
+      )}
+    >
+      <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5 p-3">
+        <div className="flex items-center gap-2">
+          <div className="text-muted-foreground rounded p-1">
+            <ChevronRight className="h-4 w-4" />
+          </div>
+          <Badge
+            variant="outline"
+            className="h-5 px-1.5 text-[10px] font-normal"
+          >
+            {step.order + 1}
+          </Badge>
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium">{step.name}</span>
+          </div>
+          <span className="text-muted-foreground hidden text-[11px] md:inline">
+            {step.actions.length} actions
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <GripVertical className="h-4 w-4" />
+        </div>
+      </div>
+      {/* Preview optional: show empty body hint or just the header? Header is usually enough for sorting. */}
+      <div className="bg-muted/10 p-2 h-12 flex items-center justify-center border-t border-dashed">
+        <span className="text-[10px] text-muted-foreground">
+          {step.actions.length} actions hidden while dragging
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /* Utility                                                                    */
@@ -331,9 +390,19 @@ function parseSortableAction(id: string): string | null {
 /* Droppable Overlay (for palette action drops)                               */
 /* -------------------------------------------------------------------------- */
 function StepDroppableArea({ stepId }: { stepId: string }) {
-  const { isOver } = useDroppable({ id: `step-${stepId}` });
+  const { active } = useDndContext();
+  const isStepDragging = active?.id.toString().startsWith("s-step-");
+
+  const { isOver, setNodeRef } = useDroppable({
+    id: `step-${stepId}`,
+    disabled: isStepDragging
+  });
+
+  if (isStepDragging) return null;
+
   return (
     <div
+      ref={setNodeRef}
       data-step-drop
       className={cn(
         "pointer-events-none absolute inset-0 rounded-md transition-colors",
@@ -348,26 +417,155 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
 /* Sortable Action Chip                                                       */
 /* -------------------------------------------------------------------------- */
 
-interface ActionChipProps {
+export interface ActionChipProps {
   stepId: string;
   action: ExperimentAction;
   parentId: string | null;
   selectedActionId: string | null | undefined;
   onSelectAction: (stepId: string, actionId: string | undefined) => void;
   onDeleteAction: (stepId: string, actionId: string) => void;
+  onReorderAction?: (stepId: string, actionId: string, direction: 'up' | 'down') => void;
   dragHandle?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-function SortableActionChip({
+/* -------------------------------------------------------------------------- */
+/* Action Chip Visuals (Pure Component)                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface ActionChipVisualsProps {
+  action: ExperimentAction;
+  isSelected?: boolean;
+  isDragging?: boolean;
+  isOverNested?: boolean;
+  onSelect?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+  onReorder?: (direction: 'up' | 'down') => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  children?: React.ReactNode;
+  isFirst?: boolean;
+  isLast?: boolean;
+  validationStatus?: "error" | "warning" | "info";
+}
+
+export function ActionChipVisuals({
+  action,
+  isSelected,
+  isDragging,
+  isOverNested,
+  onSelect,
+  onDelete,
+  onReorder,
+  dragHandleProps,
+  children,
+  isFirst,
+  isLast,
+  validationStatus,
+}: ActionChipVisualsProps) {
+  const def = actionRegistry.getAction(action.type);
+
+  return (
+    <div
+      className={cn(
+        "group relative flex w-full flex-col items-start gap-1 rounded border px-3 py-2 text-[11px]",
+        "bg-muted/40 hover:bg-accent/40 cursor-pointer",
+        isSelected && "border-border bg-accent/30",
+        isDragging && "opacity-70 shadow-lg",
+        isOverNested && !isDragging && "ring-2 ring-blue-400 ring-offset-1 bg-blue-50/50"
+      )}
+      onClick={onSelect}
+      role="button"
+      aria-pressed={isSelected}
+      tabIndex={0}
+    >
+      <div className="flex w-full items-center gap-2">
+        <span className="flex-1 leading-snug font-medium break-words flex items-center gap-2">
+          {action.name}
+          {validationStatus === "error" && (
+            <div className="h-2 w-2 rounded-full bg-red-500 ring-1 ring-red-600" aria-label="Error" />
+          )}
+          {validationStatus === "warning" && (
+            <div className="h-2 w-2 rounded-full bg-amber-500 ring-1 ring-amber-600" aria-label="Warning" />
+          )}
+        </span>
+
+        <div className="flex items-center gap-0.5 mr-1 bg-background/50 rounded-md border border-border/50 shadow-sm px-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-[10px] text-muted-foreground hover:text-foreground z-20 pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder?.('up');
+            }}
+            disabled={isFirst}
+            aria-label="Move action up"
+          >
+            <ChevronRight className="h-3 w-3 -rotate-90" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-[10px] text-muted-foreground hover:text-foreground z-20 pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder?.('down');
+            }}
+            disabled={isLast}
+            aria-label="Move action down"
+          >
+            <ChevronRight className="h-3 w-3 rotate-90" />
+          </Button>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-foreground rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+          aria-label="Delete action"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+      {def?.description && (
+        <div className="text-muted-foreground line-clamp-3 w-full text-[10px] leading-snug">
+          {def.description}
+        </div>
+      )}
+      {def?.parameters.length ? (
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          {def.parameters.slice(0, 4).map((p) => (
+            <span
+              key={p.id}
+              className="bg-background/70 text-muted-foreground ring-border rounded px-1 py-0.5 text-[9px] font-medium ring-1"
+            >
+              {p.name}
+            </span>
+          ))}
+          {def.parameters.length > 4 && (
+            <span className="text-[9px] text-muted-foreground">+{def.parameters.length - 4}</span>
+          )}
+        </div>
+      ) : null}
+
+      {children}
+    </div>
+  );
+}
+
+export function SortableActionChip({
   stepId,
   action,
   parentId,
   selectedActionId,
   onSelectAction,
   onDeleteAction,
+  onReorderAction,
   dragHandle,
+  isFirst,
+  isLast,
 }: ActionChipProps) {
-  const def = actionRegistry.getAction(action.type);
   const isSelected = selectedActionId === action.id;
 
   const insertionProjection = useDesignerStore((s) => s.insertionProjection);
@@ -388,35 +586,44 @@ function SortableActionChip({
   /* ------------------------------------------------------------------------ */
   const isPlaceholder = action.id === "projection-placeholder";
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: isSortableDragging,
-  } = useSortable({
-    id: sortableActionId(action.id),
-    disabled: isPlaceholder, // Disable sortable for placeholder
-    data: {
-      type: "action",
-      stepId,
-      parentId,
-      id: action.id,
-    },
-  });
+  // Compute validation status
+  const issues = useDesignerStore((s) => s.validationIssues[action.id]);
+  const validationStatus = useMemo(() => {
+    if (!issues?.length) return undefined;
+    if (issues.some((i) => i.severity === "error")) return "error";
+    if (issues.some((i) => i.severity === "warning")) return "warning";
+    return "info";
+  }, [issues]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Sortable (Local) DnD Monitoring                                          */
+  /* ------------------------------------------------------------------------ */
+  // useSortable disabled per user request to remove action drag-and-drop
+  // const { ... } = useSortable(...) 
 
   // Use local dragging state or passed prop
-  const isDragging = isSortableDragging || dragHandle;
+  const isDragging = dragHandle || false;
 
   const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
+    // transform: CSS.Translate.toString(transform),
+    // transition,
   };
+
+  // We need a ref for droppable? Droppable is below.
+  // For the chip itself, if not sortable, we don't need setNodeRef.
+  // But we might need it for layout?
+  // Let's keep a simple div ref usage if needed, but useSortable provided setNodeRef.
+  // We can just use a normal ref or nothing if not measuring.
+  const setNodeRef = undefined; // No-op
+  const attributes = {};
+  const listeners = {};
+
+
 
   /* ------------------------------------------------------------------------ */
   /* Nested Droppable (for control flow containers)                           */
   /* ------------------------------------------------------------------------ */
+  const def = actionRegistry.getAction(action.type);
   const nestedDroppableId = `container-${action.id}`;
   const {
     isOver: isOverNested,
@@ -472,114 +679,61 @@ function SortableActionChip({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "group relative flex w-full flex-col items-start gap-1 rounded border px-3 py-2 text-[11px]",
-        "bg-muted/40 hover:bg-accent/40 cursor-pointer",
-        isSelected && "border-border bg-accent/30",
-        isDragging && "opacity-70 shadow-lg",
-        // Visual feedback for nested drop
-        isOverNested && !isDragging && "ring-2 ring-blue-400 ring-offset-1 bg-blue-50/50"
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelectAction(stepId, action.id);
-      }}
       {...attributes}
-      role="button"
-      aria-pressed={isSelected}
-      tabIndex={0}
     >
-      <div className="flex w-full items-center gap-2">
-        <div
-          {...listeners}
-          className="text-muted-foreground/70 hover:text-foreground cursor-grab rounded p-0.5"
-          aria-label="Drag action"
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </div>
-        <span
-          className={cn(
-            "h-2.5 w-2.5 rounded-full",
-            def
-              ? {
-                wizard: "bg-blue-500",
-                robot: "bg-emerald-500",
-                control: "bg-amber-500",
-                observation: "bg-purple-500",
-              }[def.category]
-              : "bg-slate-400",
-          )}
-        />
-        <span className="flex-1 leading-snug font-medium break-words">
-          {action.name}
-        </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteAction(stepId, action.id);
-          }}
-          className="text-muted-foreground hover:text-foreground rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
-          aria-label="Delete action"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      {def?.description && (
-        <div className="text-muted-foreground line-clamp-3 w-full text-[10px] leading-snug">
-          {def.description}
-        </div>
-      )}
-      {def?.parameters.length ? (
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          {def.parameters.slice(0, 4).map((p) => (
-            <span
-              key={p.id}
-              className="bg-background/70 text-muted-foreground ring-border rounded px-1 py-0.5 text-[9px] font-medium ring-1"
-            >
-              {p.name}
-            </span>
-          ))}
-          {def.parameters.length > 4 && (
-            <span className="text-[9px] text-muted-foreground">+{def.parameters.length - 4}</span>
-          )}
-        </div>
-      ) : null}
-
-      {/* Nested Actions Container */}
-      {shouldRenderChildren && (
-        <div
-          ref={setNestedNodeRef}
-          className={cn(
-            "mt-2 w-full flex flex-col gap-2 pl-4 border-l-2 border-border/40 transition-all min-h-[0.5rem] pb-4",
-          )}
-        >
-          <SortableContext
-            items={(displayChildren ?? action.children ?? [])
-              .filter(c => c.id !== "projection-placeholder")
-              .map(c => sortableActionId(c.id))}
-            strategy={verticalListSortingStrategy}
-          >
-            {(displayChildren || action.children || []).map((child) => (
-              <SortableActionChip
-                key={child.id}
-                stepId={stepId}
-                action={child}
-                parentId={action.id}
-                selectedActionId={selectedActionId}
-                onSelectAction={onSelectAction}
-                onDeleteAction={onDeleteAction}
-              />
-            ))}
-            {(!displayChildren?.length && !action.children?.length) && (
-              <div className="text-[10px] text-muted-foreground/60 italic py-1">
-                Drag actions here
-              </div>
+      <ActionChipVisuals
+        action={action}
+        isSelected={isSelected}
+        isDragging={isDragging}
+        isOverNested={isOverNested}
+        onSelect={(e) => {
+          e.stopPropagation();
+          onSelectAction(stepId, action.id);
+        }}
+        onDelete={(e) => {
+          e.stopPropagation();
+          onDeleteAction(stepId, action.id);
+        }}
+        onReorder={(direction) => onReorderAction?.(stepId, action.id, direction)}
+        dragHandleProps={listeners}
+        isLast={isLast}
+        validationStatus={validationStatus}
+      >
+        {/* Nested Actions Container */}
+        {shouldRenderChildren && (
+          <div
+            ref={setNestedNodeRef}
+            className={cn(
+              "mt-2 w-full flex flex-col gap-2 pl-4 border-l-2 border-border/40 transition-all min-h-[0.5rem] pb-4",
             )}
-          </SortableContext>
-        </div>
-      )}
-
+          >
+            <SortableContext
+              items={(displayChildren ?? action.children ?? [])
+                .filter(c => c.id !== "projection-placeholder")
+                .map(c => sortableActionId(c.id))}
+              strategy={verticalListSortingStrategy}
+            >
+              {(displayChildren || action.children || []).map((child) => (
+                <SortableActionChip
+                  key={child.id}
+                  stepId={stepId}
+                  action={child}
+                  parentId={action.id}
+                  selectedActionId={selectedActionId}
+                  onSelectAction={onSelectAction}
+                  onDeleteAction={onDeleteAction}
+                  onReorderAction={onReorderAction}
+                />
+              ))}
+              {(!displayChildren?.length && !action.children?.length) && (
+                <div className="text-[10px] text-muted-foreground/60 italic py-1">
+                  Drag actions here
+                </div>
+              )}
+            </SortableContext>
+          </div>
+        )}
+      </ActionChipVisuals>
     </div>
   );
 }
@@ -796,6 +950,52 @@ export function FlowWorkspace({
     [removeAction, selectedActionId, selectAction, recomputeHash],
   );
 
+  const handleReorderStep = useCallback(
+    (stepId: string, direction: 'up' | 'down') => {
+      console.log('handleReorderStep', stepId, direction);
+      const currentIndex = steps.findIndex((s) => s.id === stepId);
+      console.log('currentIndex', currentIndex, 'total', steps.length);
+      if (currentIndex === -1) return;
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      console.log('newIndex', newIndex);
+      if (newIndex < 0 || newIndex >= steps.length) return;
+      reorderStep(currentIndex, newIndex);
+    },
+    [steps, reorderStep]
+  );
+
+  const handleReorderAction = useCallback(
+    (stepId: string, actionId: string, direction: 'up' | 'down') => {
+      const step = steps.find(s => s.id === stepId);
+      if (!step) return;
+
+      const findInTree = (list: ExperimentAction[], pId: string | null): { list: ExperimentAction[], parentId: string | null, index: number } | null => {
+        const idx = list.findIndex(a => a.id === actionId);
+        if (idx !== -1) return { list, parentId: pId, index: idx };
+
+        for (const a of list) {
+          if (a.children) {
+            const res = findInTree(a.children, a.id);
+            if (res) return res;
+          }
+        }
+        return null;
+      };
+
+      const context = findInTree(step.actions, null);
+      if (!context) return;
+
+      const { parentId, index, list } = context;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+
+      if (newIndex < 0 || newIndex >= list.length) return;
+
+      moveAction(stepId, actionId, parentId, newIndex);
+    },
+    [steps, moveAction]
+  );
+
+
   /* ------------------------------------------------------------------------ */
   /* Sortable (Local) DnD Monitoring                                          */
   /* ------------------------------------------------------------------------ */
@@ -815,19 +1015,9 @@ export function FlowWorkspace({
       }
       const activeId = active.id.toString();
       const overId = over.id.toString();
-      // Step reorder
-      if (activeId.startsWith("s-step-") && overId.startsWith("s-step-")) {
-        const fromStepId = parseSortableStep(activeId);
-        const toStepId = parseSortableStep(overId);
-        if (fromStepId && toStepId && fromStepId !== toStepId) {
-          const fromIndex = steps.findIndex((s) => s.id === fromStepId);
-          const toIndex = steps.findIndex((s) => s.id === toStepId);
-          if (fromIndex >= 0 && toIndex >= 0) {
-            reorderStep(fromIndex, toIndex);
-            void recomputeHash();
-          }
-        }
-      }
+
+      // Step reorder is now handled globally in DesignerRoot
+
       // Action reorder (supports nesting)
       if (activeId.startsWith("s-act-") && overId.startsWith("s-act-")) {
         const activeData = active.data.current;
@@ -839,8 +1029,9 @@ export function FlowWorkspace({
           activeData.type === 'action' && overData.type === 'action'
         ) {
           const stepId = activeData.stepId as string;
-          const activeActionId = activeData.action.id;
-          const overActionId = overData.action.id;
+          // Fix: SortableActionChip puts 'id' directly on data, not inside 'action' property
+          const activeActionId = activeData.id;
+          const overActionId = overData.id;
 
           if (activeActionId !== overActionId) {
             const newParentId = overData.parentId as string | null;
@@ -877,8 +1068,10 @@ export function FlowWorkspace({
           activeData.type === 'action' &&
           overData.type === 'action'
         ) {
-          const activeActionId = activeData.action.id;
-          const overActionId = overData.action.id;
+          // Fix: Access 'id' directly from data payload
+          const activeActionId = activeData.id;
+          const overActionId = overData.id;
+
           const activeStepId = activeData.stepId;
           const overStepId = overData.stepId;
           const activeParentId = activeData.parentId;
@@ -956,7 +1149,8 @@ export function FlowWorkspace({
       <div
         ref={containerRef}
         id="tour-designer-canvas"
-        className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border"
+        // Removed 'border' class to fix double border issue
+        className="relative h-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md"
         onScroll={onScroll}
       >
         {steps.length === 0 ? (
@@ -990,6 +1184,8 @@ export function FlowWorkspace({
                     <StepRow
                       key={vi.key}
                       item={vi}
+                      step={vi.step}
+                      totalSteps={steps.length}
                       selectedStepId={selectedStepId}
                       selectedActionId={selectedActionId}
                       renamingStepId={renamingStepId}
@@ -1004,6 +1200,8 @@ export function FlowWorkspace({
                       onDeleteAction={deleteAction}
                       setRenamingStepId={setRenamingStepId}
                       registerMeasureRef={registerMeasureRef}
+                      onReorderStep={handleReorderStep}
+                      onReorderAction={handleReorderAction}
                     />
                   ),
               )}

@@ -67,6 +67,10 @@ export interface InspectorPanelProps {
     name: string;
     version: string;
   }>;
+  /**
+   * Called to clear all validation issues.
+   */
+  onClearAll?: () => void;
 }
 
 export function InspectorPanel({
@@ -77,6 +81,7 @@ export function InspectorPanel({
   studyPlugins,
   collapsed,
   onCollapse,
+  onClearAll,
 }: InspectorPanelProps) {
   /* ------------------------------------------------------------------------ */
   /* Store Selectors                                                          */
@@ -323,6 +328,7 @@ export function InspectorPanel({
           >
             <ValidationPanel
               issues={validationIssues}
+              onClearAll={onClearAll}
               entityLabelForId={(entityId) => {
                 if (entityId.startsWith("action-")) {
                   for (const s of steps) {

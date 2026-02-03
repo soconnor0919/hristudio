@@ -17,7 +17,10 @@ import {
   studyMembers,
   userSystemRoles,
 } from "~/server/db/schema";
-import { convertStepsToDatabase } from "~/lib/experiment-designer/block-converter";
+import {
+  convertStepsToDatabase,
+  convertDatabaseToSteps,
+} from "~/lib/experiment-designer/block-converter";
 import type {
   ExperimentStep,
   ExperimentDesign,
@@ -382,6 +385,7 @@ export const experimentsRouter = createTRPCRouter({
 
       return {
         ...experiment,
+        steps: convertDatabaseToSteps(experiment.steps),
         integrityHash: experiment.integrityHash,
         executionGraphSummary,
         pluginDependencies: experiment.pluginDependencies ?? [],

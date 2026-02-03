@@ -119,26 +119,13 @@ export const TRIGGER_OPTIONS = [
 ];
 
 // Step type options for UI
+// IMPORTANT: Steps should ALWAYS execute sequentially
+// Parallel execution, conditionals, and loops should be implemented via control flow ACTIONS
 export const STEP_TYPE_OPTIONS = [
   {
     value: "sequential" as const,
     label: "Sequential",
-    description: "Actions run one after another",
-  },
-  {
-    value: "parallel" as const,
-    label: "Parallel",
-    description: "Actions run at the same time",
-  },
-  {
-    value: "conditional" as const,
-    label: "Conditional",
-    description: "Actions run if condition is met",
-  },
-  {
-    value: "loop" as const,
-    label: "Loop",
-    description: "Actions repeat multiple times",
+    description: "Actions run one after another (enforced for all steps)",
   },
 ];
 

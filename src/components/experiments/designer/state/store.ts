@@ -167,8 +167,6 @@ function cloneSteps(steps: ExperimentStep[]): ExperimentStep[] {
 
 function reindexSteps(steps: ExperimentStep[]): ExperimentStep[] {
   return steps
-    .slice()
-    .sort((a, b) => a.order - b.order)
     .map((s, idx) => ({ ...s, order: idx }));
 }
 

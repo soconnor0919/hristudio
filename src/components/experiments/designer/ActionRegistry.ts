@@ -284,46 +284,8 @@ export class ActionRegistry {
 
   loadPluginActions(
     studyId: string,
-    studyPlugins: Array<{
-      plugin: {
-        id: string;
-        robotId: string | null;
-        version: string | null;
-        actionDefinitions?: Array<{
-          id: string;
-          name: string;
-          description?: string;
-          category?: string;
-          icon?: string;
-          timeout?: number;
-          retryable?: boolean;
-          aliases?: string[];
-          parameterSchema?: unknown;
-          ros2?: {
-            topic?: string;
-            messageType?: string;
-            service?: string;
-            action?: string;
-            payloadMapping?: unknown;
-            qos?: {
-              reliability?: string;
-              durability?: string;
-              history?: string;
-              depth?: number;
-            };
-          };
-          rest?: {
-            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-            path: string;
-            headers?: Record<string, string>;
-          };
-        }>;
-        metadata?: Record<string, any>;
-      };
-    }>,
+    studyPlugins: any[],
   ): void {
-    // console.log("ActionRegistry.loadPluginActions called with:", { studyId, pluginCount: studyPlugins?.length ?? 0 });
-
     if (this.pluginActionsLoaded && this.loadedStudyId === studyId) return;
 
     if (this.loadedStudyId !== studyId) {
@@ -332,17 +294,14 @@ export class ActionRegistry {
 
     let totalActionsLoaded = 0;
 
-    (studyPlugins ?? []).forEach((studyPlugin) => {
-      const { plugin } = studyPlugin;
+    (studyPlugins ?? []).forEach((plugin) => {
       const actionDefs = Array.isArray(plugin.actionDefinitions)
         ? plugin.actionDefinitions
         : undefined;
 
-      // console.log(`Plugin ${plugin.id}:`, { actionCount: actionDefs?.length ?? 0 });
-
       if (!actionDefs) return;
 
-      actionDefs.forEach((action) => {
+      actionDefs.forEach((action: any) => {
         const rawCategory =
           typeof action.category === "string"
             ? action.category.toLowerCase().trim()
