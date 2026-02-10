@@ -13,6 +13,8 @@ import { Button } from "~/components/ui/button";
 import { Edit } from "lucide-react";
 import Link from "next/link";
 
+import { ParticipantConsentManager } from "~/components/participants/ParticipantConsentManager";
+
 interface ParticipantDetailPageProps {
     params: Promise<{ id: string; participantId: string }>;
 }
@@ -61,6 +63,13 @@ export default async function ParticipantDetailPage({
 
                 <TabsContent value="overview">
                     <div className="grid gap-6 grid-cols-1">
+                        <ParticipantConsentManager
+                            studyId={studyId}
+                            participantId={participantId}
+                            consentGiven={participant.consentGiven}
+                            consentDate={participant.consentDate}
+                            existingConsent={participant.consents[0] ?? null}
+                        />
                         <EntityViewSection title="Participant Information" icon="Info">
                             <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                                 <div>

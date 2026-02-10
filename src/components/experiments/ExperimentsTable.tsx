@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Copy, Eye, Edit, LayoutTemplate, PlayCircle, Archive } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Edit, LayoutTemplate, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -243,64 +243,56 @@ export const columns: ColumnDef<Experiment>[] = [
   {
     id: "actions",
     enableHiding: false,
-    cell: ({ row }) => {
-      const experiment = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(experiment.id)}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>
-                <Eye className="mr-2 h-4 w-4" />
-                Details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
-                <LayoutTemplate className="mr-2 h-4 w-4" />
-                Designer
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/studies/${experiment.studyId}/trials/new?experimentId=${experiment.id}`}
-              >
-                <PlayCircle className="mr-2 h-4 w-4" />
-                Start Trial
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
-              <Archive className="mr-2 h-4 w-4" />
-              Archive
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <ExperimentActions experiment={row.original} />,
   },
 ];
+
+function ExperimentActions({ experiment }: { experiment: Experiment }) {
+  const utils = api.useUtils();
+  const deleteMutation = api.experiments.delete.useMutation({
+    onSuccess: () => {
+      utils.experiments.list.invalidate();
+    },
+  });
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Metadata
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+            <LayoutTemplate className="mr-2 h-4 w-4" />
+            Design
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-700"
+          onClick={() => {
+            if (confirm("Are you sure you want to delete this experiment?")) {
+              deleteMutation.mutate({ id: experiment.id });
+            }
+          }}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function ExperimentsTable() {
   const { selectedStudyId } = useStudyContext();

@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { api } from "~/trpc/react";
 
 export type Experiment = {
   id: string;
@@ -78,27 +79,23 @@ const statusConfig = {
 };
 
 function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
-  const handleDelete = async () => {
+  const utils = api.useUtils();
+  const deleteMutation = api.experiments.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Experiment deleted successfully");
+      utils.experiments.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete experiment: ${error.message}`);
+    },
+  });
+
+  const handleDelete = () => {
     if (
       window.confirm(`Are you sure you want to delete "${experiment.name}"?`)
     ) {
-      try {
-        // TODO: Implement delete experiment mutation
-        toast.success("Experiment deleted successfully");
-      } catch {
-        toast.error("Failed to delete experiment");
-      }
+      deleteMutation.mutate({ id: experiment.id });
     }
-  };
-
-  const handleCopyId = () => {
-    void navigator.clipboard.writeText(experiment.id);
-    toast.success("Experiment ID copied to clipboard");
-  };
-
-  const handleStartTrial = () => {
-    // Navigate to new trial creation with this experiment pre-selected
-    window.location.href = `/studies/${experiment.studyId}/trials/new?experimentId=${experiment.id}`;
   };
 
   return (
@@ -111,43 +108,18 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
         <DropdownMenuItem asChild>
-          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
+          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Metadata
           </Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
           <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
             <FlaskConical className="mr-2 h-4 w-4" />
-            Open Designer
+            Design
           </Link>
-        </DropdownMenuItem>
-
-        {experiment.canEdit && (
-          <DropdownMenuItem asChild>
-            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Experiment
-            </Link>
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuSeparator />
-
-        {experiment.status === "ready" && (
-          <DropdownMenuItem onClick={handleStartTrial}>
-            <Play className="mr-2 h-4 w-4" />
-            Start New Trial
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuItem onClick={handleCopyId}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Experiment ID
         </DropdownMenuItem>
 
         {experiment.canDelete && (
@@ -158,7 +130,7 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
               className="text-red-600 focus:text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Experiment
+              Delete
             </DropdownMenuItem>
           </>
         )}
@@ -315,20 +287,7 @@ export const experimentsColumns: ColumnDef<Experiment>[] = [
     },
     enableSorting: false,
   },
-  {
-    accessorKey: "createdAt",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Created" />
-    ),
-    cell: ({ row }) => {
-      const date = row.getValue("createdAt");
-      return (
-        <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date as Date, { addSuffix: true })}
-        </div>
-      );
-    },
-  },
+
   {
     accessorKey: "updatedAt",
     header: ({ column }) => (

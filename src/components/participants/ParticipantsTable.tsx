@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Copy, Eye, Edit, Mail, Trash2 } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -148,30 +148,7 @@ export const columns: ColumnDef<Participant>[] = [
       );
     },
   },
-  {
-    accessorKey: "createdAt",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const date = row.getValue("createdAt");
-      return (
-        <div className="text-muted-foreground text-sm">
-          {formatDistanceToNow(new Date(date as string | number | Date), {
-            addSuffix: true,
-          })}
-        </div>
-      );
-    },
-  },
+
   {
     id: "actions",
     enableHiding: false,
@@ -195,23 +172,12 @@ export const columns: ColumnDef<Participant>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(participant.id)}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href={`/studies/${studyId}/participants/${participant.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit participant
               </Link >
             </DropdownMenuItem >
-            <DropdownMenuItem disabled>
-              <Mail className="mr-2 h-4 w-4" />
-              Send consent
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />

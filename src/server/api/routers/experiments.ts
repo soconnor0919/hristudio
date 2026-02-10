@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -87,7 +87,10 @@ export const experimentsRouter = createTRPCRouter({
       // Check study access
       await checkStudyAccess(ctx.db, userId, studyId);
 
-      const conditions = [eq(experiments.studyId, studyId)];
+      const conditions = [
+        eq(experiments.studyId, studyId),
+        isNull(experiments.deletedAt),
+      ];
       if (status) {
         conditions.push(eq(experiments.status, status));
       }
@@ -224,7 +227,10 @@ export const experimentsRouter = createTRPCRouter({
       }
 
       // Build where conditions
-      const conditions = [inArray(experiments.studyId, studyIds)];
+      const conditions = [
+        inArray(experiments.studyId, studyIds),
+        isNull(experiments.deletedAt),
+      ];
 
       if (status) {
         conditions.push(eq(experiments.status, status));

@@ -406,6 +406,32 @@ export const WizardInterface = React.memo(function WizardInterface({
     },
   });
 
+  const pauseTrialMutation = api.trials.pause.useMutation({
+    onSuccess: () => {
+      toast.success("Trial paused");
+      // Optionally update local state if needed, though status might not change on backend strictly to "paused"
+      // depending on enum. But we logged the event.
+    },
+    onError: (error) => {
+      toast.error("Failed to pause trial", { description: error.message });
+    },
+  });
+
+  const archiveTrialMutation = api.trials.archive.useMutation({
+    onSuccess: () => {
+      console.log("Trial archived successfully");
+    },
+    onError: (error) => {
+      console.error("Failed to archive trial", error);
+    },
+  });
+
+  const logEventMutation = api.trials.logEvent.useMutation({
+    onSuccess: () => {
+      // toast.success("Event logged"); // Too noisy
+    },
+  });
+
   // Action handlers
   const handleStartTrial = async () => {
     console.log(
@@ -443,8 +469,11 @@ export const WizardInterface = React.memo(function WizardInterface({
   };
 
   const handlePauseTrial = async () => {
-    // TODO: Implement pause functionality
-    console.log("Pause trial");
+    try {
+      await pauseTrialMutation.mutateAsync({ id: trial.id });
+    } catch (error) {
+      console.error("Failed to pause trial:", error);
+    }
   };
 
   const handleNextStep = (targetIndex?: number) => {
@@ -498,6 +527,19 @@ export const WizardInterface = React.memo(function WizardInterface({
     // Default: Linear progression
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
+      // Log step change
+      logEventMutation.mutate({
+        trialId: trial.id,
+        type: "step_changed",
+        data: {
+          fromIndex: currentStepIndex,
+          toIndex: nextIndex,
+          fromStepId: currentStep?.id,
+          toStepId: steps[nextIndex]?.id,
+          stepName: steps[nextIndex]?.name,
+        }
+      });
+
       setCurrentStepIndex(nextIndex);
     } else {
       handleCompleteTrial();
@@ -507,6 +549,8 @@ export const WizardInterface = React.memo(function WizardInterface({
   const handleCompleteTrial = async () => {
     try {
       await completeTrialMutation.mutateAsync({ id: trial.id });
+      // Trigger archive in background
+      archiveTrialMutation.mutate({ id: trial.id });
     } catch (error) {
       console.error("Failed to complete trial:", error);
     }
@@ -543,10 +587,7 @@ export const WizardInterface = React.memo(function WizardInterface({
     });
   };
 
-  // Mutation for events (Acknowledge)
-  const logEventMutation = api.trials.logEvent.useMutation({
-    onSuccess: () => toast.success("Event logged"),
-  });
+
 
   // Mutation for interventions
   const addInterventionMutation = api.trials.addIntervention.useMutation({

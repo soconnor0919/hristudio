@@ -2,17 +2,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { LineChart, BarChart, Clock, Database, FileText, AlertTriangle, CheckCircle, VideoOff, Info } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import Link from "next/link";
+import { LineChart, BarChart, Clock, Database, FileText, AlertTriangle, CheckCircle, VideoOff, Info, Bot, Activity, ArrowLeft } from "lucide-react";
 import { PlaybackProvider } from "../playback/PlaybackContext";
 import { PlaybackPlayer } from "../playback/PlaybackPlayer";
 import { EventTimeline } from "../playback/EventTimeline";
 import { api } from "~/trpc/react";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { cn } from "~/lib/utils";
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
 } from "~/components/ui/resizable";
+import { EventsDataTable } from "../analysis/events-data-table";
 
 interface TrialAnalysisViewProps {
     trial: {
@@ -27,9 +31,10 @@ interface TrialAnalysisViewProps {
         mediaCount?: number;
         media?: { url: string; contentType: string }[];
     };
+    backHref: string;
 }
 
-export function TrialAnalysisView({ trial }: TrialAnalysisViewProps) {
+export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
     // Fetch events for timeline
     const { data: events = [] } = api.trials.getEvents.useQuery({
         trialId: trial.id,
@@ -39,139 +44,153 @@ export function TrialAnalysisView({ trial }: TrialAnalysisViewProps) {
     const videoMedia = trial.media?.find(m => m.contentType.startsWith("video/"));
     const videoUrl = videoMedia?.url;
 
+    // Metrics
+    const interventionCount = events.filter(e => e.eventType.includes("intervention")).length;
+    const errorCount = events.filter(e => e.eventType.includes("error")).length;
+    const robotActionCount = events.filter(e => e.eventType.includes("robot_action")).length;
+
     return (
         <PlaybackProvider events={events} startTime={trial.startedAt ?? undefined}>
-            <div className="h-[calc(100vh-8rem)] flex flex-col bg-background rounded-lg border shadow-sm overflow-hidden">
+            <div className="flex h-full flex-col gap-4 p-4 text-sm">
                 {/* Header Context */}
-                <div className="flex items-center justify-between p-3 border-b bg-muted/20 flex-none h-14">
+                <div className="flex items-center justify-between pb-2 border-b">
                     <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" asChild className="-ml-2">
+                            <Link href={backHref}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
                         <div className="flex flex-col">
-                            <h1 className="text-base font-semibold leading-none">
+                            <h1 className="text-lg font-semibold leading-none tracking-tight">
                                 {trial.experiment.name}
                             </h1>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {trial.participant.participantCode} • Session {trial.id.slice(0, 4)}...
-                            </p>
-                        </div>
-                        <div className="h-8 w-px bg-border" />
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                                <Clock className="h-3.5 w-3.5" />
-                                <span>{trial.startedAt?.toLocaleDateString()} {trial.startedAt?.toLocaleTimeString()}</span>
+                            <div className="flex items-center gap-2 text-muted-foreground mt-1">
+                                <span className="font-mono">{trial.participant.participantCode}</span>
+                                <span>•</span>
+                                <span>Session {trial.id.slice(0, 4)}</span>
                             </div>
-                            {trial.duration && (
-                                <Badge variant="secondary" className="text-[10px] font-mono">
-                                    {Math.floor(trial.duration / 60)}m {trial.duration % 60}s
-                                </Badge>
-                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span className="text-xs font-mono">
+                                {trial.startedAt?.toLocaleDateString()} {trial.startedAt?.toLocaleTimeString()}
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Resizable Workspace */}
-                <div className="flex-1 min-h-0">
-                    <ResizablePanelGroup direction="horizontal">
+                {/* Metrics Header */}
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Card className="bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-950/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Duration</CardTitle>
+                            <Clock className="h-4 w-4 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {trial.duration ? (
+                                    <span>{Math.floor(trial.duration / 60)}m {trial.duration % 60}s</span>
+                                ) : (
+                                    "--:--"
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Total session time</p>
+                        </CardContent>
+                    </Card>
 
-                        {/* LEFT: Video & Timeline */}
-                        <ResizablePanel defaultSize={65} minSize={30} className="flex flex-col min-h-0">
-                            <ResizablePanelGroup direction="vertical">
-                                {/* Top: Video Player */}
-                                <ResizablePanel defaultSize={75} minSize={20} className="bg-black relative">
-                                    {videoUrl ? (
-                                        <div className="absolute inset-0">
-                                            <PlaybackPlayer src={videoUrl} />
-                                        </div>
-                                    ) : (
-                                        <div className="h-full w-full flex flex-col items-center justify-center text-slate-500">
-                                            <VideoOff className="h-12 w-12 mb-3 opacity-20" />
-                                            <p className="text-sm">No recording available.</p>
-                                        </div>
-                                    )}
-                                </ResizablePanel>
+                    <Card className="bg-gradient-to-br from-purple-50 to-transparent dark:from-purple-950/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Robot Actions</CardTitle>
+                            <Bot className="h-4 w-4 text-purple-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{robotActionCount}</div>
+                            <p className="text-xs text-muted-foreground">Executed autonomous behaviors</p>
+                        </CardContent>
+                    </Card>
 
-                                <ResizableHandle withHandle />
+                    <Card className="bg-gradient-to-br from-orange-50 to-transparent dark:from-orange-950/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Interventions</CardTitle>
+                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{interventionCount}</div>
+                            <p className="text-xs text-muted-foreground">Manual wizard overrides</p>
+                        </CardContent>
+                    </Card>
 
-                                {/* Bottom: Timeline Track */}
-                                <ResizablePanel defaultSize={25} minSize={10} className="bg-background flex flex-col min-h-0">
-                                    <div className="p-2 border-b flex-none bg-muted/10 flex items-center gap-2">
-                                        <Info className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Timeline Track</span>
+                    <Card className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Completeness</CardTitle>
+                            <Activity className="h-4 w-4 text-green-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {trial.status === 'completed' ? '100%' : 'Incomplete'}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className={cn(
+                                    "inline-block h-2 w-2 rounded-full",
+                                    trial.status === 'completed' ? "bg-green-500" : "bg-yellow-500"
+                                )} />
+                                {trial.status.charAt(0).toUpperCase() + trial.status.slice(1)}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Workspace: Vertical Layout */}
+                <div className="flex-1 min-h-0 rounded-xl border shadow-sm overflow-hidden bg-background">
+                    <ResizablePanelGroup direction="vertical">
+
+                        {/* TOP: Video & Timeline */}
+                        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40">
+                            <div className="relative flex-1 min-h-0 flex items-center justify-center">
+                                {videoUrl ? (
+                                    <div className="absolute inset-0">
+                                        <PlaybackPlayer src={videoUrl} />
                                     </div>
-                                    <div className="flex-1 min-h-0 relative">
-                                        <div className="absolute inset-0 p-2 overflow-hidden">
-                                            <EventTimeline />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
+                                        <div className="bg-muted rounded-full p-4 mb-4">
+                                            <VideoOff className="h-8 w-8 opacity-50" />
                                         </div>
+                                        <h3 className="font-semibold text-lg">No playback media available</h3>
+                                        <p className="text-sm max-w-sm mt-2">
+                                            There is no video recording associated with this trial session.
+                                        </p>
                                     </div>
-                                </ResizablePanel>
-                            </ResizablePanelGroup>
+                                )}
+                            </div>
+
+                            {/* Timeline Control */}
+                            <div className="shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+                                <EventTimeline />
+                            </div>
                         </ResizablePanel>
 
-                        <ResizableHandle withHandle />
+                        <ResizableHandle withHandle className="bg-border/50" />
 
-                        {/* RIGHT: Logs & Metrics */}
-                        <ResizablePanel defaultSize={35} minSize={20} className="flex flex-col min-h-0 border-l bg-muted/5">
-                            {/* Metrics Strip */}
-                            <div className="grid grid-cols-2 gap-2 p-3 border-b bg-background flex-none">
-                                <Card className="shadow-none border-dashed bg-transparent">
-                                    <CardContent className="p-3 py-2">
-                                        <div className="text-[10px] uppercase text-muted-foreground font-semibold mb-0.5">Interventions</div>
-                                        <div className="text-xl font-mono font-bold flex items-center gap-2">
-                                            {events.filter(e => e.eventType.includes("intervention")).length}
-                                            <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card className="shadow-none border-dashed bg-transparent">
-                                    <CardContent className="p-3 py-2">
-                                        <div className="text-[10px] uppercase text-muted-foreground font-semibold mb-0.5">Status</div>
-                                        <div className="text-xl font-mono font-bold flex items-center gap-2">
-                                            {trial.status === 'completed' ? 'PASS' : 'INC'}
-                                            <div className={`h-2 w-2 rounded-full ${trial.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'}`} />
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                        {/* BOTTOM: Events Table */}
+                        <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0 bg-background">
+                            <div className="flex items-center justify-between px-4 py-3 border-b">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <h3 className="font-semibold text-sm">Event Log</h3>
+                                </div>
+                                <Badge variant="secondary" className="text-xs">{events.length} Events</Badge>
                             </div>
-
-                            {/* Log Title */}
-                            <div className="p-2 px-3 border-b bg-muted/20 flex items-center justify-between flex-none">
-                                <span className="text-xs font-semibold flex items-center gap-2">
-                                    <FileText className="h-3.5 w-3.5 text-primary" />
-                                    Event Log
-                                </span>
-                                <Badge variant="outline" className="text-[10px] h-5">{events.length} Events</Badge>
-                            </div>
-
-                            {/* Scrollable Event List */}
-                            <div className="flex-1 min-h-0 relative bg-background/50">
-                                <ScrollArea className="h-full">
-                                    <div className="divide-y divide-border/50">
-                                        {events.map((event, i) => (
-                                            <div key={i} className="p-3 py-2 text-sm hover:bg-accent/50 transition-colors cursor-pointer group flex gap-3 items-start">
-                                                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 min-w-[3rem]">
-                                                    {formatTime(new Date(event.timestamp).getTime() - (trial.startedAt?.getTime() ?? 0))}
-                                                </div>
-                                                <div className="flex-1 min-w-0 space-y-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">
-                                                            {event.eventType.replace(/_/g, " ")}
-                                                        </span>
-                                                    </div>
-                                                    {!!event.data && (
-                                                        <div className="text-[10px] text-muted-foreground bg-muted p-1.5 rounded border font-mono whitespace-pre-wrap break-all opacity-80 group-hover:opacity-100">
-                                                            {JSON.stringify(event.data as object, null, 1).replace(/"/g, '').replace(/[{}]/g, '').trim()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {events.length === 0 && (
-                                            <div className="p-8 text-center text-xs text-muted-foreground italic">
-                                                No events found in log.
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-                            </div>
+                            <ScrollArea className="flex-1">
+                                <div className="p-4">
+                                    <EventsDataTable
+                                        data={events.map(e => ({ ...e, timestamp: new Date(e.timestamp) }))}
+                                        startTime={trial.startedAt ?? undefined}
+                                    />
+                                </div>
+                            </ScrollArea>
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 </div>
@@ -187,3 +206,4 @@ function formatTime(ms: number) {
     const s = Math.floor(totalSeconds % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
 }
+

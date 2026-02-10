@@ -5,8 +5,9 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    activityLogs, consentForms, participantConsents, participants, studyMembers, trials
+  activityLogs, consentForms, participantConsents, participants, studyMembers, trials
 } from "~/server/db/schema";
+import { getUploadUrl, validateFile } from "~/lib/storage/minio";
 
 // Helper function to check study access
 async function checkStudyAccess(
@@ -415,6 +416,42 @@ export const participantsRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  getConsentUploadUrl: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid(),
+        participantId: z.string().uuid(),
+        filename: z.string(),
+        contentType: z.string(),
+        size: z.number().max(10 * 1024 * 1024), // 10MB limit
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { studyId, participantId, filename, contentType, size } = input;
+      const userId = ctx.session.user.id;
+
+      // Check study access with researcher permission
+      await checkStudyAccess(ctx.db, userId, studyId, ["owner", "researcher", "wizard"]);
+
+      // Validate file type
+      const allowedTypes = ["pdf", "png", "jpg", "jpeg"];
+      const validation = validateFile(filename, size, allowedTypes);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: validation.error,
+        });
+      }
+
+      // Generate key: studies/{studyId}/participants/{participantId}/consent/{timestamp}-{filename}
+      const key = `studies/${studyId}/participants/${participantId}/consent/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+
+      // Generate presigned URL
+      const url = await getUploadUrl(key, contentType);
+
+      return { url, key };
+    }),
+
   recordConsent: protectedProcedure
     .input(
       z.object({
@@ -422,10 +459,11 @@ export const participantsRouter = createTRPCRouter({
         consentFormId: z.string().uuid(),
         signatureData: z.string().optional(),
         ipAddress: z.string().optional(),
+        storagePath: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { participantId, consentFormId, signatureData, ipAddress } = input;
+      const { participantId, consentFormId, signatureData, ipAddress, storagePath } = input;
       const userId = ctx.session.user.id;
 
       // Get participant to check study access
@@ -489,6 +527,7 @@ export const participantsRouter = createTRPCRouter({
           consentFormId,
           signatureData,
           ipAddress,
+          storagePath,
         })
         .returning();
 

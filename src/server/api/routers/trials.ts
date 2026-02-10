@@ -34,6 +34,7 @@ import { s3Client } from "~/server/storage";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
+import { uploadFile } from "~/lib/storage/minio";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -542,6 +543,14 @@ export const trialsRouter = createTRPCRouter({
         });
       }
 
+      // Log trial start event
+      await db.insert(trialEvents).values({
+        trialId: input.id,
+        eventType: "trial_started",
+        timestamp: new Date(),
+        data: { userId },
+      });
+
       return trial[0];
     }),
 
@@ -625,7 +634,134 @@ export const trialsRouter = createTRPCRouter({
         });
       }
 
+      // Log trial abort event
+      await db.insert(trialEvents).values({
+        trialId: input.id,
+        eventType: "trial_aborted",
+        timestamp: new Date(),
+        data: { userId, reason: input.reason },
+      });
+
       return trial[0];
+    }),
+
+  pause: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      await checkTrialAccess(db, userId, input.id, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      // Log trial paused event
+      await db.insert(trialEvents).values({
+        trialId: input.id,
+        eventType: "trial_paused",
+        timestamp: new Date(),
+        data: { userId },
+      });
+
+      return { success: true };
+    }),
+
+  archive: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const userId = ctx.session.user.id;
+
+      const trial = await checkTrialAccess(db, userId, input.id, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
+
+      // 1. Fetch full trial data
+      const trialData = await db.query.trials.findFirst({
+        where: eq(trials.id, input.id),
+        with: {
+          experiment: true,
+          participant: true,
+          wizard: true,
+        },
+      });
+
+      if (!trialData) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Trial data not found",
+        });
+      }
+
+      // 2. Fetch all events
+      const events = await db
+        .select()
+        .from(trialEvents)
+        .where(eq(trialEvents.trialId, input.id))
+        .orderBy(asc(trialEvents.timestamp));
+
+      // 3. Fetch all interventions
+      const interventions = await db
+        .select()
+        .from(wizardInterventions)
+        .where(eq(wizardInterventions.trialId, input.id))
+        .orderBy(asc(wizardInterventions.timestamp));
+
+      // 4. Construct Archive Object
+      const archiveObject = {
+        trial: trialData,
+        events,
+        interventions,
+        archivedAt: new Date().toISOString(),
+        archivedBy: userId,
+      };
+
+      // 5. Upload to MinIO
+      const filename = `archive-${input.id}-${Date.now()}.json`;
+      const key = `trials/${input.id}/${filename}`;
+
+      try {
+        const uploadResult = await uploadFile({
+          key,
+          body: JSON.stringify(archiveObject, null, 2),
+          contentType: "application/json",
+        });
+
+        // 6. Update Trial Metadata with Archive URL/Key
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const currentMetadata = (trialData.metadata as any) || {};
+        await db
+          .update(trials)
+          .set({
+            metadata: {
+              ...currentMetadata,
+              archiveKey: uploadResult.key,
+              archiveUrl: uploadResult.url,
+              archivedAt: new Date(),
+            },
+          })
+          .where(eq(trials.id, input.id));
+
+        return { success: true, url: uploadResult.url };
+      } catch (error) {
+        console.error("Failed to archive trial:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to upload archive to storage",
+        });
+      }
     }),
 
   logEvent: protectedProcedure

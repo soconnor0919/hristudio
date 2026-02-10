@@ -95,25 +95,10 @@ function AnalysisPageContent() {
     };
 
     return (
-        <div className="flex h-full flex-col">
-            <PageHeader
-                title="Trial Analysis"
-                description={`Analysis for Session ${trial.sessionNumber} • Participant ${trial.participant.participantCode}`}
-                icon={LineChart}
-                actions={
-                    <Button asChild variant="outline">
-                        <Link href={`/studies/${studyId}/trials/${trialId}`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Trial Details
-                        </Link>
-                    </Button>
-                }
-            />
-
-            <div className="min-h-0 flex-1">
-                <TrialAnalysisView trial={trialData} />
-            </div>
-        </div>
+        <TrialAnalysisView
+            trial={trialData}
+            backHref={`/studies/${studyId}/trials/${trialId}`}
+        />
     );
 }
 

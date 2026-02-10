@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Copy, Eye, Play, Gamepad2, LineChart, Ban } from "lucide-react";
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Play, Gamepad2, LineChart, Ban } from "lucide-react";
 import * as React from "react";
 
 import { format, formatDistanceToNow } from "date-fns";
@@ -331,33 +331,7 @@ export const columns: ColumnDef<Trial>[] = [
       );
     },
   },
-  {
-    accessorKey: "createdAt",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const date = row.getValue("createdAt");
-      if (!date)
-        return <span className="text-muted-foreground text-sm">Unknown</span>;
 
-      return (
-        <div className="text-muted-foreground text-sm">
-          {formatDistanceToNow(new Date(date as string | number | Date), {
-            addSuffix: true,
-          })}
-        </div>
-      );
-    },
-  },
   {
     id: "actions",
     enableHiding: false,
@@ -393,19 +367,6 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem
-          onClick={() => navigator.clipboard.writeText(trial.id)}
-        >
-          <Copy className="mr-2 h-4 w-4" />
-          Copy ID
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={`/studies/${trial.studyId}/trials/${trial.id}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            Details
-          </Link>
-        </DropdownMenuItem>
         {trial.status === "scheduled" && (
           <DropdownMenuItem asChild>
             <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
@@ -430,11 +391,6 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
             </Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => duplicateMutation.mutate({ id: trial.id })}>
-          <Copy className="mr-2 h-4 w-4" />
-          Duplicate
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {(trial.status === "scheduled" || trial.status === "failed") && (
           <DropdownMenuItem className="text-red-600">
