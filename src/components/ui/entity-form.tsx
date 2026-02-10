@@ -127,12 +127,14 @@ export function EntityForm<T extends FieldValues = FieldValues>({
       <div
         className={cn(
           "grid gap-8 w-full",
-          layout === "default" && "grid-cols-1 lg:grid-cols-3", // Keep the column split but remove max-width
-          layout === "full-width" && "grid-cols-1",
+          // If sidebar exists, use 2-column layout. If not, use full width (max-w-7xl centered).
+          sidebar && layout === "default"
+            ? "grid-cols-1 lg:grid-cols-3"
+            : "grid-cols-1 max-w-7xl mx-auto",
         )}
       >
         {/* Main Form */}
-        <div className={layout === "default" ? "lg:col-span-2" : "col-span-1"}>
+        <div className={sidebar && layout === "default" ? "lg:col-span-2" : "col-span-1"}>
           <Card>
             <CardHeader>
               <CardTitle>

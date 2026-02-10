@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
 import {
   EntityForm,
@@ -165,103 +166,124 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
 
   // Form fields
   const formFields = (
-    <FormSection
-      title="Study Details"
-      description="Basic information about your research study."
-    >
-      <FormField>
-        <Label htmlFor="tour-study-name">Study Name *</Label>
-        <Input
-          id="tour-study-name"
-          {...form.register("name")}
-          placeholder="Enter study name..."
-          className={form.formState.errors.name ? "border-red-500" : ""}
-        />
-        {form.formState.errors.name && (
-          <p className="text-sm text-red-600">
-            {form.formState.errors.name.message}
-          </p>
-        )}
-      </FormField>
+    <div className="space-y-6">
+      <FormSection
+        title="Study Details"
+        description="Basic information and status of your research study."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField>
+            <Label htmlFor="tour-study-name">Study Name *</Label>
+            <Input
+              id="tour-study-name"
+              {...form.register("name")}
+              placeholder="Enter study name..."
+              className={form.formState.errors.name ? "border-red-500" : ""}
+            />
+            {form.formState.errors.name && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.name.message}
+              </p>
+            )}
+          </FormField>
 
-      <FormField>
-        <Label htmlFor="tour-study-description">Description *</Label>
-        <Textarea
-          id="tour-study-description"
-          {...form.register("description")}
-          placeholder="Describe the research objectives, methodology, and expected outcomes..."
-          rows={4}
-          className={form.formState.errors.description ? "border-red-500" : ""}
-        />
-        {form.formState.errors.description && (
-          <p className="text-sm text-red-600">
-            {form.formState.errors.description.message}
-          </p>
-        )}
-      </FormField>
+          <FormField>
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={form.watch("status")}
+              onValueChange={(value) =>
+                form.setValue(
+                  "status",
+                  value as "draft" | "active" | "completed" | "archived",
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft - Study in preparation</SelectItem>
+                <SelectItem value="active">
+                  Active - Currently recruiting/running
+                </SelectItem>
+                <SelectItem value="completed">
+                  Completed - Data collection finished
+                </SelectItem>
+                <SelectItem value="archived">
+                  Archived - Study concluded
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
 
-      <FormField>
-        <Label htmlFor="institution">Institution *</Label>
-        <Input
-          id="institution"
-          {...form.register("institution")}
-          placeholder="e.g., University of Technology"
-          className={form.formState.errors.institution ? "border-red-500" : ""}
-        />
-        {form.formState.errors.institution && (
-          <p className="text-sm text-red-600">
-            {form.formState.errors.institution.message}
-          </p>
-        )}
-      </FormField>
+          <div className="md:col-span-2">
+            <FormField>
+              <Label htmlFor="tour-study-description">Description *</Label>
+              <Textarea
+                id="tour-study-description"
+                {...form.register("description")}
+                placeholder="Describe the research objectives, methodology, and expected outcomes..."
+                rows={4}
+                className={
+                  form.formState.errors.description ? "border-red-500" : ""
+                }
+              />
+              {form.formState.errors.description && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.description.message}
+                </p>
+              )}
+            </FormField>
+          </div>
+        </div>
+      </FormSection>
 
-      <FormField>
-        <Label htmlFor="irbProtocolNumber">IRB Protocol Number</Label>
-        <Input
-          id="irbProtocolNumber"
-          {...form.register("irbProtocolNumber")}
-          placeholder="e.g., IRB-2024-001"
-          className={
-            form.formState.errors.irbProtocolNumber ? "border-red-500" : ""
-          }
-        />
-        {form.formState.errors.irbProtocolNumber && (
-          <p className="text-sm text-red-600">
-            {form.formState.errors.irbProtocolNumber.message}
-          </p>
-        )}
-        <p className="text-muted-foreground text-xs">
-          Optional: Institutional Review Board protocol number if applicable
-        </p>
-      </FormField>
+      <Separator />
 
-      <FormField>
-        <Label htmlFor="status">Status</Label>
-        <Select
-          value={form.watch("status")}
-          onValueChange={(value) =>
-            form.setValue(
-              "status",
-              value as "draft" | "active" | "completed" | "archived",
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="draft">Draft - Study in preparation</SelectItem>
-            <SelectItem value="active">
-              Active - Currently recruiting/running
-            </SelectItem>
-            <SelectItem value="completed">
-              Completed - Data collection finished
-            </SelectItem>
-            <SelectItem value="archived">Archived - Study concluded</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
-    </FormSection>
+      <FormSection
+        title="Configuration"
+        description="Institutional details and ethics approval."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField>
+            <Label htmlFor="institution">Institution *</Label>
+            <Input
+              id="institution"
+              {...form.register("institution")}
+              placeholder="e.g., University of Technology"
+              className={
+                form.formState.errors.institution ? "border-red-500" : ""
+              }
+            />
+            {form.formState.errors.institution && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.institution.message}
+              </p>
+            )}
+          </FormField>
+
+          <FormField>
+            <Label htmlFor="irbProtocolNumber">IRB Protocol Number</Label>
+            <Input
+              id="irbProtocolNumber"
+              {...form.register("irbProtocolNumber")}
+              placeholder="e.g., IRB-2024-001"
+              className={
+                form.formState.errors.irbProtocolNumber ? "border-red-500" : ""
+              }
+            />
+            {form.formState.errors.irbProtocolNumber && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.irbProtocolNumber.message}
+              </p>
+            )}
+            <p className="text-muted-foreground text-xs">
+              Optional: Institutional Review Board protocol number if applicable
+            </p>
+          </FormField>
+        </div>
+      </FormSection>
+    </div>
   );
 
   // Sidebar content
@@ -324,7 +346,7 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
       error={error}
       onDelete={mode === "edit" ? onDelete : undefined}
       isDeleting={isDeleting}
-      sidebar={sidebar}
+      sidebar={mode === "create" ? sidebar : undefined}
       submitButtonId="tour-study-submit"
       extraActions={
         <Button variant="ghost" size="sm" onClick={() => startTour("study_creation")}>

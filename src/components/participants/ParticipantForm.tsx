@@ -256,160 +256,148 @@ export function ParticipantForm({
     <>
       <FormSection
         title="Participant Information"
-        description="Basic information about the research participant."
+        description="Basic identity and study association."
       >
-        <FormField>
-          <Label htmlFor="participantCode">Participant Code *</Label>
-          <Input
-            id="participantCode"
-            {...form.register("participantCode")}
-            placeholder="e.g., P001, SUBJ_01, etc."
-            className={
-              form.formState.errors.participantCode ? "border-red-500" : ""
-            }
-          />
-          {form.formState.errors.participantCode && (
-            <p className="text-sm text-red-600">
-              {form.formState.errors.participantCode.message}
-            </p>
-          )}
-          <p className="text-muted-foreground text-xs">
-            Unique identifier for this participant within the study
-          </p>
-        </FormField>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField>
+            <Label htmlFor="participantCode">Participant Code *</Label>
+            <Input
+              id="participantCode"
+              {...form.register("participantCode")}
+              placeholder="e.g., P001"
+              className={
+                form.formState.errors.participantCode ? "border-red-500" : ""
+              }
+            />
+            {form.formState.errors.participantCode && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.participantCode.message}
+              </p>
+            )}
+          </FormField>
 
-        <FormField>
-          <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            {...form.register("name")}
-            placeholder="Optional: Participant's full name"
-            className={form.formState.errors.name ? "border-red-500" : ""}
-          />
-          {form.formState.errors.name && (
-            <p className="text-sm text-red-600">
-              {form.formState.errors.name.message}
-            </p>
-          )}
-          <p className="text-muted-foreground text-xs">
-            Optional: Real name for contact purposes
-          </p>
-        </FormField>
+          <FormField>
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
+              {...form.register("name")}
+              placeholder="Optional name"
+              className={form.formState.errors.name ? "border-red-500" : ""}
+            />
+            {form.formState.errors.name && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.name.message}
+              </p>
+            )}
+          </FormField>
 
-        <FormField>
-          <Label htmlFor="email">Email Address</Label>
-          <Input
-            id="email"
-            type="email"
-            {...form.register("email")}
-            placeholder="participant@example.com"
-            className={form.formState.errors.email ? "border-red-500" : ""}
-          />
-          {form.formState.errors.email && (
-            <p className="text-sm text-red-600">
-              {form.formState.errors.email.message}
-            </p>
-          )}
-          <p className="text-muted-foreground text-xs">
-            Optional: For scheduling and communication
-          </p>
-        </FormField>
-
-        <FormField>
-          <Label htmlFor="studyId">Study *</Label>
-          <Select
-            value={form.watch("studyId")}
-            onValueChange={(value) => form.setValue("studyId", value)}
-            disabled={studiesLoading || mode === "edit"}
-          >
-            <SelectTrigger
-              className={form.formState.errors.studyId ? "border-red-500" : ""}
-            >
-              <SelectValue
-                placeholder={
-                  studiesLoading ? "Loading studies..." : "Select a study"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {studiesData?.studies?.map((study) => (
-                <SelectItem key={study.id} value={study.id}>
-                  {study.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.studyId && (
-            <p className="text-sm text-red-600">
-              {form.formState.errors.studyId.message}
-            </p>
-          )}
-          {mode === "edit" && (
-            <p className="text-muted-foreground text-xs">
-              Study cannot be changed after registration
-            </p>
-          )}
-        </FormField>
+          <FormField>
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              {...form.register("email")}
+              placeholder="participant@example.com"
+              className={form.formState.errors.email ? "border-red-500" : ""}
+            />
+            {form.formState.errors.email && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.email.message}
+              </p>
+            )}
+          </FormField>
+        </div>
       </FormSection>
 
-      <FormSection
-        title="Demographics"
-        description="Optional demographic information for research purposes."
-      >
-        <FormField>
-          <Label htmlFor="age">Age</Label>
-          <Input
-            id="age"
-            type="number"
-            min="18"
-            max="120"
-            {...form.register("age", { valueAsNumber: true })}
-            placeholder="e.g., 25"
-            className={form.formState.errors.age ? "border-red-500" : ""}
-          />
-          {form.formState.errors.age && (
-            <p className="text-sm text-red-600">
-              {form.formState.errors.age.message}
-            </p>
-          )}
-          <p className="text-muted-foreground text-xs">
-            Optional: Age in years (minimum 18)
-          </p>
-        </FormField>
+      <div className="my-6" />
 
-        <FormField>
-          <Label htmlFor="gender">Gender</Label>
-          <Select
-            value={form.watch("gender") ?? ""}
-            onValueChange={(value) =>
-              form.setValue(
-                "gender",
-                value as
-                | "male"
-                | "female"
-                | "non_binary"
-                | "prefer_not_to_say"
-                | "other",
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gender (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="non_binary">Non-binary</SelectItem>
-              <SelectItem value="prefer_not_to_say">
-                Prefer not to say
-              </SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-muted-foreground text-xs">
-            Optional: Gender identity for demographic analysis
-          </p>
-        </FormField>
+      <FormSection
+        title="Demographics & Study"
+        description="study association and demographic details."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField>
+            <Label htmlFor="studyId">Study *</Label>
+            <Select
+              value={form.watch("studyId")}
+              onValueChange={(value) => form.setValue("studyId", value)}
+              disabled={studiesLoading || mode === "edit"}
+            >
+              <SelectTrigger
+                className={
+                  form.formState.errors.studyId ? "border-red-500" : ""
+                }
+              >
+                <SelectValue
+                  placeholder={
+                    studiesLoading ? "Loading..." : "Select study"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {studiesData?.studies?.map((study) => (
+                  <SelectItem key={study.id} value={study.id}>
+                    {study.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.studyId && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.studyId.message}
+              </p>
+            )}
+          </FormField>
+
+          <FormField>
+            <Label htmlFor="age">Age</Label>
+            <Input
+              id="age"
+              type="number"
+              min="18"
+              max="120"
+              {...form.register("age", { valueAsNumber: true })}
+              placeholder="e.g., 25"
+              className={form.formState.errors.age ? "border-red-500" : ""}
+            />
+            {form.formState.errors.age && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.age.message}
+              </p>
+            )}
+          </FormField>
+
+          <FormField>
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={form.watch("gender") ?? ""}
+              onValueChange={(value) =>
+                form.setValue(
+                  "gender",
+                  value as
+                  | "male"
+                  | "female"
+                  | "non_binary"
+                  | "prefer_not_to_say"
+                  | "other",
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="non_binary">Non-binary</SelectItem>
+                <SelectItem value="prefer_not_to_say">
+                  Prefer not to say
+                </SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+        </div>
       </FormSection>
 
       {mode === "create" && (
@@ -505,8 +493,7 @@ export function ParticipantForm({
       error={error}
       onDelete={mode === "edit" ? onDelete : undefined}
       isDeleting={isDeleting}
-
-      // sidebar={sidebar} // Removed for cleaner UI per user request
+      sidebar={mode === "create" ? sidebar : undefined}
       submitText={mode === "create" ? "Register Participant" : "Save Changes"}
     >
       {formFields}

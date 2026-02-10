@@ -24,6 +24,12 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 export type Participant = {
   id: string;
@@ -101,16 +107,32 @@ export const columns: ColumnDef<Participant>[] = [
       const name = row.getValue("name");
       const email = row.original.email;
       return (
-        <div>
-          <div className="truncate font-medium">
-            {String(name) || "No name provided"}
-          </div>
-          {email && (
-            <div className="text-muted-foreground truncate text-sm">
-              {email}
+        <TooltipProvider>
+          <div>
+            <div className="truncate font-medium max-w-[200px]">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>{String(name) || "No name provided"}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{String(name) || "No name provided"}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-          )}
-        </div>
+            {email && (
+              <div className="text-muted-foreground truncate text-sm max-w-[200px]">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>{email}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{email}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+          </div>
+        </TooltipProvider>
       );
     },
   },
@@ -120,11 +142,30 @@ export const columns: ColumnDef<Participant>[] = [
     cell: ({ row }) => {
       const consentGiven = row.getValue("consentGiven");
 
-      if (consentGiven) {
-        return <Badge className="bg-green-100 text-green-800">Consented</Badge>;
-      }
-
-      return <Badge className="bg-red-100 text-red-800">Pending</Badge>;
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              {consentGiven ? (
+                <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                  Consented
+                </Badge>
+              ) : (
+                <Badge className="bg-red-100 text-red-800 hover:bg-red-200">
+                  Pending
+                </Badge>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {consentGiven
+                  ? "Participant has signed the consent form."
+                  : "Consent form has not been recorded."}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
     },
   },
   {
