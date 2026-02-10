@@ -1046,6 +1046,19 @@ export const trialsRouter = createTRPCRouter({
         createdBy: ctx.session.user.id,
       });
 
+      // Update execution variables if data provided
+      if (input.data) {
+        const executionEngine = getExecutionEngine();
+        Object.entries(input.data).forEach(([key, value]) => {
+          executionEngine.setVariable(input.trialId, key, value);
+        });
+
+        // Also set a generic "last_wizard_response" if response field exists
+        if ('response' in input.data) {
+          executionEngine.setVariable(input.trialId, "last_wizard_response", input.data.response);
+        }
+      }
+
       return { success: true };
     }),
 

@@ -116,10 +116,21 @@ interface RawExperiment {
 function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
   // 1. Prefer database steps (Source of Truth) if valid, to ensure we have the latest
   //    plugin provenance data (which might be missing from stale visualDesign snapshots).
+  // 1. Prefer database steps (Source of Truth) if valid.
   if (Array.isArray(exp.steps) && exp.steps.length > 0) {
     try {
-      // console.log('[DesignerRoot] Hydrating design from Database Steps (Source of Truth)');
-      const dbSteps = convertDatabaseToSteps(exp.steps);
+      // Check if steps are already converted (have trigger property) to avoid double-conversion data loss
+      const firstStep = exp.steps[0] as any;
+      let dbSteps: ExperimentStep[];
+
+      if (firstStep && typeof firstStep === 'object' && 'trigger' in firstStep) {
+        // Already converted by server
+        dbSteps = exp.steps as ExperimentStep[];
+      } else {
+        // Raw DB steps, need conversion
+        dbSteps = convertDatabaseToSteps(exp.steps);
+      }
+
       return {
         id: exp.id,
         name: exp.name,
@@ -129,7 +140,7 @@ function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
         lastSaved: new Date(),
       };
     } catch (err) {
-      console.warn('[DesignerRoot] Failed to convert DB steps, falling back to visualDesign:', err);
+      console.warn('[DesignerRoot] Failed to convert/hydrate steps, falling back to visualDesign:', err);
     }
   }
 
@@ -615,6 +626,9 @@ export function DesignerRoot({
 
       setLastSavedAt(new Date());
       toast.success("Experiment saved");
+
+      // Auto-validate after save to clear "Modified" (drift) status
+      void validateDesign();
 
       console.log('[DesignerRoot] 💾 SAVE complete');
 

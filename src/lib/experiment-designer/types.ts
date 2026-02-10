@@ -24,7 +24,7 @@ export type TriggerType =
 export interface ActionParameter {
   id: string;
   name: string;
-  type: "text" | "number" | "select" | "boolean";
+  type: "text" | "number" | "select" | "boolean" | "json" | "array";
   placeholder?: string;
   options?: string[];
   min?: number;

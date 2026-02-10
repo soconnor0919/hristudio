@@ -49,7 +49,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
   return (
     <div className="flex h-full flex-col gap-2 p-2">
       {/* Camera View - Always Visible */}
-      <div className="shrink-0 bg-black rounded-lg overflow-hidden border shadow-sm h-48 sm:h-56 relative group">
+      <div className="shrink-0 bg-muted/30 rounded-lg overflow-hidden border shadow-sm h-48 sm:h-56 relative group">
         <WebcamPanel readOnly={readOnly} />
       </div>
 
@@ -69,7 +69,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                   {rosConnected ? (
                     <Power className="h-3 w-3 text-green-600" />
                   ) : (
-                    <PowerOff className="h-3 w-3 text-gray-400" />
+                    <Badge variant="outline" className="text-gray-500 border-gray-300 text-xs text-muted-foreground w-auto px-1.5 py-0">Offline</Badge>
                   )}
                 </div>
               </div>

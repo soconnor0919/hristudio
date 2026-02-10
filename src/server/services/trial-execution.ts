@@ -47,6 +47,7 @@ export interface StepDefinition {
   type: string;
   orderIndex: number;
   condition?: string;
+  conditions?: Record<string, any>;
   actions: ActionDefinition[];
 }
 
@@ -173,7 +174,8 @@ export class TrialExecutionEngine {
         description: step.description || undefined,
         type: step.type,
         orderIndex: step.orderIndex,
-        condition: (step.conditions as string) || undefined,
+        condition: typeof step.conditions === 'string' ? step.conditions : undefined,
+        conditions: typeof step.conditions === 'object' ? (step.conditions as Record<string, any>) : undefined,
         actions: actionDefinitions,
       });
     }
@@ -399,20 +401,37 @@ export class TrialExecutionEngine {
 
     switch (action.type) {
       case "wait":
+      case "hristudio-core.wait":
         return await this.executeWaitAction(action);
 
+      case "branch":
+      case "hristudio-core.branch":
+        // Branch actions are logical markers; execution is just a pass-through
+        return {
+          success: true,
+          completed: true,
+          duration: 0,
+          data: { message: "Branch point reached" },
+        };
+
       case "wizard_say":
+      case "hristudio-woz.wizard_say":
+        return await this.executeWizardAction(trialId, action);
+
+      case "wizard_wait_for_response":
+      case "hristudio-woz.wizard_wait_for_response":
         return await this.executeWizardAction(trialId, action);
 
       case "wizard_gesture":
         return await this.executeWizardAction(trialId, action);
 
       case "observe_behavior":
+      case "hristudio-woz.observe":
         return await this.executeObservationAction(trialId, action);
 
       default:
         // Check if it's a robot action (contains plugin prefix)
-        if (action.type.includes(".")) {
+        if (action.type.includes(".") && !action.type.startsWith("hristudio-")) {
           return await this.executeRobotAction(trialId, action);
         }
 
@@ -424,6 +443,7 @@ export class TrialExecutionEngine {
           data: {
             message: `Action type '${action.type}' not implemented yet`,
             parameters: action.parameters,
+            localHandler: true // Indicate this fell through to default local handler
           },
         };
     }
@@ -814,6 +834,16 @@ export class TrialExecutionEngine {
   }
 
   /**
+   * Set a variable in the trial context
+   */
+  setVariable(trialId: string, key: string, value: unknown): void {
+    const context = this.activeTrials.get(trialId);
+    if (context) {
+      context.variables[key] = value;
+    }
+  }
+
+  /**
    * Advance to the next step
    */
   async advanceToNextStep(trialId: string): Promise<ExecutionResult> {
@@ -827,12 +857,54 @@ export class TrialExecutionEngine {
       return { success: false, error: "No steps loaded for trial" };
     }
 
+    const currentStep = steps[context.currentStepIndex];
+    if (!currentStep) {
+      return { success: false, error: "Invalid current step" };
+    }
+
     const previousStepIndex = context.currentStepIndex;
-    context.currentStepIndex++;
+    let nextStepIndex = context.currentStepIndex + 1;
+
+    // Check for branching conditions
+    if (currentStep.conditions && currentStep.conditions.options) {
+      const { variable, options } = currentStep.conditions as any;
+
+      // Default to "last_wizard_response" if variable not specified, for backward compatibility
+      const variableName = variable || "last_wizard_response";
+      const variableValue = context.variables[variableName];
+
+      console.log(`[TrialExecution] Checking branch condition for step ${currentStep.id}: variable=${variableName}, value=${variableValue}`);
+
+      if (variableValue !== undefined) {
+        // Find matching option
+        // option.value matches variableValue (e.g., label string)
+        const matchedOption = options.find((opt: any) => opt.value === variableValue || opt.label === variableValue);
+
+        if (matchedOption) {
+          if (matchedOption.nextStepId) {
+            // Find step by ID
+            const targetStepIndex = steps.findIndex(s => s.id === matchedOption.nextStepId);
+            if (targetStepIndex !== -1) {
+              nextStepIndex = targetStepIndex;
+              console.log(`[TrialExecution] Taking branch to step ID ${matchedOption.nextStepId} (Index ${nextStepIndex})`);
+            } else {
+              console.warn(`[TrialExecution] Branch target step ID ${matchedOption.nextStepId} not found`);
+            }
+          } else if (matchedOption.nextStepIndex !== undefined) {
+            // Fallback to relative/absolute index if ID not present (legacy)
+            nextStepIndex = matchedOption.nextStepIndex;
+            console.log(`[TrialExecution] Taking branch to index ${nextStepIndex}`);
+          }
+        }
+      }
+    }
+
+    context.currentStepIndex = nextStepIndex;
 
     await this.logTrialEvent(trialId, "step_transition", {
       fromStepIndex: previousStepIndex,
       toStepIndex: context.currentStepIndex,
+      reason: nextStepIndex !== previousStepIndex + 1 ? "branch" : "sequence"
     });
 
     // Check if we've completed all steps

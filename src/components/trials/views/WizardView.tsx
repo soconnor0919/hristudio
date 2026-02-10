@@ -29,12 +29,13 @@ interface WizardViewProps {
       demographics: Record<string, unknown> | null;
     };
   };
+  userRole: string;
 }
 
-export function WizardView({ trial }: WizardViewProps) {
+export function WizardView({ trial, userRole }: WizardViewProps) {
   return (
-    <div className="h-full">
-      <WizardInterface trial={trial} userRole="wizard" />
+    <div className="h-full max-h-full w-full overflow-hidden">
+      <WizardInterface trial={trial} userRole={userRole} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
   type ExperimentDesign,
 } from "~/lib/experiment-designer/types";
 import { actionRegistry } from "./ActionRegistry";
+import { Button } from "~/components/ui/button";
 import {
   Settings,
   Zap,
@@ -39,6 +40,9 @@ import {
   Mic,
   Activity,
   Play,
+  Plus,
+  GitBranch,
+  Trash2,
 } from "lucide-react";
 
 /**
@@ -275,35 +279,166 @@ export function PropertiesPanelBase({
           </div>
         </div>
 
-        {/* Parameters */}
-        {def?.parameters.length ? (
+        {/* Branching Configuration (Special Case) */}
+        {selectedAction.type === "branch" ? (
           <div className="space-y-3">
-            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-              Parameters
+            <div className="text-muted-foreground text-[10px] tracking-wide uppercase flex justify-between items-center">
+              <span>Branch Options</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0"
+                onClick={() => {
+                  const currentOptions = (containingStep.trigger.conditions as any)?.options || [];
+                  onStepUpdate(containingStep.id, {
+                    trigger: {
+                      ...containingStep.trigger,
+                      conditions: {
+                        ...containingStep.trigger.conditions,
+                        options: [
+                          ...currentOptions,
+                          { label: "New Option", nextStepIndex: containingStep.order + 1, variant: "default" }
+                        ]
+                      }
+                    }
+                  });
+                  // Auto-upgrade step type if needed
+                  if (containingStep.type !== "conditional") {
+                    onStepUpdate(containingStep.id, { type: "conditional" });
+                  }
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
             </div>
+
             <div className="space-y-3">
-              {def.parameters.map((param) => (
-                <ParameterEditor
-                  key={param.id}
-                  param={param}
-                  value={selectedAction.parameters[param.id]}
-                  onUpdate={(val) => {
-                    onActionUpdate(containingStep.id, selectedAction.id, {
-                      parameters: {
-                        ...selectedAction.parameters,
-                        [param.id]: val,
-                      },
-                    });
-                  }}
-                  onCommit={() => { }}
-                />
+              {((containingStep.trigger.conditions as any)?.options || []).map((opt: any, idx: number) => (
+                <div key={idx} className="space-y-2 p-2 rounded border bg-muted/50">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label className="text-[10px]">Label</Label>
+                      <Input
+                        value={opt.label}
+                        onChange={(e) => {
+                          const newOpts = [...((containingStep.trigger.conditions as any)?.options || [])];
+                          newOpts[idx] = { ...newOpts[idx], label: e.target.value };
+                          onStepUpdate(containingStep.id, {
+                            trigger: { ...containingStep.trigger, conditions: { ...containingStep.trigger.conditions, options: newOpts } }
+                          });
+                        }}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="w-[80px]">
+                      <Label className="text-[10px]">Target Step</Label>
+                      <Select
+                        value={opt.nextStepId ?? design.steps[opt.nextStepIndex]?.id ?? ""}
+                        onValueChange={(val) => {
+                          const newOpts = [...((containingStep.trigger.conditions as any)?.options || [])];
+                          // Find index for legacy support / display logic if needed
+                          const stepIdx = design.steps.findIndex(s => s.id === val);
+
+                          newOpts[idx] = {
+                            ...newOpts[idx],
+                            nextStepId: val,
+                            nextStepIndex: stepIdx !== -1 ? stepIdx : undefined
+                          };
+
+                          onStepUpdate(containingStep.id, {
+                            trigger: { ...containingStep.trigger, conditions: { ...containingStep.trigger.conditions, options: newOpts } }
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue placeholder="Select step..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {design.steps.map((s) => (
+                            <SelectItem key={s.id} value={s.id} disabled={s.id === containingStep.id}>
+                              {s.order + 1}. {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Select
+                      value={opt.variant || "default"}
+                      onValueChange={(val) => {
+                        const newOpts = [...((containingStep.trigger.conditions as any)?.options || [])];
+                        newOpts[idx] = { ...newOpts[idx], variant: val };
+                        onStepUpdate(containingStep.id, {
+                          trigger: { ...containingStep.trigger, conditions: { ...containingStep.trigger.conditions, options: newOpts } }
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-6 w-[120px] text-[10px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default (Next)</SelectItem>
+                        <SelectItem value="destructive">Destructive (Red)</SelectItem>
+                        <SelectItem value="outline">Outline</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500"
+                      onClick={() => {
+                        const newOpts = [...((containingStep.trigger.conditions as any)?.options || [])];
+                        newOpts.splice(idx, 1);
+                        onStepUpdate(containingStep.id, {
+                          trigger: { ...containingStep.trigger, conditions: { ...containingStep.trigger.conditions, options: newOpts } }
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
               ))}
+              {(!((containingStep.trigger.conditions as any)?.options?.length)) && (
+                <div className="text-center py-4 border border-dashed rounded text-xs text-muted-foreground">
+                  No options defined.<br />Click + to add a branch.
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="text-muted-foreground text-xs">
-            No parameters for this action.
-          </div>
+          /* Standard Parameters */
+          def?.parameters.length ? (
+            <div className="space-y-3">
+              <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                Parameters
+              </div>
+              <div className="space-y-3">
+                {def.parameters.map((param) => (
+                  <ParameterEditor
+                    key={param.id}
+                    param={param}
+                    value={selectedAction.parameters[param.id]}
+                    onUpdate={(val) => {
+                      onActionUpdate(containingStep.id, selectedAction.id, {
+                        parameters: {
+                          ...selectedAction.parameters,
+                          [param.id]: val,
+                        },
+                      });
+                    }}
+                    onCommit={() => { }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground text-xs">
+              No parameters for this action.
+            </div>
+          )
         )}
       </div>
     );

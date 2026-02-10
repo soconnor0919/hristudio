@@ -207,9 +207,9 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
                 )}
             </div>
 
-            <div className="flex-1 overflow-hidden bg-black p-4 flex items-center justify-center relative">
+            <div className="flex-1 overflow-hidden bg-muted/50 p-4 flex items-center justify-center relative">
                 {isCameraEnabled ? (
-                    <div className="w-full relative rounded-lg overflow-hidden border border-slate-800">
+                    <div className="w-full relative rounded-lg overflow-hidden border border-border shadow-sm bg-black">
                         <AspectRatio ratio={16 / 9}>
                             <Webcam
                                 ref={webcamRef}
@@ -249,11 +249,13 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
                         )}
                     </div>
                 ) : (
-                    <div className="text-center text-slate-500">
-                        <CameraOff className="mx-auto mb-2 h-12 w-12 opacity-20" />
-                        <p className="text-sm">Camera is disabled</p>
+                    <div className="text-center text-muted-foreground/50">
+                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                            <CameraOff className="h-6 w-6 opacity-50" />
+                        </div>
+                        <p className="text-sm font-medium">Camera is disabled</p>
                         <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             className="mt-4"
                             onClick={handleEnableCamera}

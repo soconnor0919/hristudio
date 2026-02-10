@@ -148,7 +148,11 @@ export class WizardRosService extends EventEmitter {
         console.error("[WizardROS] WebSocket error:", error);
         clearTimeout(connectionTimeout);
         this.isConnecting = false;
-        this.emit("error", error);
+
+        // Prevent unhandled error event if no listeners
+        if (this.listenerCount("error") > 0) {
+          this.emit("error", error);
+        }
         reject(error);
       };
     });

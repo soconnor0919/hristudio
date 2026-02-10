@@ -155,7 +155,7 @@ export function RobotActionsPanel({
     disconnect: disconnectRos,
     executeRobotAction: executeRosAction,
   } = useWizardRos({
-    autoConnect: true,
+    autoConnect: false, // Let WizardInterface handle connection
     onActionCompleted: (execution) => {
       toast.success(`Completed: ${execution.actionId}`, {
         description: `Action executed in ${execution.endTime ? execution.endTime.getTime() - execution.startTime.getTime() : 0}ms`,

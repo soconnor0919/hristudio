@@ -35,6 +35,19 @@ async function loadNaoPluginDef() {
 
 // Global variable to hold the loaded definition
 let NAO_PLUGIN_DEF: any;
+let CORE_PLUGIN_DEF: any;
+let WOZ_PLUGIN_DEF: any;
+
+function loadSystemPlugin(filename: string) {
+  const LOCAL_PATH = path.join(__dirname, `../src/plugins/definitions/${filename}`);
+  try {
+    const raw = fs.readFileSync(LOCAL_PATH, "utf-8");
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error(`❌ Failed to load system plugin ${filename}:`, err);
+    process.exit(1);
+  }
+}
 
 async function main() {
   console.log("🌱 Starting realistic seed script...");
@@ -43,6 +56,8 @@ async function main() {
 
   try {
     NAO_PLUGIN_DEF = await loadNaoPluginDef();
+    CORE_PLUGIN_DEF = loadSystemPlugin("hristudio-core.json");
+    WOZ_PLUGIN_DEF = loadSystemPlugin("hristudio-woz.json");
 
     // Ensure legacy 'actions' property maps to 'actionDefinitions' if needed, though schema supports both if we map it
     if (NAO_PLUGIN_DEF.actions && !NAO_PLUGIN_DEF.actionDefinitions) {
@@ -60,6 +75,7 @@ async function main() {
     await db.delete(schema.participants).where(sql`1=1`);
     await db.delete(schema.studyPlugins).where(sql`1=1`);
     await db.delete(schema.studyMembers).where(sql`1=1`);
+    await db.delete(schema.studies).where(sql`1=1`);
     await db.delete(schema.studies).where(sql`1=1`);
     await db.delete(schema.plugins).where(sql`1=1`);
     await db.delete(schema.pluginRepositories).where(sql`1=1`);
@@ -144,12 +160,51 @@ async function main() {
       { studyId: study!.id, userId: researcherUser!.id, role: "researcher" }
     ]);
 
-    await db.insert(schema.studyPlugins).values({
-      studyId: study!.id,
-      pluginId: naoPlugin!.id,
-      configuration: { robotIp: "10.0.0.42" },
-      installedBy: adminUser.id
-    });
+    // Insert System Plugins
+    const [corePlugin] = await db.insert(schema.plugins).values({
+      name: CORE_PLUGIN_DEF.name,
+      version: CORE_PLUGIN_DEF.version,
+      description: CORE_PLUGIN_DEF.description,
+      author: CORE_PLUGIN_DEF.author,
+      trustLevel: "official",
+      actionDefinitions: CORE_PLUGIN_DEF.actionDefinitions,
+      robotId: null, // System Plugin
+      metadata: { ...CORE_PLUGIN_DEF, id: CORE_PLUGIN_DEF.id },
+      status: "active"
+    }).returning();
+
+    const [wozPlugin] = await db.insert(schema.plugins).values({
+      name: WOZ_PLUGIN_DEF.name,
+      version: WOZ_PLUGIN_DEF.version,
+      description: WOZ_PLUGIN_DEF.description,
+      author: WOZ_PLUGIN_DEF.author,
+      trustLevel: "official",
+      actionDefinitions: WOZ_PLUGIN_DEF.actionDefinitions,
+      robotId: null, // System Plugin
+      metadata: { ...WOZ_PLUGIN_DEF, id: WOZ_PLUGIN_DEF.id },
+      status: "active"
+    }).returning();
+
+    await db.insert(schema.studyPlugins).values([
+      {
+        studyId: study!.id,
+        pluginId: naoPlugin!.id,
+        configuration: { robotIp: "10.0.0.42" },
+        installedBy: adminUser.id
+      },
+      {
+        studyId: study!.id,
+        pluginId: corePlugin!.id,
+        configuration: {},
+        installedBy: adminUser.id
+      },
+      {
+        studyId: study!.id,
+        pluginId: wozPlugin!.id,
+        configuration: {},
+        installedBy: adminUser.id
+      }
+    ]);
 
     const [experiment] = await db.insert(schema.experiments).values({
       studyId: study!.id,
@@ -258,14 +313,47 @@ async function main() {
 
     // --- Step 3: Comprehension Check (Wizard Decision Point) ---
     // Note: Wizard will choose to proceed to Step 4a (Correct) or 4b (Incorrect)
+    // --- Step 3: Comprehension Check (Wizard Decision Point) ---
+    // Note: Wizard will choose to proceed to Step 4a (Correct) or 4b (Incorrect)
+    // --- Step 4a: Correct Response Branch ---
+    const [step4a] = await db.insert(schema.steps).values({
+      experimentId: experiment!.id,
+      name: "Branch A: Correct Response",
+      description: "Response when participant says 'Red'",
+      type: "robot",
+      orderIndex: 3,
+      required: false,
+      durationEstimate: 20
+    }).returning();
+
+    // --- Step 4b: Incorrect Response Branch ---
+    const [step4b] = await db.insert(schema.steps).values({
+      experimentId: experiment!.id,
+      name: "Branch B: Incorrect Response",
+      description: "Response when participant gives wrong answer",
+      type: "robot",
+      orderIndex: 4,
+      required: false,
+      durationEstimate: 20
+    }).returning();
+
+    // --- Step 3: Comprehension Check (Wizard Decision Point) ---
+    // Note: Wizard will choose to proceed to Step 4a (Correct) or 4b (Incorrect)
     const [step3] = await db.insert(schema.steps).values({
       experimentId: experiment!.id,
       name: "Comprehension Check",
       description: "Ask participant about rock color and wait for wizard input",
-      type: "wizard",
+      type: "conditional",
       orderIndex: 2,
       required: true,
-      durationEstimate: 30
+      durationEstimate: 30,
+      conditions: {
+        variable: "last_wizard_response",
+        options: [
+          { label: "Correct Response (Red)", value: "Correct", nextStepId: step4a!.id, variant: "default" },
+          { label: "Incorrect Response", value: "Incorrect", nextStepId: step4b!.id, variant: "destructive" }
+        ]
+      }
     }).returning();
 
     await db.insert(schema.actions).values([
@@ -282,29 +370,29 @@ async function main() {
       },
       {
         stepId: step3!.id,
-        name: "Wait for Wizard Input",
+        name: "Wait for Choice",
         type: "wizard_wait_for_response",
         orderIndex: 1,
+        // Define the options that will be presented to the Wizard
         parameters: {
           prompt_text: "Did participant answer 'Red' correctly?",
-          response_type: "verbal",
-          timeout: 60
+          options: ["Correct", "Incorrect"]
         },
         sourceKind: "core",
+        pluginId: "hristudio-woz", // Explicit link
         category: "wizard"
+      },
+      {
+        stepId: step3!.id,
+        name: "Branch Decision",
+        type: "branch",
+        orderIndex: 2,
+        parameters: {},
+        sourceKind: "core",
+        pluginId: "hristudio-core", // Explicit link
+        category: "control"
       }
     ]);
-
-    // --- Step 4a: Correct Response Branch ---
-    const [step4a] = await db.insert(schema.steps).values({
-      experimentId: experiment!.id,
-      name: "Branch A: Correct Response",
-      description: "Response when participant says 'Red'",
-      type: "robot",
-      orderIndex: 3,
-      required: false,
-      durationEstimate: 20
-    }).returning();
 
     await db.insert(schema.actions).values([
       {
@@ -342,16 +430,7 @@ async function main() {
       }
     ]);
 
-    // --- Step 4b: Incorrect Response Branch ---
-    const [step4b] = await db.insert(schema.steps).values({
-      experimentId: experiment!.id,
-      name: "Branch B: Incorrect Response",
-      description: "Response when participant gives wrong answer",
-      type: "robot",
-      orderIndex: 4,
-      required: false,
-      durationEstimate: 20
-    }).returning();
+
 
     await db.insert(schema.actions).values([
       {

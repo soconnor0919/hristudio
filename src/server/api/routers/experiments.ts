@@ -1543,7 +1543,8 @@ export const experimentsRouter = createTRPCRouter({
         description: step.description,
         order: step.orderIndex,
         duration: step.durationEstimate,
-        parameters: step.conditions as Record<string, unknown>,
+        parameters: {} as Record<string, unknown>, // No standard parameters on Step, only Conditions
+        conditions: step.conditions as Record<string, unknown>, // Correctly map conditions
         parentId: undefined, // Not supported in current schema
         children: [], // TODO: implement hierarchical steps if needed
         actions: step.actions.map((action) => ({

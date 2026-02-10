@@ -222,7 +222,10 @@ export default async function ExperimentDesignerPage({
                 : "sequential";
             })(),
             order: s.orderIndex ?? idx,
-            trigger: { type: "trial_start", conditions: {} },
+            trigger: {
+              type: idx === 0 ? "trial_start" : "previous_step",
+              conditions: (s.conditions as Record<string, unknown>) || {},
+            },
             actions,
             expanded: true,
           };

@@ -203,8 +203,7 @@ function projectStepForDesign(
     order: step.order,
     trigger: {
       type: step.trigger.type,
-      // Only the sorted keys of conditions (structural presence)
-      conditionKeys: Object.keys(step.trigger.conditions).sort(),
+      conditions: canonicalize(step.trigger.conditions),
     },
     actions: step.actions.map((a) => projectActionForDesign(a, options)),
   };
@@ -267,11 +266,35 @@ export async function computeDesignHash(
   opts: DesignHashOptions = {},
 ): Promise<string> {
   const options = { ...DEFAULT_OPTIONS, ...opts };
-  const projected = steps
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map((s) => projectStepForDesign(s, options));
-  return hashObject({ steps: projected });
+
+  // 1. Sort steps first to ensure order independence of input array
+  const sortedSteps = steps.slice().sort((a, b) => a.order - b.order);
+
+  // 2. Map hierarchically (Merkle style)
+  const stepHashes = await Promise.all(sortedSteps.map(async (s) => {
+    // Action hashes
+    const actionHashes = await Promise.all(s.actions.map(a => hashObject(projectActionForDesign(a, options))));
+
+    // Step hash
+    const pStep = {
+      id: s.id,
+      type: s.type,
+      order: s.order,
+      trigger: {
+        type: s.trigger.type,
+        conditions: canonicalize(s.trigger.conditions),
+      },
+      actions: actionHashes,
+      ...(options.includeStepNames ? { name: s.name } : {}),
+    };
+    return hashObject(pStep);
+  }));
+
+  // 3. Aggregate design hash
+  return hashObject({
+    steps: stepHashes,
+    count: steps.length
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -338,7 +361,7 @@ export async function computeIncrementalDesignHash(
       order: step.order,
       trigger: {
         type: step.trigger.type,
-        conditionKeys: Object.keys(step.trigger.conditions).sort(),
+        conditions: canonicalize(step.trigger.conditions),
       },
       actions: step.actions.map((a) => actionHashes.get(a.id) ?? ""),
       ...(options.includeStepNames ? { name: step.name } : {}),

@@ -53,6 +53,7 @@ export interface ValidationResult {
 // Parallel/conditional/loop execution happens at the ACTION level, not step level
 const VALID_STEP_TYPES: StepType[] = [
   "sequential",
+  "conditional",
 ];
 const VALID_TRIGGER_TYPES: TriggerType[] = [
   "trial_start",
@@ -387,6 +388,34 @@ export function validateParameters(
                   Array.isArray(paramDef.options) && paramDef.options.length
                     ? `Choose from: ${paramDef.options.join(", ")}`
                     : "Choose a valid option",
+              });
+            }
+            break;
+
+          case "array":
+            if (!Array.isArray(value)) {
+              issues.push({
+                severity: "error",
+                message: `Parameter '${paramDef.name}' must be a list/array`,
+                category: "parameter",
+                field,
+                stepId,
+                actionId,
+                suggestion: "Enter a list of values",
+              });
+            }
+            break;
+
+          case "json":
+            if (typeof value !== "object" || value === null) {
+              issues.push({
+                severity: "error",
+                message: `Parameter '${paramDef.name}' must be a valid object`,
+                category: "parameter",
+                field,
+                stepId,
+                actionId,
+                suggestion: "Enter a valid JSON object",
               });
             }
             break;

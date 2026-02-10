@@ -1,0 +1,51 @@
+{
+    "id": "hristudio-core",
+    "name": "HRIStudio Core",
+    "version": "1.0.0",
+    "description": "Essential platform control flow and logic actions.",
+    "author": "HRIStudio",
+    "trustLevel": "official",
+    "actionDefinitions": [
+        {
+            "id": "wait",
+            "name": "Wait",
+            "description": "Wait for specified time",
+            "category": "control",
+            "icon": "Clock",
+            "color": "#f59e0b",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "duration": {
+                        "title": "Duration (seconds)",
+                        "type": "number",
+                        "minimum": 0.1,
+                        "maximum": 300,
+                        "default": 2,
+                        "description": "Time to wait in seconds"
+                    }
+                },
+                "required": [
+                    "duration"
+                ]
+            },
+            "timeout": 60000,
+            "retryable": false,
+            "nestable": false
+        },
+        {
+            "id": "branch",
+            "name": "Branch / Decision",
+            "description": "Prompt the wizard to choose a path.",
+            "category": "control",
+            "icon": "GitBranch",
+            "color": "#f97316",
+            "parameters": {},
+            "parameterSchema": {},
+            "timeout": 0,
+            "retryable": false,
+            "nestable": false
+        }
+    ]
+}

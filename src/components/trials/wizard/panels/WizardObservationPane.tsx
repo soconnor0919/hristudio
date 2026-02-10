@@ -31,6 +31,7 @@ interface WizardObservationPaneProps {
     ) => Promise<void>;
     isSubmitting?: boolean;
     readOnly?: boolean;
+    activeTab?: "notes" | "timeline";
 }
 
 export function WizardObservationPane({
@@ -38,6 +39,7 @@ export function WizardObservationPane({
     isSubmitting = false,
     trialEvents = [],
     readOnly = false,
+    activeTab = "notes",
 }: WizardObservationPaneProps & { trialEvents?: TrialEvent[] }) {
     const [note, setNote] = useState("");
     const [category, setCategory] = useState("observation");
@@ -68,95 +70,82 @@ export function WizardObservationPane({
     };
 
     return (
-        <div className="flex h-full flex-col border-t bg-background">
-            <Tabs defaultValue="notes" className="flex h-full flex-col">
-                <div className="border-b px-4 bg-muted/30">
-                    <TabsList className="h-9 -mb-px bg-transparent p-0">
-                        <TabsTrigger value="notes" className="h-9 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-2 pt-2 font-medium text-muted-foreground data-[state=active]:text-foreground shadow-none">
-                            Notes & Observations
-                        </TabsTrigger>
-                        <TabsTrigger value="timeline" className="h-9 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 pb-2 pt-2 font-medium text-muted-foreground data-[state=active]:text-foreground shadow-none">
-                            Timeline
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
+        <div className="flex h-full flex-col bg-background">
+            <div className={`flex-1 flex flex-col p-4 m-0 ${activeTab !== "notes" ? "hidden" : ""}`}>
+                <div className="flex flex-1 flex-col gap-2">
+                    <Textarea
+                        placeholder={readOnly ? "Session is read-only" : "Type your observation here..."}
+                        className="flex-1 resize-none font-mono text-sm"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={readOnly}
+                    />
 
-                <TabsContent value="notes" className="flex-1 flex flex-col p-4 m-0 data-[state=inactive]:hidden">
-                    <div className="flex flex-1 flex-col gap-2">
-                        <Textarea
-                            placeholder={readOnly ? "Session is read-only" : "Type your observation here..."}
-                            className="flex-1 resize-none font-mono text-sm"
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            disabled={readOnly}
-                        />
+                    <div className="flex items-center gap-2">
+                        <Select value={category} onValueChange={setCategory} disabled={readOnly}>
+                            <SelectTrigger className="w-[140px] h-8 text-xs">
+                                <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="observation">Observation</SelectItem>
+                                <SelectItem value="participant_behavior">Behavior</SelectItem>
+                                <SelectItem value="system_issue">System Issue</SelectItem>
+                                <SelectItem value="success">Success</SelectItem>
+                                <SelectItem value="failure">Failure</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                        <div className="flex items-center gap-2">
-                            <Select value={category} onValueChange={setCategory} disabled={readOnly}>
-                                <SelectTrigger className="w-[140px] h-8 text-xs">
-                                    <SelectValue placeholder="Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="observation">Observation</SelectItem>
-                                    <SelectItem value="participant_behavior">Behavior</SelectItem>
-                                    <SelectItem value="system_issue">System Issue</SelectItem>
-                                    <SelectItem value="success">Success</SelectItem>
-                                    <SelectItem value="failure">Failure</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <div className="flex flex-1 items-center gap-2 rounded-md border px-2 h-8">
-                                <Tag className={`h-3 w-3 ${readOnly ? "text-muted-foreground/50" : "text-muted-foreground"}`} />
-                                <input
-                                    type="text"
-                                    placeholder={readOnly ? "" : "Add tags..."}
-                                    className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-                                    value={currentTag}
-                                    onChange={(e) => setCurrentTag(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            addTag();
-                                        }
-                                    }}
-                                    onBlur={addTag}
-                                    disabled={readOnly}
-                                />
-                            </div>
-
-                            <Button
-                                size="sm"
-                                onClick={handleSubmit}
-                                disabled={isSubmitting || !note.trim() || readOnly}
-                                className="h-8"
-                            >
-                                <Send className="mr-2 h-3 w-3" />
-                                Add Note
-                            </Button>
+                        <div className="flex flex-1 items-center gap-2 rounded-md border px-2 h-8">
+                            <Tag className={`h-3 w-3 ${readOnly ? "text-muted-foreground/50" : "text-muted-foreground"}`} />
+                            <input
+                                type="text"
+                                placeholder={readOnly ? "" : "Add tags..."}
+                                className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                                value={currentTag}
+                                onChange={(e) => setCurrentTag(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        addTag();
+                                    }
+                                }}
+                                onBlur={addTag}
+                                disabled={readOnly}
+                            />
                         </div>
 
-                        {tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                                {tags.map((tag) => (
-                                    <Badge
-                                        key={tag}
-                                        variant="secondary"
-                                        className="px-1 py-0 text-[10px] cursor-pointer hover:bg-destructive/10 hover:text-destructive"
-                                        onClick={() => setTags(tags.filter((t) => t !== tag))}
-                                    >
-                                        #{tag}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
+                        <Button
+                            size="sm"
+                            onClick={handleSubmit}
+                            disabled={isSubmitting || !note.trim() || readOnly}
+                            className="h-8"
+                        >
+                            <Send className="mr-2 h-3 w-3" />
+                            Add Note
+                        </Button>
                     </div>
-                </TabsContent>
 
-                <TabsContent value="timeline" className="flex-1 m-0 min-h-0 p-4 data-[state=inactive]:hidden">
-                    <HorizontalTimeline events={trialEvents} />
-                </TabsContent>
-            </Tabs>
+                    {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {tags.map((tag) => (
+                                <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="px-1 py-0 text-[10px] cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => setTags(tags.filter((t) => t !== tag))}
+                                >
+                                    #{tag}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className={`flex-1 m-0 min-h-0 p-4 ${activeTab !== "timeline" ? "hidden" : ""}`}>
+                <HorizontalTimeline events={trialEvents} />
+            </div>
         </div>
     );
 }

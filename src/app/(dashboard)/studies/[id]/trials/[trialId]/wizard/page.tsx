@@ -171,10 +171,27 @@ function WizardPageContent() {
 
   const renderView = () => {
     const trialData = {
-      ...trial,
+      id: trial.id,
+      status: trial.status,
+      scheduledAt: trial.scheduledAt,
+      startedAt: trial.startedAt,
+      completedAt: trial.completedAt,
+      duration: trial.duration,
+      sessionNumber: trial.sessionNumber,
+      notes: trial.notes,
       metadata: trial.metadata as Record<string, unknown> | null,
+      experimentId: trial.experimentId,
+      participantId: trial.participantId,
+      wizardId: trial.wizardId,
+      experiment: {
+        id: trial.experiment.id,
+        name: trial.experiment.name,
+        description: trial.experiment.description,
+        studyId: trial.experiment.studyId,
+      },
       participant: {
-        ...trial.participant,
+        id: trial.participant.id,
+        participantCode: trial.participant.participantCode,
         demographics: trial.participant.demographics as Record<
           string,
           unknown
@@ -184,7 +201,7 @@ function WizardPageContent() {
 
     switch (currentRole) {
       case "wizard":
-        return <WizardView trial={trialData} />;
+        return <WizardView trial={trialData} userRole={currentRole} />;
       case "observer":
         return <ObserverView trial={trialData} />;
       case "participant":
@@ -195,24 +212,8 @@ function WizardPageContent() {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader
-        title={getViewTitle(currentRole)}
-        description={`Session ${trial.sessionNumber} • Participant ${trial.participant.participantCode}`}
-        icon={getViewIcon(currentRole)}
-        actions={
-          currentRole !== "participant" ? (
-            <Button asChild variant="outline">
-              <Link href={`/studies/${studyId}/trials/${trialId}`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Trial
-              </Link>
-            </Button>
-          ) : null
-        }
-      />
-
-      <div className="min-h-0 flex-1">{renderView()}</div>
+    <div>
+      {renderView()}
     </div>
   );
 }

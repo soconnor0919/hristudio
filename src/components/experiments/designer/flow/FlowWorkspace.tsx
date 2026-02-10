@@ -29,6 +29,7 @@ import {
   Trash2,
   GitBranch,
   Edit3,
+  CornerDownRight,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
@@ -96,6 +97,7 @@ interface StepRowProps {
   registerMeasureRef: (stepId: string, el: HTMLDivElement | null) => void;
   onReorderStep: (stepId: string, direction: 'up' | 'down') => void;
   onReorderAction?: (stepId: string, actionId: string, direction: 'up' | 'down') => void;
+  isChild?: boolean;
 }
 
 function StepRow({
@@ -115,8 +117,10 @@ function StepRow({
   registerMeasureRef,
   onReorderStep,
   onReorderAction,
+  isChild,
 }: StepRowProps) {
   // const step = item.step; // Removed local derivation
+  const allSteps = useDesignerStore((s) => s.steps);
   const insertionProjection = useDesignerStore((s) => s.insertionProjection);
 
   const displayActions = useMemo(() => {
@@ -149,9 +153,17 @@ function StepRow({
     <div style={style} data-step-id={step.id}>
       <div
         ref={(el) => registerMeasureRef(step.id, el)}
-        className="relative px-3 py-4"
+        className={cn(
+          "relative px-3 py-4 transition-all duration-300",
+          isChild && "ml-8 pl-0"
+        )}
         data-step-id={step.id}
       >
+        {isChild && (
+          <div className="absolute left-[-24px] top-8 text-muted-foreground/40">
+            <CornerDownRight className="h-5 w-5" />
+          </div>
+        )}
         <StepDroppableArea stepId={step.id} />
         <div
           className={cn(
@@ -281,6 +293,78 @@ function StepRow({
             </div>
           </div>
 
+
+
+          {/* Conditional Branching Visualization */}
+          {/* Conditional Branching Visualization */}
+          {step.type === "conditional" && (
+            <div className="mx-3 my-3 rounded-md border text-xs" style={{
+              backgroundColor: 'var(--validation-warning-bg)', // Semantic background
+              borderColor: 'var(--validation-warning-border)', // Semantic border
+            }}>
+              <div className="flex items-center gap-2 border-b px-3 py-2 font-medium" style={{
+                borderColor: 'var(--validation-warning-border)',
+                color: 'var(--validation-warning-text)'
+              }}>
+                <GitBranch className="h-3.5 w-3.5" />
+                <span>Branching Logic</span>
+              </div>
+
+              <div className="p-2 space-y-2">
+                {!(step.trigger.conditions as any)?.options?.length ? (
+                  <div className="text-muted-foreground/60 italic text-center py-2 text-[11px]">
+                    No branches configured. Add options in properties.
+                  </div>
+                ) : (
+                  (step.trigger.conditions as any).options.map((opt: any, idx: number) => {
+                    // Resolve ID to name for display
+                    let targetName = "Unlinked";
+                    let targetIndex = -1;
+
+                    if (opt.nextStepId) {
+                      const target = allSteps.find(s => s.id === opt.nextStepId);
+                      if (target) {
+                        targetName = target.name;
+                        targetIndex = target.order;
+                      }
+                    } else if (typeof opt.nextStepIndex === 'number') {
+                      targetIndex = opt.nextStepIndex;
+                      targetName = `Step #${targetIndex + 1}`;
+                    }
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between rounded bg-background/50 shadow-sm border p-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge variant="outline" className={cn(
+                            "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 min-w-[70px] justify-center bg-background",
+                            opt.variant === "destructive"
+                              ? "border-red-500/30 text-red-600 dark:text-red-400"
+                              : "border-slate-500/30 text-foreground"
+                          )}>
+                            {opt.label}
+                          </Badge>
+                          <span className="text-muted-foreground text-[10px]">then go to</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-right min-w-0 max-w-[50%]">
+                          <span className="font-medium truncate text-[11px] block text-foreground" title={targetName}>
+                            {targetName}
+                          </span>
+                          {targetIndex !== -1 && (
+                            <Badge variant="secondary" className="px-1 py-0 h-4 text-[9px] min-w-[20px] justify-center tabular-nums">
+                              #{targetIndex + 1}
+                            </Badge>
+                          )}
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action List (Collapsible/Virtual content) */}
           {step.expanded && (
             <div className="bg-background/40 min-h-[3rem] space-y-2 p-2 pb-8">
@@ -315,7 +399,7 @@ function StepRow({
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
@@ -787,6 +871,21 @@ export function FlowWorkspace({
     return map;
   }, [steps]);
 
+  /* Hierarchy detection for visual indentation */
+  const childStepIds = useMemo(() => {
+    const children = new Set<string>();
+    for (const step of steps) {
+      if (step.type === 'conditional' && (step.trigger.conditions as any)?.options) {
+        for (const opt of (step.trigger.conditions as any).options) {
+          if (opt.nextStepId) {
+            children.add(opt.nextStepId);
+          }
+        }
+      }
+    }
+    return children;
+  }, [steps]);
+
   /* Resize observer for viewport and width changes */
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -1202,6 +1301,7 @@ export function FlowWorkspace({
                       registerMeasureRef={registerMeasureRef}
                       onReorderStep={handleReorderStep}
                       onReorderAction={handleReorderAction}
+                      isChild={childStepIds.has(vi.step.id)}
                     />
                   ),
               )}

@@ -168,7 +168,6 @@ export function convertDatabaseToSteps(
   const sortedSteps = [...dbSteps].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
   return sortedSteps.map((dbStep, idx) => {
-    // console.log(`[block-converter] Step ${dbStep.name} OrderIndex:`, dbStep.orderIndex, dbStep.order_index);
     return {
       id: dbStep.id,
       name: dbStep.name,

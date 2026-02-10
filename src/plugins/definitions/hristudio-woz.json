@@ -1,0 +1,107 @@
+{
+    "id": "hristudio-woz",
+    "name": "Wizard of Oz Features",
+    "version": "1.0.0",
+    "description": "Standard capabilities for Wizard of Oz studies.",
+    "author": "HRIStudio",
+    "trustLevel": "official",
+    "actionDefinitions": [
+        {
+            "id": "wizard_say",
+            "name": "Wizard Says",
+            "description": "Wizard speaks to participant",
+            "category": "wizard",
+            "icon": "MessageSquare",
+            "color": "#a855f7",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "title": "Message",
+                        "type": "string",
+                        "description": "Text to display/speak"
+                    },
+                    "tone": {
+                        "title": "Tone",
+                        "type": "string",
+                        "enum": [
+                            "neutral",
+                            "friendly",
+                            "encouraging"
+                        ],
+                        "default": "neutral"
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "timeout": 30000,
+            "retryable": true,
+            "nestable": false
+        },
+        {
+            "id": "wizard_wait_for_response",
+            "name": "Wait for Wizard Input",
+            "description": "Pause execution until wizard provides input",
+            "category": "wizard",
+            "icon": "HandMetal",
+            "color": "#a855f7",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "prompt_text": {
+                        "title": "Prompt Text",
+                        "type": "string",
+                        "description": "What did the participant say?"
+                    },
+                    "options": {
+                        "title": "Response Options",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Choices for the Wizard"
+                    }
+                },
+                "required": [
+                    "prompt_text"
+                ]
+            },
+            "timeout": 0,
+            "retryable": false,
+            "nestable": false
+        },
+        {
+            "id": "observe",
+            "name": "Observe",
+            "description": "Record participant behavior",
+            "category": "observation",
+            "icon": "Eye",
+            "color": "#8b5cf6",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "behavior": {
+                        "title": "Behavior to observe",
+                        "type": "string",
+                        "enum": [
+                            "facial_expression",
+                            "body_language",
+                            "verbal_response"
+                        ]
+                    }
+                },
+                "required": [
+                    "behavior"
+                ]
+            },
+            "timeout": 120000,
+            "retryable": false,
+            "nestable": false
+        }
+    ]
+}
