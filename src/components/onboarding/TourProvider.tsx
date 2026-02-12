@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 
-type TourType = "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard" | "full_platform";
+type TourType = "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard" | "analytics" | "full_platform";
 
 interface TourContextType {
     startTour: (tour: TourType) => void;
@@ -58,7 +58,20 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         }
     }, [pathname]);
 
-    const runTourSegment = (segment: "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard") => {
+    useEffect(() => {
+        // Listen for custom tour triggers (from components without context access)
+        const handleTourTrigger = (e: Event) => {
+            const detail = (e as CustomEvent).detail as TourType;
+            if (detail) {
+                startTour(detail);
+            }
+        };
+
+        document.addEventListener('hristudio-start-tour', handleTourTrigger);
+        return () => document.removeEventListener('hristudio-start-tour', handleTourTrigger);
+    }, []);
+
+    const runTourSegment = (segment: "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard" | "analytics") => {
         const isDark = theme === "dark";
         // We add a specific class to handle dark/light overrides reliably
         const themeClass = isDark ? "driverjs-theme-dark" : "driverjs-theme-light";
@@ -234,6 +247,50 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                 },
             ];
         }
+        else if (segment === "analytics") {
+            steps = [
+                {
+                    element: "#tour-analytics-table",
+                    popover: {
+                        title: "Study Analytics",
+                        description: "View aggregate data across all participant sessions. Sort and filter to identify trends or specific trials.",
+                        side: "bottom",
+                    },
+                },
+                {
+                    element: "#tour-analytics-filter",
+                    popover: {
+                        title: "Filter Data",
+                        description: "Quickly find participants by ID or name using this search bar.",
+                        side: "bottom",
+                    },
+                },
+                {
+                    element: "#tour-trial-metrics",
+                    popover: {
+                        title: "Trial Metrics",
+                        description: "High-level KPIs for the selected trial: Duration, Robot Actions, and Intervention counts.",
+                        side: "bottom",
+                    },
+                },
+                {
+                    element: "#tour-trial-timeline",
+                    popover: {
+                        title: "Video & Timeline",
+                        description: "Watch the trial recording synced with the event timeline. Click any event to jump to that moment in the video.",
+                        side: "right",
+                    },
+                },
+                {
+                    element: "#tour-trial-events",
+                    popover: {
+                        title: "Event Log",
+                        description: "A detailed, searchable log of every system event, robot action, and wizard interaction.",
+                        side: "left",
+                    },
+                },
+            ];
+        }
 
         driverObj.current = driver({
             showProgress: true,
@@ -265,6 +322,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             else if (pathname.includes("/participants/new")) runTourSegment("participant_creation");
             else if (pathname.includes("/designer")) runTourSegment("designer");
             else if (pathname.includes("/wizard")) runTourSegment("wizard");
+            else if (pathname.includes("/analysis")) runTourSegment("analytics");
             else runTourSegment("dashboard"); // Fallback
         } else {
             localStorage.setItem("hristudio_tour_mode", "manual");
@@ -275,6 +333,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             if (tour === "participant_creation") runTourSegment("participant_creation");
             if (tour === "designer") runTourSegment("designer");
             if (tour === "wizard") runTourSegment("wizard");
+            if (tour === "analytics") runTourSegment("analytics");
         }
     };
 

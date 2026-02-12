@@ -230,7 +230,7 @@ export function StudyAnalyticsDataTable({ data }: StudyAnalyticsDataTableProps) 
     });
 
     return (
-        <div className="w-full">
+        <div className="w-full" id="tour-analytics-table">
             <div className="flex items-center py-4">
                 <Input
                     placeholder="Filter participants..."
@@ -239,6 +239,7 @@ export function StudyAnalyticsDataTable({ data }: StudyAnalyticsDataTableProps) 
                         table.getColumn("participantCode")?.setFilterValue(event.target.value)
                     }
                     className="max-w-sm"
+                    id="tour-analytics-filter"
                 />
             </div>
             <div className="rounded-md border bg-card">

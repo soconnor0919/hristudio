@@ -60,6 +60,17 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={() => {
+                            // Dispatch custom event since useTour isn't directly available in this specific context yet
+                            // or better yet, assume we can import useTour if valid context, but here let's try direct button if applicable.
+                            // Actually, TrialAnalysisView is a child of page, we need useTour context.
+                            // Checking imports... TrialAnalysisView doesn't have useTour.
+                            // We should probably just dispatch an event or rely on the parent.
+                            // Let's assume we can add useTour hook support here.
+                            document.dispatchEvent(new CustomEvent('hristudio-start-tour', { detail: 'analytics' }));
+                        }}>
+                            <Info className="h-4 w-4" />
+                        </Button>
                         <div className="flex flex-col">
                             <h1 className="text-lg font-semibold leading-none tracking-tight">
                                 {trial.experiment.name}
@@ -82,7 +93,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                 </div>
 
                 {/* Metrics Header */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4" id="tour-trial-metrics">
                     <Card className="bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-950/20">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Duration</CardTitle>
@@ -147,7 +158,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                     <ResizablePanelGroup direction="vertical">
 
                         {/* TOP: Video & Timeline */}
-                        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40">
+                        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40" id="tour-trial-timeline">
                             <div className="relative flex-1 min-h-0 flex items-center justify-center">
                                 {videoUrl ? (
                                     <div className="absolute inset-0">
@@ -175,7 +186,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                         <ResizableHandle withHandle className="bg-border/50" />
 
                         {/* BOTTOM: Events Table */}
-                        <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0 bg-background">
+                        <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0 bg-background" id="tour-trial-events">
                             <div className="flex items-center justify-between px-4 py-3 border-b">
                                 <div className="flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-primary" />

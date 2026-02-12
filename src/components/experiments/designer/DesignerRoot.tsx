@@ -1193,15 +1193,22 @@ export function DesignerRoot({
                 )}
                 <span className="text-sm font-medium">Flow Workspace</span>
                 {rightCollapsed && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 ml-2"
-                    onClick={() => setRightCollapsed(false)}
-                    title="Open Inspector"
-                  >
-                    <PanelRightOpen className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startTour('designer')}>
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                    {rightCollapsed && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 ml-2"
+                        onClick={() => setRightCollapsed(false)}
+                        title="Open Inspector"
+                      >
+                        <PanelRightOpen className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex-1 overflow-hidden min-h-0 relative">

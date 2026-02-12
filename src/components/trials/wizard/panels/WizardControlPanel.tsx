@@ -145,7 +145,7 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" id="tour-wizard-controls">
 
 
       <div className="min-h-0 flex-1">
@@ -155,7 +155,7 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
               {/* Decision Point UI removed as per user request (handled in Execution Panel) */}
 
               {trial.status === "in_progress" ? (
-                <div className="space-y-2">
+                <div className="space-y-2" id="tour-wizard-action-list">
                   <Button
                     variant="outline"
                     size="sm"
@@ -225,7 +225,7 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
               <div className="flex items-center justify-between">
                 <Label htmlFor="autonomous-life" className="text-xs font-normal text-muted-foreground">Autonomous Life</Label>
                 <Switch
-                  id="autonomous-life"
+                  id="tour-wizard-autonomous"
                   checked={!!autonomousLife}
                   onCheckedChange={handleAutonomousLifeChange}
                   disabled={!_isConnected || readOnly}
