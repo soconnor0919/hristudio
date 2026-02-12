@@ -34,7 +34,7 @@ async function inspectExperimentSteps() {
         console.log(`Step [${step.orderIndex}] ID: ${step.id}`);
         console.log(`Name: ${step.name}`);
         console.log(`Type: ${step.type}`);
-        console.log(`NextStepId: ${step.nextStepId}`);
+
 
         if (step.type === 'conditional') {
             console.log("Conditions:", JSON.stringify(step.conditions, null, 2));

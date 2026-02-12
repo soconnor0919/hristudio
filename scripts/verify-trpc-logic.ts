@@ -48,9 +48,15 @@ async function verifyTrpcLogic() {
     // 3. Inspect Step 4 (Branch A)
     // Step index 3 (0-based) is Branch A
     const branchAStep = transformedSteps[3];
-    console.log("Step 4 (Branch A):", branchAStep.name);
-    console.log("  Type:", branchAStep.type);
-    console.log("  Trigger:", JSON.stringify(branchAStep.trigger, null, 2));
+
+    if (branchAStep) {
+        console.log("Step 4 (Branch A):", branchAStep.name);
+        console.log("  Type:", branchAStep.type);
+        console.log("  Trigger:", JSON.stringify(branchAStep.trigger, null, 2));
+    } else {
+        console.error("Step 4 (Branch A) not found in transformed steps!");
+        process.exit(1);
+    }
 
     // Check conditions specifically
     const conditions = branchAStep.trigger?.conditions as any;
@@ -62,8 +68,12 @@ async function verifyTrpcLogic() {
 
     // Inspect Step 5 (Branch B) for completeness
     const branchBStep = transformedSteps[4];
-    console.log("Step 5 (Branch B):", branchBStep.name);
-    console.log("  Trigger:", JSON.stringify(branchBStep.trigger, null, 2));
+    if (branchBStep) {
+        console.log("Step 5 (Branch B):", branchBStep.name);
+        console.log("  Trigger:", JSON.stringify(branchBStep.trigger, null, 2));
+    } else {
+        console.warn("Step 5 (Branch B) not found in transformed steps.");
+    }
 }
 
 verifyTrpcLogic()

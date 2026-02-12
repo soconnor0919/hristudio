@@ -31,6 +31,12 @@ const steps = [
 
 function simulateNextStep(currentStepIndex: number) {
     const currentStep = steps[currentStepIndex];
+
+    if (!currentStep) {
+        console.log("No step found at index:", currentStepIndex);
+        return;
+    }
+
     console.log(`\n--- Simulating Next Step from: ${currentStep.name} ---`);
     console.log("Current Step Data:", JSON.stringify(currentStep, null, 2));
 

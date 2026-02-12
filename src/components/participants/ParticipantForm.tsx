@@ -26,6 +26,8 @@ import {
 } from "~/components/ui/select";
 import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
+import { useTour } from "~/components/onboarding/TourProvider";
+import { Button } from "~/components/ui/button";
 
 type DemographicsData = {
   age?: number;
@@ -80,6 +82,7 @@ export function ParticipantForm({
   studyId,
 }: ParticipantFormProps) {
   const router = useRouter();
+  const { startTour } = useTour();
   const { selectedStudyId } = useStudyContext();
   const contextStudyId = studyId ?? selectedStudyId;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -262,7 +265,7 @@ export function ParticipantForm({
           <FormField>
             <Label htmlFor="participantCode">Participant Code *</Label>
             <Input
-              id="participantCode"
+              id="tour-participant-code"
               {...form.register("participantCode")}
               placeholder="e.g., P001"
               className={
@@ -279,7 +282,7 @@ export function ParticipantForm({
           <FormField>
             <Label htmlFor="name">Full Name</Label>
             <Input
-              id="name"
+              id="tour-participant-name"
               {...form.register("name")}
               placeholder="Optional name"
               className={form.formState.errors.name ? "border-red-500" : ""}
@@ -317,36 +320,38 @@ export function ParticipantForm({
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField>
-            <Label htmlFor="studyId">Study *</Label>
-            <Select
-              value={form.watch("studyId")}
-              onValueChange={(value) => form.setValue("studyId", value)}
-              disabled={studiesLoading || mode === "edit"}
-            >
-              <SelectTrigger
-                className={
-                  form.formState.errors.studyId ? "border-red-500" : ""
-                }
+            <Label htmlFor="studyId" id="tour-participant-study-label">Study *</Label>
+            <div id="tour-participant-study-container">
+              <Select
+                value={form.watch("studyId")}
+                onValueChange={(value) => form.setValue("studyId", value)}
+                disabled={studiesLoading || mode === "edit"}
               >
-                <SelectValue
-                  placeholder={
-                    studiesLoading ? "Loading..." : "Select study"
+                <SelectTrigger
+                  className={
+                    form.formState.errors.studyId ? "border-red-500" : ""
                   }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {studiesData?.studies?.map((study) => (
-                  <SelectItem key={study.id} value={study.id}>
-                    {study.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.studyId && (
-              <p className="text-sm text-red-600">
-                {form.formState.errors.studyId.message}
-              </p>
-            )}
+                >
+                  <SelectValue
+                    placeholder={
+                      studiesLoading ? "Loading..." : "Select study"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {studiesData?.studies?.map((study) => (
+                    <SelectItem key={study.id} value={study.id}>
+                      {study.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.studyId && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.studyId.message}
+                </p>
+              )}
+            </div>
           </FormField>
 
           <FormField>
@@ -408,7 +413,7 @@ export function ParticipantForm({
           <FormField>
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="consentGiven"
+                id="tour-participant-consent"
                 checked={form.watch("consentGiven")}
                 onCheckedChange={(checked) =>
                   form.setValue("consentGiven", !!checked)
@@ -495,6 +500,17 @@ export function ParticipantForm({
       isDeleting={isDeleting}
       sidebar={mode === "create" ? sidebar : undefined}
       submitText={mode === "create" ? "Register Participant" : "Save Changes"}
+      submitButtonId="tour-participant-submit"
+      extraActions={
+        mode === "create" ? (
+          <Button variant="ghost" size="sm" onClick={() => startTour("participant_creation")}>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Help</span>
+              <div className="flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground">?</div>
+            </div>
+          </Button>
+        ) : undefined
+      }
     >
       {formFields}
     </EntityForm>

@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 
-type TourType = "dashboard" | "study_creation" | "designer" | "wizard" | "full_platform";
+type TourType = "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard" | "full_platform";
 
 interface TourContextType {
     startTour: (tour: TourType) => void;
@@ -46,6 +46,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                     runTourSegment("dashboard");
                 } else if (pathname.includes("/studies/new")) {
                     runTourSegment("study_creation");
+                } else if (pathname.includes("/participants/new")) {
+                    runTourSegment("participant_creation");
                 } else if (pathname.includes("/designer")) {
                     runTourSegment("designer");
                 } else if (pathname.includes("/wizard")) {
@@ -56,7 +58,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         }
     }, [pathname]);
 
-    const runTourSegment = (segment: "dashboard" | "study_creation" | "designer" | "wizard") => {
+    const runTourSegment = (segment: "dashboard" | "study_creation" | "participant_creation" | "designer" | "wizard") => {
         const isDark = theme === "dark";
         // We add a specific class to handle dark/light overrides reliably
         const themeClass = isDark ? "driverjs-theme-dark" : "driverjs-theme-light";
@@ -130,6 +132,49 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                     popover: {
                         title: "Initialize Project",
                         description: "Create the study to access the full suite of tools: Experiment Designer, Wizard Interface, and Analytics.",
+                        side: "top",
+                    }
+                }
+            ];
+        } else if (segment === "participant_creation") {
+            steps = [
+                {
+                    element: "#tour-participant-code",
+                    popover: {
+                        title: "Participant ID",
+                        description: "Assign a unique code (e.g., P001) to identify this participant while maintaining anonymity.",
+                        side: "right",
+                    }
+                },
+                {
+                    element: "#tour-participant-name",
+                    popover: {
+                        title: "Name (Optional)",
+                        description: "You store their name for internal reference; analytics will use the ID.",
+                        side: "right",
+                    }
+                },
+                {
+                    element: "#tour-participant-study-container",
+                    popover: {
+                        title: "Study Association",
+                        description: "Link this participant to a specific research study to enable data collection.",
+                        side: "right",
+                    }
+                },
+                {
+                    element: "#tour-participant-consent",
+                    popover: {
+                        title: "Informed Consent",
+                        description: "Mandatory check to confirm you have obtained necessary ethical approvals and consent.",
+                        side: "top",
+                    }
+                },
+                {
+                    element: "#tour-participant-submit",
+                    popover: {
+                        title: "Register",
+                        description: "Create the participant record to begin scheduling trials.",
                         side: "top",
                     }
                 }
@@ -217,6 +262,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
             // Trigger current page immediately
             if (pathname === "/dashboard") runTourSegment("dashboard");
             else if (pathname.includes("/studies/new")) runTourSegment("study_creation");
+            else if (pathname.includes("/participants/new")) runTourSegment("participant_creation");
             else if (pathname.includes("/designer")) runTourSegment("designer");
             else if (pathname.includes("/wizard")) runTourSegment("wizard");
             else runTourSegment("dashboard"); // Fallback
@@ -226,6 +272,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
             if (tour === "dashboard") runTourSegment("dashboard");
             if (tour === "study_creation") runTourSegment("study_creation");
+            if (tour === "participant_creation") runTourSegment("participant_creation");
             if (tour === "designer") runTourSegment("designer");
             if (tour === "wizard") runTourSegment("wizard");
         }

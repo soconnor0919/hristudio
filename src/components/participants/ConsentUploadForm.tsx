@@ -5,9 +5,8 @@ import { Upload, X, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-r
 import { Button } from "~/components/ui/button";
 import { Progress } from "~/components/ui/progress";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { cn } from "~/lib/utils";
-import axios from "axios";
 
 interface ConsentUploadFormProps {
     studyId: string;
@@ -37,20 +36,16 @@ export function ConsentUploadForm({
             const selectedFile = e.target.files[0];
             // Validate size (10MB)
             if (selectedFile.size > 10 * 1024 * 1024) {
-                toast({
-                    title: "File too large",
+                toast.error("File too large", {
                     description: "Maximum file size is 10MB",
-                    variant: "destructive",
                 });
                 return;
             }
             // Validate type
             const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
             if (!allowedTypes.includes(selectedFile.type)) {
-                toast({
-                    title: "Invalid file type",
+                toast.error("Invalid file type", {
                     description: "Please upload a PDF, PNG, or JPG file",
-                    variant: "destructive",
                 });
                 return;
             }
@@ -74,19 +69,31 @@ export function ConsentUploadForm({
                 size: file.size,
             });
 
-            // 2. Upload to MinIO
-            await axios.put(url, file, {
-                headers: {
-                    "Content-Type": file.type,
-                },
-                onUploadProgress: (progressEvent) => {
-                    if (progressEvent.total) {
+            // 2. Upload to MinIO using XMLHttpRequest for progress
+            await new Promise<void>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open("PUT", url, true);
+                xhr.setRequestHeader("Content-Type", file.type);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
                         const percentCompleted = Math.round(
-                            (progressEvent.loaded * 100) / progressEvent.total
+                            (event.loaded * 100) / event.total
                         );
                         setUploadProgress(percentCompleted);
                     }
-                },
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error("Network error during upload"));
+                xhr.send(file);
             });
 
             // 3. Record Consent in DB
@@ -96,18 +103,15 @@ export function ConsentUploadForm({
                 storagePath: key,
             });
 
-            toast({
-                title: "Consent Recorded",
+            toast.success("Consent Recorded", {
                 description: "The consent form has been uploaded and recorded successfully.",
             });
 
             onSuccess();
         } catch (error) {
             console.error("Upload failed:", error);
-            toast({
-                title: "Upload Failed",
+            toast.error("Upload Failed", {
                 description: error instanceof Error ? error.message : "An unexpected error occurred",
-                variant: "destructive",
             });
             setIsUploading(false);
         }

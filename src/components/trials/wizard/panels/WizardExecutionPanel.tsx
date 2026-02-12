@@ -225,7 +225,7 @@ export function WizardExecutionPanel({
                   <div className="relative ml-3 space-y-0 pt-2">
                     {currentStep.actions.map((action, idx) => {
                       const isCompleted = idx < activeActionIndex;
-                      const isActive = idx === activeActionIndex;
+                      const isActive: boolean = idx === activeActionIndex;
                       const isLast = idx === currentStep.actions!.length - 1;
 
                       return (
@@ -281,7 +281,7 @@ export function WizardExecutionPanel({
                               )}
 
                               {/* Active Action Controls */}
-                              {isActive && (
+                              {isActive === true ? (
                                 <div className="pt-3 flex items-center gap-3">
                                   {action.pluginId && !["hristudio-core", "hristudio-woz"].includes(action.pluginId) ? (
                                     <>
@@ -339,45 +339,62 @@ export function WizardExecutionPanel({
                                     </Button>
                                   )}
                                 </div>
-                              )}
+                              ) : null}
 
                               {/* Wizard Wait For Response / Branching UI */}
-                              {isActive && action.type === 'wizard_wait_for_response' && action.parameters?.options && Array.isArray(action.parameters.options) && (
+                              {isActive === true &&
+                                action.type === "wizard_wait_for_response" &&
+                                action.parameters?.options &&
+                                Array.isArray(action.parameters.options) ? (
                                 <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {(action.parameters.options as any[]).map((opt, optIdx) => {
-                                    // Handle both string options and object options
-                                    const label = typeof opt === 'string' ? opt : opt.label;
-                                    const value = typeof opt === 'string' ? opt : opt.value;
-                                    const nextStepId = typeof opt === 'object' ? opt.nextStepId : undefined;
+                                  {(action.parameters.options as any[]).map(
+                                    (opt, optIdx) => {
+                                      // Handle both string options and object options
+                                      const label =
+                                        typeof opt === "string"
+                                          ? opt
+                                          : opt.label;
+                                      const value =
+                                        typeof opt === "string"
+                                          ? opt
+                                          : opt.value;
+                                      const nextStepId =
+                                        typeof opt === "object"
+                                          ? opt.nextStepId
+                                          : undefined;
 
-                                    return (
-                                      <Button
-                                        key={optIdx}
-                                        variant="outline"
-                                        className="justify-start h-auto py-3 px-4 text-left border-primary/20 hover:border-primary hover:bg-primary/5"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          onExecuteAction(
-                                            action.id,
-                                            {
+                                      return (
+                                        <Button
+                                          key={optIdx}
+                                          variant="outline"
+                                          className="justify-start h-auto py-3 px-4 text-left border-primary/20 hover:border-primary hover:bg-primary/5"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            onExecuteAction(action.id, {
                                               value,
                                               label,
-                                              nextStepId
-                                            }
-                                          );
-                                          onActionCompleted();
-                                        }}
-                                        disabled={readOnly || isExecuting}
-                                      >
-                                        <div className="flex flex-col items-start gap-1">
-                                          <span className="font-medium">{String(label)}</span>
-                                          {typeof opt !== 'string' && value && <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded-sm">{String(value)}</span>}
-                                        </div>
-                                      </Button>
-                                    );
-                                  })}
+                                              nextStepId,
+                                            });
+                                            onActionCompleted();
+                                          }}
+                                          disabled={readOnly || isExecuting}
+                                        >
+                                          <div className="flex flex-col items-start gap-1">
+                                            <span className="font-medium">
+                                              {String(label)}
+                                            </span>
+                                            {typeof opt !== "string" && value && (
+                                              <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded-sm">
+                                                {String(value)}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </Button>
+                                      );
+                                    }
+                                  )}
                                 </div>
-                              )}
+                              ) : null}
 
                               {/* Completed State Actions */}
                               {isCompleted && action.pluginId && (
