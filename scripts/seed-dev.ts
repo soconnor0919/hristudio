@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import * as schema from "../src/server/db/schema";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 
 // Database connection
 const connectionString = process.env.DATABASE_URL!;
@@ -234,18 +234,18 @@ async function main() {
     await db.insert(schema.actions).values([
       {
         stepId: step1!.id,
-        name: "Introduce Story",
+        name: "Say Text",
         type: "nao6-ros2.say_text",
         orderIndex: 0,
         parameters: { text: "Hello. I have a story to tell you about a space traveler. Are you ready?" },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
       {
         stepId: step1!.id,
-        name: "Welcome Gesture",
+        name: "Move Arm",
         type: "nao6-ros2.move_arm",
         orderIndex: 1,
         // Open hand/welcome position
@@ -258,7 +258,7 @@ async function main() {
           speed: 0.4
         },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       }
@@ -283,29 +283,29 @@ async function main() {
         orderIndex: 0,
         parameters: { text: "The traveler flew to Mars. He found a red rock that glowed in the dark. He put it in his pocket." },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
       {
         stepId: step2!.id,
-        name: "Look Away (Thinking)",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 1,
         parameters: { yaw: 1.5, pitch: 0.0, speed: 0.3 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       },
       {
         stepId: step2!.id,
-        name: "Look Back at Participant",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 2,
         parameters: { yaw: 0.0, pitch: -0.1, speed: 0.4 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       }
@@ -359,12 +359,12 @@ async function main() {
     await db.insert(schema.actions).values([
       {
         stepId: step3!.id,
-        name: "Ask Question",
+        name: "Say Text",
         type: "nao6-ros2.say_text",
         orderIndex: 0,
         parameters: { text: "What color was the rock the traveler found?" },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
@@ -397,34 +397,34 @@ async function main() {
     await db.insert(schema.actions).values([
       {
         stepId: step4a!.id,
-        name: "Confirm Correct Answer",
+        name: "Say Text with Emotion",
         type: "nao6-ros2.say_with_emotion",
         orderIndex: 0,
         parameters: { text: "Yes! It was a glowing red rock.", emotion: "happy", speed: 1.0 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
       {
         stepId: step4a!.id,
-        name: "Nod Head",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 1,
         parameters: { yaw: 0.0, pitch: -0.3, speed: 0.5 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       },
       {
         stepId: step4a!.id,
-        name: "Return to Neutral",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 2,
         parameters: { yaw: 0.0, pitch: 0.0, speed: 0.4 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       }
@@ -440,40 +440,40 @@ async function main() {
         orderIndex: 0,
         parameters: { text: "Actually, it was red." },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
       {
         stepId: step4b!.id,
-        name: "Shake Head (Left)",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 1,
         parameters: { yaw: -0.5, pitch: 0.0, speed: 0.5 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       },
       {
         stepId: step4b!.id,
-        name: "Shake Head (Right)",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 2,
         parameters: { yaw: 0.5, pitch: 0.0, speed: 0.5 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       },
       {
         stepId: step4b!.id,
-        name: "Return to Center",
+        name: "Turn Head",
         type: "nao6-ros2.turn_head",
         orderIndex: 3,
         parameters: { yaw: 0.0, pitch: 0.0, speed: 0.4 },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       }
@@ -498,7 +498,7 @@ async function main() {
         orderIndex: 0,
         parameters: { text: "The End. Thank you for listening." },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "interaction",
         retryable: true
       },
@@ -516,11 +516,208 @@ async function main() {
           speed: 0.3
         },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
-        pluginVersion: "2.1.0",
+        pluginVersion: "2.2.0",
         category: "movement",
         retryable: true
       }
     ]);
+
+    // 5b. Create "Control Flow Demo" Experiment
+    console.log("🧩 Creating 'Control Flow Demo' experiment...");
+    const [controlDemoExp] = await db.insert(schema.experiments).values({
+      studyId: study!.id,
+      name: "Control Flow Demo",
+      description: "Demonstration of enhanced control flow actions: Parallel, Wait, Loop, Branch.",
+      version: 2,
+      status: "draft",
+      robotId: naoRobot!.id,
+      createdBy: adminUser.id,
+    }).returning();
+
+    // Step 1: Introduction (Parallel)
+    const [cdStep1] = await db.insert(schema.steps).values({
+      experimentId: controlDemoExp!.id,
+      name: "1. Introduction (Parallel)",
+      description: "Parallel execution demonstration",
+      type: "robot",
+      orderIndex: 0,
+      required: true,
+      durationEstimate: 30
+    }).returning();
+
+    // Step 5: Conclusion - Defined early for ID reference (Convergence point)
+    const [cdStep5] = await db.insert(schema.steps).values({
+      experimentId: controlDemoExp!.id,
+      name: "5. Conclusion",
+      description: "Convergence point",
+      type: "robot",
+      orderIndex: 4,
+      required: true,
+      durationEstimate: 15
+    }).returning();
+
+    // Step 4: Path B (Wait) - Defined early for ID reference
+    const [cdStep4] = await db.insert(schema.steps).values({
+      experimentId: controlDemoExp!.id,
+      name: "4. Path B (Wait)",
+      description: "Wait action demonstration",
+      type: "robot",
+      orderIndex: 3,
+      required: true,
+      durationEstimate: 10
+    }).returning();
+
+    // Step 3: Path A (Loop) - Defined early for ID reference
+    const [cdStep3] = await db.insert(schema.steps).values({
+      experimentId: controlDemoExp!.id,
+      name: "3. Path A (Loop)",
+      description: "Looping demonstration",
+      type: "robot",
+      orderIndex: 2,
+      required: true,
+      durationEstimate: 45,
+      conditions: { nextStepId: cdStep5!.id }
+    }).returning();
+
+    // Step 2: Branch Decision
+    const [cdStep2] = await db.insert(schema.steps).values({
+      experimentId: controlDemoExp!.id,
+      name: "2. Branch Decision",
+      description: "Choose between Loop (3) or Wait (4)",
+      type: "conditional",
+      orderIndex: 1,
+      required: true,
+      durationEstimate: 30,
+      conditions: {
+        variable: "demo_branch_choice",
+        options: [
+          { label: "Go to Loop (Step 3)", value: "loop", nextStepId: cdStep3!.id, variant: "default" },
+          { label: "Go to Wait (Step 4)", value: "wait", nextStepId: cdStep4!.id, variant: "secondary" }
+        ]
+      }
+    }).returning();
+
+    // --- Step 1 Actions (Parallel) ---
+    await db.insert(schema.actions).values({
+      stepId: cdStep1!.id,
+      name: "Parallel Intro",
+      type: "parallel",
+      orderIndex: 0,
+      parameters: {
+        children: [
+          {
+            id: randomUUID(),
+            name: "Say Text",
+            type: "nao6-ros2.say_text",
+            parameters: { text: "Starting control flow demonstration." },
+            pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
+            pluginVersion: "2.2.0",
+            category: "interaction"
+          },
+          {
+            id: randomUUID(),
+            name: "Move Arm",
+            type: "nao6-ros2.move_arm",
+            parameters: { arm: "right", shoulder_roll: -0.5 },
+            pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
+            pluginVersion: "2.2.0",
+            category: "movement"
+          }
+        ]
+      },
+      pluginId: "hristudio-core",
+      category: "control",
+      sourceKind: "core"
+    });
+
+    // --- Step 2 Actions (Branch) ---
+    await db.insert(schema.actions).values([
+      {
+        stepId: cdStep2!.id,
+        name: "Say Text",
+        type: "nao6-ros2.say_text",
+        orderIndex: 0,
+        parameters: { text: "Should I loop or wait?" },
+        pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
+        pluginVersion: "2.2.0",
+        category: "interaction"
+      },
+      {
+        stepId: cdStep2!.id,
+        name: "Wizard Decision",
+        type: "wizard_wait_for_response",
+        orderIndex: 1,
+        parameters: {
+          prompt_text: "Choose the next path:",
+          options: [
+            { label: "Loop Path", value: "loop", nextStepId: cdStep3!.id },
+            { label: "Wait Path", value: "wait", nextStepId: cdStep4!.id }
+          ]
+        },
+        pluginId: "hristudio-woz",
+        category: "wizard",
+        sourceKind: "core"
+      },
+      {
+        stepId: cdStep2!.id,
+        name: "Execute Branch",
+        type: "branch",
+        orderIndex: 2,
+        parameters: {},
+        pluginId: "hristudio-core",
+        category: "control",
+        sourceKind: "core"
+      }
+    ]);
+
+    // --- Step 3 Actions (Loop) ---
+    await db.insert(schema.actions).values({
+      stepId: cdStep3!.id,
+      name: "Loop 3 Times",
+      type: "loop",
+      orderIndex: 0,
+      parameters: {
+        iterations: 3,
+        children: [
+          {
+            id: randomUUID(),
+            name: "Say Text",
+            type: "nao6-ros2.say_text",
+            parameters: { text: "I am looping." },
+            pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
+            pluginVersion: "2.2.0",
+            category: "interaction"
+          }
+        ]
+      },
+      pluginId: "hristudio-core",
+      category: "control",
+      sourceKind: "core"
+    });
+
+    // --- Step 4 Actions (Wait) ---
+    await db.insert(schema.actions).values({
+      stepId: cdStep4!.id,
+      name: "Wait 3 Seconds",
+      type: "wait",
+      orderIndex: 0,
+      parameters: { duration: 3 },
+      pluginId: "hristudio-core",
+      category: "control",
+      sourceKind: "core"
+    });
+
+    // --- Step 5 Actions (Conclusion) ---
+    await db.insert(schema.actions).values({
+      stepId: cdStep5!.id,
+      name: "Say Text",
+      type: "nao6-ros2.say_text",
+      orderIndex: 0,
+      parameters: { text: "Demonstration complete. Returning to start." },
+      pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
+      pluginVersion: "2.2.0",
+      category: "interaction"
+    });
 
     // 6. Participants (N=20 for study)
     console.log("👤 Creating 20 participants for N=20 study...");
@@ -549,6 +746,198 @@ async function main() {
     console.log(`  - Step 4b: Branch B - Incorrect Response (correction + head shake)`);
     console.log(`  - Step 5: Conclusion (ending + bow)`);
     console.log(`- ${insertedParticipants.length} Participants`);
+
+    // 7. Seed a COMPLETED trial with rich analytics data for testing
+    console.log("📊 Seeding completed trial with analytics data...");
+
+    // Pick participant P101
+    const p101 = insertedParticipants.find(p => p.participantCode === "P101");
+    if (!p101) throw new Error("P101 not found");
+
+    const startTime = new Date();
+    startTime.setMinutes(startTime.getMinutes() - 10); // Started 10 mins ago
+    const endTime = new Date(); // Ended just now
+
+    // Create the trial
+    const [analyticsTrial] = await db.insert(schema.trials).values({
+      experimentId: experiment!.id,
+      participantId: p101.id,
+      // studyId is not in trials table, it is inferred from experiment
+      status: "completed",
+      startedAt: startTime,
+      completedAt: endTime,
+      currentStepId: step5!.id, // Ended at last step
+      runId: randomUUID(),
+      metadata: {
+        condition: "HRIStudio",
+        notes: "Seeded for analytics testing"
+      }
+    }).returning();
+
+    // Create a series of events
+    const timelineEvents = [];
+    let currentTime = new Date(startTime);
+
+    // Helper to advance time
+    const advance = (seconds: number) => {
+      currentTime = new Date(currentTime.getTime() + seconds * 1000);
+      return currentTime;
+    };
+
+    // 1. Trial Started
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "trial_started",
+      timestamp: new Date(currentTime),
+      data: { experimentId: experiment!.id, participantId: p101.id }
+    });
+
+    // 2. Step 1: The Hook
+    advance(2);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "step_changed",
+      timestamp: new Date(currentTime),
+      data: { stepId: step1!.id, stepName: "The Hook" }
+    });
+
+    advance(1);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Say Text", text: "Hello..." }
+    });
+
+    advance(5);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Move Arm", arm: "right" }
+    });
+
+    // 3. Step 2: The Narrative
+    advance(20);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "step_changed",
+      timestamp: new Date(currentTime),
+      data: { stepId: step2!.id, stepName: "The Narrative" }
+    });
+
+    advance(2);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Tell Story" }
+    });
+
+    // Simulate an intervention/wizard action
+    advance(15);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "intervention",
+      timestamp: new Date(currentTime),
+      data: { type: "pause", reason: "participant_distracted" }
+    });
+
+    advance(10); // Paused for 10s
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "intervention",
+      timestamp: new Date(currentTime),
+      data: { type: "resume" }
+    });
+
+    advance(2);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Turn Head", yaw: 1.5 }
+    });
+
+    // 4. Step 3: Comprehension Check
+    advance(30);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "step_changed",
+      timestamp: new Date(currentTime),
+      data: { stepId: step3!.id, stepName: "Comprehension Check" }
+    });
+
+    advance(1);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Say Text", text: "What color..." }
+    });
+
+    advance(5);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "wizard_action",
+      timestamp: new Date(currentTime),
+      data: { action: "wait_for_response", prompt: "Did they answer Red?" }
+    });
+
+    // Wizard selects "Correct"
+    advance(8);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "wizard_response",
+      timestamp: new Date(currentTime),
+      data: { response: "Correct", variable: "last_wizard_response" }
+    });
+
+    // 5. Branch A
+    advance(1);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "step_changed",
+      timestamp: new Date(currentTime),
+      data: { stepId: step4a!.id, stepName: "Branch A: Correct" }
+    });
+
+    advance(1);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "Say Text with Emotion", emotion: "happy" }
+    });
+
+    // 6. Conclusion
+    advance(15);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "step_changed",
+      timestamp: new Date(currentTime),
+      data: { stepId: step5!.id, stepName: "Conclusion" }
+    });
+
+    advance(2);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "action_executed",
+      timestamp: new Date(currentTime),
+      data: { actionName: "End Story" }
+    });
+
+    // Trial Complete
+    advance(5);
+    timelineEvents.push({
+      trialId: analyticsTrial!.id,
+      eventType: "trial_completed",
+      timestamp: new Date(currentTime),
+      data: { durationSeconds: (currentTime.getTime() - startTime.getTime()) / 1000 }
+    });
+
+    await db.insert(schema.trialEvents).values(timelineEvents);
+    console.log("✅ Seeded 1 completed trial with " + timelineEvents.length + " events.");
 
   } catch (error) {
     console.error("❌ Seeding failed:", error);

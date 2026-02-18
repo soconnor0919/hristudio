@@ -17,12 +17,14 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Settings
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { PageHeader } from "~/components/ui/page-header";
 import { useTour } from "~/components/onboarding/TourProvider";
+import { SettingsModal } from "./SettingsModal";
 
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
@@ -45,7 +47,8 @@ import {
 import { BottomStatusBar } from "./layout/BottomStatusBar";
 import { ActionLibraryPanel } from "./panels/ActionLibraryPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
-import { FlowWorkspace, SortableActionChip, StepCardPreview } from "./flow/FlowWorkspace";
+import { FlowWorkspace, StepCardPreview } from "./flow/FlowWorkspace";
+import { SortableActionChip } from "./flow/ActionChip";
 import { GripVertical } from "lucide-react";
 
 import {
@@ -96,6 +99,23 @@ export interface DesignerRootProps {
   initialDesign?: ExperimentDesign;
   autoCompile?: boolean;
   onPersist?: (design: ExperimentDesign) => void;
+  experiment?: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    studyId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    study: {
+      id: string;
+      name: string;
+    };
+  };
+  designStats?: {
+    stepCount: number;
+    actionCount: number;
+  };
 }
 
 interface RawExperiment {
@@ -114,10 +134,13 @@ interface RawExperiment {
 /* -------------------------------------------------------------------------- */
 
 function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
+  console.log('[adaptExistingDesign] Entry - exp.steps:', exp.steps);
+
   // 1. Prefer database steps (Source of Truth) if valid, to ensure we have the latest
   //    plugin provenance data (which might be missing from stale visualDesign snapshots).
   // 1. Prefer database steps (Source of Truth) if valid.
   if (Array.isArray(exp.steps) && exp.steps.length > 0) {
+    console.log('[adaptExistingDesign] Has steps array, length:', exp.steps.length);
     try {
       // Check if steps are already converted (have trigger property) to avoid double-conversion data loss
       const firstStep = exp.steps[0] as any;
@@ -128,7 +151,17 @@ function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
         dbSteps = exp.steps as ExperimentStep[];
       } else {
         // Raw DB steps, need conversion
+        console.log('[adaptExistingDesign] Taking raw DB conversion path');
         dbSteps = convertDatabaseToSteps(exp.steps);
+
+        // DEBUG: Check children after conversion
+        dbSteps.forEach((step) => {
+          step.actions.forEach((action) => {
+            if (["sequence", "parallel", "loop", "branch"].includes(action.type)) {
+              console.log(`[adaptExistingDesign] Post-conversion ${action.type} (${action.name}) children:`, action.children);
+            }
+          });
+        });
       }
 
       return {
@@ -196,6 +229,8 @@ export function DesignerRoot({
   initialDesign,
   autoCompile = true,
   onPersist,
+  experiment: experimentMetadata,
+  designStats,
 }: DesignerRootProps) {
   // Subscribe to registry updates to ensure re-renders when actions load
   useActionRegistry();
@@ -217,8 +252,6 @@ export function DesignerRoot({
       gcTime: 0, // Garbage collect immediately
     }
   );
-
-
 
   const updateExperiment = api.experiments.update.useMutation({
     onError: (err) => {
@@ -321,6 +354,7 @@ export function DesignerRoot({
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Responsive initialization: Collapse left sidebar on smaller screens (<1280px)
   useEffect(() => {
@@ -353,14 +387,12 @@ export function DesignerRoot({
 
   /* ----------------------------- Initialization ---------------------------- */
   useEffect(() => {
+    console.log('[DesignerRoot] useEffect triggered', { initialized, loadingExperiment, hasExperiment: !!experiment, hasInitialDesign: !!initialDesign });
+
     if (initialized) return;
     if (loadingExperiment && !initialDesign) return;
 
-    // console.log('[DesignerRoot] 🚀 INITIALIZING', {
-    //   hasExperiment: !!experiment,
-    //   hasInitialDesign: !!initialDesign,
-    //   loadingExperiment,
-    // });
+    console.log('[DesignerRoot] Proceeding with initialization');
 
     const adapted =
       initialDesign ??
@@ -1004,10 +1036,8 @@ export function DesignerRoot({
         const defaultParams: Record<string, unknown> = {};
         if (fullDef?.parameters) {
           for (const param of fullDef.parameters) {
-            // @ts-expect-error - 'default' property access
-            if (param.default !== undefined) {
-              // @ts-expect-error - 'default' property access
-              defaultParams[param.id] = param.default;
+            if (param.value !== undefined) {
+              defaultParams[param.id] = param.value;
             }
           }
         }
@@ -1097,6 +1127,16 @@ export function DesignerRoot({
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
+      {experimentMetadata && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSettingsOpen(true)}
+          title="Experiment Settings"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -1127,7 +1167,10 @@ export function DesignerRoot({
   );
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-background">
+    <div className="relative flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-background">
+      {/* Subtle Background Gradients */}
+      <div className="absolute top-0 left-1/2 -z-10 h-[400px] w-[800px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl opacity-20 dark:opacity-10" />
+      <div className="absolute bottom-0 right-0 -z-10 h-[250px] w-[250px] rounded-full bg-violet-500/5 blur-3xl" />
       <PageHeader
         title={designMeta.name}
         description={designMeta.description || "No description"}
@@ -1289,6 +1332,16 @@ export function DesignerRoot({
           </DragOverlay>
         </DndContext>
       </div>
+
+      {/* Settings Modal */}
+      {experimentMetadata && (
+        <SettingsModal
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          experiment={experimentMetadata}
+          designStats={designStats}
+        />
+      )}
     </div>
   );
 }

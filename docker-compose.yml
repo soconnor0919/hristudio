@@ -29,6 +29,18 @@ services:
       - minio_data:/data
     command: server --console-address ":9001" /data
 
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/hristudio;
+      /usr/bin/mc anonymous set public myminio/hristudio;
+      exit 0;
+      "
+
 volumes:
   postgres_data:
   minio_data:

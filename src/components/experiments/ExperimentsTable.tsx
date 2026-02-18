@@ -256,41 +256,35 @@ function ExperimentActions({ experiment }: { experiment: Experiment }) {
   });
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/edit`}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Metadata
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
-            <LayoutTemplate className="mr-2 h-4 w-4" />
-            Design
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-red-600 focus:text-red-700"
-          onClick={() => {
-            if (confirm("Are you sure you want to delete this experiment?")) {
-              deleteMutation.mutate({ id: experiment.id });
-            }
-          }}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        asChild
+        className="h-8 w-8 text-muted-foreground hover:text-primary"
+        title="Open Designer"
+      >
+        <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+          <LayoutTemplate className="h-4 w-4" />
+          <span className="sr-only">Design</span>
+        </Link>
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => {
+          if (confirm("Are you sure you want to delete this experiment?")) {
+            deleteMutation.mutate({ id: experiment.id });
+          }
+        }}
+        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        title="Delete Experiment"
+      >
+        <Trash2 className="h-4 w-4" />
+        <span className="sr-only">Delete</span>
+      </Button>
+    </div>
   );
 }
 

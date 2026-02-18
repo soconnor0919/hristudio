@@ -12,7 +12,10 @@ import { Separator } from "~/components/ui/separator";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 import { WebcamPanel } from "./WebcamPanel";
+import { RobotActionsPanel } from "../RobotActionsPanel";
 
 interface WizardMonitoringPanelProps {
   rosConnected: boolean;
@@ -33,6 +36,14 @@ interface WizardMonitoringPanelProps {
     actionId: string,
     parameters: Record<string, unknown>,
   ) => Promise<unknown>;
+  onSetAutonomousLife?: (enabled: boolean) => Promise<boolean | void>;
+  onExecuteRobotAction?: (
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<void>;
+  studyId?: string;
+  trialId?: string;
   readOnly?: boolean;
 }
 
@@ -44,8 +55,28 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
   connectRos,
   disconnectRos,
   executeRosAction,
+  onSetAutonomousLife,
+  onExecuteRobotAction,
+  studyId,
+  trialId,
   readOnly = false,
 }: WizardMonitoringPanelProps) {
+  const [autonomousLife, setAutonomousLife] = React.useState(true);
+
+  const handleAutonomousLifeChange = React.useCallback(async (checked: boolean) => {
+    setAutonomousLife(checked); // Optimistic update
+    if (onSetAutonomousLife) {
+      try {
+        const result = await onSetAutonomousLife(checked);
+        if (result === false) {
+          throw new Error("Service unavailable");
+        }
+      } catch (error) {
+        console.error("Failed to set autonomous life:", error);
+        setAutonomousLife(!checked); // Revert on failure
+      }
+    }
+  }, [onSetAutonomousLife]);
   return (
     <div className="flex h-full flex-col gap-2 p-2">
       {/* Camera View - Always Visible */}
@@ -163,6 +194,35 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                 </div>
               )}
             </div>
+
+            <Separator />
+
+            {/* Autonomous Life Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="autonomous-life" className="text-xs font-normal text-muted-foreground">Autonomous Life</Label>
+                <Switch
+                  id="tour-wizard-autonomous"
+                  checked={!!autonomousLife}
+                  onCheckedChange={handleAutonomousLifeChange}
+                  disabled={!rosConnected || readOnly}
+                  className="scale-75"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Robot Actions Panel */}
+            {studyId && trialId && onExecuteRobotAction ? (
+              <div className={readOnly ? "pointer-events-none opacity-50" : ""}>
+                <RobotActionsPanel
+                  studyId={studyId}
+                  trialId={trialId}
+                  onExecuteAction={onExecuteRobotAction}
+                />
+              </div>
+            ) : null}
 
             <Separator />
 

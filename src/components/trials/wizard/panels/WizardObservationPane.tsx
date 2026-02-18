@@ -14,7 +14,7 @@ import {
     SelectValue,
 } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { HorizontalTimeline } from "~/components/trials/timeline/HorizontalTimeline";
+
 
 interface TrialEvent {
     type: string;
@@ -31,7 +31,7 @@ interface WizardObservationPaneProps {
     ) => Promise<void>;
     isSubmitting?: boolean;
     readOnly?: boolean;
-    activeTab?: "notes" | "timeline";
+
 }
 
 export function WizardObservationPane({
@@ -39,7 +39,6 @@ export function WizardObservationPane({
     isSubmitting = false,
     trialEvents = [],
     readOnly = false,
-    activeTab = "notes",
 }: WizardObservationPaneProps & { trialEvents?: TrialEvent[] }) {
     const [note, setNote] = useState("");
     const [category, setCategory] = useState("observation");
@@ -71,7 +70,7 @@ export function WizardObservationPane({
 
     return (
         <div className="flex h-full flex-col bg-background">
-            <div className={`flex-1 flex flex-col p-4 m-0 ${activeTab !== "notes" ? "hidden" : ""}`}>
+            <div className="flex-1 flex flex-col p-4 m-0">
                 <div className="flex flex-1 flex-col gap-2">
                     <Textarea
                         placeholder={readOnly ? "Session is read-only" : "Type your observation here..."}
@@ -141,10 +140,6 @@ export function WizardObservationPane({
                         </div>
                     )}
                 </div>
-            </div>
-
-            <div className={`flex-1 m-0 min-h-0 p-4 ${activeTab !== "timeline" ? "hidden" : ""}`}>
-                <HorizontalTimeline events={trialEvents} />
             </div>
         </div>
     );

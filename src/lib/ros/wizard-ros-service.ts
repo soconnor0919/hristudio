@@ -145,7 +145,7 @@ export class WizardRosService extends EventEmitter {
       };
 
       this.ws.onerror = (error) => {
-        console.error("[WizardROS] WebSocket error:", error);
+        console.warn("[WizardROS] WebSocket error (connection may be retried):", error);
         clearTimeout(connectionTimeout);
         this.isConnecting = false;
 
@@ -773,7 +773,7 @@ export class WizardRosService extends EventEmitter {
       try {
         await this.connect();
       } catch (error) {
-        console.error("[WizardROS] Reconnect failed:", error);
+        console.warn("[WizardROS] Reconnect failed:", error);
         if (this.connectionAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         } else {

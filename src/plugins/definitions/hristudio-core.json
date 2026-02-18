@@ -42,10 +42,90 @@
             "icon": "GitBranch",
             "color": "#f97316",
             "parameters": {},
-            "parameterSchema": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {
+                                    "type": "string"
+                                },
+                                "nextStepId": {
+                                    "type": "string"
+                                },
+                                "variant": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Branching options"
+                    }
+                },
+                "required": [
+                    "options"
+                ]
+            },
             "timeout": 0,
             "retryable": false,
             "nestable": false
+        },
+        {
+            "id": "loop",
+            "name": "Loop / Repeat",
+            "description": "Repeat a sequence of steps.",
+            "category": "control",
+            "icon": "Repeat",
+            "color": "#8b5cf6",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "iterations": {
+                        "title": "Iterations",
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 1,
+                        "description": "Number of times to repeat (standard loop)"
+                    },
+                    "children": {
+                        "title": "Actions",
+                        "type": "array",
+                        "description": "Child actions to repeat"
+                    }
+                },
+                "required": [
+                    "iterations"
+                ]
+            },
+            "timeout": 0,
+            "retryable": false,
+            "nestable": true
+        },
+        {
+            "id": "parallel",
+            "name": "Parallel Execution",
+            "description": "Run nested actions simultaneously.",
+            "category": "control",
+            "icon": "Layers",
+            "color": "#10b981",
+            "parameters": {},
+            "parameterSchema": {
+                "type": "object",
+                "properties": {
+                    "children": {
+                        "title": "Actions",
+                        "type": "array",
+                        "description": "Child actions to execute in parallel"
+                    }
+                }
+            },
+            "timeout": 0,
+            "retryable": false,
+            "nestable": true
         }
     ]
 }

@@ -1,8 +1,8 @@
 
-import { db } from "../src/server/db";
-import { experiments } from "../src/server/db/schema";
+import { db } from "../../src/server/db";
+import { experiments } from "../../src/server/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { convertDatabaseToSteps } from "../src/lib/experiment-designer/block-converter";
+import { convertDatabaseToSteps } from "../../src/lib/experiment-designer/block-converter";
 
 async function verifyConversion() {
     const experiment = await db.query.experiments.findFirst({

@@ -30,6 +30,7 @@ import {
   GitBranch,
   Edit3,
   CornerDownRight,
+  Repeat,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
@@ -41,6 +42,7 @@ import { actionRegistry } from "../ActionRegistry";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
+import { SortableActionChip } from "./ActionChip";
 
 /**
  * FlowWorkspace
@@ -296,74 +298,40 @@ function StepRow({
 
 
           {/* Conditional Branching Visualization */}
-          {/* Conditional Branching Visualization */}
-          {step.type === "conditional" && (
+
+
+          {/* Loop Visualization */}
+          {step.type === "loop" && (
             <div className="mx-3 my-3 rounded-md border text-xs" style={{
-              backgroundColor: 'var(--validation-warning-bg)', // Semantic background
-              borderColor: 'var(--validation-warning-border)', // Semantic border
+              backgroundColor: 'var(--validation-info-bg, #f0f9ff)',
+              borderColor: 'var(--validation-info-border, #bae6fd)',
             }}>
               <div className="flex items-center gap-2 border-b px-3 py-2 font-medium" style={{
-                borderColor: 'var(--validation-warning-border)',
-                color: 'var(--validation-warning-text)'
+                borderColor: 'var(--validation-info-border, #bae6fd)',
+                color: 'var(--validation-info-text, #0369a1)'
               }}>
-                <GitBranch className="h-3.5 w-3.5" />
-                <span>Branching Logic</span>
+                <Repeat className="h-3.5 w-3.5" />
+                <span>Loop Logic</span>
               </div>
 
               <div className="p-2 space-y-2">
-                {!(step.trigger.conditions as any)?.options?.length ? (
-                  <div className="text-muted-foreground/60 italic text-center py-2 text-[11px]">
-                    No branches configured. Add options in properties.
-                  </div>
-                ) : (
-                  (step.trigger.conditions as any).options.map((opt: any, idx: number) => {
-                    // Resolve ID to name for display
-                    let targetName = "Unlinked";
-                    let targetIndex = -1;
-
-                    if (opt.nextStepId) {
-                      const target = allSteps.find(s => s.id === opt.nextStepId);
-                      if (target) {
-                        targetName = target.name;
-                        targetIndex = target.order;
-                      }
-                    } else if (typeof opt.nextStepIndex === 'number') {
-                      targetIndex = opt.nextStepIndex;
-                      targetName = `Step #${targetIndex + 1}`;
-                    }
-
-                    return (
-                      <div key={idx} className="flex items-center justify-between rounded bg-background/50 shadow-sm border p-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Badge variant="outline" className={cn(
-                            "text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 min-w-[70px] justify-center bg-background",
-                            opt.variant === "destructive"
-                              ? "border-red-500/30 text-red-600 dark:text-red-400"
-                              : "border-slate-500/30 text-foreground"
-                          )}>
-                            {opt.label}
-                          </Badge>
-                          <span className="text-muted-foreground text-[10px]">then go to</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-right min-w-0 max-w-[50%]">
-                          <span className="font-medium truncate text-[11px] block text-foreground" title={targetName}>
-                            {targetName}
-                          </span>
-                          {targetIndex !== -1 && (
-                            <Badge variant="secondary" className="px-1 py-0 h-4 text-[9px] min-w-[20px] justify-center tabular-nums">
-                              #{targetIndex + 1}
-                            </Badge>
-                          )}
-                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-muted-foreground">Repeat:</span>
+                  <Badge variant="outline" className="font-mono">
+                    {(step.trigger.conditions as any).loop?.iterations || 1} times
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-muted-foreground">Approval:</span>
+                  <Badge variant={(step.trigger.conditions as any).loop?.requireApproval !== false ? "default" : "secondary"}>
+                    {(step.trigger.conditions as any).loop?.requireApproval !== false ? "Required" : "Auto-proceed"}
+                  </Badge>
+                </div>
               </div>
             </div>
           )}
+
+
 
           {/* Action List (Collapsible/Virtual content) */}
           {step.expanded && (
@@ -497,330 +465,7 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Sortable Action Chip                                                       */
-/* -------------------------------------------------------------------------- */
 
-export interface ActionChipProps {
-  stepId: string;
-  action: ExperimentAction;
-  parentId: string | null;
-  selectedActionId: string | null | undefined;
-  onSelectAction: (stepId: string, actionId: string | undefined) => void;
-  onDeleteAction: (stepId: string, actionId: string) => void;
-  onReorderAction?: (stepId: string, actionId: string, direction: 'up' | 'down') => void;
-  dragHandle?: boolean;
-  isFirst?: boolean;
-  isLast?: boolean;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Action Chip Visuals (Pure Component)                                        */
-/* -------------------------------------------------------------------------- */
-
-export interface ActionChipVisualsProps {
-  action: ExperimentAction;
-  isSelected?: boolean;
-  isDragging?: boolean;
-  isOverNested?: boolean;
-  onSelect?: (e: React.MouseEvent) => void;
-  onDelete?: (e: React.MouseEvent) => void;
-  onReorder?: (direction: 'up' | 'down') => void;
-  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
-  children?: React.ReactNode;
-  isFirst?: boolean;
-  isLast?: boolean;
-  validationStatus?: "error" | "warning" | "info";
-}
-
-export function ActionChipVisuals({
-  action,
-  isSelected,
-  isDragging,
-  isOverNested,
-  onSelect,
-  onDelete,
-  onReorder,
-  dragHandleProps,
-  children,
-  isFirst,
-  isLast,
-  validationStatus,
-}: ActionChipVisualsProps) {
-  const def = actionRegistry.getAction(action.type);
-
-  return (
-    <div
-      className={cn(
-        "group relative flex w-full flex-col items-start gap-1 rounded border px-3 py-2 text-[11px]",
-        "bg-muted/40 hover:bg-accent/40 cursor-pointer",
-        isSelected && "border-border bg-accent/30",
-        isDragging && "opacity-70 shadow-lg",
-        isOverNested && !isDragging && "ring-2 ring-blue-400 ring-offset-1 bg-blue-50/50"
-      )}
-      onClick={onSelect}
-      role="button"
-      aria-pressed={isSelected}
-      tabIndex={0}
-    >
-      <div className="flex w-full items-center gap-2">
-        <span className="flex-1 leading-snug font-medium break-words flex items-center gap-2">
-          {action.name}
-          {validationStatus === "error" && (
-            <div className="h-2 w-2 rounded-full bg-red-500 ring-1 ring-red-600" aria-label="Error" />
-          )}
-          {validationStatus === "warning" && (
-            <div className="h-2 w-2 rounded-full bg-amber-500 ring-1 ring-amber-600" aria-label="Warning" />
-          )}
-        </span>
-
-        <div className="flex items-center gap-0.5 mr-1 bg-background/50 rounded-md border border-border/50 shadow-sm px-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 w-5 p-0 text-[10px] text-muted-foreground hover:text-foreground z-20 pointer-events-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              onReorder?.('up');
-            }}
-            disabled={isFirst}
-            aria-label="Move action up"
-          >
-            <ChevronRight className="h-3 w-3 -rotate-90" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 w-5 p-0 text-[10px] text-muted-foreground hover:text-foreground z-20 pointer-events-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              onReorder?.('down');
-            }}
-            disabled={isLast}
-            aria-label="Move action down"
-          >
-            <ChevronRight className="h-3 w-3 rotate-90" />
-          </Button>
-        </div>
-
-        <button
-          type="button"
-          onClick={onDelete}
-          className="text-muted-foreground hover:text-foreground rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
-          aria-label="Delete action"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      {def?.description && (
-        <div className="text-muted-foreground line-clamp-3 w-full text-[10px] leading-snug">
-          {def.description}
-        </div>
-      )}
-      {def?.parameters.length ? (
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          {def.parameters.slice(0, 4).map((p) => (
-            <span
-              key={p.id}
-              className="bg-background/70 text-muted-foreground ring-border rounded px-1 py-0.5 text-[9px] font-medium ring-1"
-            >
-              {p.name}
-            </span>
-          ))}
-          {def.parameters.length > 4 && (
-            <span className="text-[9px] text-muted-foreground">+{def.parameters.length - 4}</span>
-          )}
-        </div>
-      ) : null}
-
-      {children}
-    </div>
-  );
-}
-
-export function SortableActionChip({
-  stepId,
-  action,
-  parentId,
-  selectedActionId,
-  onSelectAction,
-  onDeleteAction,
-  onReorderAction,
-  dragHandle,
-  isFirst,
-  isLast,
-}: ActionChipProps) {
-  const isSelected = selectedActionId === action.id;
-
-  const insertionProjection = useDesignerStore((s) => s.insertionProjection);
-  const displayChildren = useMemo(() => {
-    if (
-      insertionProjection?.stepId === stepId &&
-      insertionProjection.parentId === action.id
-    ) {
-      const copy = [...(action.children || [])];
-      copy.splice(insertionProjection.index, 0, insertionProjection.action);
-      return copy;
-    }
-    return action.children;
-  }, [action.children, action.id, stepId, insertionProjection]);
-
-  /* ------------------------------------------------------------------------ */
-  /* Main Sortable Logic                                                      */
-  /* ------------------------------------------------------------------------ */
-  const isPlaceholder = action.id === "projection-placeholder";
-
-  // Compute validation status
-  const issues = useDesignerStore((s) => s.validationIssues[action.id]);
-  const validationStatus = useMemo(() => {
-    if (!issues?.length) return undefined;
-    if (issues.some((i) => i.severity === "error")) return "error";
-    if (issues.some((i) => i.severity === "warning")) return "warning";
-    return "info";
-  }, [issues]);
-
-  /* ------------------------------------------------------------------------ */
-  /* Sortable (Local) DnD Monitoring                                          */
-  /* ------------------------------------------------------------------------ */
-  // useSortable disabled per user request to remove action drag-and-drop
-  // const { ... } = useSortable(...) 
-
-  // Use local dragging state or passed prop
-  const isDragging = dragHandle || false;
-
-  const style = {
-    // transform: CSS.Translate.toString(transform),
-    // transition,
-  };
-
-  // We need a ref for droppable? Droppable is below.
-  // For the chip itself, if not sortable, we don't need setNodeRef.
-  // But we might need it for layout?
-  // Let's keep a simple div ref usage if needed, but useSortable provided setNodeRef.
-  // We can just use a normal ref or nothing if not measuring.
-  const setNodeRef = undefined; // No-op
-  const attributes = {};
-  const listeners = {};
-
-
-
-  /* ------------------------------------------------------------------------ */
-  /* Nested Droppable (for control flow containers)                           */
-  /* ------------------------------------------------------------------------ */
-  const def = actionRegistry.getAction(action.type);
-  const nestedDroppableId = `container-${action.id}`;
-  const {
-    isOver: isOverNested,
-    setNodeRef: setNestedNodeRef
-  } = useDroppable({
-    id: nestedDroppableId,
-    disabled: !def?.nestable || isPlaceholder, // Disable droppable for placeholder
-    data: {
-      type: "container",
-      stepId,
-      parentId: action.id,
-      action // Pass full action for projection logic
-    }
-  });
-
-  const shouldRenderChildren = def?.nestable;
-
-  if (isPlaceholder) {
-    const { setNodeRef: setPlaceholderRef } = useDroppable({
-      id: "projection-placeholder",
-      data: { type: "placeholder" }
-    });
-
-    // Render simplified placeholder without hooks refs
-    // We still render the content matching the action type for visual fidelity
-    return (
-      <div
-        ref={setPlaceholderRef}
-        className="group relative flex w-full flex-col items-start gap-1 rounded border-2 border-dashed border-blue-300 bg-blue-50/50 px-3 py-2 text-[11px] opacity-70"
-      >
-        <div className="flex w-full items-center gap-2">
-          <span className={cn(
-            "h-2.5 w-2.5 rounded-full",
-            def ? {
-              wizard: "bg-blue-500",
-              robot: "bg-emerald-500",
-              control: "bg-amber-500",
-              observation: "bg-purple-500",
-            }[def.category] : "bg-gray-400"
-          )} />
-          <span className="font-medium text-foreground">{def?.name ?? action.name}</span>
-        </div>
-        {def?.description && (
-          <div className="text-muted-foreground line-clamp-3 w-full text-[10px] leading-snug">
-            {def.description}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-    >
-      <ActionChipVisuals
-        action={action}
-        isSelected={isSelected}
-        isDragging={isDragging}
-        isOverNested={isOverNested}
-        onSelect={(e) => {
-          e.stopPropagation();
-          onSelectAction(stepId, action.id);
-        }}
-        onDelete={(e) => {
-          e.stopPropagation();
-          onDeleteAction(stepId, action.id);
-        }}
-        onReorder={(direction) => onReorderAction?.(stepId, action.id, direction)}
-        dragHandleProps={listeners}
-        isLast={isLast}
-        validationStatus={validationStatus}
-      >
-        {/* Nested Actions Container */}
-        {shouldRenderChildren && (
-          <div
-            ref={setNestedNodeRef}
-            className={cn(
-              "mt-2 w-full flex flex-col gap-2 pl-4 border-l-2 border-border/40 transition-all min-h-[0.5rem] pb-4",
-            )}
-          >
-            <SortableContext
-              items={(displayChildren ?? action.children ?? [])
-                .filter(c => c.id !== "projection-placeholder")
-                .map(c => sortableActionId(c.id))}
-              strategy={verticalListSortingStrategy}
-            >
-              {(displayChildren || action.children || []).map((child) => (
-                <SortableActionChip
-                  key={child.id}
-                  stepId={stepId}
-                  action={child}
-                  parentId={action.id}
-                  selectedActionId={selectedActionId}
-                  onSelectAction={onSelectAction}
-                  onDeleteAction={onDeleteAction}
-                  onReorderAction={onReorderAction}
-                />
-              ))}
-              {(!displayChildren?.length && !action.children?.length) && (
-                <div className="text-[10px] text-muted-foreground/60 italic py-1">
-                  Drag actions here
-                </div>
-              )}
-            </SortableContext>
-          </div>
-        )}
-      </ActionChipVisuals>
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /* FlowWorkspace Component                                                     */

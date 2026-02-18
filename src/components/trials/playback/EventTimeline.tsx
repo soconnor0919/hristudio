@@ -73,8 +73,7 @@ export function EventTimeline() {
 
     const currentProgress = (currentTime * 1000 / effectiveDuration) * 100;
 
-    // Generate ticks for "number line" look
-    // We want a major tick every ~10% or meaningful time interval
+    // Generate ticks
     const ticks = useMemo(() => {
         const count = 10;
         return Array.from({ length: count + 1 }).map((_, i) => ({
@@ -84,106 +83,75 @@ export function EventTimeline() {
     }, [effectiveDuration]);
 
     const getEventIcon = (type: string) => {
-        if (type.includes("intervention") || type.includes("wizard")) return <User className="h-3 w-3" />;
-        if (type.includes("robot") || type.includes("action")) return <Bot className="h-3 w-3" />;
-        if (type.includes("completed")) return <CheckCircle className="h-3 w-3" />;
-        if (type.includes("start")) return <Flag className="h-3 w-3" />;
-        if (type.includes("note")) return <MessageSquare className="h-3 w-3" />;
-        if (type.includes("error")) return <AlertTriangle className="h-3 w-3" />;
-        return <Activity className="h-3 w-3" />;
+        if (type.includes("intervention") || type.includes("wizard")) return <User className="h-4 w-4" />;
+        if (type.includes("robot") || type.includes("action")) return <Bot className="h-4 w-4" />;
+        if (type.includes("completed")) return <CheckCircle className="h-4 w-4" />;
+        if (type.includes("start")) return <Flag className="h-4 w-4" />;
+        if (type.includes("note")) return <MessageSquare className="h-4 w-4" />;
+        if (type.includes("error")) return <AlertTriangle className="h-4 w-4" />;
+        return <Activity className="h-4 w-4" />;
     };
 
     const getEventColor = (type: string) => {
-        if (type.includes("intervention") || type.includes("wizard")) return "text-orange-500 border-orange-200 bg-orange-50";
-        if (type.includes("robot") || type.includes("action")) return "text-purple-500 border-purple-200 bg-purple-50";
-        if (type.includes("completed")) return "text-green-500 border-green-200 bg-green-50";
-        if (type.includes("start")) return "text-blue-500 border-blue-200 bg-blue-50";
-        if (type.includes("error")) return "text-red-500 border-red-200 bg-red-50";
-        return "text-slate-500 border-slate-200 bg-slate-50";
+        if (type.includes("intervention") || type.includes("wizard")) return "bg-orange-100 text-orange-600 border-orange-200";
+        if (type.includes("robot") || type.includes("action")) return "bg-purple-100 text-purple-600 border-purple-200";
+        if (type.includes("completed")) return "bg-green-100 text-green-600 border-green-200";
+        if (type.includes("start")) return "bg-blue-100 text-blue-600 border-blue-200";
+        if (type.includes("error")) return "bg-red-100 text-red-600 border-red-200";
+        return "bg-slate-100 text-slate-600 border-slate-200";
     };
 
     return (
-        <div className="w-full h-full flex flex-col select-none py-2">
-            <TooltipProvider>
-                {/* Timeline Track Container */}
+        <div className="w-full h-28 flex flex-col justify-center px-8 select-none">
+            <TooltipProvider delayDuration={0}>
+                {/* Main Interactive Area */}
                 <div
                     ref={containerRef}
-                    className="relative w-full flex-1 min-h-[80px] group cursor-crosshair border-b border-border/50"
+                    className="relative w-full h-16 flex items-center cursor-pointer group"
                     onClick={handleSeek}
                 >
-                    {/* Background Grid/Ticks */}
-                    <div className="absolute inset-0 pointer-events-none">
-                        {/* Major Ticks */}
-                        {ticks.map((tick, i) => (
-                            <div
-                                key={i}
-                                className="absolute top-0 bottom-0 border-l border-border/30 flex flex-col justify-end"
-                                style={{ left: `${tick.pct}%` }}
-                            >
-                                <span className="text-[10px] font-mono text-muted-foreground -ml-3 mb-1 bg-background/80 px-1 rounded">
-                                    {tick.label}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    {/* The Timeline Line (Horizontal) */}
+                    <div className="absolute left-0 right-0 h-0.5 top-1/2 -mt-px bg-border group-hover:bg-border/80 transition-colors" />
 
-                    {/* Central Axis Line */}
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-border z-0" />
-
-                    {/* Progress Fill (Subtle) */}
+                    {/* Progress Fill */}
                     <div
-                        className="absolute top-0 bottom-0 left-0 bg-primary/5 z-0 pointer-events-none"
-                        style={{ width: `${currentProgress}%` }}
+                        className="absolute left-0 h-0.5 bg-primary/30 pointer-events-none"
+                        style={{ width: `${currentProgress}%`, top: '50%', marginTop: '-1px' }}
                     />
 
-                    {/* Playhead */}
+                    {/* Playhead (Scanner) */}
                     <div
-                        className="absolute top-0 bottom-0 w-px bg-red-500 z-30 pointer-events-none transition-all duration-75"
-                        style={{ left: `${currentProgress}%` }}
+                        className="absolute h-16 w-px bg-red-500 z-30 pointer-events-none transition-all duration-75"
+                        style={{ left: `${currentProgress}%`, top: '50%', transform: 'translateY(-50%)' }}
                     >
-                        <div className="absolute -top-1 -ml-1.5 p-0.5 bg-red-500 rounded text-[8px] font-bold text-white w-3 h-3 flex items-center justify-center">
-                            ▼
-                        </div>
+                        {/* Knob */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full shadow border border-white" />
                     </div>
 
-                    {/* Events "Lollipops" */}
+                    {/* Events (Avatars/Dots) */}
                     {sortedEvents.map((event, i) => {
                         const pct = getPercentage(new Date(event.timestamp).getTime());
-                        const isTop = i % 2 === 0; // Stagger events top/bottom
 
                         return (
                             <Tooltip key={i}>
                                 <TooltipTrigger asChild>
                                     <div
-                                        className="absolute z-20 flex flex-col items-center group/event"
-                                        style={{
-                                            left: `${pct}%`,
-                                            top: '50%',
-                                            transform: 'translate(-50%, -50%)',
-                                            height: '100%'
-                                        }}
+                                        className="absolute z-20 top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group/event"
+                                        style={{ left: `${pct}%` }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             seekTo((new Date(event.timestamp).getTime() - startTime) / 1000);
                                         }}
                                     >
-                                        {/* The Stem */}
                                         <div className={cn(
-                                            "w-px transition-all duration-200 bg-border group-hover/event:bg-primary group-hover/event:h-full",
-                                            isTop ? "h-8 mb-auto" : "h-8 mt-auto"
-                                        )} />
-
-                                        {/* The Node */}
-                                        <div className={cn(
-                                            "absolute w-6 h-6 rounded-full border shadow-sm flex items-center justify-center transition-transform hover:scale-110 cursor-pointer bg-background z-10",
-                                            getEventColor(event.eventType),
-                                            isTop ? "-top-2" : "-bottom-2"
+                                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-125 hover:z-50 bg-background relative z-20",
+                                            getEventColor(event.eventType)
                                         )}>
                                             {getEventIcon(event.eventType)}
                                         </div>
                                     </div>
                                 </TooltipTrigger>
-                                <TooltipContent side={isTop ? "top" : "bottom"}>
+                                <TooltipContent side="top">
                                     <div className="text-xs font-semibold uppercase tracking-wider mb-0.5">{event.eventType.replace(/_/g, " ")}</div>
                                     <div className="text-[10px] font-mono opacity-70 mb-1">
                                         {new Date(event.timestamp).toLocaleTimeString()}
@@ -197,9 +165,21 @@ export function EventTimeline() {
                             </Tooltip>
                         );
                     })}
+
+                    {/* Ticks (Below) */}
+                    {ticks.map((tick, i) => (
+                        <div
+                            key={i}
+                            className="absolute top-10 text-[10px] font-mono text-muted-foreground transform -translate-x-1/2 pointer-events-none flex flex-col items-center"
+                            style={{ left: `${tick.pct}%` }}
+                        >
+                            {/* Tick Mark */}
+                            <div className="w-px h-2 bg-border mb-1" />
+                            {tick.label}
+                        </div>
+                    ))}
                 </div>
             </TooltipProvider>
         </div>
     );
 }
-

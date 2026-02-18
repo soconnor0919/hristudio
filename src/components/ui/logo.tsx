@@ -13,6 +13,12 @@ const iconSizes = {
   lg: "h-8 w-8",
 };
 
+const textSizes = {
+  sm: "text-sm",
+  md: "text-base",
+  lg: "text-3xl",
+};
+
 export function Logo({
   className,
   iconSize = "md",
@@ -24,14 +30,11 @@ export function Logo({
         <Bot className={iconSizes[iconSize]} />
       </div>
       {showText && (
-        <div className="grid flex-1 text-left text-sm leading-tight">
+        <div className="grid flex-1 text-left leading-none">
           <div className="flex items-baseline gap-0">
-            <span className="text-base font-extrabold tracking-tight">HRI</span>
-            <span className="text-base font-normal tracking-tight">Studio</span>
+            <span className={cn(textSizes[iconSize], "font-extrabold tracking-tight")}>HRI</span>
+            <span className={cn(textSizes[iconSize], "font-normal tracking-tight")}>Studio</span>
           </div>
-          <span className="text-muted-foreground truncate text-xs">
-            Research Platform
-          </span>
         </div>
       )}
     </div>

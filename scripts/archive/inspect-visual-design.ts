@@ -1,6 +1,6 @@
 
-import { db } from "../src/server/db";
-import { experiments } from "../src/server/db/schema";
+import { db } from "../../src/server/db";
+import { experiments } from "../../src/server/db/schema";
 import { eq } from "drizzle-orm";
 
 async function inspectVisualDesign() {

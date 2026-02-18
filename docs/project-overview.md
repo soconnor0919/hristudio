@@ -37,6 +37,13 @@ HRIStudio is a web-based platform designed to standardize and improve the reprod
 - Context-sensitive help and best practice guidance
 - Automatic generation of robot-specific action components
 - Parameter configuration with validation
+- **System Plugins**:
+  - **Core (`hristudio-core`)**: Control flow (loops, branches) and observation blocks
+  - **Wizard (`hristudio-woz`)**: Wizard interactions (speech, text input)
+- **External Robot Plugins**:
+  - Located in `robot-plugins/` repository (e.g., `nao6-ros2`)
+  - Loaded dynamically per study
+  - Map abstract actions (Say, Walk) to ROS2 topics
 - **Core Block Categories**:
   - Events (4): Trial triggers, speech detection, timers, key presses
   - Wizard Actions (6): Speech, gestures, object handling, rating, notes

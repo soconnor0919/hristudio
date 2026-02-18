@@ -2,278 +2,366 @@
 
 ## Overview
 
-The Wizard Interface is a real-time control panel for conducting Human-Robot Interaction (HRI) trials. It provides wizards with comprehensive tools to execute experiment protocols, monitor participant interactions, and control robot behaviors in real-time.
+The HRIStudio wizard interface provides a comprehensive, real-time trial execution environment with a consolidated 3-panel design optimized for efficient experiment control and monitoring.
 
-## Key Features
+## Interface Layout
 
-- **Real-time Trial Execution**: Live step-by-step protocol execution with WebSocket connectivity
-- **Robot Status Monitoring**: Battery levels, connection status, sensor readings, and position tracking
-- **Participant Information**: Demographics, consent status, and session details
-- **Live Event Logging**: Real-time capture of all trial events and wizard interventions
-- **Action Controls**: Quick access to common wizard actions and robot commands
-
-## WebSocket System
-
-### Connection Setup
-
-The wizard interface automatically connects to a WebSocket server for real-time communication:
-
-```typescript
-// WebSocket URL format
-wss://your-domain.com/api/websocket?trialId={TRIAL_ID}&token={AUTH_TOKEN}
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Trial Execution Header                              │
+│                    [Trial Name] - [Participant] - [Status]                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────┬──────────────────────────────────────┬──────────────────────┐
+│              │                                       │                      │
+│ Trial        │   Execution Timeline                  │ Robot Control        │
+│ Control      │                                       │ & Status             │
+│              │                                       │                      │
+│ ┌──────────┐ │ ┌──┬──┬──┬──┬──┐ Step Progress      │ 📷 Camera View       │
+│ │ Start    │ │ │✓ │✓ │● │  │  │                    │                      │
+│ │ Pause    │ │ └──┴──┴──┴──┴──┘                    │ Connection: ✓        │
+│ │ Next Step│ │                                       │                      │
+│ │ Complete │ │ Current Step: "Greeting"             │ Autonomous Life: ON  │
+│ │ Abort    │ │ ┌────────────────────────────────┐   │                      │
+│ └──────────┘ │ │ Actions:                       │   │ Robot Actions:       │
+│              │ │ • Say "Hello"          [Run]   │   │ ┌──────────────────┐ │
+│ Progress:    │ │ • Wave Hand            [Run]   │   │ │ Quick Commands   │ │
+│ Step 3/5     │ │ • Wait 2s              [Run]   │   │ └──────────────────┘ │
+│              │ └────────────────────────────────┘   │                      │
+│              │                                       │ Movement Controls    │
+│              │                                       │ Quick Actions        │
+│              │                                       │ Status Monitoring    │
+└──────────────┴──────────────────────────────────────┴──────────────────────┘
 ```
 
-### Message Types
+## Panel Descriptions
 
-#### Incoming Messages (from server):
-- `connection_established` - Connection acknowledgment
-- `trial_status` - Current trial state and step information
-- `trial_action_executed` - Confirmation of action execution
-- `step_changed` - Step transition notifications
-- `intervention_logged` - Wizard intervention confirmations
+### Left Panel: Trial Control
 
-#### Outgoing Messages (to server):
-- `heartbeat` - Keep connection alive
-- `trial_action` - Execute trial actions (start, complete, abort)
-- `wizard_intervention` - Log wizard interventions
-- `step_transition` - Advance to next step
+**Purpose**: Manage overall trial flow and progression
 
-### Example Usage
+**Features:**
+- **Start Trial**: Begin experiment execution
+- **Pause/Resume**: Temporarily halt trial without aborting
+- **Next Step**: Manually advance to next step (when all actions complete)
+- **Complete Trial**: Mark trial as successfully completed
+- **Abort Trial**: Emergency stop with reason logging
 
-```typescript
-// Start a trial
-webSocket.sendMessage({
-  type: "trial_action",
-  data: {
-    actionType: "start_trial",
-    step_index: 0,
-    data: { notes: "Trial started by wizard" }
-  }
-});
+**Progress Indicators:**
+- Current step number (e.g., "Step 3 of 5")
+- Overall trial status
+- Time elapsed
 
-// Log wizard intervention
-webSocket.sendMessage({
-  type: "wizard_intervention",
-  data: {
-    action_type: "manual_correction",
-    step_index: currentStepIndex,
-    action_data: { message: "Clarified instruction" }
-  }
-});
-```
-
-## Trial Execution Workflow
-
-### 1. Pre-Trial Setup
-- Verify participant consent and demographics
-- Check robot connection and status
-- Review experiment protocol steps
-- Confirm WebSocket connectivity
-
-### 2. Starting a Trial
-1. Click "Start Trial" button
-2. System automatically:
-   - Updates trial status to "in_progress"
-   - Records start timestamp
-   - Loads first protocol step
-   - Broadcasts status to all connected clients
-
-### 3. Step-by-Step Execution
-- **Current Step Display**: Shows active step details and actions
-- **Execute Step**: Trigger step-specific actions (robot commands, wizard prompts)
-- **Next Step**: Advance to subsequent protocol step
-- **Quick Actions**: Access common wizard interventions
-
-### 4. Real-time Monitoring
-- **Robot Status**: Live updates on battery, signal, position, sensors
-- **Event Log**: Chronological list of all trial events
-- **Progress Tracking**: Visual progress bar and step completion status
-
-### 5. Trial Completion
-- Click "Complete" for successful trials
-- Click "Abort" for early termination
-- System records end timestamp and final status
-- Automatic redirect to analysis page
-
-## Experiment Data Integration
-
-### Loading Real Experiment Steps
-
-The wizard interface automatically loads experiment steps from the database:
-
-```typescript
-// Steps are fetched from the experiments API
-const { data: experimentSteps } = api.experiments.getSteps.useQuery({
-  experimentId: trial.experimentId
-});
-```
-
-### Step Types and Actions
-
-Supported step types from the experiment designer:
-- **Wizard Steps**: Manual wizard actions and prompts
-- **Robot Steps**: Automated robot behaviors and movements
-- **Parallel Steps**: Concurrent actions executed simultaneously
-- **Conditional Steps**: Branching logic based on participant responses
-
-## Seed Data and Testing
-
-### Available Test Data
-
-The development database includes realistic test scenarios:
-
-```bash
-# Seed the database with test data
-bun db:seed
-
-# Default login credentials
-Email: sean@soconnor.dev
-Password: password123
-```
-
-### Test Experiments
-
-1. **"Basic Interaction Protocol 1"** (Study: Real-time HRI Coordination)
-   - 3 steps: Introduction, Wait for Response, Robot Feedback
-   - Includes wizard actions and NAO robot integration
-   - Estimated duration: 25 minutes
-
-2. **"Dialogue Timing Pilot"** (Study: Wizard-of-Oz Dialogue Study)
-   - Multi-step protocol with parallel and conditional actions
-   - Timer-based transitions and conditional follow-ups
-   - Estimated duration: 35 minutes
-
-### Test Participants
-
-Pre-loaded participants with complete demographics:
-- Various age groups (18-65)
-- Different educational backgrounds
-- Robot experience levels
-- Consent already verified
-
-## Robot Integration
-
-### Supported Robots
-
-- **TurtleBot3 Burger**: Navigation and sensing capabilities
-- **NAO Humanoid Robot**: Speech, gestures, and animations
-- **Plugin System**: Extensible support for additional platforms
-
-### Robot Actions
-
-Common robot actions available during trials:
-- **Speech**: Text-to-speech with configurable speed/volume
-- **Movement**: Navigation commands and position control
-- **Gestures**: Pre-defined animation sequences
-- **LED Control**: Visual feedback through color changes
-- **Sensor Readings**: Real-time environmental data
-
-## Error Handling and Troubleshooting
-
-### WebSocket Connection Issues
-
-- **Connection Failed**: Check network connectivity and server status
-- **Frequent Disconnections**: Verify firewall settings and WebSocket support
-- **Authentication Errors**: Ensure valid session and proper token generation
-
-### Trial Execution Problems
-
-- **Steps Not Loading**: Verify experiment has published steps in database
-- **Robot Commands Failing**: Check robot connection and plugin configuration
-- **Progress Not Updating**: Confirm WebSocket messages are being sent/received
-
-### Recovery Procedures
-
-1. **Connection Loss**: Interface automatically attempts reconnection with exponential backoff
-2. **Trial State Mismatch**: Use "Refresh" button to sync with server state
-3. **Robot Disconnect**: Monitor robot status panel for connection recovery
-
-## Best Practices
-
-### Wizard Guidelines
-
-1. **Pre-Trial Preparation**
-   - Review complete experiment protocol
-   - Test robot functionality before participant arrival
-   - Verify audio/video recording systems
-
-2. **During Trial Execution**
-   - Follow protocol steps in sequence
-   - Use intervention logging for any deviations
-   - Monitor participant comfort and engagement
-   - Watch robot status for any issues
-
-3. **Post-Trial Procedures**
-   - Complete trial properly (don't just abort)
-   - Add summary notes about participant behavior
-   - Review event log for any anomalies
-
-### Technical Considerations
-
-- **Browser Compatibility**: Use modern browsers with WebSocket support
-- **Network Requirements**: Stable internet connection for real-time features
-- **Performance**: Close unnecessary browser tabs during trials
-- **Backup Plans**: Have manual procedures ready if technology fails
-
-## Development and Customization
-
-### Adding Custom Actions
-
-```typescript
-// Register new wizard action
-const handleCustomAction = async (actionData: Record<string, unknown>) => {
-  await logEventMutation.mutateAsync({
-    trialId: trial.id,
-    type: "wizard_action",
-    data: {
-      action_type: "custom_intervention",
-      ...actionData
-    }
-  });
-};
-```
-
-### Extending Robot Support
-
-1. Create new robot plugin following plugin system guidelines
-2. Define action schemas in plugin configuration
-3. Implement communication protocol (REST/ROS2/WebSocket)
-4. Test integration with wizard interface
-
-### Custom Step Types
-
-To add new step types:
-1. Update database schema (`stepTypeEnum`)
-2. Add type mapping in `WizardInterface.tsx`
-3. Create step-specific UI components
-4. Update execution engine logic
-
-## Security Considerations
-
-- **Authentication**: All WebSocket connections require valid session tokens
-- **Authorization**: Role-based access control for trial operations
-- **Data Protection**: All trial data encrypted in transit and at rest
-- **Session Management**: Automatic cleanup of expired connections
-
-## Performance Optimization
-
-- **Connection Pooling**: Efficient WebSocket connection management
-- **Event Batching**: Group related events to reduce message overhead
-- **Selective Updates**: Only broadcast relevant changes to connected clients
-- **Caching**: Local state management for responsive UI updates
+**Best Practices:**
+- Use Pause for participant breaks
+- Use Abort only for unrecoverable issues
+- Document abort reasons thoroughly
 
 ---
 
-## Quick Start Checklist
+### Center Panel: Execution Timeline
 
-- [ ] Database seeded with test data (`bun db:seed`)
-- [ ] Development server running (`bun dev`)
-- [ ] Logged in as administrator (sean@soconnor.dev)
-- [ ] Navigate to Trials section
-- [ ] Select a trial and click "Wizard Control"
-- [ ] Verify WebSocket connection (green "Real-time" badge)
-- [ ] Start trial and execute steps
-- [ ] Monitor robot status and event log
-- [ ] Complete trial and review analysis page
+**Purpose**: Visualize experiment flow and execute current step actions
 
-For additional support, refer to the complete HRIStudio documentation in the `docs/` folder.
+#### Horizontal Step Progress Bar
+
+**Features:**
+- **Visual Overview**: See all steps at a glance
+- **Step States**:
+  - ✓ **Completed** (green checkmark, primary border)
+  - ● **Current** (highlighted, ring effect)
+  - ○ **Upcoming** (muted appearance)
+- **Click Navigation**: Jump to any step (unless read-only)
+- **Horizontal Scroll**: For experiments with many steps
+
+**Step Card Elements:**
+- Step number or checkmark icon
+- Truncated step name (hover for full name)
+- Visual state indicators
+
+#### Current Step View
+
+**Features:**
+- **Step Header**: Name and description
+- **Action List**: Vertical timeline of actions
+- **Action States**:
+  - Completed actions (checkmark)
+  - Active action (highlighted, pulsing)
+  - Pending actions (numbered)
+- **Action Controls**: Run, Skip, Mark Complete buttons
+- **Progress Tracking**: Auto-scrolls to active action
+
+**Action Types:**
+- **Wizard Actions**: Manual tasks for the wizard
+- **Robot Actions**: Commands sent to the robot
+- **Control Flow**: Loops, branches, parallel execution
+- **Observations**: Data collection and recording
+
+**Best Practices:**
+- Review step description before starting
+- Execute actions in order unless branching
+- Use Skip sparingly and document reasons
+- Verify robot action completion before proceeding
+
+---
+
+### Right Panel: Robot Control & Status
+
+**Purpose**: Unified location for all robot-related controls and monitoring
+
+#### Camera View
+- Live video feed from robot or environment
+- Multiple camera support (switchable)
+- Full-screen mode available
+
+#### Connection Status
+- **ROS Bridge**: WebSocket connection state
+- **Robot Status**: Online/offline indicator
+- **Reconnect**: Manual reconnection button
+- **Auto-reconnect**: Automatic retry on disconnect
+
+#### Autonomous Life Toggle
+- **Purpose**: Enable/disable robot's autonomous behaviors
+- **States**:
+  - ON: Robot exhibits idle animations, breathing, awareness
+  - OFF: Robot remains still, fully manual control
+- **Best Practice**: Turn OFF during precise interactions
+
+#### Robot Actions Panel
+- **Quick Commands**: Pre-configured robot actions
+- **Parameter Controls**: Adjust action parameters
+- **Execution Status**: Real-time feedback
+- **Action History**: Recent commands log
+
+#### Movement Controls
+- **Directional Pad**: Manual robot navigation
+- **Speed Control**: Adjust movement speed
+- **Safety Limits**: Collision detection and boundaries
+- **Emergency Stop**: Immediate halt
+
+#### Quick Actions
+- **Text-to-Speech**: Send custom speech commands
+- **Preset Gestures**: Common robot gestures
+- **LED Control**: Change robot LED colors
+- **Posture Control**: Sit, stand, crouch commands
+
+#### Status Monitoring
+- **Battery Level**: Remaining charge percentage
+- **Joint Status**: Motor temperatures and positions
+- **Sensor Data**: Ultrasonic, tactile, IMU readings
+- **Warnings**: Overheating, low battery, errors
+
+**Best Practices:**
+- Monitor battery level throughout trial
+- Check connection status before robot actions
+- Use Emergency Stop for safety concerns
+- Document any robot malfunctions
+
+---
+
+## Workflow Guide
+
+### Pre-Trial Setup
+
+1. **Verify Robot Connection**
+   - Check ROS Bridge status (green indicator)
+   - Test robot responsiveness with quick action
+   - Confirm camera feed is visible
+
+2. **Review Experiment Protocol**
+   - Scan horizontal step progress bar
+   - Review first step's actions
+   - Prepare any physical materials
+
+3. **Configure Robot Settings** (Researchers/Admins only)
+   - Click Settings icon in robot panel
+   - Adjust speech, movement, connection parameters
+   - Save configuration for this study
+
+### During Trial Execution
+
+1. **Start Trial**
+   - Click "Start" in left panel
+   - First step becomes active
+   - First action highlights in timeline
+
+2. **Execute Actions**
+   - Follow action sequence in center panel
+   - Use action controls (Run/Skip/Complete)
+   - Monitor robot status in right panel
+   - Document any deviations
+
+3. **Navigate Steps**
+   - Wait for "Complete Step" button after all actions
+   - Click to advance to next step
+   - Or click step in progress bar to jump
+
+4. **Handle Issues**
+   - **Participant Question**: Use Pause
+   - **Robot Malfunction**: Check status panel, use Emergency Stop if needed
+   - **Protocol Deviation**: Document in notes, continue or abort as appropriate
+
+### Post-Trial Completion
+
+1. **Complete Trial**
+   - Click "Complete Trial" after final step
+   - Confirm completion dialog
+   - Trial marked as completed
+
+2. **Review Data**
+   - All actions logged with timestamps
+   - Robot commands recorded
+   - Sensor data captured
+   - Video recordings saved
+
+---
+
+## Control Flow Features
+
+### Loops
+
+**Behavior:**
+- Loops execute their child actions repeatedly
+- **Implicit Approval**: Wizard automatically approves each iteration
+- **Manual Override**: Wizard can skip or abort loop
+- **Progress Tracking**: Shows current iteration (e.g., "2 of 5")
+
+**Best Practices:**
+- Monitor participant engagement during loops
+- Use abort if participant shows distress
+- Document any skipped iterations
+
+### Branches
+
+**Behavior:**
+- Conditional execution based on criteria
+- Wizard selects branch path
+- Only selected branch actions execute
+- Other branches are skipped
+
+**Best Practices:**
+- Review branch conditions before choosing
+- Document branch selection rationale
+- Ensure participant meets branch criteria
+
+### Parallel Execution
+
+**Behavior:**
+- Multiple actions execute simultaneously
+- All must complete before proceeding
+- Independent progress tracking
+
+**Best Practices:**
+- Monitor all parallel actions
+- Be prepared for simultaneous robot and wizard tasks
+- Coordinate timing carefully
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Space` | Start/Pause Trial |
+| `→` | Next Step |
+| `Esc` | Abort Trial (with confirmation) |
+| `R` | Run Current Action |
+| `S` | Skip Current Action |
+| `C` | Complete Current Action |
+| `E` | Emergency Stop Robot |
+
+---
+
+## Troubleshooting
+
+### Robot Not Responding
+
+1. Check ROS Bridge connection (right panel)
+2. Click Reconnect button
+3. Verify robot is powered on
+4. Check network connectivity
+5. Restart ROS Bridge if needed
+
+### Camera Feed Not Showing
+
+1. Verify camera is enabled in robot settings
+2. Check camera topic in ROS
+3. Refresh browser page
+4. Check camera hardware connection
+
+### Actions Not Progressing
+
+1. Verify action has completed
+2. Check for error messages
+3. Manually mark complete if stuck
+4. Document issue in trial notes
+
+### Timeline Not Updating
+
+1. Refresh browser page
+2. Check WebSocket connection
+3. Verify trial status is "in_progress"
+4. Contact administrator if persists
+
+---
+
+## Role-Specific Features
+
+### Wizards
+- Full trial execution control
+- Action execution and skipping
+- Robot control (if permitted)
+- Real-time decision making
+
+### Researchers
+- All wizard features
+- Robot settings configuration
+- Trial monitoring and oversight
+- Protocol deviation approval
+
+### Observers
+- **Read-only access**
+- View trial progress
+- Monitor robot status
+- Add annotations (no control)
+
+### Administrators
+- All features enabled
+- System configuration
+- Plugin management
+- Emergency overrides
+
+---
+
+## Best Practices Summary
+
+✅ **Before Trial**
+- Verify all connections
+- Test robot responsiveness
+- Review protocol thoroughly
+
+✅ **During Trial**
+- Follow action sequence
+- Monitor robot status continuously
+- Document deviations immediately
+- Use Pause for breaks, not Abort
+
+✅ **After Trial**
+- Complete trial properly
+- Review captured data
+- Document any issues
+- Debrief with participant
+
+❌ **Avoid**
+- Skipping actions without documentation
+- Ignoring robot warnings
+- Aborting trials unnecessarily
+- Deviating from protocol without approval
+
+---
+
+## Additional Resources
+
+- **[Quick Reference](./quick-reference.md)** - Essential commands and shortcuts
+- **[Implementation Details](./implementation-details.md)** - Technical architecture
+- **[NAO6 Quick Reference](./nao6-quick-reference.md)** - Robot-specific commands
+- **[Troubleshooting Guide](./nao6-integration-complete-guide.md)** - Detailed problem resolution

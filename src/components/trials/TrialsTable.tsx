@@ -1,7 +1,7 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Play, Gamepad2, LineChart, Ban } from "lucide-react";
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Play, Gamepad2, LineChart, Ban, Printer } from "lucide-react";
 import * as React from "react";
 
 import { format, formatDistanceToNow } from "date-fns";
@@ -108,10 +108,25 @@ export const columns: ColumnDef<Trial>[] = [
     },
     cell: ({ row }) => {
       const sessionNumber = row.getValue("sessionNumber");
+      const status = row.original.status;
+      const trialId = row.original.id;
+      const studyId = row.original.studyId;
+
+      let href = `/studies/${studyId}/trials/${trialId}`; // Fallback
+      if (status === "scheduled" || status === "in_progress") {
+        href = `/studies/${studyId}/trials/${trialId}/wizard`;
+      } else if (status === "completed") {
+        href = `/studies/${studyId}/trials/${trialId}/analysis`;
+      } else {
+        // for aborted/failed, maybe still link to detail or nowhere?
+        // Let's keep detail for now as a fallback for metadata
+        href = `/studies/${studyId}/trials/${trialId}`;
+      }
+
       return (
         <div className="font-mono text-sm">
           <Link
-            href={`/studies/${row.original.studyId}/trials/${row.original.id}`}
+            href={href}
             className="hover:underline"
           >
             #{Number(sessionNumber)}
@@ -343,63 +358,52 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
   const trial = row.original;
   // ActionsCell is a component rendered by the table.
 
-  // importing useRouter is fine.
-
-  const utils = api.useUtils();
-  const duplicateMutation = api.trials.duplicate.useMutation({
-    onSuccess: () => {
-      utils.trials.list.invalidate();
-      // toast.success("Trial duplicated"); // We need toast
-    },
-  });
-
   if (!trial?.id) {
     return <span className="text-muted-foreground text-sm">No actions</span>;
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
+    <div className="flex items-center gap-2 justify-end">
+      {trial.status === "scheduled" && (
+        <Button size="sm" asChild>
+          <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
+            <Play className="mr-1.5 h-3.5 w-3.5" />
+            Start
+          </Link>
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        {trial.status === "scheduled" && (
-          <DropdownMenuItem asChild>
-            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
-              <Play className="mr-2 h-4 w-4" />
-              Start Trial
-            </Link>
-          </DropdownMenuItem>
-        )}
-        {trial.status === "in_progress" && (
-          <DropdownMenuItem asChild>
-            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
-              <Gamepad2 className="mr-2 h-4 w-4" />
-              Control Trial
-            </Link>
-          </DropdownMenuItem>
-        )}
-        {trial.status === "completed" && (
-          <DropdownMenuItem asChild>
+      )}
+      {trial.status === "in_progress" && (
+        <Button size="sm" variant="secondary" asChild>
+          <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
+            <Gamepad2 className="mr-1.5 h-3.5 w-3.5" />
+            Control
+          </Link>
+        </Button>
+      )}
+      {trial.status === "completed" && (
+        <>
+          <Button size="sm" variant="outline" asChild>
             <Link href={`/studies/${trial.studyId}/trials/${trial.id}/analysis`}>
-              <LineChart className="mr-2 h-4 w-4" />
-              Analysis
+              <LineChart className="mr-1.5 h-3.5 w-3.5" />
+              View
             </Link>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        {(trial.status === "scheduled" || trial.status === "failed") && (
-          <DropdownMenuItem className="text-red-600">
-            <Ban className="mr-2 h-4 w-4" />
-            Cancel
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            {/* We link to the analysis page with a query param to trigger print/export */}
+            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/analysis?export=true`}>
+              <Printer className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Link>
+          </Button>
+        </>
+      )}
+      {(trial.status === "scheduled" || trial.status === "failed") && (
+        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600">
+          <Ban className="h-4 w-4" />
+          <span className="sr-only">Cancel</span>
+        </Button>
+      )}
+    </div>
   );
 }
 

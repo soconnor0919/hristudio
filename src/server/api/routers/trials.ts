@@ -306,6 +306,32 @@ export const trialsRouter = createTRPCRouter({
       };
     }),
 
+  getLatestSession: protectedProcedure
+    .input(
+      z.object({
+        participantId: z.string(),
+        experimentId: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { db } = ctx;
+      const { participantId, experimentId } = input;
+
+      const conditions: SQL[] = [eq(trials.participantId, participantId)];
+      if (experimentId) {
+        conditions.push(eq(trials.experimentId, experimentId));
+      }
+
+      const result = await db
+        .select({ sessionNumber: trials.sessionNumber })
+        .from(trials)
+        .where(and(...conditions))
+        .orderBy(desc(trials.sessionNumber))
+        .limit(1);
+
+      return result[0]?.sessionNumber ?? 0;
+    }),
+
   create: protectedProcedure
     .input(
       z.object({
@@ -756,11 +782,10 @@ export const trialsRouter = createTRPCRouter({
 
         return { success: true, url: uploadResult.url };
       } catch (error) {
-        console.error("Failed to archive trial:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to upload archive to storage",
-        });
+        console.error("Failed to archive trial (non-fatal):", error);
+        // Do not throw error to client, as archiving is a background task
+        // and shouldn't block the user flow or show alarming errors
+        return { success: false, error: "Failed to upload archive to storage" };
       }
     }),
 
@@ -1248,7 +1273,7 @@ export const trialsRouter = createTRPCRouter({
       await db.insert(trialEvents).values({
         trialId: input.trialId,
         eventType: "manual_robot_action",
-        actionId: actionDefinition.id,
+        actionId: null, // Ad-hoc action, not linked to a protocol action definition
         data: {
           userId,
           pluginName: input.pluginName,

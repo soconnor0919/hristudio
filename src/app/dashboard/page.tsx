@@ -7,16 +7,18 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Activity,
   ArrowRight,
-  Bot,
   Calendar,
+  CheckCircle,
   CheckCircle2,
   Clock,
+  FlaskConical,
   HelpCircle,
   LayoutDashboard,
   MoreHorizontal,
   Play,
   PlayCircle,
   Plus,
+  Search,
   Settings,
   Users,
 } from "lucide-react";
@@ -49,9 +51,11 @@ import { Badge } from "~/components/ui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { api } from "~/trpc/react";
 import { useTour } from "~/components/onboarding/TourProvider";
+import { useSession } from "next-auth/react";
 
 export default function DashboardPage() {
   const { startTour } = useTour();
+  const { data: session } = useSession();
   const [studyFilter, setStudyFilter] = React.useState<string | null>(null);
 
   // --- Data Fetching ---
@@ -81,14 +85,27 @@ export default function DashboardPage() {
     studyId: studyFilter ?? undefined,
   });
 
+  const userName = session?.user?.name ?? "Researcher";
+
+  const getWelcomeMessage = () => {
+    const hour = new Date().getHours();
+    let greeting = "Good evening";
+    if (hour < 12) greeting = "Good morning";
+    else if (hour < 18) greeting = "Good afternoon";
+
+    return `${greeting}, ${userName.split(" ")[0]}`;
+  };
+
   return (
-    <div className="flex flex-col space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Section */}
       <div id="dashboard-header" className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {getWelcomeMessage()}
+          </h1>
           <p className="text-muted-foreground">
-            Overview of your research activities and upcoming tasks.
+            Here's what's happening with your research today.
           </p>
         </div>
 
@@ -123,166 +140,218 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Main Stats Grid */}
       <div id="tour-dashboard-stats" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Participants"
-          value={stats?.totalParticipants ?? 0}
-          icon={Users}
-          description="Across all studies"
-          trend="+2 this week"
-        />
         <StatsCard
           title="Active Trials"
           value={stats?.activeTrials ?? 0}
           icon={Activity}
-          description="Currently in progress"
-
+          description="Currently running sessions"
+          iconColor="text-emerald-500"
         />
         <StatsCard
-          title="Completed Trials"
+          title="Completed Today"
           value={stats?.completedToday ?? 0}
-          icon={CheckCircle2}
-          description="Completed today"
+          icon={CheckCircle}
+          description="Successful completions"
+          iconColor="text-blue-500"
         />
         <StatsCard
           title="Scheduled"
           value={stats?.scheduledTrials ?? 0}
           icon={Calendar}
           description="Upcoming sessions"
+          iconColor="text-violet-500"
+        />
+        <StatsCard
+          title="Total Studies"
+          value={userStudies.length}
+          icon={FlaskConical}
+          description="Active research projects"
+          iconColor="text-orange-500"
         />
       </div>
 
+      {/* Action Center & Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
 
-        {/* Main Column: Scheduled Trials & Study Progress */}
-        <div className="col-span-4 space-y-4">
-
-          {/* Scheduled Trials */}
-          <Card id="tour-scheduled-trials" className="col-span-4 border-muted/40 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Upcoming Sessions</CardTitle>
-                  <CardDescription>
-                    You have {scheduledTrials?.length ?? 0} scheduled trials coming up.
-                  </CardDescription>
+        {/* Quick Actions Card */}
+        <Card className="col-span-3 bg-gradient-to-br from-primary/5 to-background border-primary/20 h-fit">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks to get you started</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 px-4 border-primary/20 hover:border-primary/50 hover:bg-primary/5 group"
+              asChild
+            >
+              <Link href="/studies/new">
+                <div className="p-2 bg-primary/10 rounded-full mr-4 group-hover:bg-primary/20 transition-colors">
+                  <FlaskConical className="h-5 w-5 text-primary" />
                 </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/trials?status=scheduled">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <div className="text-left">
+                  <div className="font-semibold">Create New Study</div>
+                  <div className="text-xs text-muted-foreground font-normal">
+                    Design a new experiment protocol
+                  </div>
+                </div>
+                <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 px-4 group"
+              asChild
+            >
+              <Link href="/studies">
+                <div className="p-2 bg-secondary rounded-full mr-4">
+                  <Search className="h-5 w-5 text-foreground" />
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold">Browse Studies</div>
+                  <div className="text-xs text-muted-foreground font-normal">
+                    Find and manage existing studies
+                  </div>
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 px-4 group"
+              asChild
+            >
+              <Link href="/trials">
+                <div className="p-2 bg-emerald-500/10 rounded-full mr-4">
+                  <Activity className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold">Monitor Active Trials</div>
+                  <div className="text-xs text-muted-foreground font-normal">
+                    Jump into the Wizard Interface
+                  </div>
+                </div>
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity Card */}
+        <Card id="tour-recent-activity" className="col-span-4 border-muted/40 shadow-sm">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Your latest interactions across the platform
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {recentActivity?.map((activity) => (
+                  <div key={activity.id} className="relative pl-4 pb-1 border-l last:border-0 border-muted-foreground/20">
+                    <span className="absolute left-[-5px] top-1 h-2.5 w-2.5 rounded-full bg-primary/30 ring-4 ring-background" />
+                    <div className="mb-1 text-sm font-medium leading-none">{activity.title}</div>
+                    <div className="text-xs text-muted-foreground mb-1">{activity.description}</div>
+                    <div className="text-[10px] text-muted-foreground/70 uppercase">
+                      {formatDistanceToNow(activity.time, { addSuffix: true })}
+                    </div>
+                  </div>
+                ))}
+                {!recentActivity?.length && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                    <Clock className="h-10 w-10 mb-3 opacity-20" />
+                    <p>No recent activity recorded.</p>
+                    <p className="text-sm">Start a trial to see updates here.</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Scheduled Trials (Restored from previous page.tsx but styled to fit) */}
+        <Card id="tour-scheduled-trials" className="col-span-4 border-muted/40 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Upcoming Sessions</CardTitle>
+                <CardDescription>
+                  You have {scheduledTrials?.length ?? 0} scheduled trials coming up.
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/trials?status=scheduled">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!scheduledTrials?.length ? (
+              <div className="flex h-[150px] flex-col items-center justify-center rounded-md border border-dashed text-center animate-in fade-in-50">
+                <Calendar className="h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-2 text-sm text-muted-foreground">No scheduled trials found.</p>
+                <Button variant="link" size="sm" asChild className="mt-1">
+                  <Link href="/trials/new">Schedule a Trial</Link>
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {!scheduledTrials?.length ? (
-                <div className="flex h-[150px] flex-col items-center justify-center rounded-md border border-dashed text-center animate-in fade-in-50">
-                  <Calendar className="h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2 text-sm text-muted-foreground">No scheduled trials found.</p>
-                  <Button variant="link" size="sm" asChild className="mt-1">
-                    <Link href="/trials/new">Schedule a Trial</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {scheduledTrials.map((trial) => (
-                    <div key={trial.id} className="flex items-center justify-between rounded-lg border p-3 bg-muted/10 hover:bg-muted/50 hover:shadow-sm transition-all duration-200">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                          <Calendar className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {trial.participant.participantCode}
-                            <span className="ml-2 text-muted-foreground font-normal text-xs">• {trial.experiment.name}</span>
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {trial.scheduledAt ? format(trial.scheduledAt, "MMM d, h:mm a") : "Unscheduled"}
-                          </div>
+            ) : (
+              <div className="space-y-4">
+                {scheduledTrials.map((trial) => (
+                  <div key={trial.id} className="flex items-center justify-between rounded-lg border p-3 bg-muted/10 hover:bg-muted/50 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {trial.participant.participantCode}
+                          <span className="ml-2 text-muted-foreground font-normal text-xs">• {trial.experiment.name}</span>
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {trial.scheduledAt ? format(trial.scheduledAt, "MMM d, h:mm a") : "Unscheduled"}
                         </div>
                       </div>
-                      <Button size="sm" className="gap-2" asChild>
-                        <Link href={`/wizard/${trial.id}`}>
-                          <Play className="h-3.5 w-3.5" /> Start
-                        </Link>
-                      </Button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Study Progress */}
-          <Card className="border-muted/40 shadow-sm">
-            <CardHeader>
-              <CardTitle>Study Progress</CardTitle>
-              <CardDescription>
-                Completion tracking for active studies
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {studyProgress?.map((study) => (
-                <div key={study.id} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="font-medium">{study.name}</div>
-                    <div className="text-muted-foreground">{study.participants} / {study.totalParticipants} Participants</div>
+                    <Button size="sm" className="gap-2" asChild>
+                      <Link href={`/wizard/${trial.id}`}>
+                        <Play className="h-3.5 w-3.5" /> Start
+                      </Link>
+                    </Button>
                   </div>
-                  <Progress value={study.progress} className="h-2" />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Study Progress */}
+        <Card className="col-span-3 border-muted/40 shadow-sm">
+          <CardHeader>
+            <CardTitle>Study Progress</CardTitle>
+            <CardDescription>
+              Completion tracking for active studies
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {studyProgress?.map((study) => (
+              <div key={study.id} className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="font-medium">{study.name}</div>
+                  <div className="text-muted-foreground">{study.participants} / {study.totalParticipants} Participants</div>
                 </div>
-              ))}
-              {!studyProgress?.length && (
-                <p className="text-sm text-muted-foreground text-center py-4">No active studies to track.</p>
-              )}
-            </CardContent>
-          </Card>
-
-        </div>
-
-        {/* Side Column: Recent Activity & Quick Actions */}
-        <div className="col-span-3 space-y-4">
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5" asChild>
-              <Link href="/experiments/new">
-                <Bot className="h-6 w-6 mb-1" />
-                <span>New Experim.</span>
-              </Link>
-            </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5" asChild>
-              <Link href="/trials/new">
-                <PlayCircle className="h-6 w-6 mb-1" />
-                <span>Run Trial</span>
-              </Link>
-            </Button>
-          </div>
-
-          {/* Recent Activity */}
-          <Card id="tour-recent-activity" className="border-muted/40 shadow-sm h-full">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-4">
-                  {recentActivity?.map((activity) => (
-                    <div key={activity.id} className="relative pl-4 pb-1 border-l last:border-0 border-muted-foreground/20">
-                      <span className="absolute left-[-5px] top-1 h-2.5 w-2.5 rounded-full bg-primary/30 ring-4 ring-background" />
-                      <div className="mb-1 text-sm font-medium leading-none">{activity.title}</div>
-                      <div className="text-xs text-muted-foreground mb-1">{activity.description}</div>
-                      <div className="text-[10px] text-muted-foreground/70 uppercase">
-                        {formatDistanceToNow(activity.time, { addSuffix: true })}
-                      </div>
-                    </div>
-                  ))}
-                  {!recentActivity?.length && (
-                    <p className="text-sm text-muted-foreground text-center py-8">No recent activity.</p>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
+                <Progress value={study.progress} className="h-2" />
+              </div>
+            ))}
+            {!studyProgress?.length && (
+              <p className="text-sm text-muted-foreground text-center py-4">No active studies to track.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -294,18 +363,20 @@ function StatsCard({
   icon: Icon,
   description,
   trend,
+  iconColor,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   description: string;
   trend?: string;
+  iconColor?: string;
 }) {
   return (
     <Card className="border-muted/40 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className={`h-4 w-4 ${iconColor || "text-muted-foreground"}`} />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>

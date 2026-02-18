@@ -22,6 +22,7 @@ import {
   type RobotAction,
   type RobotActionResult,
 } from "./robot-communication";
+import type { ExperimentAction } from "~/lib/experiment-designer/types";
 
 export type TrialStatus =
   | "scheduled"
@@ -429,6 +430,23 @@ export class TrialExecutionEngine {
       case "hristudio-woz.observe":
         return await this.executeObservationAction(trialId, action);
 
+      // Control Flow Actions
+      case "sequence":
+      case "hristudio-core.sequence":
+        return await this.executeSequenceAction(trialId, action);
+
+      case "parallel":
+      case "hristudio-core.parallel":
+        return await this.executeParallelAction(trialId, action);
+
+      case "loop":
+      case "hristudio-core.loop":
+        return await this.executeLoopAction(trialId, action);
+
+      case "branch":
+      case "hristudio-core.branch":
+        return await this.executeBranchAction(trialId, action);
+
       default:
         // Check if it's a robot action (contains plugin prefix)
         if (action.type.includes(".") && !action.type.startsWith("hristudio-")) {
@@ -455,17 +473,27 @@ export class TrialExecutionEngine {
   private async executeWaitAction(
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
-    const duration = (action.parameters.duration as number) || 1000;
+    const rawDuration = action.parameters.duration;
+    // Duration is in SECONDS per definition, default to 1s
+    const durationSeconds = typeof rawDuration === 'string'
+      ? parseFloat(rawDuration)
+      : (typeof rawDuration === 'number' ? rawDuration : 1);
+
+    const durationMs = durationSeconds * 1000;
+
+    console.log(`[TrialExecution] Executing wait action: ${action.id}, rawDuration: ${rawDuration}, parsedSeconds: ${durationSeconds}, ms: ${durationMs}`);
 
     return new Promise((resolve) => {
       setTimeout(() => {
+        console.log(`[TrialExecution] Wait action completed: ${action.id}`);
         resolve({
           success: true,
           completed: true,
-          duration,
-          data: { waitDuration: duration },
+          duration: durationMs,
+
+          data: { waitDuration: durationSeconds },
         });
-      }, duration);
+      }, durationMs);
     });
   }
 
@@ -866,35 +894,48 @@ export class TrialExecutionEngine {
     let nextStepIndex = context.currentStepIndex + 1;
 
     // Check for branching conditions
-    if (currentStep.conditions && currentStep.conditions.options) {
-      const { variable, options } = currentStep.conditions as any;
+    if (currentStep.conditions) {
+      const { variable, options, nextStepId: unconditionalNextId } = currentStep.conditions as any;
 
-      // Default to "last_wizard_response" if variable not specified, for backward compatibility
-      const variableName = variable || "last_wizard_response";
-      const variableValue = context.variables[variableName];
+      if (options) {
+        // Default to "last_wizard_response" if variable not specified, for backward compatibility
+        const variableName = variable || "last_wizard_response";
+        const variableValue = context.variables[variableName];
 
-      console.log(`[TrialExecution] Checking branch condition for step ${currentStep.id}: variable=${variableName}, value=${variableValue}`);
+        console.log(`[TrialExecution] Checking branch condition for step ${currentStep.id}: variable=${variableName}, value=${variableValue}`);
 
-      if (variableValue !== undefined) {
-        // Find matching option
-        // option.value matches variableValue (e.g., label string)
-        const matchedOption = options.find((opt: any) => opt.value === variableValue || opt.label === variableValue);
+        if (variableValue !== undefined) {
+          // Find matching option
+          // option.value matches variableValue (e.g., label string)
+          const matchedOption = options.find((opt: any) => opt.value === variableValue || opt.label === variableValue);
 
-        if (matchedOption) {
-          if (matchedOption.nextStepId) {
-            // Find step by ID
-            const targetStepIndex = steps.findIndex(s => s.id === matchedOption.nextStepId);
-            if (targetStepIndex !== -1) {
-              nextStepIndex = targetStepIndex;
-              console.log(`[TrialExecution] Taking branch to step ID ${matchedOption.nextStepId} (Index ${nextStepIndex})`);
-            } else {
-              console.warn(`[TrialExecution] Branch target step ID ${matchedOption.nextStepId} not found`);
+          if (matchedOption) {
+            if (matchedOption.nextStepId) {
+              // Find step by ID
+              const targetStepIndex = steps.findIndex(s => s.id === matchedOption.nextStepId);
+              if (targetStepIndex !== -1) {
+                nextStepIndex = targetStepIndex;
+                console.log(`[TrialExecution] Taking branch to step ID ${matchedOption.nextStepId} (Index ${nextStepIndex})`);
+              } else {
+                console.warn(`[TrialExecution] Branch target step ID ${matchedOption.nextStepId} not found`);
+              }
+            } else if (matchedOption.nextStepIndex !== undefined) {
+              // Fallback to relative/absolute index if ID not present (legacy)
+              nextStepIndex = matchedOption.nextStepIndex;
+              console.log(`[TrialExecution] Taking branch to index ${nextStepIndex}`);
             }
-          } else if (matchedOption.nextStepIndex !== undefined) {
-            // Fallback to relative/absolute index if ID not present (legacy)
-            nextStepIndex = matchedOption.nextStepIndex;
-            console.log(`[TrialExecution] Taking branch to index ${nextStepIndex}`);
           }
+        }
+      }
+
+      // Check for unconditional jump if no branch was taken
+      if (nextStepIndex === context.currentStepIndex + 1 && unconditionalNextId) {
+        const targetStepIndex = steps.findIndex(s => s.id === unconditionalNextId);
+        if (targetStepIndex !== -1) {
+          nextStepIndex = targetStepIndex;
+          console.log(`[TrialExecution] Taking unconditional jump to step ID ${unconditionalNextId} (Index ${nextStepIndex})`);
+        } else {
+          console.warn(`[TrialExecution] Unconditional jump target step ID ${unconditionalNextId} not found`);
         }
       }
     }
@@ -1112,6 +1153,277 @@ export class TrialExecutionEngine {
 
       default:
         return `Execute: ${action.name}`;
+    }
+  }
+
+  /**
+   * Execute a sequence of actions in order
+   */
+  private async executeSequenceAction(
+    trialId: string,
+    action: ActionDefinition,
+  ): Promise<ActionExecutionResult> {
+    const startTime = Date.now();
+    const children = action.parameters.children as ActionDefinition[] | undefined;
+
+    if (!children || !Array.isArray(children) || children.length === 0) {
+      return {
+        success: true,
+        completed: true,
+        duration: Date.now() - startTime,
+        data: { message: "Empty sequence completed", childCount: 0 },
+      };
+    }
+
+    const results: ActionExecutionResult[] = [];
+
+    // Execute children sequentially
+    for (const childAction of children) {
+      try {
+        const result = await this.executeAction(trialId, childAction);
+        results.push(result);
+
+        // If any child fails, stop sequence execution
+        if (!result.success) {
+          return {
+            success: false,
+            completed: false,
+            duration: Date.now() - startTime,
+            data: {
+              message: `Sequence failed at action: ${childAction.name}`,
+              completedActions: results.length,
+              totalActions: children.length,
+              results,
+            },
+          };
+        }
+      } catch (error) {
+        return {
+          success: false,
+          completed: false,
+          duration: Date.now() - startTime,
+          data: {
+            message: `Sequence error at action: ${childAction.name}`,
+            error: error instanceof Error ? error.message : String(error),
+            completedActions: results.length,
+            totalActions: children.length,
+          },
+        };
+      }
+    }
+
+    return {
+      success: true,
+      completed: true,
+      duration: Date.now() - startTime,
+      data: {
+        message: "Sequence completed successfully",
+        completedActions: results.length,
+        results,
+      },
+    };
+  }
+
+  /**
+   * Execute multiple actions in parallel
+   */
+  private async executeParallelAction(
+    trialId: string,
+    action: ActionDefinition,
+  ): Promise<ActionExecutionResult> {
+    const startTime = Date.now();
+    const children = action.parameters.children as ActionDefinition[] | undefined;
+
+    if (!children || !Array.isArray(children) || children.length === 0) {
+      return {
+        success: true,
+        completed: true,
+        duration: Date.now() - startTime,
+        data: { message: "Empty parallel block completed", childCount: 0 },
+      };
+    }
+
+    // Execute all children in parallel
+    const promises = children.map((childAction) =>
+      this.executeAction(trialId, childAction).catch((error) => ({
+        success: false,
+        completed: false,
+        duration: 0,
+        data: {
+          error: error instanceof Error ? error.message : String(error),
+          actionName: childAction.name,
+        },
+      }))
+    );
+
+    const results = await Promise.all(promises);
+    const allSuccessful = results.every((r) => r.success);
+
+    return {
+      success: allSuccessful,
+      completed: true,
+      duration: Date.now() - startTime,
+      data: {
+        message: allSuccessful
+          ? "All parallel actions completed successfully"
+          : "Some parallel actions failed",
+        completedActions: results.filter((r) => r.success).length,
+        totalActions: children.length,
+        results,
+      },
+    };
+  }
+
+  /**
+   * Execute an action multiple times (loop)
+   */
+  private async executeLoopAction(
+    trialId: string,
+    action: ActionDefinition,
+  ): Promise<ActionExecutionResult> {
+    const startTime = Date.now();
+    const children = action.parameters.children as ActionDefinition[] | undefined;
+    const iterations = (action.parameters.iterations as number) || 1;
+
+    if (!children || !Array.isArray(children) || children.length === 0) {
+      return {
+        success: true,
+        completed: true,
+        duration: Date.now() - startTime,
+        data: { message: "Empty loop completed", iterations: 0 },
+      };
+    }
+
+    const allResults: ActionExecutionResult[][] = [];
+
+    // Execute the children sequence for each iteration
+    for (let i = 0; i < iterations; i++) {
+      const iterationResults: ActionExecutionResult[] = [];
+
+      for (const childAction of children) {
+        try {
+          const result = await this.executeAction(trialId, childAction);
+          iterationResults.push(result);
+
+          // If any child fails, stop the loop
+          if (!result.success) {
+            return {
+              success: false,
+              completed: false,
+              duration: Date.now() - startTime,
+              data: {
+                message: `Loop failed at iteration ${i + 1}, action: ${childAction.name}`,
+                completedIterations: i,
+                totalIterations: iterations,
+                results: allResults,
+              },
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            completed: false,
+            duration: Date.now() - startTime,
+            data: {
+              message: `Loop error at iteration ${i + 1}, action: ${childAction.name}`,
+              error: error instanceof Error ? error.message : String(error),
+              completedIterations: i,
+              totalIterations: iterations,
+            },
+          };
+        }
+      }
+
+      allResults.push(iterationResults);
+    }
+
+    return {
+      success: true,
+      completed: true,
+      duration: Date.now() - startTime,
+      data: {
+        message: `Loop completed ${iterations} iterations successfully`,
+        completedIterations: iterations,
+        results: allResults,
+      },
+    };
+  }
+
+  /**
+   * Execute branch action - prompts wizard to choose a path
+   * Returns the selected option which determines next step routing
+   */
+  private async executeBranchAction(
+    trialId: string,
+    action: ActionDefinition,
+  ): Promise<ActionExecutionResult> {
+    const startTime = Date.now();
+
+    await this.logTrialEvent(trialId, "action_started", {
+      actionId: action.id,
+      actionType: action.type,
+      actionName: action.name,
+    });
+
+    try {
+      const options = (action.parameters.options as any[]) || [];
+
+      if (options.length === 0) {
+        return {
+          success: false,
+          completed: false,
+          duration: Date.now() - startTime,
+          data: {
+            message: "Branch action has no options configured",
+            error: "No routing options available",
+          },
+        };
+      }
+
+      // Branch actions are wizard-driven - they pause execution
+      // and wait for wizard to make a choice
+      // The wizard UI should display the options and record the selection
+
+      await this.logTrialEvent(trialId, "action_completed", {
+        actionId: action.id,
+        actionType: action.type,
+        actionName: action.name,
+        duration: Date.now() - startTime,
+        data: {
+          message: "Branch action presented to wizard",
+          optionsCount: options.length,
+          options: options.map(opt => ({ label: opt.label, nextStepId: opt.nextStepId })),
+        },
+      });
+
+      return {
+        success: true,
+        completed: true,
+        duration: Date.now() - startTime,
+        data: {
+          message: "Branch action completed - wizard choice required",
+          options,
+          // The wizard's selected option will determine the next step
+          // This is handled by the trial runner's step navigation logic
+        },
+      };
+    } catch (error) {
+      await this.logTrialEvent(trialId, "action_failed", {
+        actionId: action.id,
+        actionType: action.type,
+        actionName: action.name,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return {
+        success: false,
+        completed: false,
+        duration: Date.now() - startTime,
+        data: {
+          message: "Branch action failed",
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
     }
   }
 }

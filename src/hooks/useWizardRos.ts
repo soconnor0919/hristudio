@@ -237,7 +237,7 @@ export function useWizardRos(
     ) {
       const timeoutId = setTimeout(() => {
         connect().catch((error) => {
-          console.error("[useWizardRos] Auto-connect failed:", error);
+          console.warn("[useWizardRos] Auto-connect failed (retrying manually):", error instanceof Error ? error.message : error);
           // Don't retry automatically - let user manually connect
         });
       }, 100); // Small delay to prevent immediate connection attempts

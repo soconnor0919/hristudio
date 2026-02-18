@@ -158,10 +158,17 @@ export interface DesignerState {
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
+function cloneActions(actions: ExperimentAction[]): ExperimentAction[] {
+  return actions.map((a) => ({
+    ...a,
+    children: a.children ? cloneActions(a.children) : undefined,
+  }));
+}
+
 function cloneSteps(steps: ExperimentStep[]): ExperimentStep[] {
   return steps.map((s) => ({
     ...s,
-    actions: s.actions.map((a) => ({ ...a })),
+    actions: cloneActions(s.actions),
   }));
 }
 
@@ -248,8 +255,10 @@ function insertActionIntoTree(
 /* Store Implementation                                                       */
 /* -------------------------------------------------------------------------- */
 
-export const useDesignerStore = create<DesignerState>((set, get) => ({
-  steps: [],
+export const createDesignerStore = (props: {
+  initialSteps?: ExperimentStep[];
+}) => create<DesignerState>((set, get) => ({
+  steps: props.initialSteps ? reindexSteps(cloneSteps(props.initialSteps)) : [],
   dirtyEntities: new Set<string>(),
   validationIssues: {},
   actionSignatureIndex: new Map(),
@@ -540,6 +549,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       };
     }),
 }));
+
+export const useDesignerStore = createDesignerStore({});
 
 /* -------------------------------------------------------------------------- */
 /* Convenience Selectors                                                      */

@@ -227,6 +227,7 @@ bun dev
 ### **Development Experience**
 - **Unified Components**: Significant reduction in code duplication
 - **Panel Architecture**: 90% code sharing between experiment designer and wizard interface
+- **Consolidated Wizard**: 3-panel design with trial controls, horizontal timeline, and unified robot controls
 - **Enterprise DataTables**: Advanced filtering, export, pagination
 - **Comprehensive Testing**: Realistic seed data with complete scenarios
 - **Developer Friendly**: Clear patterns and extensive documentation
@@ -253,11 +254,12 @@ bun dev
 - ✅ **Database Schema** - 31 tables with comprehensive relationships
 - ✅ **Authentication** - Role-based access control system
 - ✅ **Visual Designer** - Repository-based plugin architecture
-- ✅ **Panel-Based Wizard Interface** - Consistent with experiment designer architecture
+- ✅ **Consolidated Wizard Interface** - 3-panel design with horizontal timeline and unified robot controls
 - ✅ **Core Blocks System** - 26 blocks across events, wizard, control, observation
 - ✅ **Plugin Architecture** - Unified system for core blocks and robot actions
 - ✅ **Development Environment** - Realistic test data and scenarios
 - ✅ **NAO6 Robot Integration** - Full ROS2 integration with comprehensive control and monitoring
+- ✅ **Intelligent Control Flow** - Loops with implicit approval, branching, parallel execution
 
 ---
 

@@ -389,9 +389,11 @@ export const experimentsRouter = createTRPCRouter({
         }
         : null;
 
+      const convertedSteps = convertDatabaseToSteps(experiment.steps);
+
       return {
         ...experiment,
-        steps: convertDatabaseToSteps(experiment.steps),
+        steps: convertedSteps,
         integrityHash: experiment.integrityHash,
         executionGraphSummary,
         pluginDependencies: experiment.pluginDependencies ?? [],

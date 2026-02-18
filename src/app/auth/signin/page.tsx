@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle
 } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Logo } from "~/components/ui/logo";
@@ -21,12 +22,19 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notRobot, setNotRobot] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    if (!notRobot) {
+      setError("Please confirm you're not a robot");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const result = await signIn("credentials", {
@@ -62,7 +70,7 @@ export default function SignInPage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center justify-center transition-opacity hover:opacity-80">
-            <Logo iconSize="lg" showText={false} />
+            <Logo iconSize="lg" showText={true} />
           </Link>
           <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -114,6 +122,22 @@ export default function SignInPage() {
                   disabled={isLoading}
                   className="bg-background/50"
                 />
+              </div>
+
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="not-robot"
+                  checked={notRobot}
+                  onCheckedChange={(checked) => setNotRobot(checked === true)}
+                  disabled={isLoading}
+                />
+                <label
+                  htmlFor="not-robot"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  I&apos;m not a robot{" "}
+                  <span className="text-muted-foreground text-xs italic">(ironic, isn&apos;t it?)</span>
+                </label>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading} size="lg">

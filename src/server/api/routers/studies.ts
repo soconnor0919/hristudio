@@ -665,4 +665,108 @@ export const studiesRouter = createTRPCRouter({
         },
       };
     }),
+
+  // Plugin configuration management
+  getPluginConfiguration: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid(),
+        pluginId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { studyId, pluginId } = input;
+      const userId = ctx.session.user.id;
+
+      // Check if user has access to this study
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have access to this study",
+        });
+      }
+
+      // Get the study plugin configuration
+      const studyPlugin = await ctx.db.query.studyPlugins.findFirst({
+        where: and(
+          eq(studyPlugins.studyId, studyId),
+          eq(studyPlugins.pluginId, pluginId),
+        ),
+      });
+
+      if (!studyPlugin) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Plugin not installed in this study",
+        });
+      }
+
+      return studyPlugin.configuration ?? {};
+    }),
+
+  updatePluginConfiguration: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid(),
+        pluginId: z.string().uuid(),
+        configuration: z.any(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { studyId, pluginId, configuration } = input;
+      const userId = ctx.session.user.id;
+
+      // Check if user has permission to update plugin configuration
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership || !["owner", "researcher"].includes(membership.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to update plugin configuration",
+        });
+      }
+
+      // Update the plugin configuration
+      const [updatedPlugin] = await ctx.db
+        .update(studyPlugins)
+        .set({
+          configuration,
+        })
+        .where(
+          and(
+            eq(studyPlugins.studyId, studyId),
+            eq(studyPlugins.pluginId, pluginId),
+          ),
+        )
+        .returning();
+
+      if (!updatedPlugin) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Plugin not found in this study",
+        });
+      }
+
+      // Log activity
+      await ctx.db.insert(activityLogs).values({
+        studyId,
+        userId,
+        action: "plugin_configured",
+        description: `Updated plugin configuration`,
+      });
+
+      return updatedPlugin;
+    }),
 });

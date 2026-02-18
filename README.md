@@ -19,12 +19,13 @@ HRIStudio addresses critical challenges in HRI research by providing a comprehen
 - **Hierarchical Structure**: Study → Experiment → Trial → Step → Action
 - **Visual Experiment Designer**: Drag-and-drop protocol creation with 26+ core blocks
 - **Plugin System**: Extensible robot platform integration (RESTful, ROS2, custom)
+- **Consolidated Wizard Interface**: 3-panel design with trial controls, horizontal timeline, and unified robot controls
 - **Real-time Trial Execution**: Live wizard control with comprehensive data capture
 - **Role-Based Access**: Administrator, Researcher, Wizard, Observer (4 distinct roles)
 - **Unified Form Experiences**: 73% code reduction through standardized patterns
 - **Enterprise DataTables**: Advanced filtering, pagination, export capabilities
-- **Real-time Trial Execution**: Professional wizard interface with live monitoring
 - **Mock Robot Integration**: Complete simulation system for development and testing
+- **Intelligent Control Flow**: Loops with implicit approval, branching logic, parallel execution
 
 ## Quick Start
 
@@ -96,6 +97,9 @@ bun dev
 - Plugin Store with trust levels (Official, Verified, Community)
 
 #### 3. Adaptive Wizard Interface
+- **3-Panel Design**: Trial controls (left), horizontal timeline (center), robot control & status (right)
+- **Horizontal Step Progress**: Non-scrolling step navigation with visual progress indicators
+- **Consolidated Robot Controls**: Single location for connection, autonomous life, actions, and monitoring
 - Real-time experiment execution dashboard
 - Step-by-step guidance for consistent execution
 - Quick actions for unscripted interventions

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   BarChart3,
+  BookOpen,
   Building,
   ChevronDown,
   FlaskConical,
@@ -113,6 +114,14 @@ const adminItems = [
   },
 ];
 
+const helpItems = [
+  {
+    title: "Help Center",
+    url: "/help",
+    icon: BookOpen, // Make sure to import this from lucide-react
+  },
+];
+
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   userRole?: string;
 }
@@ -126,8 +135,37 @@ export function AppSidebar({
   const isAdmin = userRole === "administrator";
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
-  const { selectedStudyId, userStudies, selectStudy, refreshStudyData } =
+  const { selectedStudyId, userStudies, selectStudy, refreshStudyData, isLoadingUserStudies } =
     useStudyManagement();
+
+  // Reference to track if we've already attempted auto-selection to avoid fighting with manual clearing
+  const hasAutoSelected = useRef(false);
+
+  // Auto-select most recently touched study if none selected
+  useEffect(() => {
+    // Only run if not loading, no study selected, and we have studies available
+    // And only run once per session (using ref) to allow user to clear selection if desired
+    if (
+      !isLoadingUserStudies &&
+      !selectedStudyId &&
+      userStudies.length > 0 &&
+      !hasAutoSelected.current
+    ) {
+      // userStudies is sorted by updatedAt desc from the API, so the first one is the most recent
+      // userStudies is sorted by updatedAt desc from the API, so the first one is the most recent
+      const mostRecent = userStudies[0];
+      if (mostRecent) {
+        console.log("Auto-selecting most recent study:", mostRecent.name);
+        void selectStudy(mostRecent.id);
+        hasAutoSelected.current = true;
+      }
+    }
+  }, [
+    isLoadingUserStudies,
+    selectedStudyId,
+    userStudies,
+    selectStudy,
+  ]);
 
   // Debug API call
   const { data: debugData } = api.dashboard.debug.useQuery(undefined, {
@@ -519,6 +557,44 @@ export function AppSidebar({
           </SidebarGroup>
         )}
       </SidebarContent>
+
+      {/* Help Section */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Support</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {helpItems.map((item) => {
+              const isActive = pathname.startsWith(item.url);
+
+              const menuButton = (
+                <SidebarMenuButton asChild isActive={isActive}>
+                  <Link href={item.url}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              );
+
+              return (
+                <SidebarMenuItem key={item.title}>
+                  {isCollapsed ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>{menuButton}</TooltipTrigger>
+                        <TooltipContent side="right" className="text-sm">
+                          {item.title}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    menuButton
+                  )}
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
 
       {/* Debug info moved to footer tooltip button */}
 

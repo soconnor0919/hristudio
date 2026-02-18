@@ -196,12 +196,6 @@ export default function ExperimentDetailPage({
                     canEdit ? (
                         <>
                             <Button asChild variant="outline">
-                                <Link href={`/studies/${studyId}/experiments/${experimentId}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline">
                                 <Link href={`/studies/${studyId}/experiments/${experimentId}/designer`}>
                                     <Settings className="mr-2 h-4 w-4" />
                                     Designer
@@ -442,15 +436,9 @@ export default function ExperimentDetailPage({
                                 {
                                     label: "Export Data",
                                     icon: "Download" as const,
-                                    href: `/studies/${studyId}/experiments/${experimentId}/export`,
                                 },
                                 ...(canEdit
                                     ? [
-                                        {
-                                            label: "Edit Experiment",
-                                            icon: "Edit" as const,
-                                            href: `/studies/${studyId}/experiments/${experimentId}/edit`,
-                                        },
                                         {
                                             label: "Open Designer",
                                             icon: "Palette" as const,

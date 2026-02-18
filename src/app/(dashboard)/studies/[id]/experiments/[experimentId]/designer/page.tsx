@@ -121,7 +121,8 @@ export default async function ExperimentDesignerPage({
           };
         });
         const mapped: ExperimentStep[] = exec.steps.map((s, idx) => {
-          const actions: ExperimentAction[] = s.actions.map((a) => {
+          // Recursive function to hydrate actions with children
+          const hydrateAction = (a: any): ExperimentAction => {
             // Normalize legacy plugin action ids and provenance
             const rawType = a.type ?? "";
 
@@ -188,11 +189,24 @@ export default async function ExperimentDesignerPage({
             const pluginId = legacy?.pluginId;
             const pluginVersion = legacy?.pluginVersion;
 
+            // Extract children from parameters for control flow actions
+            const params = (a.parameters ?? {}) as Record<string, unknown>;
+            let children: ExperimentAction[] | undefined = undefined;
+
+            // Handle control flow structures (sequence, parallel, loop only)
+            // Branch actions control step routing, not nested actions
+            const childrenRaw = params.children;
+
+            // Recursively hydrate nested children for container actions
+            if (Array.isArray(childrenRaw) && childrenRaw.length > 0) {
+              children = childrenRaw.map((child: any) => hydrateAction(child));
+            }
+
             return {
               id: a.id,
               type: typeOut,
               name: a.name,
-              parameters: (a.parameters ?? {}) as Record<string, unknown>,
+              parameters: params,
               category: categoryOut,
               source: {
                 kind: sourceKind,
@@ -202,8 +216,11 @@ export default async function ExperimentDesignerPage({
                 baseActionId: legacy?.baseId,
               },
               execution,
+              children, // Add children at top level
             };
-          });
+          };
+
+          const actions: ExperimentAction[] = s.actions.map((a) => hydrateAction(a));
           return {
             id: s.id,
             name: s.name,

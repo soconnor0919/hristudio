@@ -1,6 +1,8 @@
 "use client";
 
+
 import React from "react";
+import { WizardActionItem } from "./WizardActionItem";
 import {
   Play,
   SkipForward,
@@ -111,6 +113,7 @@ interface WizardExecutionPanelProps {
   completedActionsCount: number;
   onActionCompleted: () => void;
   readOnly?: boolean;
+  rosConnected?: boolean;
 }
 
 export function WizardExecutionPanel({
@@ -131,6 +134,7 @@ export function WizardExecutionPanel({
   completedActionsCount,
   onActionCompleted,
   readOnly = false,
+  rosConnected,
 }: WizardExecutionPanelProps) {
   // Local state removed in favor of parent state to prevent reset on re-render
   // const [completedCount, setCompletedCount] = React.useState(0);
@@ -207,11 +211,85 @@ export function WizardExecutionPanel({
   // Active trial state
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 relative">
-        <ScrollArea className="h-full w-full">
+      {/* Horizontal Step Progress Bar */}
+      <div className="flex-none border-b bg-muted/30 p-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          {steps.map((step, idx) => {
+            const isCurrent = idx === currentStepIndex;
+            const isCompleted = idx < currentStepIndex;
+            const isUpcoming = idx > currentStepIndex;
+
+            return (
+              <div
+                key={step.id}
+                className="flex items-center gap-2 flex-shrink-0"
+              >
+                <button
+                  onClick={() => onStepSelect(idx)}
+                  disabled={readOnly}
+                  className={`
+                    group relative flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all
+                    ${isCurrent
+                      ? "border-primary bg-primary/10 shadow-sm"
+                      : isCompleted
+                        ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
+                        : "border-muted-foreground/20 bg-background hover:bg-muted/50"
+                    }
+                    ${readOnly ? "cursor-default" : "cursor-pointer"}
+                  `}
+                >
+                  {/* Step Number/Icon */}
+                  <div
+                    className={`
+                      flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold
+                      ${isCompleted
+                        ? "bg-primary text-primary-foreground"
+                        : isCurrent
+                          ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                          : "bg-muted text-muted-foreground"
+                      }
+                    `}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      idx + 1
+                    )}
+                  </div>
+
+                  {/* Step Name */}
+                  <span
+                    className={`text-xs font-medium max-w-[120px] truncate ${isCurrent
+                      ? "text-foreground"
+                      : isCompleted
+                        ? "text-muted-foreground"
+                        : "text-muted-foreground/60"
+                      }`}
+                    title={step.name}
+                  >
+                    {step.name}
+                  </span>
+                </button>
+
+                {/* Arrow Connector */}
+                {idx < steps.length - 1 && (
+                  <ArrowRight
+                    className={`h-4 w-4 flex-shrink-0 ${isCompleted ? "text-primary/40" : "text-muted-foreground/30"
+                      }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Current Step Details - NO SCROLL */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full overflow-y-auto">
           <div className="pr-4">
             {currentStep ? (
-              <div className="flex flex-col gap-4 p-4 max-w-2xl mx-auto">
+              <div className="flex flex-col gap-4 p-4 max-w-5xl mx-auto w-full">
                 {/* Header Info */}
                 <div className="space-y-1 pb-4 border-b">
                   <h2 className="text-xl font-bold tracking-tight">{currentStep.name}</h2>
@@ -226,7 +304,7 @@ export function WizardExecutionPanel({
                     {currentStep.actions.map((action, idx) => {
                       const isCompleted = idx < activeActionIndex;
                       const isActive: boolean = idx === activeActionIndex;
-                      const isLast = idx === currentStep.actions!.length - 1;
+                      const isLast = idx === (currentStep.actions?.length || 0) - 1;
 
                       return (
                         <div
@@ -257,176 +335,25 @@ export function WizardExecutionPanel({
                             )}
                           </div>
 
-                          {/* Content Card */}
-                          <div
-                            className={`rounded-lg border transition-all duration-300 ${isActive
-                              ? "bg-card border-primary/50 shadow-md p-5 translate-x-1"
-                              : "bg-muted/5 border-transparent p-3 opacity-70 hover:opacity-100"
-                              }`}
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-start justify-between gap-4">
-                                <div
-                                  className={`text-base font-medium leading-none ${isCompleted ? "line-through text-muted-foreground" : ""
-                                    }`}
-                                >
-                                  {action.name}
-                                </div>
-                              </div>
-
-                              {action.description && (
-                                <div className="text-sm text-muted-foreground">
-                                  {action.description}
-                                </div>
-                              )}
-
-                              {/* Active Action Controls */}
-                              {isActive === true ? (
-                                <div className="pt-3 flex items-center gap-3">
-                                  {action.pluginId && !["hristudio-core", "hristudio-woz"].includes(action.pluginId) ? (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        className="shadow-sm min-w-[100px]"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          onExecuteRobotAction(
-                                            action.pluginId!,
-                                            action.type.includes(".")
-                                              ? action.type.split(".").pop()!
-                                              : action.type,
-                                            action.parameters || {},
-                                            { autoAdvance: false }
-                                          );
-                                          onActionCompleted();
-                                        }}
-                                        disabled={readOnly || isExecuting}
-                                      >
-                                        <Play className="mr-2 h-3.5 w-3.5" />
-                                        Execute
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          onSkipAction(
-                                            action.pluginId!,
-                                            action.type.includes(".")
-                                              ? action.type.split(".").pop()!
-                                              : action.type,
-                                            action.parameters || {},
-                                            { autoAdvance: false }
-                                          );
-                                          onActionCompleted();
-                                        }}
-                                        disabled={readOnly}
-                                      >
-                                        Skip
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        onActionCompleted();
-                                      }}
-                                      disabled={readOnly || isExecuting}
-                                    >
-                                      Mark Done
-                                    </Button>
-                                  )}
-                                </div>
-                              ) : null}
-
-                              {/* Wizard Wait For Response / Branching UI */}
-                              {isActive === true &&
-                                action.type === "wizard_wait_for_response" &&
-                                action.parameters?.options &&
-                                Array.isArray(action.parameters.options) ? (
-                                <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {(action.parameters.options as any[]).map(
-                                    (opt, optIdx) => {
-                                      // Handle both string options and object options
-                                      const label =
-                                        typeof opt === "string"
-                                          ? opt
-                                          : opt.label;
-                                      const value =
-                                        typeof opt === "string"
-                                          ? opt
-                                          : opt.value;
-                                      const nextStepId =
-                                        typeof opt === "object"
-                                          ? opt.nextStepId
-                                          : undefined;
-
-                                      return (
-                                        <Button
-                                          key={optIdx}
-                                          variant="outline"
-                                          className="justify-start h-auto py-3 px-4 text-left border-primary/20 hover:border-primary hover:bg-primary/5"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            onExecuteAction(action.id, {
-                                              value,
-                                              label,
-                                              nextStepId,
-                                            });
-                                            onActionCompleted();
-                                          }}
-                                          disabled={readOnly || isExecuting}
-                                        >
-                                          <div className="flex flex-col items-start gap-1">
-                                            <span className="font-medium">
-                                              {String(label)}
-                                            </span>
-                                            {typeof opt !== "string" && value && (
-                                              <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded-sm">
-                                                {String(value)}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </Button>
-                                      );
-                                    }
-                                  )}
-                                </div>
-                              ) : null}
-
-                              {/* Completed State Actions */}
-                              {isCompleted && action.pluginId && (
-                                <div className="pt-1 flex items-center gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      onExecuteRobotAction(
-                                        action.pluginId!,
-                                        action.type.includes(".") ? action.type.split(".").pop()! : action.type,
-                                        action.parameters || {},
-                                        { autoAdvance: false },
-                                      );
-                                    }}
-                                    disabled={readOnly || isExecuting}
-                                  >
-                                    <RotateCcw className="mr-1.5 h-3 w-3" />
-                                    Retry
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          {/* Action Content */}
+                          <WizardActionItem
+                            action={action as any} // Cast to ActionData
+                            index={idx}
+                            isActive={isActive}
+                            isCompleted={isCompleted}
+                            onExecute={onExecuteAction}
+                            onExecuteRobot={onExecuteRobotAction}
+                            onSkip={onSkipAction}
+                            onCompleted={onActionCompleted}
+                            readOnly={readOnly}
+                            isExecuting={isExecuting}
+                            isRobotConnected={rosConnected}
+                          />
                         </div>
                       );
                     })}
                   </div>
-                )
-                }
+                )}
 
                 {/* Manual Advance Button */}
                 {activeActionIndex >= (currentStep.actions?.length || 0) && (
@@ -453,7 +380,7 @@ export function WizardExecutionPanel({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );

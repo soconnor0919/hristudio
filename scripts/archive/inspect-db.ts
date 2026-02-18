@@ -1,6 +1,6 @@
 
-import { db } from "../src/server/db";
-import { steps } from "../src/server/db/schema";
+import { db } from "../../src/server/db";
+import { steps } from "../../src/server/db/schema";
 import { eq, like } from "drizzle-orm";
 
 async function checkSteps() {

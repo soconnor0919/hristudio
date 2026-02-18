@@ -138,12 +138,21 @@ export function convertActionToDatabase(
   action: ExperimentAction,
   orderIndex: number,
 ): ConvertedAction {
+  // Serialize nested children into parameters for storage
+  const parameters = { ...action.parameters };
+
+  if (action.children && action.children.length > 0) {
+    // Recursively convert children for container actions (sequence, parallel, loop)
+    // Branch actions don't have children - they control step routing
+    parameters.children = action.children.map((child, idx) => convertActionToDatabase(child, idx));
+  }
+
   return {
     name: action.name,
     description: `${action.type} action`,
     type: action.type,
     orderIndex,
-    parameters: action.parameters,
+    parameters,
     timeout: estimateActionTimeout(action),
     pluginId: action.source.pluginId,
     pluginVersion: action.source.pluginVersion,
@@ -231,15 +240,29 @@ export function convertDatabaseToAction(dbAction: any): ExperimentAction {
     retryable: dbAction.retryable ?? false,
   };
 
+  // Convert definitions to runtime action, handling nested children
+  const parameters = (dbAction.parameters as Record<string, unknown>) || {};
+
+  // Hydrate nested children (Sequence, Parallel, Loop only)
+  // Branch actions control step routing, not nested actions
+  let children: ExperimentAction[] | undefined = undefined;
+
+  const paramChildren = parameters.children;
+
+  if (Array.isArray(paramChildren)) {
+    children = paramChildren.map((child: any) => convertDatabaseToAction(child));
+  }
+
   return {
     id: dbAction.id,
     name: dbAction.name,
     description: dbAction.description ?? undefined,
     type: dbAction.type,
     category: dbAction.category ?? "general",
-    parameters: (dbAction.parameters as Record<string, unknown>) || {},
+    parameters,
     source,
     execution,
     parameterSchemaRaw: dbAction.parameterSchemaRaw,
+    children,
   };
 }

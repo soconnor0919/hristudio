@@ -49,6 +49,8 @@ export function EventsDataTable({ data, startTime }: EventsDataTableProps) {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">All Events</SelectItem>
+                    <SelectItem value="action_executed">Actions</SelectItem>
+                    <SelectItem value="action_skipped">Skipped Actions</SelectItem>
                     <SelectItem value="intervention">Interventions</SelectItem>
                     <SelectItem value="robot">Robot Actions</SelectItem>
                     <SelectItem value="step">Step Changes</SelectItem>

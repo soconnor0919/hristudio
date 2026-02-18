@@ -1,10 +1,12 @@
-"use client";
+
+import { PageHeader } from "~/components/ui/page-header";
 
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { LineChart, BarChart, Clock, Database, FileText, AlertTriangle, CheckCircle, VideoOff, Info, Bot, Activity, ArrowLeft } from "lucide-react";
+import { LineChart, BarChart, Printer, Clock, Database, FileText, AlertTriangle, CheckCircle, VideoOff, Info, Bot, Activity, ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 import { PlaybackProvider } from "../playback/PlaybackContext";
 import { PlaybackPlayer } from "../playback/PlaybackPlayer";
 import { EventTimeline } from "../playback/EventTimeline";
@@ -25,7 +27,7 @@ interface TrialAnalysisViewProps {
         startedAt: Date | null;
         completedAt: Date | null;
         duration: number | null;
-        experiment: { name: string };
+        experiment: { name: string; studyId: string };
         participant: { participantCode: string };
         eventCount?: number;
         mediaCount?: number;
@@ -41,6 +43,17 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
         limit: 1000
     });
 
+    // Auto-print effect
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.get('export') === 'true') {
+            // Small delay to ensure rendering
+            setTimeout(() => {
+                window.print();
+            }, 1000);
+        }
+    }, []);
+
     const videoMedia = trial.media?.find(m => m.contentType.startsWith("video/"));
     const videoUrl = videoMedia?.url;
 
@@ -51,50 +64,130 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
 
     return (
         <PlaybackProvider events={events} startTime={trial.startedAt ?? undefined}>
-            <div className="flex h-full flex-col gap-4 p-4 text-sm">
+            <div id="trial-analysis-content" className="flex h-full flex-col gap-4 p-4 text-sm">
                 {/* Header Context */}
-                <div className="flex items-center justify-between pb-2 border-b">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" asChild className="-ml-2">
-                            <Link href={backHref}>
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 ml-1" onClick={() => {
-                            // Dispatch custom event since useTour isn't directly available in this specific context yet
-                            // or better yet, assume we can import useTour if valid context, but here let's try direct button if applicable.
-                            // Actually, TrialAnalysisView is a child of page, we need useTour context.
-                            // Checking imports... TrialAnalysisView doesn't have useTour.
-                            // We should probably just dispatch an event or rely on the parent.
-                            // Let's assume we can add useTour hook support here.
-                            document.dispatchEvent(new CustomEvent('hristudio-start-tour', { detail: 'analytics' }));
-                        }}>
-                            <Info className="h-4 w-4" />
-                        </Button>
-                        <div className="flex flex-col">
-                            <h1 className="text-lg font-semibold leading-none tracking-tight">
-                                {trial.experiment.name}
-                            </h1>
-                            <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                                <span className="font-mono">{trial.participant.participantCode}</span>
-                                <span>•</span>
-                                <span>Session {trial.id.slice(0, 4)}</span>
-                            </div>
+                <PageHeader
+                    title={trial.experiment.name}
+                    description={`Session ${trial.id.slice(0, 8)} • ${trial.startedAt?.toLocaleDateString() ?? 'Unknown Date'} ${trial.startedAt?.toLocaleTimeString() ?? ''}`}
+                    badges={[
+                        {
+                            label: trial.status.toUpperCase(),
+                            variant: trial.status === 'completed' ? 'default' : 'secondary',
+                            className: trial.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''
+                        }
+                    ]}
+                    actions={
+                        <div className="flex items-center gap-2">
+                            <style jsx global>{`
+                                @media print {
+                                    @page {
+                                        size: auto;
+                                        margin: 15mm;
+                                    }
+                                    body {
+                                        background: white;
+                                        color: black;
+                                        -webkit-print-color-adjust: exact;
+                                        print-color-adjust: exact;
+                                    }
+                                    /* Hide everything by default */
+                                    body * {
+                                        visibility: hidden;
+                                    }
+                                    /* Show only our content */
+                                    #trial-analysis-content, #trial-analysis-content * {
+                                        visibility: visible;
+                                    }
+                                    #trial-analysis-content {
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+                                        width: 100%;
+                                        height: auto;
+                                        overflow: visible;
+                                        padding: 0;
+                                        margin: 0;
+                                        background: white;
+                                    }
+                                    
+                                    /* Hide specific non-printable elements */
+                                    #tour-trial-video, 
+                                    button, 
+                                    .no-print, 
+                                    [role="dialog"],
+                                    header, 
+                                    nav {
+                                        display: none !important;
+                                    }
+
+                                    /* Adjust Metrics for Print */
+                                    #tour-trial-metrics {
+                                        display: grid;
+                                        grid-template-columns: repeat(4, 1fr);
+                                        gap: 1rem;
+                                        margin-bottom: 2rem;
+                                        page-break-inside: avoid;
+                                    }
+                                    #tour-trial-metrics .rounded-xl {
+                                        border: 1px solid #ddd;
+                                        box-shadow: none;
+                                    }
+
+                                    /* Expand Timeline */
+                                    .h-28 {
+                                        height: 120px !important;
+                                        page-break-inside: avoid;
+                                        border-bottom: 1px solid #eee;
+                                        margin-bottom: 1rem;
+                                    }
+
+                                    /* Remove Panel Resizing constraints */
+                                    [data-panel-group-direction="vertical"] {
+                                        flex-direction: column !important;
+                                        display: block !important;
+                                        height: auto !important;
+                                    }
+                                    [data-panel] {
+                                        flex: none !important;
+                                        height: auto !important;
+                                        overflow: visible !important;
+                                    }
+                                    [data-panel-resize-handle] {
+                                        display: none !important;
+                                    }
+
+                                    /* Table Styles: Clean & Full Width */
+                                    #tour-trial-events {
+                                        display: block !important;
+                                        border: none !important;
+                                        height: auto !important;
+                                    }
+                                    #tour-trial-events [data-radix-scroll-area-viewport] {
+                                        overflow: visible !important;
+                                        height: auto !important;
+                                    }
+                                    /* Hide "Filter" input wrapper if visible */
+                                    #tour-trial-events .border-b {
+                                        border-bottom: 2px solid #000 !important;
+                                    }
+                                }
+                            `}</style>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => window.print()}
+                            >
+                                <Printer className="h-4 w-4" />
+                                Export Report
+                            </Button>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span className="text-xs font-mono">
-                                {trial.startedAt?.toLocaleDateString()} {trial.startedAt?.toLocaleTimeString()}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                    }
+                />
 
                 {/* Metrics Header */}
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4" id="tour-trial-metrics">
-                    <Card className="bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-950/20">
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Duration</CardTitle>
                             <Clock className="h-4 w-4 text-blue-500" />
@@ -111,7 +204,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-purple-50 to-transparent dark:from-purple-950/20">
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Robot Actions</CardTitle>
                             <Bot className="h-4 w-4 text-purple-500" />
@@ -122,7 +215,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-orange-50 to-transparent dark:from-orange-950/20">
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Interventions</CardTitle>
                             <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -133,7 +226,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/20">
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Completeness</CardTitle>
                             <Activity className="h-4 w-4 text-green-500" />
@@ -154,54 +247,56 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                 </div>
 
                 {/* Main Workspace: Vertical Layout */}
-                <div className="flex-1 min-h-0 rounded-xl border shadow-sm overflow-hidden bg-background">
+                <div className="flex-1 min-h-0 rounded-xl border shadow-sm overflow-hidden bg-background flex flex-col">
+
+                    {/* FIXED TIMELINE: Always visible at top */}
+                    <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-1">
+                        <EventTimeline />
+                    </div>
+
                     <ResizablePanelGroup direction="vertical">
 
-                        {/* TOP: Video & Timeline */}
-                        <ResizablePanel defaultSize={50} minSize={30} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40" id="tour-trial-timeline">
-                            <div className="relative flex-1 min-h-0 flex items-center justify-center">
-                                {videoUrl ? (
-                                    <div className="absolute inset-0">
-                                        <PlaybackPlayer src={videoUrl} />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-                                        <div className="bg-muted rounded-full p-4 mb-4">
-                                            <VideoOff className="h-8 w-8 opacity-50" />
+                        {/* TOP: Video (Optional) */}
+                        {videoUrl && (
+                            <>
+                                <ResizablePanel defaultSize={40} minSize={20} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40" id="tour-trial-video">
+                                    <div className="relative flex-1 min-h-0 flex items-center justify-center">
+                                        <div className="absolute inset-0">
+                                            <PlaybackPlayer src={videoUrl} />
                                         </div>
-                                        <h3 className="font-semibold text-lg">No playback media available</h3>
-                                        <p className="text-sm max-w-sm mt-2">
-                                            There is no video recording associated with this trial session.
-                                        </p>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Timeline Control */}
-                            <div className="shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
-                                <EventTimeline />
-                            </div>
-                        </ResizablePanel>
-
-                        <ResizableHandle withHandle className="bg-border/50" />
+                                </ResizablePanel>
+                                <ResizableHandle withHandle className="bg-border/50" />
+                            </>
+                        )}
 
                         {/* BOTTOM: Events Table */}
-                        <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0 bg-background" id="tour-trial-events">
-                            <div className="flex items-center justify-between px-4 py-3 border-b">
+                        <ResizablePanel defaultSize={videoUrl ? 60 : 100} minSize={20} className="flex flex-col min-h-0 bg-background" id="tour-trial-events">
+                            <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
                                 <div className="flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-primary" />
                                     <h3 className="font-semibold text-sm">Event Log</h3>
                                 </div>
-                                <Badge variant="secondary" className="text-xs">{events.length} Events</Badge>
-                            </div>
-                            <ScrollArea className="flex-1">
-                                <div className="p-4">
-                                    <EventsDataTable
-                                        data={events.map(e => ({ ...e, timestamp: new Date(e.timestamp) }))}
-                                        startTime={trial.startedAt ?? undefined}
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        placeholder="Filter events..."
+                                        className="h-8 w-[200px]"
+                                        disabled
+                                        style={{ display: 'none' }}
                                     />
+                                    <Badge variant="secondary" className="text-xs">{events.length} Events</Badge>
                                 </div>
-                            </ScrollArea>
+                            </div>
+                            <div className="flex-1 min-h-0">
+                                <ScrollArea className="h-full">
+                                    <div className="p-4">
+                                        <EventsDataTable
+                                            data={events.map(e => ({ ...e, timestamp: new Date(e.timestamp) }))}
+                                            startTime={trial.startedAt ?? undefined}
+                                        />
+                                    </div>
+                                </ScrollArea>
+                            </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 </div>
@@ -209,6 +304,9 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
         </PlaybackProvider>
     );
 }
+
+// Helper specific to this file if needed, otherwise ignore.
+import { Input } from "~/components/ui/input";
 
 function formatTime(ms: number) {
     if (ms < 0) return "0:00";

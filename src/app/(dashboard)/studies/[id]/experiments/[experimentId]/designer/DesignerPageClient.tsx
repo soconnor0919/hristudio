@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { DesignerRoot } from "~/components/experiments/designer/DesignerRoot";
+import { useActionRegistry } from "~/components/experiments/designer/ActionRegistry";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import type { ExperimentStep } from "~/lib/experiment-designer/types";
 
@@ -9,6 +11,10 @@ interface DesignerPageClientProps {
     id: string;
     name: string;
     description: string | null;
+    status: string;
+    studyId: string;
+    createdAt: Date;
+    updatedAt: Date;
     study: {
       id: string;
       name: string;
@@ -28,6 +34,22 @@ export function DesignerPageClient({
   experiment,
   initialDesign,
 }: DesignerPageClientProps) {
+  // Initialize action registry early to prevent CLS
+  useActionRegistry();
+
+  // Calculate design statistics
+  const designStats = useMemo(() => {
+    if (!initialDesign) return undefined;
+
+    const stepCount = initialDesign.steps.length;
+    const actionCount = initialDesign.steps.reduce(
+      (sum, step) => sum + step.actions.length,
+      0
+    );
+
+    return { stepCount, actionCount };
+  }, [initialDesign]);
+
   // Set breadcrumbs
   useBreadcrumbsEffect([
     {
@@ -55,5 +77,12 @@ export function DesignerPageClient({
     },
   ]);
 
-  return <DesignerRoot experimentId={experiment.id} initialDesign={initialDesign} />;
+  return (
+    <DesignerRoot
+      experimentId={experiment.id}
+      initialDesign={initialDesign}
+      experiment={experiment}
+      designStats={designStats}
+    />
+  );
 }
