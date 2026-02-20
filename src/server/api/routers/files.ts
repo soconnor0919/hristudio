@@ -8,12 +8,12 @@ import { uuid } from "drizzle-orm/pg-core";
 import { eq, desc } from "drizzle-orm";
 
 // Initialize MinIO client
-// Note: In production, ensure these ENV vars are set.
-// For development with docker-compose, we use localhost:9000
+const minioUrl = new URL(env.MINIO_ENDPOINT ?? "http://localhost:9000");
+
 const minioClient = new Minio.Client({
-    endPoint: (env.MINIO_ENDPOINT ?? "localhost").split(":")[0] ?? "localhost",
-    port: parseInt((env.MINIO_ENDPOINT ?? "9000").split(":")[1] ?? "9000"),
-    useSSL: false, // Default to false for local dev; adjust for prod
+    endPoint: minioUrl.hostname,
+    port: parseInt(minioUrl.port) || 9000,
+    useSSL: minioUrl.protocol === "https:",
     accessKey: env.MINIO_ACCESS_KEY ?? "minioadmin",
     secretKey: env.MINIO_SECRET_KEY ?? "minioadmin",
 });

@@ -300,7 +300,12 @@ export const trialsRouter = createTRPCRouter({
           return {
             ...m,
             url, // Add the signed URL to the response
-            contentType: m.format === 'webm' ? 'video/webm' : 'application/octet-stream', // Infer or store content type
+            contentType: m.format === 'webm' ? 'video/webm'
+              : m.format === 'mp4' ? 'video/mp4'
+                : m.format === 'mkv' ? 'video/x-matroska'
+                  : m.storagePath.endsWith('.webm') ? 'video/webm'
+                    : m.storagePath.endsWith('.mp4') ? 'video/mp4'
+                      : 'application/octet-stream', // Infer or store content type
           };
         })),
       };
@@ -597,11 +602,23 @@ export const trialsRouter = createTRPCRouter({
         "wizard",
       ]);
 
+      const [currentTrial] = await db
+        .select()
+        .from(trials)
+        .where(eq(trials.id, input.id))
+        .limit(1);
+
+      let durationSeconds = null;
+      if (currentTrial?.startedAt) {
+        durationSeconds = Math.floor((new Date().getTime() - currentTrial.startedAt.getTime()) / 1000);
+      }
+
       const [trial] = await db
         .update(trials)
         .set({
           status: "completed",
           completedAt: new Date(),
+          duration: durationSeconds,
           notes: input.notes,
         })
         .where(eq(trials.id, input.id))

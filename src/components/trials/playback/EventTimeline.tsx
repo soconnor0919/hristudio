@@ -83,20 +83,21 @@ export function EventTimeline() {
     }, [effectiveDuration]);
 
     const getEventIcon = (type: string) => {
-        if (type.includes("intervention") || type.includes("wizard")) return <User className="h-4 w-4" />;
+        if (type.includes("intervention") || type.includes("wizard") || type.includes("jump")) return <User className="h-4 w-4" />;
         if (type.includes("robot") || type.includes("action")) return <Bot className="h-4 w-4" />;
         if (type.includes("completed")) return <CheckCircle className="h-4 w-4" />;
         if (type.includes("start")) return <Flag className="h-4 w-4" />;
-        if (type.includes("note")) return <MessageSquare className="h-4 w-4" />;
+        if (type.includes("note") || type.includes("annotation")) return <MessageSquare className="h-4 w-4" />;
         if (type.includes("error")) return <AlertTriangle className="h-4 w-4" />;
         return <Activity className="h-4 w-4" />;
     };
 
     const getEventColor = (type: string) => {
-        if (type.includes("intervention") || type.includes("wizard")) return "bg-orange-100 text-orange-600 border-orange-200";
+        if (type.includes("intervention") || type.includes("wizard") || type.includes("jump")) return "bg-orange-100 text-orange-600 border-orange-200";
         if (type.includes("robot") || type.includes("action")) return "bg-purple-100 text-purple-600 border-purple-200";
         if (type.includes("completed")) return "bg-green-100 text-green-600 border-green-200";
         if (type.includes("start")) return "bg-blue-100 text-blue-600 border-blue-200";
+        if (type.includes("note") || type.includes("annotation")) return "bg-yellow-100 text-yellow-600 border-yellow-200";
         if (type.includes("error")) return "bg-red-100 text-red-600 border-red-200";
         return "bg-slate-100 text-slate-600 border-slate-200";
     };
@@ -132,19 +133,37 @@ export function EventTimeline() {
                     {sortedEvents.map((event, i) => {
                         const pct = getPercentage(new Date(event.timestamp).getTime());
 
+                        // Smart Formatting Logic
+                        const details = (() => {
+                            const { eventType, data } = event;
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const d = data as any;
+
+                            if (eventType.includes("jump")) return `Jumped to step ${d?.stepName || d?.toIndex + 1 || "?"} (Manual)`;
+                            if (eventType.includes("skipped")) return `Skipped: ${d?.actionId}`;
+                            if (eventType.includes("marked_complete")) return "Manually marked complete";
+                            if (eventType.includes("annotation") || eventType.includes("note")) return d?.description || d?.note || d?.message || "Note";
+
+                            if (!d || Object.keys(d).length === 0) return null;
+                            return JSON.stringify(d).slice(0, 100).replace(/[{""}]/g, " ").trim();
+                        })();
+
                         return (
                             <Tooltip key={i}>
                                 <TooltipTrigger asChild>
                                     <div
-                                        className="absolute z-20 top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group/event"
+                                        className="absolute z-20 top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group/event cursor-pointer p-2"
                                         style={{ left: `${pct}%` }}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            seekTo((new Date(event.timestamp).getTime() - startTime) / 1000);
+                                            // startTime is in ms, timestamp is Date string or obj
+                                            const timeMs = new Date(event.timestamp).getTime();
+                                            const seekSeconds = (timeMs - startTime) / 1000;
+                                            seekTo(Math.max(0, seekSeconds));
                                         }}
                                     >
                                         <div className={cn(
-                                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-125 hover:z-50 bg-background relative z-20",
+                                            "flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-125 hover:z-50 bg-background relative z-20",
                                             getEventColor(event.eventType)
                                         )}>
                                             {getEventIcon(event.eventType)}
@@ -156,9 +175,9 @@ export function EventTimeline() {
                                     <div className="text-[10px] font-mono opacity-70 mb-1">
                                         {new Date(event.timestamp).toLocaleTimeString()}
                                     </div>
-                                    {!!event.data && (
-                                        <div className="bg-muted/50 p-1 rounded font-mono text-[9px] max-w-[200px] break-all">
-                                            {JSON.stringify(event.data as object).slice(0, 100)}
+                                    {!!details && (
+                                        <div className="bg-muted/50 p-1.5 rounded text-[10px] max-w-[220px] break-words whitespace-normal border">
+                                            {details}
                                         </div>
                                     )}
                                 </TooltipContent>

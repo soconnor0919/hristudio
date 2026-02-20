@@ -47,6 +47,7 @@ interface WizardActionItemProps {
     isExecuting?: boolean;
     depth?: number;
     isRobotConnected?: boolean;
+    onLogEvent?: (type: string, data?: any) => void;
 }
 
 export function WizardActionItem({
@@ -62,6 +63,7 @@ export function WizardActionItem({
     isExecuting,
     depth = 0,
     isRobotConnected = false,
+    onLogEvent,
 }: WizardActionItemProps): React.JSX.Element {
     // Local state for container children completion
     const [completedChildren, setCompletedChildren] = useState<Set<number>>(new Set());
@@ -289,13 +291,14 @@ export function WizardActionItem({
                                     isExecuting={isExecuting}
                                     depth={depth + 1}
                                     isRobotConnected={isRobotConnected}
+                                    onLogEvent={onLogEvent}
                                 />
                             ))}
                         </div>
                     ) : null) as any}
 
                     {/* Active Action Controls */}
-                    {isActive && !readOnly && (
+                    {(isActive || (isCompleted && !readOnly)) && (
                         <div className="pt-3 flex flex-wrap items-center gap-3">
                             {/* Parallel Container Controls */}
                             {isContainer && action.type.includes("parallel") ? (
@@ -326,20 +329,22 @@ export function WizardActionItem({
                                         title={isButtonDisabled && !isExecuting ? "Robot disconnected" : undefined}
                                     >
                                         <Play className="mr-2 h-3.5 w-3.5" />
-                                        Run All
+                                        {isCompleted ? "Rerun All" : "Run All"}
                                     </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            onCompleted();
-                                        }}
-                                        disabled={isExecuting}
-                                    >
-                                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                                        Mark Group Complete
-                                    </Button>
+                                    {!isCompleted && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                onCompleted();
+                                            }}
+                                            disabled={isExecuting}
+                                        >
+                                            <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                            Mark Group Complete
+                                        </Button>
+                                    )}
                                 </>
                             ) : (
                                 /* Standard Single Action Controls */
@@ -367,7 +372,7 @@ export function WizardActionItem({
                                                         action.parameters || {},
                                                         { autoAdvance: false }
                                                     );
-                                                    onCompleted();
+                                                    if (!isCompleted) onCompleted();
                                                 } catch (error) {
                                                     console.error("Action execution error:", error);
                                                 } finally {
@@ -386,39 +391,50 @@ export function WizardActionItem({
                                             ) : (
                                                 <>
                                                     <Play className="mr-2 h-3.5 w-3.5" />
-                                                    Run
+                                                    {isCompleted ? "Rerun" : "Run"}
                                                 </>
                                             )}
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                onCompleted();
-                                            }}
-                                            disabled={isExecuting}
-                                        >
-                                            <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                                            Mark Complete
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                if (onSkip) {
-                                                    onSkip(action.pluginId!, action.type.includes(".") ? action.type.split(".").pop()! : action.type, action.parameters || {}, { autoAdvance: false });
-                                                }
-                                                onCompleted();
-                                            }}
-                                        >
-                                            Skip
-                                        </Button>
+                                        {!isCompleted && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // Log manual completion
+                                                    if (onLogEvent) {
+                                                        onLogEvent("action_marked_complete", {
+                                                            actionId: action.id,
+                                                            formatted: "Action manually marked complete"
+                                                        });
+                                                    }
+                                                    onCompleted();
+                                                }}
+                                                disabled={isExecuting}
+                                            >
+                                                <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                                Mark Complete
+                                            </Button>
+                                        )}
+                                        {!isCompleted && (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (onSkip) {
+                                                        onSkip(action.pluginId!, action.type.includes(".") ? action.type.split(".").pop()! : action.type, action.parameters || {}, { autoAdvance: false });
+                                                    }
+                                                    onCompleted();
+                                                }}
+                                            >
+                                                Skip
+                                            </Button>
+                                        )}
                                     </>
                                 ) : (
                                     // Manual/Wizard Actions (Leaf nodes)
-                                    !isContainer && action.type !== "wizard_wait_for_response" && (
+                                    !isContainer && action.type !== "wizard_wait_for_response" && !isCompleted && (
                                         <Button
                                             size="sm"
                                             onClick={(e) => {
@@ -437,7 +453,7 @@ export function WizardActionItem({
                     )}
 
                     {/* Branching / Choice UI */}
-                    {isActive &&
+                    {(isActive || (isCompleted && !readOnly)) &&
                         (action.type === "wizard_wait_for_response" || isBranch) &&
                         action.parameters?.options &&
                         Array.isArray(action.parameters.options) && (

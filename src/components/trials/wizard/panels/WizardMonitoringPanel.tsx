@@ -14,7 +14,6 @@ import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
-import { WebcamPanel } from "./WebcamPanel";
 import { RobotActionsPanel } from "../RobotActionsPanel";
 
 interface WizardMonitoringPanelProps {
@@ -44,6 +43,7 @@ interface WizardMonitoringPanelProps {
   ) => Promise<void>;
   studyId?: string;
   trialId?: string;
+  trialStatus?: string;
   readOnly?: boolean;
 }
 
@@ -59,6 +59,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
   onExecuteRobotAction,
   studyId,
   trialId,
+  trialStatus,
   readOnly = false,
 }: WizardMonitoringPanelProps) {
   const [autonomousLife, setAutonomousLife] = React.useState(true);
@@ -78,12 +79,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
     }
   }, [onSetAutonomousLife]);
   return (
-    <div className="flex h-full flex-col gap-2 p-2">
-      {/* Camera View - Always Visible */}
-      <div className="shrink-0 bg-muted/30 rounded-lg overflow-hidden border shadow-sm h-48 sm:h-56 relative group">
-        <WebcamPanel readOnly={readOnly} />
-      </div>
-
+    <div className="flex h-full flex-col p-2">
       {/* Robot Controls - Scrollable */}
       <div className="flex-1 min-h-0 bg-background rounded-lg border shadow-sm overflow-hidden flex flex-col">
         <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">

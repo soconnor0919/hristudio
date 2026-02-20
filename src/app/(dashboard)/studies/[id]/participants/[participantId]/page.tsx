@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/com
 import { Badge } from "~/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Users } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "~/components/ui/page-header";
 
 import { ParticipantConsentManager } from "~/components/participants/ParticipantConsentManager";
 
@@ -37,14 +38,16 @@ export default async function ParticipantDetailPage({
 
     return (
         <EntityView>
-            <EntityViewHeader
+            <PageHeader
                 title={participant.participantCode}
-                subtitle={participant.name ?? "Unnamed Participant"}
-                icon="Users"
-                status={{
-                    label: participant.consentGiven ? "Consent Given" : "No Consent",
-                    variant: participant.consentGiven ? "default" : "secondary"
-                }}
+                description={participant.name ?? "Unnamed Participant"}
+                icon={Users}
+                badges={[
+                    {
+                        label: participant.consentGiven ? "Consent Given" : "No Consent",
+                        variant: participant.consentGiven ? "default" : "secondary"
+                    }
+                ]}
                 actions={
                     <Button asChild variant="outline" size="sm">
                         <Link href={`/studies/${studyId}/participants/${participantId}/edit`}>

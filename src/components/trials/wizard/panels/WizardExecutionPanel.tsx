@@ -113,7 +113,11 @@ interface WizardExecutionPanelProps {
   completedActionsCount: number;
   onActionCompleted: () => void;
   readOnly?: boolean;
+  isPaused?: boolean;
   rosConnected?: boolean;
+  completedStepIndices?: Set<number>;
+  skippedStepIndices?: Set<number>;
+  onLogEvent?: (type: string, data?: any) => void;
 }
 
 export function WizardExecutionPanel({
@@ -134,12 +138,17 @@ export function WizardExecutionPanel({
   completedActionsCount,
   onActionCompleted,
   readOnly = false,
+  isPaused = false,
   rosConnected,
+  completedStepIndices = new Set(),
+  skippedStepIndices = new Set(),
+  onLogEvent,
 }: WizardExecutionPanelProps) {
   // Local state removed in favor of parent state to prevent reset on re-render
   // const [completedCount, setCompletedCount] = React.useState(0);
 
-  const activeActionIndex = completedActionsCount;
+  const isStepCompleted = completedStepIndices.has(currentStepIndex);
+  const activeActionIndex = isStepCompleted ? 9999 : completedActionsCount;
 
   // Auto-scroll to active action
   const activeActionRef = React.useRef<HTMLDivElement>(null);
@@ -210,13 +219,29 @@ export function WizardExecutionPanel({
 
   // Active trial state
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden relative">
+      {/* Paused Overlay */}
+      {isPaused && (
+        <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+          <div className="bg-background border shadow-lg rounded-xl p-8 flex flex-col items-center max-w-sm text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-muted-foreground" />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Trial Paused</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                The trial execution has been paused. Resume from the control bar to continue interacting.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Horizontal Step Progress Bar */}
       <div className="flex-none border-b bg-muted/30 p-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {steps.map((step, idx) => {
             const isCurrent = idx === currentStepIndex;
-            const isCompleted = idx < currentStepIndex;
+            const isSkipped = skippedStepIndices.has(idx);
+            const isCompleted = completedStepIndices.has(idx) || (!isSkipped && idx < currentStepIndex);
             const isUpcoming = idx > currentStepIndex;
 
             return (
@@ -233,7 +258,9 @@ export function WizardExecutionPanel({
                       ? "border-primary bg-primary/10 shadow-sm"
                       : isCompleted
                         ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
-                        : "border-muted-foreground/20 bg-background hover:bg-muted/50"
+                        : isSkipped
+                          ? "border-muted-foreground/30 bg-muted/20 border-dashed"
+                          : "border-muted-foreground/20 bg-background hover:bg-muted/50"
                     }
                     ${readOnly ? "cursor-default" : "cursor-pointer"}
                   `}
@@ -244,9 +271,11 @@ export function WizardExecutionPanel({
                       flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold
                       ${isCompleted
                         ? "bg-primary text-primary-foreground"
-                        : isCurrent
-                          ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
-                          : "bg-muted text-muted-foreground"
+                        : isSkipped
+                          ? "bg-transparent border border-muted-foreground/40 text-muted-foreground"
+                          : isCurrent
+                            ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                            : "bg-muted text-muted-foreground"
                       }
                     `}
                   >
@@ -348,6 +377,7 @@ export function WizardExecutionPanel({
                             readOnly={readOnly}
                             isExecuting={isExecuting}
                             isRobotConnected={rosConnected}
+                            onLogEvent={onLogEvent}
                           />
                         </div>
                       );

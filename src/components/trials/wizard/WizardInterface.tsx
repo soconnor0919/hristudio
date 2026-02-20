@@ -25,10 +25,10 @@ import Link from "next/link";
 import { Progress } from "~/components/ui/progress";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { WizardControlPanel } from "./panels/WizardControlPanel";
 import { WizardExecutionPanel } from "./panels/WizardExecutionPanel";
 import { WizardMonitoringPanel } from "./panels/WizardMonitoringPanel";
 import { WizardObservationPane } from "./panels/WizardObservationPane";
+import { WebcamPanel } from "./panels/WebcamPanel";
 import { TrialStatusBar } from "./panels/TrialStatusBar";
 import { api } from "~/trpc/react";
 import { useWizardRos } from "~/hooks/useWizardRos";
@@ -121,20 +121,22 @@ export const WizardInterface = React.memo(function WizardInterface({
   const [completedActionsCount, setCompletedActionsCount] = useState(0);
 
   // Collapse state for panels
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [obsCollapsed, setObsCollapsed] = useState(false);
-
-  // Center tabs (Timeline | Actions)
-  const [centerTab, setCenterTab] = useState<"timeline" | "actions">("timeline");
 
   // Reset completed actions when step changes
   useEffect(() => {
     setCompletedActionsCount(0);
   }, [currentStepIndex]);
 
+  // Track completed steps
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [skippedSteps, setSkippedSteps] = useState<Set<number>>(new Set());
+
   // Track the last response value from wizard_wait_for_response for branching
   const [lastResponse, setLastResponse] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const utils = api.useUtils();
 
   // Get experiment steps from API
   const { data: experimentSteps } = api.experiments.getSteps.useQuery(
@@ -492,13 +494,24 @@ export const WizardInterface = React.memo(function WizardInterface({
   const handlePauseTrial = async () => {
     try {
       await pauseTrialMutation.mutateAsync({ id: trial.id });
-      logEventMutation.mutate({
-        trialId: trial.id,
-        type: "trial_paused",
-        data: { timestamp: new Date() }
-      });
+      setIsPaused(true);
+      toast.info("Trial paused");
     } catch (error) {
       console.error("Failed to pause trial:", error);
+    }
+  };
+
+  const handleResumeTrial = async () => {
+    try {
+      logEventMutation.mutate({
+        trialId: trial.id,
+        type: "trial_resumed",
+        data: { timestamp: new Date() }
+      });
+      setIsPaused(false);
+      toast.success("Trial resumed");
+    } catch (error) {
+      console.error("Failed to resume trial:", error);
     }
   };
 
@@ -577,6 +590,24 @@ export const WizardInterface = React.memo(function WizardInterface({
           }
         });
 
+        // Mark steps as skipped
+        setSkippedSteps(prev => {
+          const next = new Set(prev);
+          for (let i = currentStepIndex + 1; i < targetIndex; i++) {
+            if (!completedSteps.has(i)) {
+              next.add(i);
+            }
+          }
+          return next;
+        });
+
+        // Mark current as complete
+        setCompletedSteps(prev => {
+          const next = new Set(prev);
+          next.add(currentStepIndex);
+          return next;
+        });
+
         setCurrentStepIndex(targetIndex);
         setCompletedActionsCount(0);
         return;
@@ -590,6 +621,13 @@ export const WizardInterface = React.memo(function WizardInterface({
     // Default: Linear progression
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
+      // Mark current step as complete
+      setCompletedSteps(prev => {
+        const next = new Set(prev);
+        next.add(currentStepIndex);
+        return next;
+      });
+
       // Log step change
       logEventMutation.mutate({
         trialId: trial.id,
@@ -600,6 +638,7 @@ export const WizardInterface = React.memo(function WizardInterface({
           fromStepId: currentStep?.id,
           toStepId: steps[nextIndex]?.id,
           stepName: steps[nextIndex]?.name,
+          method: "auto"
         }
       });
 
@@ -609,14 +648,51 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
   };
 
+  const handleStepSelect = (index: number) => {
+    if (index === currentStepIndex) return;
+
+    // Log manual jump
+    logEventMutation.mutate({
+      trialId: trial.id,
+      type: "intervention_step_jump",
+      data: {
+        fromIndex: currentStepIndex,
+        toIndex: index,
+        fromStepId: currentStep?.id,
+        toStepId: steps[index]?.id,
+        stepName: steps[index]?.name,
+        method: "manual"
+      }
+    });
+
+    // Mark current as complete if leaving it?
+    // Maybe better to only mark on "Next" or explicit complete.
+    // If I jump away, I might not be done. 
+    // I'll leave 'completedSteps' update to explicit actions or completion.
+
+    setCurrentStepIndex(index);
+  };
+
   const handleCompleteTrial = async () => {
     try {
+      // Mark final step as complete
+      setCompletedSteps(prev => {
+        const next = new Set(prev);
+        next.add(currentStepIndex);
+        return next;
+      });
+
       await completeTrialMutation.mutateAsync({ id: trial.id });
 
-
+      // Invalidate queries so the analysis page sees the completed state immediately
+      await utils.trials.get.invalidate({ id: trial.id });
+      await utils.trials.getEvents.invalidate({ trialId: trial.id });
 
       // Trigger archive in background
       archiveTrialMutation.mutate({ id: trial.id });
+
+      // Immediately navigate to analysis
+      router.push(`/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`);
     } catch (error) {
       console.error("Failed to complete trial:", error);
     }
@@ -707,12 +783,60 @@ export const WizardInterface = React.memo(function WizardInterface({
           category: String(parameters?.category || "quick_note")
         });
       } else {
-        // Generic action logging
+        // Generic action logging - now with more details
+        // Find the action definition to get its name
+        let actionName = actionId;
+        let actionType = "unknown";
+
+        // Helper to search recursively
+        const findAction = (actions: ActionData[], id: string): ActionData | undefined => {
+          for (const action of actions) {
+            if (action.id === id) return action;
+            if (action.parameters?.children) {
+              const found = findAction(action.parameters.children as ActionData[], id);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+
+        // Search in current step first
+        let foundAction: ActionData | undefined;
+        if (steps[currentStepIndex]?.actions) {
+          foundAction = findAction(steps[currentStepIndex]!.actions!, actionId);
+        }
+
+        // If not found, search all steps (less efficient but safer)
+        if (!foundAction) {
+          for (const step of steps) {
+            if (step.actions) {
+              foundAction = findAction(step.actions, actionId);
+              if (foundAction) break;
+            }
+          }
+        }
+
+        if (foundAction) {
+          actionName = foundAction.name;
+          actionType = foundAction.type;
+        } else {
+          // Fallback for Wizard Actions (often have label/value in parameters)
+          if (parameters?.label && typeof parameters.label === 'string') {
+            actionName = parameters.label;
+            actionType = "wizard_button";
+          } else if (parameters?.value && typeof parameters.value === 'string') {
+            actionName = parameters.value;
+            actionType = "wizard_input";
+          }
+        }
+
         await logEventMutation.mutateAsync({
           trialId: trial.id,
           type: "action_executed",
           data: {
             actionId,
+            actionName,
+            actionType,
             parameters
           }
         });
@@ -734,6 +858,22 @@ export const WizardInterface = React.memo(function WizardInterface({
     ) => {
       try {
         setIsExecutingAction(true);
+
+        // Core actions execute directly via tRPC (no ROS needed)
+        if (pluginName === "hristudio-core" || pluginName === "hristudio-woz") {
+          await executeRobotActionMutation.mutateAsync({
+            trialId: trial.id,
+            pluginName,
+            actionId,
+            parameters,
+          });
+          if (options?.autoAdvance) {
+            handleNextStep();
+          }
+          setIsExecutingAction(false);
+          return;
+        }
+
         // Try direct WebSocket execution first for better performance
         if (rosConnected) {
           try {
@@ -778,18 +918,12 @@ export const WizardInterface = React.memo(function WizardInterface({
             }
           }
         } else {
-          // Use tRPC execution if WebSocket not connected
-          await executeRobotActionMutation.mutateAsync({
-            trialId: trial.id,
-            pluginName,
-            actionId,
-            parameters,
-          });
-
-          toast.success(`Robot action executed: ${actionId}`);
-          if (options?.autoAdvance) {
-            handleNextStep();
-          }
+          // Not connected - show error and don't try to execute
+          const errorMsg = "Robot not connected. Cannot execute action.";
+          toast.error(errorMsg);
+          console.warn(errorMsg);
+          // Throw to stop execution flow
+          throw new Error(errorMsg);
         }
       } catch (error) {
         console.error("Failed to execute robot action:", error);
@@ -825,7 +959,7 @@ export const WizardInterface = React.memo(function WizardInterface({
           // Generic skip logging
           await logEventMutation.mutateAsync({
             trialId: trial.id,
-            type: "action_skipped",
+            type: "intervention_action_skipped",
             data: {
               actionId,
               parameters
@@ -842,8 +976,16 @@ export const WizardInterface = React.memo(function WizardInterface({
         toast.error("Failed to skip action");
       }
     },
-    [logRobotActionMutation, trial.id],
+    [logRobotActionMutation, trial.id, logEventMutation, handleNextStep],
   );
+
+  const handleLogEvent = useCallback((type: string, data?: any) => {
+    logEventMutation.mutate({
+      trialId: trial.id,
+      type,
+      data
+    });
+  }, [logEventMutation, trial.id]);
 
 
 
@@ -869,13 +1011,13 @@ export const WizardInterface = React.memo(function WizardInterface({
             {trial.status === "in_progress" && (
               <>
                 <Button
-                  variant="outline"
+                  variant={isPaused ? "default" : "outline"}
                   size="sm"
-                  onClick={handlePauseTrial}
+                  onClick={isPaused ? handleResumeTrial : handlePauseTrial}
                   className="gap-2"
                 >
-                  <Pause className="h-4 w-4" />
-                  Pause
+                  {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {isPaused ? "Resume" : "Pause"}
                 </Button>
 
                 <Button
@@ -922,190 +1064,128 @@ export const WizardInterface = React.memo(function WizardInterface({
         className="flex-none px-2 pb-2"
       />
 
-      {/* Main Grid - 2 rows */}
-      <div className="flex-1 min-h-0 flex flex-col gap-2 px-2 pb-2">
-        {/* Top Row - 3 Column Layout */}
-        <div className="flex-1 min-h-0 flex gap-2">
-          {/* Left Sidebar - Control Panel (Collapsible) */}
-          {!leftCollapsed && (
-            <div className="flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm w-80">
-              <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
-                <span className="text-sm font-medium">Control</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setLeftCollapsed(true)}
-                >
-                  <PanelLeftClose className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-hidden min-h-0 bg-muted/10">
-                <div id="tour-wizard-controls-wrapper" className="h-full">
-                  <WizardControlPanel
-                    trial={trial}
-                    currentStep={currentStep}
-                    steps={steps}
-                    currentStepIndex={currentStepIndex}
-                    onStartTrial={handleStartTrial}
-                    onPauseTrial={handlePauseTrial}
-                    onNextStep={handleNextStep}
-                    onCompleteTrial={handleCompleteTrial}
-                    onAbortTrial={handleAbortTrial}
-                    onExecuteAction={handleExecuteAction}
-                    isStarting={startTrialMutation.isPending}
-                    readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Main Grid - Single Row */}
+      <div className="flex-1 min-h-0 flex gap-2 px-2 pb-2">
 
-          {/* Center - Tabbed Workspace */}
-          {/* Center - Execution Workspace */}
-          <div className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
-            <div className="flex items-center border-b px-3 py-2 bg-muted/30 min-h-[45px]">
-              {leftCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 mr-2"
-                  onClick={() => setLeftCollapsed(false)}
-                  title="Open Tools Panel"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </Button>
-              )}
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Trial Execution</span>
-                {currentStep && (
-                  <Badge variant="outline" className="text-xs font-normal">
-                    {currentStep.name}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="flex-1" />
-
-              <div className="mr-2 text-xs text-muted-foreground font-medium">
-                Step {currentStepIndex + 1} / {steps.length}
-              </div>
-
-              {rightCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setRightCollapsed(false)}
-                  title="Open Robot Status"
-                >
-                  <PanelRightOpen className="h-4 w-4" />
-                </Button>
+        {/* Center - Execution Workspace */}
+        <div className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
+          <div className="flex items-center border-b px-3 py-2 bg-muted/30 min-h-[45px]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Trial Execution</span>
+              {currentStep && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  {currentStep.name}
+                </Badge>
               )}
             </div>
-            <div className="flex-1 overflow-auto min-h-0 bg-muted/10">
-              <div id="tour-wizard-timeline" className="h-full">
-                <WizardExecutionPanel
-                  trial={trial}
-                  currentStep={currentStep}
-                  steps={steps}
-                  currentStepIndex={currentStepIndex}
-                  trialEvents={trialEvents}
-                  onStepSelect={(index: number) => setCurrentStepIndex(index)}
-                  onExecuteAction={handleExecuteAction}
-                  onExecuteRobotAction={handleExecuteRobotAction}
-                  activeTab={executionPanelTab}
-                  onTabChange={setExecutionPanelTab}
-                  onSkipAction={handleSkipAction}
-                  isExecuting={isExecutingAction}
-                  onNextStep={handleNextStep}
-                  completedActionsCount={completedActionsCount}
-                  onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
-                  onCompleteTrial={handleCompleteTrial}
-                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                  rosConnected={rosConnected}
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Right Sidebar - Robot Status (Collapsible) */}
-          {!rightCollapsed && (
-            <div className="flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm w-80">
-              <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
-                <span className="text-sm font-medium">Robot Control & Status</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setRightCollapsed(true)}
-                >
-                  <PanelRightClose className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-auto min-h-0 bg-muted/10">
-                <div id="tour-wizard-robot-status" className="h-full">
-                  <WizardMonitoringPanel
-                    rosConnected={rosConnected}
-                    rosConnecting={rosConnecting}
-                    rosError={rosError ?? undefined}
-                    robotStatus={robotStatus}
-                    connectRos={connectRos}
-                    disconnectRos={disconnectRos}
-                    executeRosAction={executeRosAction}
-                    onSetAutonomousLife={setAutonomousLife}
-                    onExecuteRobotAction={handleExecuteRobotAction}
-                    studyId={trial.experiment.studyId}
-                    trialId={trial.id}
-                    readOnly={trial.status === 'completed' || _userRole === 'observer'}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            <div className="flex-1" />
 
-        {/* Bottom Row - Observations (Full Width, Collapsible) */}
-        {!obsCollapsed && (
-          <div className="flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm h-48 flex-none">
-            <div className="flex items-center border-b px-3 py-2 bg-muted/30 gap-3">
-              <span className="text-sm font-medium">Observations</span>
-              <div className="flex-1" />
+            <div className="mr-2 text-xs text-muted-foreground font-medium">
+              Step {currentStepIndex + 1} / {steps.length}
+            </div>
+
+            {rightCollapsed && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => setObsCollapsed(true)}
+                onClick={() => setRightCollapsed(false)}
+                title="Open Status & Tools"
               >
-                <ChevronDown className="h-4 w-4" />
+                <PanelRightOpen className="h-4 w-4" />
               </Button>
-            </div>
-            <div className="flex-1 overflow-auto min-h-0 bg-muted/10">
-              <WizardObservationPane
-                onAddAnnotation={handleAddAnnotation}
-                isSubmitting={addAnnotationMutation.isPending}
+            )}
+          </div>
+          <div className="flex-1 overflow-auto bg-muted/10 pb-0">
+            <div id="tour-wizard-timeline" className="h-full">
+              <WizardExecutionPanel
+                trial={trial}
+                currentStep={currentStep}
+                steps={steps}
+                currentStepIndex={currentStepIndex}
+                completedStepIndices={completedSteps}
                 trialEvents={trialEvents}
-                readOnly={trial.status === 'completed'}
+                isPaused={isPaused}
+                onStepSelect={handleStepSelect}
+                onExecuteAction={handleExecuteAction}
+                onExecuteRobotAction={handleExecuteRobotAction}
+                activeTab={executionPanelTab}
+                onTabChange={setExecutionPanelTab}
+                onSkipAction={handleSkipAction}
+                isExecuting={isExecutingAction}
+                onNextStep={handleNextStep}
+                completedActionsCount={completedActionsCount}
+                onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
+                onCompleteTrial={handleCompleteTrial}
+                readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                rosConnected={rosConnected}
+                onLogEvent={handleLogEvent}
               />
             </div>
           </div>
-        )}
-        {
-          obsCollapsed && (
+        </div>
+
+        {/* Right Sidebar - Tools Tabs (Collapsible) */}
+        <div className={cn(
+          "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm w-[350px] lg:w-[400px]",
+          rightCollapsed && "hidden"
+        )}>
+          <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30 shrink-0">
+            <span className="text-sm font-medium">Tools</span>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setObsCollapsed(false)}
-              className="w-full flex-none"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setRightCollapsed(true)}
             >
-              <ChevronUp className="h-4 w-4 mr-2" />
-              Show Observations
+              <PanelRightClose className="h-4 w-4" />
             </Button>
-          )
-        }
-      </div >
-    </div >
+          </div>
+          <div className="flex-1 overflow-hidden bg-background">
+            <Tabs defaultValue="camera_obs" className="flex flex-col h-full w-full">
+              <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 px-3 py-1 shrink-0 h-10">
+                <TabsTrigger value="camera_obs" className="text-xs flex-1">Camera & Obs</TabsTrigger>
+                <TabsTrigger value="robot" className="text-xs flex-1">Robot Control</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="camera_obs" className="flex-1 flex flex-col m-0 p-0 h-full overflow-hidden min-h-0">
+                <div className="flex-none bg-muted/30 border-b h-48 sm:h-56 relative group shrink-0">
+                  <WebcamPanel readOnly={trial.status === 'completed'} trialId={trial.id} trialStatus={trial.status} />
+                </div>
+                <div className="flex-1 overflow-auto min-h-0 bg-muted/10">
+                  <WizardObservationPane
+                    onAddAnnotation={handleAddAnnotation}
+                    onFlagIntervention={() => handleExecuteAction("intervene")}
+                    isSubmitting={addAnnotationMutation.isPending}
+                    trialEvents={trialEvents}
+                    readOnly={trial.status === 'completed'}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="robot" className="flex-1 m-0 h-full overflow-hidden">
+                <WizardMonitoringPanel
+                  rosConnected={rosConnected}
+                  rosConnecting={rosConnecting}
+                  rosError={rosError ?? undefined}
+                  robotStatus={robotStatus}
+                  connectRos={connectRos}
+                  disconnectRos={disconnectRos}
+                  executeRosAction={executeRosAction}
+                  onSetAutonomousLife={setAutonomousLife}
+                  onExecuteRobotAction={handleExecuteRobotAction}
+                  studyId={trial.experiment.studyId}
+                  trialId={trial.id}
+                  trialStatus={trial.status}
+                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 

@@ -86,7 +86,7 @@ function AnalysisPageContent() {
         );
     }
 
-    const trialData = {
+    const customTrialData = {
         ...trial,
         startedAt: trial.startedAt ? new Date(trial.startedAt) : null,
         completedAt: trial.completedAt ? new Date(trial.completedAt) : null,
@@ -96,7 +96,7 @@ function AnalysisPageContent() {
 
     return (
         <TrialAnalysisView
-            trial={trialData}
+            trial={customTrialData}
             backHref={`/studies/${studyId}/trials/${trialId}`}
         />
     );

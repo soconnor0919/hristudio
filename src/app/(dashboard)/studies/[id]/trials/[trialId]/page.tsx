@@ -140,6 +140,12 @@ function TrialDetailContent() {
         title={`Trial: ${trial.participant.participantCode}`}
         description={`${trial.experiment.name} - Session ${trial.sessionNumber}`}
         icon={Play}
+        badges={[
+          {
+            label: trial.status.replace("_", " ").toUpperCase(),
+            variant: getStatusBadgeVariant(trial.status),
+          }
+        ]}
         actions={
           <div className="flex gap-2">
             {trial.status === "scheduled" && (

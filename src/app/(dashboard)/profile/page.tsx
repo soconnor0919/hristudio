@@ -16,8 +16,19 @@ import { Separator } from "~/components/ui/separator";
 import { PageHeader } from "~/components/ui/page-header";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { formatRole, getRoleDescription } from "~/lib/auth-client";
-import { User, Shield, Download, Trash2, ExternalLink } from "lucide-react";
+import {
+  User,
+  Shield,
+  Download,
+  Trash2,
+  ExternalLink,
+  Lock,
+  UserCog,
+  Mail,
+  Fingerprint
+} from "lucide-react";
 import { useSession } from "next-auth/react";
+import { cn } from "~/lib/utils";
 
 interface ProfileUser {
   id: string;
@@ -32,185 +43,141 @@ interface ProfileUser {
 
 function ProfileContent({ user }: { user: ProfileUser }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <PageHeader
-        title="Profile"
-        description="Manage your account settings and preferences"
+        title={user.name ?? "User"}
+        description={user.email}
         icon={User}
+        badges={[
+          { label: `ID: ${user.id}`, variant: "outline" },
+          ...(user.roles?.map((r) => ({
+            label: formatRole(r.role),
+            variant: "secondary" as const,
+          })) ?? []),
+        ]}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Profile Information */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Basic Information */}
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>
-                Your personal account information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProfileEditForm
-                user={{
-                  id: user.id,
-                  name: user.name,
-                  email: user.email,
-                  image: user.image,
-                }}
-              />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Main Content (Left Column) */}
+        <div className="space-y-8 lg:col-span-2">
 
-          {/* Password Change */}
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>Change your account password</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PasswordChangeForm />
-            </CardContent>
-          </Card>
+          {/* Personal Information */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <User className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Personal Information</h3>
+            </div>
+            <Card className="border-border/60 hover:border-border transition-colors">
+              <CardHeader>
+                <CardTitle className="text-base">Contact Details</CardTitle>
+                <CardDescription>Update your public profile information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProfileEditForm
+                  user={{
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image,
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </section>
 
-          {/* Account Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Actions</CardTitle>
-              <CardDescription>Manage your account settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium">Export Data</h4>
-                  <p className="text-muted-foreground text-sm">
-                    Download all your research data and account information
-                  </p>
-                </div>
-                <Button variant="outline" disabled>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Data
-                </Button>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-destructive text-sm font-medium">
-                    Delete Account
-                  </h4>
-                  <p className="text-muted-foreground text-sm">
-                    Permanently delete your account and all associated data
-                  </p>
-                </div>
-                <Button variant="destructive" disabled>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Security */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Lock className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Security</h3>
+            </div>
+            <Card className="border-border/60 hover:border-border transition-colors">
+              <CardHeader>
+                <CardTitle className="text-base">Password</CardTitle>
+                <CardDescription>Ensure your account stays secure</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PasswordChangeForm />
+              </CardContent>
+            </Card>
+          </section>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* User Summary */}
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader>
-              <CardTitle>Account Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                  <span className="text-primary text-lg font-semibold">
-                    {(user.name ?? user.email ?? "U").charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium">{user.name ?? "Unnamed User"}</p>
-                  <p className="text-muted-foreground text-sm">{user.email}</p>
-                </div>
-              </div>
+        {/* Sidebar (Right Column) */}
+        <div className="space-y-8">
 
-              <Separator />
-
-              <div>
-                <p className="mb-2 text-sm font-medium">User ID</p>
-                <p className="text-muted-foreground bg-muted rounded p-2 font-mono text-xs break-all">
-                  {user.id}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Roles */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                System Roles
-              </CardTitle>
-              <CardDescription>Your current system permissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user.roles && user.roles.length > 0 ? (
-                <div className="space-y-3">
-                  {user.roles.map((roleInfo, index: number) => (
-                    <div
-                      key={index}
-                      className="flex items-start justify-between"
-                    >
-                      <div className="flex-1">
-                        <div className="mb-1 flex items-center gap-2">
-                          <Badge variant="secondary">
-                            {formatRole(roleInfo.role)}
-                          </Badge>
+          {/* Permissions */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Shield className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Permissions</h3>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                {user.roles && user.roles.length > 0 ? (
+                  <div className="space-y-4">
+                    {user.roles.map((roleInfo, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{formatRole(roleInfo.role)}</span>
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            Since {new Date(roleInfo.grantedAt).toLocaleDateString()}
+                          </span>
                         </div>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           {getRoleDescription(roleInfo.role)}
                         </p>
-                        <p className="text-muted-foreground/80 mt-1 text-xs">
-                          Granted{" "}
-                          {new Date(roleInfo.grantedAt).toLocaleDateString()}
-                        </p>
+                        {index < (user.roles?.length || 0) - 1 && <Separator className="my-2" />}
                       </div>
+                    ))}
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30 text-xs text-muted-foreground mt-4">
+                      <div className="flex items-center gap-2 mb-1 text-primary font-medium">
+                        <Shield className="h-3 w-3" />
+                        <span>Role Management</span>
+                      </div>
+                      System roles are managed by administrators. Contact support if you need access adjustments.
                     </div>
-                  ))}
-
-                  <Separator />
-
-                  <div className="text-center">
-                    <p className="text-muted-foreground text-xs">
-                      Need additional permissions?{" "}
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs"
-                      >
-                        Contact an administrator
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </Button>
-                    </p>
                   </div>
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg">
-                    <Shield className="text-muted-foreground h-6 w-6" />
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm font-medium">No Roles Assigned</p>
+                    <p className="text-xs text-muted-foreground mt-1">Contact an admin to request access.</p>
+                    <Button size="sm" variant="outline" className="mt-3 w-full">Request Access</Button>
                   </div>
-                  <p className="mb-1 text-sm font-medium">No Roles Assigned</p>
-                  <p className="text-muted-foreground text-xs">
-                    You don&apos;t have any system roles yet. Contact an
-                    administrator to get access to HRIStudio features.
-                  </p>
-                  <Button size="sm" variant="outline">
-                    Request Access
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Data & Privacy */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Download className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Data & Privacy</h3>
+            </div>
+
+            <Card className="border-destructive/10 bg-destructive/5 overflow-hidden">
+              <CardContent className="pt-6 space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Export Data</h4>
+                  <p className="text-xs text-muted-foreground mb-3">Download a copy of your personal data.</p>
+                  <Button variant="outline" size="sm" className="w-full bg-background" disabled>
+                    <Download className="mr-2 h-3 w-3" />
+                    Download Archive
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <Separator className="bg-destructive/10" />
+                <div>
+                  <h4 className="text-sm font-semibold text-destructive mb-1">Delete Account</h4>
+                  <p className="text-xs text-muted-foreground mb-3">This action is irreversible.</p>
+                  <Button variant="destructive" size="sm" className="w-full" disabled>
+                    <Trash2 className="mr-2 h-3 w-3" />
+                    Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </div>
     </div>
@@ -218,12 +185,16 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 }
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
     { label: "Profile" },
   ]);
+
+  if (status === "loading") {
+    return <div className="p-8 text-muted-foreground animate-pulse">Loading profile...</div>;
+  }
 
   if (!session?.user) {
     redirect("/auth/signin");

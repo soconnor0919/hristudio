@@ -29,6 +29,7 @@ interface WizardObservationPaneProps {
         category?: string,
         tags?: string[],
     ) => Promise<void>;
+    onFlagIntervention?: () => Promise<void> | void;
     isSubmitting?: boolean;
     readOnly?: boolean;
 
@@ -36,6 +37,7 @@ interface WizardObservationPaneProps {
 
 export function WizardObservationPane({
     onAddAnnotation,
+    onFlagIntervention,
     isSubmitting = false,
     trialEvents = [],
     readOnly = false,
@@ -118,11 +120,23 @@ export function WizardObservationPane({
                             size="sm"
                             onClick={handleSubmit}
                             disabled={isSubmitting || !note.trim() || readOnly}
-                            className="h-8"
+                            className="h-8 shrink-0"
                         >
                             <Send className="mr-2 h-3 w-3" />
                             Add Note
                         </Button>
+                        {onFlagIntervention && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onFlagIntervention()}
+                                disabled={readOnly}
+                                className="h-8 shrink-0 border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700/50 dark:hover:bg-yellow-900/40"
+                            >
+                                <AlertTriangle className="mr-2 h-3 w-3" />
+                                Intervention
+                            </Button>
+                        )}
                     </div>
 
                     {tags.length > 0 && (

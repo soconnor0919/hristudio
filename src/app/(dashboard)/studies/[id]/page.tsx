@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { Plus, Settings, Shield } from "lucide-react";
+import { Plus, Settings, Shield, Building } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ import {
   QuickActions,
   StatsGrid,
 } from "~/components/ui/entity-view";
+import { PageHeader } from "~/components/ui/page-header";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
@@ -167,17 +168,18 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   return (
     <EntityView>
       {/* Header */}
-      <EntityViewHeader
+      <PageHeader
         title={study.name}
-        subtitle={study.description ?? undefined}
-        icon="Building"
-        status={{
-          label: statusInfo?.label ?? "Unknown",
-          variant: statusInfo?.variant ?? "secondary",
-          icon: statusInfo?.icon ?? "FileText",
-        }}
+        description={study.description ?? undefined}
+        icon={Building}
+        badges={[
+          {
+            label: statusInfo?.label ?? "Unknown",
+            variant: statusInfo?.variant ?? "secondary",
+          }
+        ]}
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <Button asChild variant="outline">
               <Link href={`/studies/${study.id}/edit`}>
                 <Settings className="mr-2 h-4 w-4" />
@@ -190,7 +192,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                 New Experiment
               </Link>
             </Button>
-          </>
+          </div>
         }
       />
 
@@ -271,10 +273,10 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                         </h4>
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${experiment.status === "draft"
-                              ? "bg-gray-100 text-gray-800"
-                              : experiment.status === "ready"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-blue-100 text-blue-800"
+                            ? "bg-gray-100 text-gray-800"
+                            : experiment.status === "ready"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
                             }`}
                         >
                           {experiment.status}

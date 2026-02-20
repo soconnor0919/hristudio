@@ -10,6 +10,7 @@ import {
   Play,
   Target,
   Users,
+  SkipForward
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -21,15 +22,17 @@ interface TrialProgressProps {
     id: string;
     name: string;
     type:
-      | "wizard_action"
-      | "robot_action"
-      | "parallel_steps"
-      | "conditional_branch";
+    | "wizard_action"
+    | "robot_action"
+    | "parallel_steps"
+    | "conditional_branch";
     description?: string;
     duration?: number;
     parameters?: Record<string, unknown>;
   }>;
   currentStepIndex: number;
+  completedSteps: Set<number>;
+  skippedSteps: Set<number>;
   trialStatus: "scheduled" | "in_progress" | "completed" | "aborted" | "failed";
 }
 
@@ -71,6 +74,8 @@ const stepTypeConfig = {
 export function TrialProgress({
   steps,
   currentStepIndex,
+  completedSteps,
+  skippedSteps,
   trialStatus,
 }: TrialProgressProps) {
   if (!steps || steps.length === 0) {
@@ -93,7 +98,7 @@ export function TrialProgress({
         ? 0
         : ((currentStepIndex + 1) / steps.length) * 100;
 
-  const completedSteps =
+  const completedCount =
     trialStatus === "completed"
       ? steps.length
       : trialStatus === "aborted" || trialStatus === "failed"
@@ -102,12 +107,19 @@ export function TrialProgress({
 
   const getStepStatus = (index: number) => {
     if (trialStatus === "aborted" || trialStatus === "failed") return "aborted";
-    if (trialStatus === "completed" || index < currentStepIndex)
-      return "completed";
+    if (trialStatus === "completed") return "completed";
+
+    if (skippedSteps.has(index)) return "skipped";
+    if (completedSteps.has(index)) return "completed";
+
     if (index === currentStepIndex && trialStatus === "in_progress")
       return "active";
     if (index === currentStepIndex && trialStatus === "scheduled")
       return "pending";
+
+    // Default fallback if jumping around without explicitly adding to sets
+    if (index < currentStepIndex && !skippedSteps.has(index)) return "completed";
+
     return "upcoming";
   };
 
@@ -145,6 +157,14 @@ export function TrialProgress({
           borderColor: "border-red-300",
           textColor: "text-red-800",
         };
+      case "skipped":
+        return {
+          icon: Circle,
+          iconColor: "text-slate-400 opacity-50",
+          bgColor: "bg-slate-50 opacity-50",
+          borderColor: "border-slate-200 border-dashed",
+          textColor: "text-slate-500",
+        };
       default: // upcoming
         return {
           icon: Circle,
@@ -171,7 +191,7 @@ export function TrialProgress({
           </CardTitle>
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className="text-xs">
-              {completedSteps}/{steps.length} steps
+              {completedCount}/{steps.length} steps
             </Badge>
             {totalDuration > 0 && (
               <Badge variant="outline" className="text-xs">
@@ -191,13 +211,12 @@ export function TrialProgress({
           </div>
           <Progress
             value={progress}
-            className={`h-2 ${
-              trialStatus === "completed"
-                ? "bg-green-100"
-                : trialStatus === "aborted" || trialStatus === "failed"
-                  ? "bg-red-100"
-                  : "bg-blue-100"
-            }`}
+            className={`h-2 ${trialStatus === "completed"
+              ? "bg-green-100"
+              : trialStatus === "aborted" || trialStatus === "failed"
+                ? "bg-red-100"
+                : "bg-blue-100"
+              }`}
           />
           <div className="flex justify-between text-xs text-slate-500">
             <span>Start</span>
@@ -236,51 +255,47 @@ export function TrialProgress({
                   {/* Connection Line */}
                   {index < steps.length - 1 && (
                     <div
-                      className={`absolute top-12 left-6 h-6 w-0.5 ${
-                        getStepStatus(index + 1) === "completed" ||
+                      className={`absolute top-12 left-6 h-6 w-0.5 ${getStepStatus(index + 1) === "completed" ||
                         (getStepStatus(index + 1) === "active" &&
                           status === "completed")
-                          ? "bg-green-300"
-                          : "bg-slate-300"
-                      }`}
+                        ? "bg-green-300"
+                        : "bg-slate-300"
+                        }`}
                     />
                   )}
 
                   {/* Step Card */}
                   <div
-                    className={`flex items-start space-x-3 rounded-lg border p-3 transition-all ${
-                      status === "active"
-                        ? `${statusConfig.bgColor} ${statusConfig.borderColor} shadow-md ring-2 ring-blue-200`
-                        : status === "completed"
+                    className={`flex items-start space-x-3 rounded-lg border p-3 transition-all ${status === "active"
+                      ? `${statusConfig.bgColor} ${statusConfig.borderColor} shadow-md ring-2 ring-blue-200`
+                      : status === "completed"
+                        ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
+                        : status === "aborted"
                           ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
-                          : status === "aborted"
-                            ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
-                            : "border-slate-200 bg-slate-50"
-                    }`}
+                          : "border-slate-200 bg-slate-50"
+                      }`}
                   >
                     {/* Step Number & Status */}
                     <div className="flex-shrink-0 space-y-1">
                       <div
-                        className={`flex h-8 w-12 items-center justify-center rounded-lg ${
-                          status === "active"
-                            ? statusConfig.bgColor
-                            : status === "completed"
-                              ? "bg-green-100"
-                              : status === "aborted"
-                                ? "bg-red-100"
-                                : "bg-slate-100"
-                        }`}
+                        className={`flex h-8 w-12 items-center justify-center rounded-lg ${status === "active"
+                          ? statusConfig.bgColor
+                          : status === "completed"
+                            ? "bg-green-100"
+                            : status === "aborted"
+                              ? "bg-red-100"
+                              : "bg-slate-100"
+                          }`}
                       >
                         <span
-                          className={`text-sm font-medium ${
-                            status === "active"
-                              ? statusConfig.textColor
-                              : status === "completed"
-                                ? "text-green-700"
-                                : status === "aborted"
-                                  ? "text-red-700"
-                                  : "text-slate-600"
-                          }`}
+                          className={`text-sm font-medium ${status === "active"
+                            ? statusConfig.textColor
+                            : status === "completed"
+                              ? "text-green-700"
+                              : status === "aborted"
+                                ? "text-red-700"
+                                : "text-slate-600"
+                            }`}
                         >
                           {index + 1}
                         </span>
@@ -297,15 +312,14 @@ export function TrialProgress({
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <h5
-                            className={`truncate font-medium ${
-                              status === "active"
-                                ? "text-slate-900"
-                                : status === "completed"
-                                  ? "text-green-900"
-                                  : status === "aborted"
-                                    ? "text-red-900"
-                                    : "text-slate-700"
-                            }`}
+                            className={`truncate font-medium ${status === "active"
+                              ? "text-slate-900"
+                              : status === "completed"
+                                ? "text-green-900"
+                                : status === "aborted"
+                                  ? "text-red-900"
+                                  : "text-slate-700"
+                              }`}
                           >
                             {step.name}
                           </h5>
@@ -352,6 +366,12 @@ export function TrialProgress({
                           <span>Completed</span>
                         </div>
                       )}
+                      {status === "skipped" && (
+                        <div className="mt-2 flex items-center space-x-1 text-sm text-slate-500 opacity-80">
+                          <SkipForward className="h-3 w-3" />
+                          <span>Skipped</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -365,7 +385,7 @@ export function TrialProgress({
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-green-600">
-              {completedSteps}
+              {completedCount}
             </div>
             <div className="text-xs text-slate-600">Completed</div>
           </div>
@@ -378,7 +398,7 @@ export function TrialProgress({
           <div>
             <div className="text-2xl font-bold text-slate-600">
               {steps.length -
-                completedSteps -
+                completedCount -
                 (trialStatus === "in_progress" ? 1 : 0)}
             </div>
             <div className="text-xs text-slate-600">Remaining</div>

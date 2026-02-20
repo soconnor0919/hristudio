@@ -1,12 +1,13 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { Calendar, Clock, Edit, Play, Settings, Users } from "lucide-react";
+import { Calendar, Clock, Edit, Play, Settings, Users, TestTube } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { PageHeader } from "~/components/ui/page-header";
 import {
     EntityView,
     EntityViewHeader,
@@ -183,18 +184,19 @@ export default function ExperimentDetailPage({
 
     return (
         <EntityView>
-            <EntityViewHeader
+            <PageHeader
                 title={displayName}
-                subtitle={description ?? undefined}
-                icon="TestTube"
-                status={{
-                    label: statusInfo?.label ?? "Unknown",
-                    variant: statusInfo?.variant ?? "secondary",
-                    icon: statusInfo?.icon ?? "TestTube",
-                }}
+                description={description ?? undefined}
+                icon={TestTube}
+                badges={[
+                    {
+                        label: statusInfo?.label ?? "Unknown",
+                        variant: statusInfo?.variant ?? "secondary",
+                    }
+                ]}
                 actions={
                     canEdit ? (
-                        <>
+                        <div className="flex items-center gap-2">
                             <Button asChild variant="outline">
                                 <Link href={`/studies/${studyId}/experiments/${experimentId}/designer`}>
                                     <Settings className="mr-2 h-4 w-4" />
@@ -209,7 +211,7 @@ export default function ExperimentDetailPage({
                                     Start Trial
                                 </Link>
                             </Button>
-                        </>
+                        </div>
                     ) : undefined
                 }
             />

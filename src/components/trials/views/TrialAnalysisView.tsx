@@ -4,6 +4,7 @@ import { PageHeader } from "~/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import Link from "next/link";
 import { LineChart, BarChart, Printer, Clock, Database, FileText, AlertTriangle, CheckCircle, VideoOff, Info, Bot, Activity, ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
@@ -31,7 +32,7 @@ interface TrialAnalysisViewProps {
         participant: { participantCode: string };
         eventCount?: number;
         mediaCount?: number;
-        media?: { url: string; contentType: string }[];
+        media?: { url: string; mediaType: string; format?: string; contentType?: string }[];
     };
     backHref: string;
 }
@@ -41,6 +42,8 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
     const { data: events = [] } = api.trials.getEvents.useQuery({
         trialId: trial.id,
         limit: 1000
+    }, {
+        refetchInterval: 5000
     });
 
     // Auto-print effect
@@ -54,7 +57,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
         }
     }, []);
 
-    const videoMedia = trial.media?.find(m => m.contentType.startsWith("video/"));
+    const videoMedia = trial.media?.find(m => m.mediaType === "video" || (m as any).contentType?.startsWith("video/"));
     const videoUrl = videoMedia?.url;
 
     // Metrics
@@ -64,7 +67,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
 
     return (
         <PlaybackProvider events={events} startTime={trial.startedAt ?? undefined}>
-            <div id="trial-analysis-content" className="flex h-full flex-col gap-4 p-4 text-sm">
+            <div id="trial-analysis-content" className="flex h-full flex-col gap-2 p-3 text-sm">
                 {/* Header Context */}
                 <PageHeader
                     title={trial.experiment.name}
@@ -185,65 +188,56 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                     }
                 />
 
-                {/* Metrics Header */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4" id="tour-trial-metrics">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Duration</CardTitle>
-                            <Clock className="h-4 w-4 text-blue-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {trial.duration ? (
-                                    <span>{Math.floor(trial.duration / 60)}m {trial.duration % 60}s</span>
-                                ) : (
-                                    "--:--"
-                                )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">Total session time</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Robot Actions</CardTitle>
-                            <Bot className="h-4 w-4 text-purple-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{robotActionCount}</div>
-                            <p className="text-xs text-muted-foreground">Executed autonomous behaviors</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Interventions</CardTitle>
-                            <AlertTriangle className="h-4 w-4 text-orange-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{interventionCount}</div>
-                            <p className="text-xs text-muted-foreground">Manual wizard overrides</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Completeness</CardTitle>
-                            <Activity className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {trial.status === 'completed' ? '100%' : 'Incomplete'}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className={cn(
-                                    "inline-block h-2 w-2 rounded-full",
-                                    trial.status === 'completed' ? "bg-green-500" : "bg-yellow-500"
-                                )} />
-                                {trial.status.charAt(0).toUpperCase() + trial.status.slice(1)}
+                {/* Top Section: Metrics & Optional Video Grid */}
+                <div className="flex flex-col xl:flex-row gap-3 shrink-0">
+                    <Card id="tour-trial-metrics" className="shadow-sm flex-1">
+                        <CardContent className="p-0 h-full">
+                            <div className="flex flex-row divide-x h-full">
+                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
+                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                                        <Clock className="h-3.5 w-3.5 text-blue-500" /> Duration
+                                    </p>
+                                    <p className="text-base font-bold">
+                                        {trial.duration ? <span>{Math.floor(trial.duration / 60)}m {trial.duration % 60}s</span> : "--:--"}
+                                    </p>
+                                </div>
+                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
+                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                                        <Bot className="h-3.5 w-3.5 text-purple-500" /> Robot Actions
+                                    </p>
+                                    <p className="text-base font-bold">{robotActionCount}</p>
+                                </div>
+                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
+                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                                        <AlertTriangle className="h-3.5 w-3.5 text-orange-500" /> Interventions
+                                    </p>
+                                    <p className="text-base font-bold">{interventionCount}</p>
+                                </div>
+                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
+                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                                        <Activity className="h-3.5 w-3.5 text-green-500" /> Completeness
+                                    </p>
+                                    <div className="flex items-center gap-1.5 text-base font-bold">
+                                        <span className={cn(
+                                            "inline-block h-2 w-2 rounded-full",
+                                            trial.status === 'completed' ? "bg-green-500" : "bg-yellow-500"
+                                        )} />
+                                        {trial.status === 'completed' ? '100%' : 'Incomplete'}
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
+
+                    {videoUrl && (
+                        <Card id="tour-trial-video" className="shadow-sm w-full xl:w-[500px] overflow-hidden shrink-0 bg-black/5 dark:bg-black/40 border">
+                            <div className="aspect-video w-full h-full relative flex items-center justify-center bg-black">
+                                <div className="absolute inset-0">
+                                    <PlaybackPlayer src={videoUrl} />
+                                </div>
+                            </div>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Main Workspace: Vertical Layout */}
@@ -254,51 +248,89 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                         <EventTimeline />
                     </div>
 
-                    <ResizablePanelGroup direction="vertical">
-
-                        {/* TOP: Video (Optional) */}
-                        {videoUrl && (
-                            <>
-                                <ResizablePanel defaultSize={40} minSize={20} className="flex flex-col min-h-0 bg-black/5 dark:bg-black/40" id="tour-trial-video">
-                                    <div className="relative flex-1 min-h-0 flex items-center justify-center">
-                                        <div className="absolute inset-0">
-                                            <PlaybackPlayer src={videoUrl} />
-                                        </div>
-                                    </div>
-                                </ResizablePanel>
-                                <ResizableHandle withHandle className="bg-border/50" />
-                            </>
-                        )}
-
-                        {/* BOTTOM: Events Table */}
-                        <ResizablePanel defaultSize={videoUrl ? 60 : 100} minSize={20} className="flex flex-col min-h-0 bg-background" id="tour-trial-events">
-                            <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+                    {/* BOTTOM: Events Table */}
+                    <div className="flex-1 flex flex-col min-h-0 bg-background" id="tour-trial-events">
+                        <Tabs defaultValue="events" className="flex flex-col h-full">
+                            <div className="flex items-center justify-between px-3 py-2 border-b shrink-0 bg-muted/10">
                                 <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    <h3 className="font-semibold text-sm">Event Log</h3>
+                                    <TabsList className="h-8">
+                                        <TabsTrigger value="events" className="text-xs">All Events</TabsTrigger>
+                                        <TabsTrigger value="observations" className="text-xs">Observations ({events.filter(e => e.eventType.startsWith('annotation') || e.eventType === 'wizard_note').length})</TabsTrigger>
+                                    </TabsList>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Input
-                                        placeholder="Filter events..."
-                                        className="h-8 w-[200px]"
+                                        placeholder="Filter..."
+                                        className="h-7 w-[150px] text-xs"
                                         disabled
                                         style={{ display: 'none' }}
                                     />
-                                    <Badge variant="secondary" className="text-xs">{events.length} Events</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-normal">{events.length} Total</Badge>
                                 </div>
                             </div>
-                            <div className="flex-1 min-h-0">
+
+                            <TabsContent value="events" className="flex-1 min-h-0 mt-0">
                                 <ScrollArea className="h-full">
-                                    <div className="p-4">
+                                    <div className="p-0">
                                         <EventsDataTable
                                             data={events.map(e => ({ ...e, timestamp: new Date(e.timestamp) }))}
                                             startTime={trial.startedAt ?? undefined}
                                         />
                                     </div>
                                 </ScrollArea>
-                            </div>
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
+                            </TabsContent>
+
+                            <TabsContent value="observations" className="flex-1 min-h-0 mt-0 bg-muted/5">
+                                <ScrollArea className="h-full">
+                                    <div className="p-4 space-y-3 max-w-2xl mx-auto">
+                                        {events.filter(e => e.eventType.startsWith('annotation') || e.eventType === 'wizard_note').length > 0 ? (
+                                            events
+                                                .filter(e => e.eventType.startsWith('annotation') || e.eventType === 'wizard_note')
+                                                .map((e, i) => {
+                                                    const data = e.data as any;
+                                                    return (
+                                                        <Card key={i} className="border shadow-none">
+                                                            <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                                                        {data?.category || "Note"}
+                                                                    </Badge>
+                                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                                        {trial.startedAt ? formatTime(new Date(e.timestamp).getTime() - new Date(trial.startedAt).getTime()) : '--:--'}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground">
+                                                                    {new Date(e.timestamp).toLocaleTimeString()}
+                                                                </span>
+                                                            </CardHeader>
+                                                            <CardContent className="p-3 pt-2">
+                                                                <p className="text-sm">
+                                                                    {data?.description || data?.note || data?.message || "No content"}
+                                                                </p>
+                                                                {data?.tags && data.tags.length > 0 && (
+                                                                    <div className="flex gap-1 mt-2">
+                                                                        {data.tags.map((t: string, ti: number) => (
+                                                                            <Badge key={ti} variant="secondary" className="text-[10px] h-5 px-1.5">
+                                                                                {t}
+                                                                            </Badge>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </CardContent>
+                                                        </Card>
+                                                    );
+                                                })
+                                        ) : (
+                                            <div className="text-center py-12 text-muted-foreground text-sm">
+                                                <Info className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                                No observations recorded for this session.
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
                 </div>
             </div>
         </PlaybackProvider>

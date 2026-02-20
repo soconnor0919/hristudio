@@ -85,13 +85,14 @@ export function PlaybackPlayer({ src }: PlaybackPlayerProps) {
                 <video
                     ref={videoRef}
                     src={src}
+                    controls
+                    muted={muted}
                     className="w-full h-full object-contain"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onWaiting={handleWaiting}
                     onPlaying={handlePlaying}
                     onEnded={handleEnded}
-                    onClick={togglePlay}
                 />
 
                 {/* Overlay Controls (Visible on Hover/Pause) */}

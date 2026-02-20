@@ -16,7 +16,7 @@ import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
-export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
+export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOnly?: boolean; trialId?: string; trialStatus?: string }) {
     const [deviceId, setDeviceId] = useState<string | null>(null);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [isCameraEnabled, setIsCameraEnabled] = useState(false);
@@ -31,6 +31,10 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
     // TRPC mutation for presigned URL
     const getUploadUrlMutation = api.storage.getUploadPresignedUrl.useMutation();
 
+    // Mutation to save recording metadata to DB
+    const saveRecordingMutation = api.storage.saveRecording.useMutation();
+    const logEventMutation = api.trials.logEvent.useMutation();
+
     const handleDevices = useCallback(
         (mediaDevices: MediaDeviceInfo[]) => {
             setDevices(mediaDevices.filter(({ kind, deviceId }) => kind === "videoinput" && deviceId !== ""));
@@ -38,7 +42,10 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
         [setDevices],
     );
 
+    const [isMounted, setIsMounted] = useState(false);
+
     React.useEffect(() => {
+        setIsMounted(true);
         navigator.mediaDevices.enumerateDevices().then(handleDevices);
     }, [handleDevices]);
 
@@ -52,6 +59,30 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
             handleStopRecording();
         }
         setIsCameraEnabled(false);
+    };
+
+    // Auto-record based on trial status
+    React.useEffect(() => {
+        if (!trialStatus || readOnly) return;
+
+        if (trialStatus === "in_progress") {
+            if (!isCameraEnabled) {
+                console.log("Auto-enabling camera for trial start");
+                setIsCameraEnabled(true);
+            } else if (!isRecording && webcamRef.current?.stream) {
+                handleStartRecording();
+            }
+        } else if (trialStatus === "completed" && isRecording) {
+            handleStopRecording();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [trialStatus, isCameraEnabled, isRecording, readOnly]);
+
+    const handleUserMedia = () => {
+        if (trialStatus === "in_progress" && !isRecording && !readOnly) {
+            console.log("Stream ready, auto-starting camera recording");
+            handleStartRecording();
+        }
     };
 
     const handleStartRecording = () => {
@@ -78,6 +109,13 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
 
             recorder.start();
             mediaRecorderRef.current = recorder;
+            if (trialId) {
+                logEventMutation.mutate({
+                    trialId,
+                    type: "camera_started",
+                    data: { action: "recording_started" }
+                });
+            }
             toast.success("Recording started");
         } catch (e) {
             console.error("Failed to start recorder:", e);
@@ -90,6 +128,13 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            if (trialId) {
+                logEventMutation.mutate({
+                    trialId,
+                    type: "camera_stopped",
+                    data: { action: "recording_stopped" }
+                });
+            }
         }
     };
 
@@ -114,7 +159,30 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
             });
 
             if (!response.ok) {
-                throw new Error("Upload failed");
+                const errorText = await response.text();
+                throw new Error(`Upload failed: ${errorText} | Status: ${response.status}`);
+            }
+
+            // 3. Save metadata to DB
+            if (trialId) {
+                console.log("Attempting to link recording to trial:", trialId);
+                try {
+                    await saveRecordingMutation.mutateAsync({
+                        trialId,
+                        storagePath: filename,
+                        mediaType: "video",
+                        format: "webm",
+                        fileSize: blob.size,
+                    });
+                    console.log("Recording successfully linked to trial:", trialId);
+                    toast.success("Recording saved to trial log");
+                } catch (mutationError) {
+                    console.error("Failed to link recording to trial:", mutationError);
+                    toast.error("Video uploaded but failed to link to trial");
+                }
+            } else {
+                console.warn("No trialId provided, recording uploaded but not linked. Props:", { trialId });
+                toast.warning("Trial ID missing - recording not linked");
             }
 
             toast.success("Recording uploaded successfully");
@@ -137,7 +205,7 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
 
                 {!readOnly && (
                     <div className="flex items-center gap-2">
-                        {devices.length > 0 && (
+                        {devices.length > 0 && isMounted && (
                             <Select
                                 value={deviceId ?? undefined}
                                 onValueChange={setDeviceId}
@@ -217,6 +285,7 @@ export function WebcamPanel({ readOnly = false }: { readOnly?: boolean }) {
                                 width="100%"
                                 height="100%"
                                 videoConstraints={{ deviceId: deviceId ?? undefined }}
+                                onUserMedia={handleUserMedia}
                                 onUserMediaError={(err) => setError(String(err))}
                                 className="object-contain w-full h-full"
                             />
