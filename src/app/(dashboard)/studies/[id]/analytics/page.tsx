@@ -20,7 +20,7 @@ export default function StudyAnalyticsPage() {
   // Fetch list of trials
   const { data: trialsList, isLoading } = api.trials.list.useQuery(
     { studyId, limit: 100 },
-    { enabled: !!studyId }
+    { enabled: !!studyId },
   );
 
   // Set breadcrumbs
@@ -49,19 +49,23 @@ export default function StudyAnalyticsPage() {
       <div className="bg-transparent">
         <Suspense fallback={<div>Loading analytics...</div>}>
           {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex flex-col items-center gap-2 animate-pulse">
-                <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                <span className="text-muted-foreground text-sm">Loading session data...</span>
+            <div className="flex h-64 items-center justify-center">
+              <div className="flex animate-pulse flex-col items-center gap-2">
+                <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+                <span className="text-muted-foreground text-sm">
+                  Loading session data...
+                </span>
               </div>
             </div>
           ) : (
-            <StudyAnalyticsDataTable data={(trialsList ?? []).map(t => ({
-              ...t,
-              startedAt: t.startedAt ? new Date(t.startedAt) : null,
-              completedAt: t.completedAt ? new Date(t.completedAt) : null,
-              createdAt: new Date(t.createdAt),
-            }))} />
+            <StudyAnalyticsDataTable
+              data={(trialsList ?? []).map((t) => ({
+                ...t,
+                startedAt: t.startedAt ? new Date(t.startedAt) : null,
+                completedAt: t.completedAt ? new Date(t.completedAt) : null,
+                createdAt: new Date(t.createdAt),
+              }))}
+            />
           )}
         </Suspense>
       </div>

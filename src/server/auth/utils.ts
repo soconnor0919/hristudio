@@ -59,11 +59,12 @@ export function isWizard(session: Session | null): boolean {
 /**
  * Check if the current user has any of the specified roles
  */
-export function hasAnyRole(session: Session | null, roles: SystemRole[]): boolean {
+export function hasAnyRole(
+  session: Session | null,
+  roles: SystemRole[],
+): boolean {
   if (!session?.user?.roles) return false;
-  return session.user.roles.some((userRole) =>
-    roles.includes(userRole.role)
-  );
+  return session.user.roles.some((userRole) => roles.includes(userRole.role));
 }
 
 /**
@@ -118,13 +119,13 @@ export async function getUserRoles(userId: string) {
 export async function grantRole(
   userId: string,
   role: SystemRole,
-  grantedBy: string
+  grantedBy: string,
 ) {
   // Check if user already has this role
   const existingRole = await db.query.userSystemRoles.findFirst({
     where: and(
       eq(userSystemRoles.userId, userId),
-      eq(userSystemRoles.role, role)
+      eq(userSystemRoles.role, role),
     ),
   });
 
@@ -152,10 +153,7 @@ export async function revokeRole(userId: string, role: SystemRole) {
   const deletedRole = await db
     .delete(userSystemRoles)
     .where(
-      and(
-        eq(userSystemRoles.userId, userId),
-        eq(userSystemRoles.role, role)
-      )
+      and(eq(userSystemRoles.userId, userId), eq(userSystemRoles.role, role)),
     )
     .returning();
 
@@ -171,7 +169,7 @@ export async function revokeRole(userId: string, role: SystemRole) {
  */
 export function canAccessResource(
   session: Session | null,
-  resourceOwnerId: string
+  resourceOwnerId: string,
 ): boolean {
   if (!session?.user) return false;
 
@@ -220,7 +218,12 @@ export function getAvailableRoles(): Array<{
   label: string;
   description: string;
 }> {
-  const roles: SystemRole[] = ["administrator", "researcher", "wizard", "observer"];
+  const roles: SystemRole[] = [
+    "administrator",
+    "researcher",
+    "wizard",
+    "observer",
+  ];
 
   return roles.map((role) => ({
     value: role,

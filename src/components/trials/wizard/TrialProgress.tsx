@@ -10,7 +10,7 @@ import {
   Play,
   Target,
   Users,
-  SkipForward
+  SkipForward,
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -22,10 +22,10 @@ interface TrialProgressProps {
     id: string;
     name: string;
     type:
-    | "wizard_action"
-    | "robot_action"
-    | "parallel_steps"
-    | "conditional_branch";
+      | "wizard_action"
+      | "robot_action"
+      | "parallel_steps"
+      | "conditional_branch";
     description?: string;
     duration?: number;
     parameters?: Record<string, unknown>;
@@ -118,7 +118,8 @@ export function TrialProgress({
       return "pending";
 
     // Default fallback if jumping around without explicitly adding to sets
-    if (index < currentStepIndex && !skippedSteps.has(index)) return "completed";
+    if (index < currentStepIndex && !skippedSteps.has(index))
+      return "completed";
 
     return "upcoming";
   };
@@ -211,12 +212,13 @@ export function TrialProgress({
           </div>
           <Progress
             value={progress}
-            className={`h-2 ${trialStatus === "completed"
-              ? "bg-green-100"
-              : trialStatus === "aborted" || trialStatus === "failed"
-                ? "bg-red-100"
-                : "bg-blue-100"
-              }`}
+            className={`h-2 ${
+              trialStatus === "completed"
+                ? "bg-green-100"
+                : trialStatus === "aborted" || trialStatus === "failed"
+                  ? "bg-red-100"
+                  : "bg-blue-100"
+            }`}
           />
           <div className="flex justify-between text-xs text-slate-500">
             <span>Start</span>
@@ -255,47 +257,51 @@ export function TrialProgress({
                   {/* Connection Line */}
                   {index < steps.length - 1 && (
                     <div
-                      className={`absolute top-12 left-6 h-6 w-0.5 ${getStepStatus(index + 1) === "completed" ||
+                      className={`absolute top-12 left-6 h-6 w-0.5 ${
+                        getStepStatus(index + 1) === "completed" ||
                         (getStepStatus(index + 1) === "active" &&
                           status === "completed")
-                        ? "bg-green-300"
-                        : "bg-slate-300"
-                        }`}
+                          ? "bg-green-300"
+                          : "bg-slate-300"
+                      }`}
                     />
                   )}
 
                   {/* Step Card */}
                   <div
-                    className={`flex items-start space-x-3 rounded-lg border p-3 transition-all ${status === "active"
-                      ? `${statusConfig.bgColor} ${statusConfig.borderColor} shadow-md ring-2 ring-blue-200`
-                      : status === "completed"
-                        ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
-                        : status === "aborted"
+                    className={`flex items-start space-x-3 rounded-lg border p-3 transition-all ${
+                      status === "active"
+                        ? `${statusConfig.bgColor} ${statusConfig.borderColor} shadow-md ring-2 ring-blue-200`
+                        : status === "completed"
                           ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
-                          : "border-slate-200 bg-slate-50"
-                      }`}
+                          : status === "aborted"
+                            ? `${statusConfig.bgColor} ${statusConfig.borderColor}`
+                            : "border-slate-200 bg-slate-50"
+                    }`}
                   >
                     {/* Step Number & Status */}
                     <div className="flex-shrink-0 space-y-1">
                       <div
-                        className={`flex h-8 w-12 items-center justify-center rounded-lg ${status === "active"
-                          ? statusConfig.bgColor
-                          : status === "completed"
-                            ? "bg-green-100"
-                            : status === "aborted"
-                              ? "bg-red-100"
-                              : "bg-slate-100"
-                          }`}
+                        className={`flex h-8 w-12 items-center justify-center rounded-lg ${
+                          status === "active"
+                            ? statusConfig.bgColor
+                            : status === "completed"
+                              ? "bg-green-100"
+                              : status === "aborted"
+                                ? "bg-red-100"
+                                : "bg-slate-100"
+                        }`}
                       >
                         <span
-                          className={`text-sm font-medium ${status === "active"
-                            ? statusConfig.textColor
-                            : status === "completed"
-                              ? "text-green-700"
-                              : status === "aborted"
-                                ? "text-red-700"
-                                : "text-slate-600"
-                            }`}
+                          className={`text-sm font-medium ${
+                            status === "active"
+                              ? statusConfig.textColor
+                              : status === "completed"
+                                ? "text-green-700"
+                                : status === "aborted"
+                                  ? "text-red-700"
+                                  : "text-slate-600"
+                          }`}
                         >
                           {index + 1}
                         </span>
@@ -312,14 +318,15 @@ export function TrialProgress({
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <h5
-                            className={`truncate font-medium ${status === "active"
-                              ? "text-slate-900"
-                              : status === "completed"
-                                ? "text-green-900"
-                                : status === "aborted"
-                                  ? "text-red-900"
-                                  : "text-slate-700"
-                              }`}
+                            className={`truncate font-medium ${
+                              status === "active"
+                                ? "text-slate-900"
+                                : status === "completed"
+                                  ? "text-green-900"
+                                  : status === "aborted"
+                                    ? "text-red-900"
+                                    : "text-slate-700"
+                            }`}
                           >
                             {step.name}
                           </h5>

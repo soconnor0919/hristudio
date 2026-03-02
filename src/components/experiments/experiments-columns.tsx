@@ -105,10 +105,12 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
         variant="ghost"
         size="icon"
         asChild
-        className="h-8 w-8 text-muted-foreground hover:text-primary"
+        className="text-muted-foreground hover:text-primary h-8 w-8"
         title="Open Designer"
       >
-        <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+        <Link
+          href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}
+        >
           <LayoutTemplate className="h-4 w-4" />
           <span className="sr-only">Design</span>
         </Link>
@@ -119,7 +121,7 @@ function ExperimentActionsCell({ experiment }: { experiment: Experiment }) {
           variant="ghost"
           size="icon"
           onClick={handleDelete}
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="text-muted-foreground hover:text-destructive h-8 w-8"
           title="Delete Experiment"
         >
           <Trash2 className="h-4 w-4" />

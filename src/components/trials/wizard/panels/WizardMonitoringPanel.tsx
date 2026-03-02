@@ -6,6 +6,14 @@ import {
   Power,
   PowerOff,
   AlertCircle,
+  CheckCircle2,
+  RotateCcw,
+  RotateCw,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Square,
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
@@ -64,24 +72,27 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
 }: WizardMonitoringPanelProps) {
   const [autonomousLife, setAutonomousLife] = React.useState(true);
 
-  const handleAutonomousLifeChange = React.useCallback(async (checked: boolean) => {
-    setAutonomousLife(checked); // Optimistic update
-    if (onSetAutonomousLife) {
-      try {
-        const result = await onSetAutonomousLife(checked);
-        if (result === false) {
-          throw new Error("Service unavailable");
+  const handleAutonomousLifeChange = React.useCallback(
+    async (checked: boolean) => {
+      setAutonomousLife(checked); // Optimistic update
+      if (onSetAutonomousLife) {
+        try {
+          const result = await onSetAutonomousLife(checked);
+          if (result === false) {
+            throw new Error("Service unavailable");
+          }
+        } catch (error) {
+          console.error("Failed to set autonomous life:", error);
+          setAutonomousLife(!checked); // Revert on failure
         }
-      } catch (error) {
-        console.error("Failed to set autonomous life:", error);
-        setAutonomousLife(!checked); // Revert on failure
       }
-    }
-  }, [onSetAutonomousLife]);
+    },
+    [onSetAutonomousLife],
+  );
   return (
     <div className="flex h-full flex-col p-2">
       {/* Robot Controls - Scrollable */}
-      <div className="flex-1 min-h-0 bg-background rounded-lg border shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border shadow-sm">
         <ScrollArea className="flex-1">
           <div className="space-y-4 p-3">
             {/* Robot Status */}
@@ -92,7 +103,12 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                   {rosConnected ? (
                     <Power className="h-3 w-3 text-green-600" />
                   ) : (
-                    <Badge variant="outline" className="text-gray-500 border-gray-300 text-xs text-muted-foreground w-auto px-1.5 py-0">Offline</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-muted-foreground w-auto border-gray-300 px-1.5 py-0 text-xs text-gray-500"
+                    >
+                      Offline
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -145,11 +161,16 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     disabled={rosConnecting || rosConnected || readOnly}
                   >
                     <Bot className="mr-1 h-3 w-3" />
-                    {rosConnecting
-                      ? "Connecting..."
-                      : rosConnected
-                        ? "Connected ✓"
-                        : "Connect to NAO6"}
+                    {rosConnecting ? (
+                      "Connecting..."
+                    ) : rosConnected ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>Connected</span>
+                        <CheckCircle2 className="h-3 w-3" />
+                      </div>
+                    ) : (
+                      "Connect to NAO6"
+                    )}
                   </Button>
                 ) : (
                   <Button
@@ -192,7 +213,12 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
             {/* Autonomous Life Toggle */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="autonomous-life" className="text-xs font-normal text-muted-foreground">Autonomous Life</Label>
+                <Label
+                  htmlFor="autonomous-life"
+                  className="text-muted-foreground text-xs font-normal"
+                >
+                  Autonomous Life
+                </Label>
                 <Switch
                   id="tour-wizard-autonomous"
                   checked={!!autonomousLife}
@@ -235,7 +261,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    ↺ Turn L
+                    <RotateCcw className="mr-1 h-3 w-3" /> Turn L
                   </Button>
                   <Button
                     size="sm"
@@ -248,7 +274,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    ↑ Forward
+                    <ArrowUp className="mr-1 h-3 w-3" /> Forward
                   </Button>
                   <Button
                     size="sm"
@@ -261,7 +287,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    Turn R ↻
+                    Turn R <RotateCw className="ml-1 h-3 w-3" />
                   </Button>
 
                   {/* Row 2: Left, Stop, Right */}
@@ -276,7 +302,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    ← Left
+                    <ArrowLeft className="mr-1 h-3 w-3" /> Left
                   </Button>
                   <Button
                     size="sm"
@@ -289,7 +315,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    ■ Stop
+                    <Square className="mr-1 h-3 w-3 fill-current" /> Stop
                   </Button>
                   <Button
                     size="sm"
@@ -302,7 +328,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    Right →
+                    Right <ArrowRight className="ml-1 h-3 w-3" />
                   </Button>
 
                   {/* Row 3: Empty, Back, Empty */}
@@ -318,7 +344,7 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     }}
                     disabled={readOnly}
                   >
-                    ↓ Back
+                    <ArrowDown className="mr-1 h-3 w-3" /> Back
                   </Button>
                   <div></div>
                 </div>
@@ -337,10 +363,14 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                   <input
                     type="text"
                     placeholder="Type text to speak..."
-                    className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex-1 rounded-md border px-2 py-1 text-xs focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                     disabled={readOnly}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && e.currentTarget.value.trim() && !readOnly) {
+                      if (
+                        e.key === "Enter" &&
+                        e.currentTarget.value.trim() &&
+                        !readOnly
+                      ) {
                         executeRosAction("nao6-ros2", "say_text", {
                           text: e.currentTarget.value.trim(),
                         }).catch(console.error);
@@ -353,7 +383,8 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
                     variant="outline"
                     className="text-xs"
                     onClick={(e) => {
-                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      const input = e.currentTarget
+                        .previousElementSibling as HTMLInputElement;
                       if (input?.value.trim()) {
                         executeRosAction("nao6-ros2", "say_text", {
                           text: input.value.trim(),

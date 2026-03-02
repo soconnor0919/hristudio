@@ -3,29 +3,29 @@ import { api } from "~/trpc/server";
 import { notFound } from "next/navigation";
 
 interface EditParticipantPageProps {
-    params: Promise<{
-        id: string;
-        participantId: string;
-    }>;
+  params: Promise<{
+    id: string;
+    participantId: string;
+  }>;
 }
 
 export default async function EditParticipantPage({
-    params,
+  params,
 }: EditParticipantPageProps) {
-    const { id: studyId, participantId } = await params;
+  const { id: studyId, participantId } = await params;
 
-    const participant = await api.participants.get({ id: participantId });
+  const participant = await api.participants.get({ id: participantId });
 
-    if (!participant || participant.studyId !== studyId) {
-        notFound();
-    }
+  if (!participant || participant.studyId !== studyId) {
+    notFound();
+  }
 
-    // Transform data to match form expectations if needed, or pass directly
-    return (
-        <ParticipantForm
-            mode="edit"
-            studyId={studyId}
-            participantId={participantId}
-        />
-    );
+  // Transform data to match form expectations if needed, or pass directly
+  return (
+    <ParticipantForm
+      mode="edit"
+      studyId={studyId}
+      participantId={participantId}
+    />
+  );
 }

@@ -21,6 +21,7 @@ import {
   User,
   UserCheck,
   Users,
+  FileText,
 } from "lucide-react";
 
 import { useSidebar } from "~/components/ui/sidebar";
@@ -97,6 +98,11 @@ const studyWorkItems = [
     icon: FlaskConical,
   },
   {
+    title: "Forms",
+    url: "/forms",
+    icon: FileText,
+  },
+  {
     title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
@@ -143,10 +149,15 @@ export function AppSidebar({
   const isAdmin = userRole === "administrator";
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
-  const { selectedStudyId, userStudies, selectStudy, refreshStudyData, isLoadingUserStudies } =
-    useStudyManagement();
+  const {
+    selectedStudyId,
+    userStudies,
+    selectStudy,
+    refreshStudyData,
+    isLoadingUserStudies,
+  } = useStudyManagement();
 
-  const { startTour } = useTour();
+  const { startTour, isTourActive } = useTour();
 
   // Reference to track if we've already attempted auto-selection to avoid fighting with manual clearing
   const hasAutoSelected = useRef(false);
@@ -170,12 +181,7 @@ export function AppSidebar({
         hasAutoSelected.current = true;
       }
     }
-  }, [
-    isLoadingUserStudies,
-    selectedStudyId,
-    userStudies,
-    selectStudy,
-  ]);
+  }, [isLoadingUserStudies, selectedStudyId, userStudies, selectStudy]);
 
   // Debug API call
   const { data: debugData } = api.dashboard.debug.useQuery(undefined, {
@@ -309,6 +315,17 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {isTourActive && !isCollapsed && (
+          <div className="mt-1 px-3 pb-2">
+            <div className="bg-primary/10 text-primary border-primary/20 animate-in fade-in slide-in-from-top-2 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
+                <span className="bg-primary relative inline-flex h-2 w-2 rounded-full"></span>
+              </span>
+              Tutorial Active
+            </div>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
@@ -324,7 +341,10 @@ export function AppSidebar({
                       <TooltipTrigger asChild>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <SidebarMenuButton className="w-full" id="tour-sidebar-study-selector">
+                            <SidebarMenuButton
+                              className="w-full"
+                              id="tour-sidebar-study-selector"
+                            >
                               <Building className="h-4 w-4 flex-shrink-0" />
                               <span className="truncate">
                                 {selectedStudy?.name ?? "Select Study"}
@@ -373,7 +393,10 @@ export function AppSidebar({
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton className="w-full" id="tour-sidebar-study-selector">
+                      <SidebarMenuButton
+                        className="w-full"
+                        id="tour-sidebar-study-selector"
+                      >
                         <Building className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">
                           {selectedStudy?.name ?? "Select Study"}
@@ -576,22 +599,23 @@ export function AppSidebar({
             {helpItems.map((item) => {
               const isActive = pathname.startsWith(item.url);
 
-              const menuButton = item.action === "tour" ? (
-                <SidebarMenuButton
-                  onClick={() => startTour("full_platform")}
-                  isActive={false}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </SidebarMenuButton>
-              ) : (
-                <SidebarMenuButton asChild isActive={isActive}>
-                  <Link href={item.url}>
+              const menuButton =
+                item.action === "tour" ? (
+                  <SidebarMenuButton
+                    onClick={() => startTour("full_platform")}
+                    isActive={false}
+                  >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              );
+                  </SidebarMenuButton>
+                ) : (
+                  <SidebarMenuButton asChild isActive={isActive}>
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                );
 
               return (
                 <SidebarMenuItem key={item.title}>

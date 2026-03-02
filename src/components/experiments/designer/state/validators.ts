@@ -51,10 +51,7 @@ export interface ValidationResult {
 
 // Steps should ALWAYS execute sequentially
 // Parallel/conditional/loop execution happens at the ACTION level, not step level
-const VALID_STEP_TYPES: StepType[] = [
-  "sequential",
-  "conditional",
-];
+const VALID_STEP_TYPES: StepType[] = ["sequential", "conditional"];
 const VALID_TRIGGER_TYPES: TriggerType[] = [
   "trial_start",
   "participant_action",

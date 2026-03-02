@@ -145,7 +145,10 @@ export class WizardRosService extends EventEmitter {
       };
 
       this.ws.onerror = (error) => {
-        console.warn("[WizardROS] WebSocket error (connection may be retried):", error);
+        console.warn(
+          "[WizardROS] WebSocket error (connection may be retried):",
+          error,
+        );
         clearTimeout(connectionTimeout);
         this.isConnecting = false;
 
@@ -518,7 +521,10 @@ export class WizardRosService extends EventEmitter {
         break;
     }
 
-    this.publish("/naoqi_driver/cmd_vel", "geometry_msgs/Twist", { linear, angular });
+    this.publish("/naoqi_driver/cmd_vel", "geometry_msgs/Twist", {
+      linear,
+      angular,
+    });
   }
 
   /**
@@ -549,11 +555,15 @@ export class WizardRosService extends EventEmitter {
     const jointNames = [`${prefix}ShoulderPitch`, `${prefix}ShoulderRoll`];
     const jointAngles = [pitch, roll];
 
-    this.publish("/naoqi_driver/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
-      joint_names: jointNames,
-      joint_angles: jointAngles,
-      speed: speed,
-    });
+    this.publish(
+      "/naoqi_driver/joint_angles",
+      "naoqi_bridge_msgs/JointAnglesWithSpeed",
+      {
+        joint_names: jointNames,
+        joint_angles: jointAngles,
+        speed: speed,
+      },
+    );
   }
 
   /**
@@ -574,7 +584,10 @@ export class WizardRosService extends EventEmitter {
         if (message.op === "service_response" && message.id === id) {
           this.off("message", handleResponse);
           if (message.result === false) {
-            resolve({ result: false, error: String(message.values || "Service call failed") });
+            resolve({
+              result: false,
+              error: String(message.values || "Service call failed"),
+            });
           } else {
             resolve({ result: true, values: message.values });
           }
@@ -608,30 +621,30 @@ export class WizardRosService extends EventEmitter {
       // Standard NaoQi Bridge pattern
       {
         service: "/naoqi_driver/ALAutonomousLife/setState",
-        args: { state: desiredState }
+        args: { state: desiredState },
       },
       {
         service: "/naoqi_driver/ALAutonomousLife/set_state",
-        args: { state: desiredState }
+        args: { state: desiredState },
       },
       // Direct module mapping
       {
         service: "/ALAutonomousLife/setState",
-        args: { state: desiredState }
+        args: { state: desiredState },
       },
       // Shortcuts/Aliases
       {
         service: "/naoqi_driver/set_autonomous_life",
-        args: { state: desiredState }
+        args: { state: desiredState },
       },
       {
         service: "/autonomous_life/set_state",
-        args: { state: desiredState }
+        args: { state: desiredState },
       },
       // Fallback: Enable/Disable topics/services
       {
         service: enabled ? "/life/enable" : "/life/disable",
-        args: {}
+        args: {},
       },
       // Last resort: Generic proxy call (if available)
       {
@@ -639,9 +652,9 @@ export class WizardRosService extends EventEmitter {
         args: {
           service: "ALAutonomousLife",
           function: "setState",
-          args: [desiredState]
-        }
-      }
+          args: [desiredState],
+        },
+      },
     ];
 
     console.log(`[WizardROS] Setting Autonomous Life to: ${desiredState}`);
@@ -657,11 +670,17 @@ export class WizardRosService extends EventEmitter {
           return true;
         } else {
           // Resolved but failed? (e.g. internal error)
-          console.warn(`[WizardROS] Service ${attempt.service} returned false result:`, response.error);
+          console.warn(
+            `[WizardROS] Service ${attempt.service} returned false result:`,
+            response.error,
+          );
         }
       } catch (error) {
         // Service call failed or timed out
-        console.warn(`[WizardROS] Service ${attempt.service} failed/timeout:`, error);
+        console.warn(
+          `[WizardROS] Service ${attempt.service} failed/timeout:`,
+          error,
+        );
       }
     }
 

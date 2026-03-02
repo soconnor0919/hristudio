@@ -44,7 +44,7 @@ export function DesignerPageClient({
     const stepCount = initialDesign.steps.length;
     const actionCount = initialDesign.steps.reduce(
       (sum, step) => sum + step.actions.length,
-      0
+      0,
     );
 
     return { stepCount, actionCount };

@@ -39,10 +39,12 @@ export interface UseWizardRosReturn {
       };
     },
   ) => Promise<RobotActionExecution>;
-  callService: (service: string, args?: Record<string, unknown>) => Promise<any>;
+  callService: (
+    service: string,
+    args?: Record<string, unknown>,
+  ) => Promise<any>;
   setAutonomousLife: (enabled: boolean) => Promise<boolean>;
 }
-
 
 export function useWizardRos(
   options: UseWizardRosOptions = {},
@@ -110,7 +112,10 @@ export function useWizardRos(
     if (!service) return;
 
     const handleConnected = () => {
-      console.log("[useWizardRos] handleConnected called, mountedRef:", mountedRef.current);
+      console.log(
+        "[useWizardRos] handleConnected called, mountedRef:",
+        mountedRef.current,
+      );
       // Set state immediately, before checking mounted status
       setIsConnected(true);
       setIsConnecting(false);
@@ -237,7 +242,10 @@ export function useWizardRos(
     ) {
       const timeoutId = setTimeout(() => {
         connect().catch((error) => {
-          console.warn("[useWizardRos] Auto-connect failed (retrying manually):", error instanceof Error ? error.message : error);
+          console.warn(
+            "[useWizardRos] Auto-connect failed (retrying manually):",
+            error instanceof Error ? error.message : error,
+          );
           // Don't retry automatically - let user manually connect
         });
       }, 100); // Small delay to prevent immediate connection attempts

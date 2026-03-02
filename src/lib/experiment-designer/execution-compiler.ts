@@ -156,7 +156,10 @@ export function collectPluginDependencies(design: ExperimentDesign): string[] {
   return Array.from(set).sort();
 }
 // Helper to recursively collect from actions list directly would be cleaner
-function collectDependenciesFromActions(actions: ExperimentAction[], set: Set<string>) {
+function collectDependenciesFromActions(
+  actions: ExperimentAction[],
+  set: Set<string>,
+) {
   for (const action of actions) {
     if (action.source.kind === "plugin" && action.source.pluginId) {
       const versionPart = action.source.pluginVersion
@@ -208,7 +211,7 @@ function buildStructuralSignature(
         timeout: a.timeout,
         retryable: a.retryable ?? false,
         parameterKeys: summarizeParametersForHash(a.parameters),
-        children: a.children?.map(c => ({
+        children: a.children?.map((c) => ({
           id: c.id,
           // Recurse structural signature for children
           type: c.type,

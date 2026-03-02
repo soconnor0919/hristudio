@@ -4,7 +4,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    attachments, comments, experiments, sharedResources, studyMembers, trials
+  attachments,
+  comments,
+  experiments,
+  sharedResources,
+  studyMembers,
+  trials,
 } from "~/server/db/schema";
 
 // Helper function to check if user has access to a resource
@@ -412,7 +417,9 @@ export const collaborationRouter = createTRPCRouter({
       z.object({
         resourceType: z.enum(["study", "experiment", "trial"]),
         resourceId: z.string(),
-        permissions: z.array(z.enum(["read", "comment", "annotate"])).default(["read"]),
+        permissions: z
+          .array(z.enum(["read", "comment", "annotate"]))
+          .default(["read"]),
         expiresAt: z.date().optional(),
         description: z.string().optional(),
       }),
@@ -535,7 +542,9 @@ export const collaborationRouter = createTRPCRouter({
       }
 
       // Delete the share
-      await db.delete(sharedResources).where(eq(sharedResources.id, input.shareId));
+      await db
+        .delete(sharedResources)
+        .where(eq(sharedResources.id, input.shareId));
 
       return { success: true };
     }),
@@ -573,7 +582,10 @@ export const collaborationRouter = createTRPCRouter({
       }
 
       // Check if the share has expired
-      if (sharedResource[0].expiresAt && sharedResource[0].expiresAt < new Date()) {
+      if (
+        sharedResource[0].expiresAt &&
+        sharedResource[0].expiresAt < new Date()
+      ) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Share link has expired",

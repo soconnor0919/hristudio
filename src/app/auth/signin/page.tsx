@@ -10,7 +10,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
@@ -61,25 +61,30 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+    <div className="bg-background relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl opacity-30 dark:opacity-20" />
-      <div className="absolute bottom-0 right-0 -z-10 h-[300px] w-[300px] rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="bg-primary/20 absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full opacity-30 blur-3xl dark:opacity-20" />
+      <div className="absolute right-0 bottom-0 -z-10 h-[300px] w-[300px] rounded-full bg-violet-500/10 blur-3xl" />
 
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-md duration-500">
         {/* Header */}
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center justify-center transition-opacity hover:opacity-80">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center transition-opacity hover:opacity-80"
+          >
             <Logo iconSize="lg" showText={true} />
           </Link>
-          <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="text-foreground mt-6 text-2xl font-bold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
             Sign in to your research account
           </p>
         </div>
 
         {/* Sign In Card */}
-        <Card className="border-muted/40 bg-card/50 backdrop-blur-sm shadow-xl">
+        <Card className="border-muted/40 bg-card/50 shadow-xl backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
             <CardDescription>
@@ -89,7 +94,7 @@ export default function SignInPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
+                <div className="bg-destructive/15 text-destructive border-destructive/20 rounded-md border p-3 text-sm font-medium">
                   {error}
                 </div>
               )}
@@ -111,7 +116,12 @@ export default function SignInPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="#" className="text-xs text-primary hover:underline">Forgot password?</Link>
+                  <Link
+                    href="#"
+                    className="text-primary text-xs hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
                 <Input
                   id="password"
@@ -133,23 +143,30 @@ export default function SignInPage() {
                 />
                 <label
                   htmlFor="not-robot"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   I&apos;m not a robot{" "}
-                  <span className="text-muted-foreground text-xs italic">(ironic, isn&apos;t it?)</span>
+                  <span className="text-muted-foreground text-xs italic">
+                    (ironic, isn&apos;t it?)
+                  </span>
                 </label>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading} size="lg">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+                size="lg"
+              >
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground mt-6 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
                 href="/auth/signup"
-                className="font-medium text-primary hover:text-primary/80"
+                className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign up
               </Link>
@@ -158,7 +175,7 @@ export default function SignInPage() {
         </Card>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-8 text-center text-xs">
           <p>
             &copy; {new Date().getFullYear()} HRIStudio. All rights reserved.
           </p>

@@ -3,7 +3,14 @@
 import { useParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import Link from "next/link";
-import { Play, Zap, ArrowLeft, User, FlaskConical, LineChart } from "lucide-react";
+import {
+  Play,
+  Zap,
+  ArrowLeft,
+  User,
+  FlaskConical,
+  LineChart,
+} from "lucide-react";
 import { PageHeader } from "~/components/ui/page-header";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -144,7 +151,7 @@ function TrialDetailContent() {
           {
             label: trial.status.replace("_", " ").toUpperCase(),
             variant: getStatusBadgeVariant(trial.status),
-          }
+          },
         ]}
         actions={
           <div className="flex gap-2">
@@ -156,13 +163,13 @@ function TrialDetailContent() {
             )}
             {(trial.status === "in_progress" ||
               trial.status === "scheduled") && (
-                <Button asChild>
-                  <Link href={`/studies/${studyId}/trials/${trialId}/wizard`}>
-                    <Zap className="mr-2 h-4 w-4" />
-                    Wizard Interface
-                  </Link>
-                </Button>
-              )}
+              <Button asChild>
+                <Link href={`/studies/${studyId}/trials/${trialId}/wizard`}>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Wizard Interface
+                </Link>
+              </Button>
+            )}
             {trial.status === "completed" && (
               <Button asChild>
                 <Link href={`/studies/${studyId}/trials/${trialId}/analysis`}>

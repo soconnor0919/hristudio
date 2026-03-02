@@ -5,7 +5,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-  activityLogs, consentForms, participantConsents, participants, studyMembers, trials
+  activityLogs,
+  consentForms,
+  participantConsents,
+  participants,
+  studyMembers,
+  trials,
 } from "~/server/db/schema";
 import { getUploadUrl, validateFile } from "~/lib/storage/minio";
 
@@ -133,6 +138,24 @@ export const participantsRouter = createTRPCRouter({
       };
     }),
 
+  getNextCode: protectedProcedure
+    .input(z.object({ studyId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { studyId } = input;
+      const userId = ctx.session.user.id;
+
+      await checkStudyAccess(ctx.db, userId, studyId);
+
+      const totalCountResult = await ctx.db
+        .select({ count: count() })
+        .from(participants)
+        .where(eq(participants.studyId, studyId));
+
+      const totalCount = totalCountResult[0]?.count ?? 0;
+
+      return `P${totalCount.toString().padStart(2, "0")}`;
+    }),
+
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -185,7 +208,7 @@ export const participantsRouter = createTRPCRouter({
       z.object({
         studyId: z.string().uuid(),
         participantCode: z.string().min(1).max(50),
-        email: z.string().email().optional(),
+        email: z.string().email().optional().or(z.literal("")),
         name: z.string().max(255).optional(),
         demographics: z.any().optional(),
       }),
@@ -267,7 +290,7 @@ export const participantsRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         participantCode: z.string().min(1).max(50).optional(),
-        email: z.string().email().optional(),
+        email: z.string().email().optional().or(z.literal("")),
         name: z.string().max(255).optional(),
         demographics: z.any().optional(),
         notes: z.string().optional(),
@@ -424,14 +447,18 @@ export const participantsRouter = createTRPCRouter({
         filename: z.string(),
         contentType: z.string(),
         size: z.number().max(10 * 1024 * 1024), // 10MB limit
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { studyId, participantId, filename, contentType, size } = input;
       const userId = ctx.session.user.id;
 
       // Check study access with researcher permission
-      await checkStudyAccess(ctx.db, userId, studyId, ["owner", "researcher", "wizard"]);
+      await checkStudyAccess(ctx.db, userId, studyId, [
+        "owner",
+        "researcher",
+        "wizard",
+      ]);
 
       // Validate file type
       const allowedTypes = ["pdf", "png", "jpg", "jpeg"];
@@ -463,7 +490,13 @@ export const participantsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { participantId, consentFormId, signatureData, ipAddress, storagePath } = input;
+      const {
+        participantId,
+        consentFormId,
+        signatureData,
+        ipAddress,
+        storagePath,
+      } = input;
       const userId = ctx.session.user.id;
 
       // Get participant to check study access

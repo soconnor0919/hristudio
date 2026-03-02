@@ -1230,7 +1230,6 @@ export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
   }),
 }));
 
-
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));

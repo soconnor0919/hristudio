@@ -93,7 +93,7 @@ export interface DesignerState {
       parentId: string | null;
       index: number;
       action: ExperimentAction;
-    } | null
+    } | null,
   ) => void;
 
   /* ------------------------------ Mutators --------------------------------- */
@@ -109,10 +109,20 @@ export interface DesignerState {
   reorderStep: (from: number, to: number) => void;
 
   // Actions
-  upsertAction: (stepId: string, action: ExperimentAction, parentId?: string | null, index?: number) => void;
+  upsertAction: (
+    stepId: string,
+    action: ExperimentAction,
+    parentId?: string | null,
+    index?: number,
+  ) => void;
   removeAction: (stepId: string, actionId: string) => void;
   reorderAction: (stepId: string, from: number, to: number) => void;
-  moveAction: (stepId: string, actionId: string, newParentId: string | null, newIndex: number) => void;
+  moveAction: (
+    stepId: string,
+    actionId: string,
+    newParentId: string | null,
+    newIndex: number,
+  ) => void;
 
   // Dirty
   markDirty: (id: string) => void;
@@ -173,8 +183,7 @@ function cloneSteps(steps: ExperimentStep[]): ExperimentStep[] {
 }
 
 function reindexSteps(steps: ExperimentStep[]): ExperimentStep[] {
-  return steps
-    .map((s, idx) => ({ ...s, order: idx }));
+  return steps.map((s, idx) => ({ ...s, order: idx }));
 }
 
 function reindexActions(actions: ExperimentAction[]): ExperimentAction[] {
@@ -257,298 +266,331 @@ function insertActionIntoTree(
 
 export const createDesignerStore = (props: {
   initialSteps?: ExperimentStep[];
-}) => create<DesignerState>((set, get) => ({
-  steps: props.initialSteps ? reindexSteps(cloneSteps(props.initialSteps)) : [],
-  dirtyEntities: new Set<string>(),
-  validationIssues: {},
-  actionSignatureIndex: new Map(),
-  actionSignatureDrift: new Set(),
-  pendingSave: false,
-  versionStrategy: "auto_minor" as VersionStrategy,
-  autoSaveEnabled: true,
-  busyHashing: false,
-  busyValidating: false,
-  insertionProjection: null,
+}) =>
+  create<DesignerState>((set, get) => ({
+    steps: props.initialSteps
+      ? reindexSteps(cloneSteps(props.initialSteps))
+      : [],
+    dirtyEntities: new Set<string>(),
+    validationIssues: {},
+    actionSignatureIndex: new Map(),
+    actionSignatureDrift: new Set(),
+    pendingSave: false,
+    versionStrategy: "auto_minor" as VersionStrategy,
+    autoSaveEnabled: true,
+    busyHashing: false,
+    busyValidating: false,
+    insertionProjection: null,
 
-  /* ------------------------------ Selection -------------------------------- */
-  selectStep: (id) =>
-    set({
-      selectedStepId: id,
-      selectedActionId: id ? get().selectedActionId : undefined,
-    }),
-  selectAction: (stepId, actionId) =>
-    set({
-      selectedStepId: stepId,
-      selectedActionId: actionId,
-    }),
+    /* ------------------------------ Selection -------------------------------- */
+    selectStep: (id) =>
+      set({
+        selectedStepId: id,
+        selectedActionId: id ? get().selectedActionId : undefined,
+      }),
+    selectAction: (stepId, actionId) =>
+      set({
+        selectedStepId: stepId,
+        selectedActionId: actionId,
+      }),
 
-  /* -------------------------------- Steps ---------------------------------- */
-  setSteps: (steps) =>
-    set(() => ({
-      steps: reindexSteps(cloneSteps(steps)),
-      dirtyEntities: new Set<string>(), // assume authoritative load
-    })),
+    /* -------------------------------- Steps ---------------------------------- */
+    setSteps: (steps) =>
+      set(() => ({
+        steps: reindexSteps(cloneSteps(steps)),
+        dirtyEntities: new Set<string>(), // assume authoritative load
+      })),
 
-  upsertStep: (step) =>
-    set((state) => {
-      const idx = state.steps.findIndex((s) => s.id === step.id);
-      let steps: ExperimentStep[];
-      if (idx >= 0) {
-        steps = [...state.steps];
-        steps[idx] = { ...step };
-      } else {
-        steps = [...state.steps, { ...step, order: state.steps.length }];
-      }
-      return {
-        steps: reindexSteps(steps),
-        dirtyEntities: new Set([...state.dirtyEntities, step.id]),
-      };
-    }),
+    upsertStep: (step) =>
+      set((state) => {
+        const idx = state.steps.findIndex((s) => s.id === step.id);
+        let steps: ExperimentStep[];
+        if (idx >= 0) {
+          steps = [...state.steps];
+          steps[idx] = { ...step };
+        } else {
+          steps = [...state.steps, { ...step, order: state.steps.length }];
+        }
+        return {
+          steps: reindexSteps(steps),
+          dirtyEntities: new Set([...state.dirtyEntities, step.id]),
+        };
+      }),
 
-  removeStep: (stepId) =>
-    set((state) => {
-      const steps = state.steps.filter((s) => s.id !== stepId);
-      const dirty = new Set(state.dirtyEntities);
-      dirty.add(stepId);
-      return {
-        steps: reindexSteps(steps),
-        dirtyEntities: dirty,
-        selectedStepId:
-          state.selectedStepId === stepId ? undefined : state.selectedStepId,
-        selectedActionId: undefined,
-      };
-    }),
+    removeStep: (stepId) =>
+      set((state) => {
+        const steps = state.steps.filter((s) => s.id !== stepId);
+        const dirty = new Set(state.dirtyEntities);
+        dirty.add(stepId);
+        return {
+          steps: reindexSteps(steps),
+          dirtyEntities: dirty,
+          selectedStepId:
+            state.selectedStepId === stepId ? undefined : state.selectedStepId,
+          selectedActionId: undefined,
+        };
+      }),
 
-  reorderStep: (from: number, to: number) =>
-    set((state: DesignerState) => {
-      if (
-        from < 0 ||
-        to < 0 ||
-        from >= state.steps.length ||
-        to >= state.steps.length ||
-        from === to
-      ) {
-        return state;
-      }
-      const stepsDraft = [...state.steps];
-      const [moved] = stepsDraft.splice(from, 1);
-      if (!moved) return state;
-      stepsDraft.splice(to, 0, moved);
-      const reindexed = reindexSteps(stepsDraft);
-      return {
-        steps: reindexed,
-        dirtyEntities: new Set<string>([
-          ...state.dirtyEntities,
-          ...reindexed.map((s) => s.id),
-        ]),
-      };
-    }),
+    reorderStep: (from: number, to: number) =>
+      set((state: DesignerState) => {
+        if (
+          from < 0 ||
+          to < 0 ||
+          from >= state.steps.length ||
+          to >= state.steps.length ||
+          from === to
+        ) {
+          return state;
+        }
+        const stepsDraft = [...state.steps];
+        const [moved] = stepsDraft.splice(from, 1);
+        if (!moved) return state;
+        stepsDraft.splice(to, 0, moved);
+        const reindexed = reindexSteps(stepsDraft);
+        return {
+          steps: reindexed,
+          dirtyEntities: new Set<string>([
+            ...state.dirtyEntities,
+            ...reindexed.map((s) => s.id),
+          ]),
+        };
+      }),
 
-  /* ------------------------------- Actions --------------------------------- */
-  upsertAction: (stepId: string, action: ExperimentAction, parentId: string | null = null, index?: number) =>
-    set((state: DesignerState) => {
-      const stepsDraft: ExperimentStep[] = state.steps.map((s) => {
-        if (s.id !== stepId) return s;
+    /* ------------------------------- Actions --------------------------------- */
+    upsertAction: (
+      stepId: string,
+      action: ExperimentAction,
+      parentId: string | null = null,
+      index?: number,
+    ) =>
+      set((state: DesignerState) => {
+        const stepsDraft: ExperimentStep[] = state.steps.map((s) => {
+          if (s.id !== stepId) return s;
 
-        // Check if exists (update)
-        const exists = findActionById(s.actions, action.id);
-        if (exists) {
-          // If updating, we don't (currently) support moving via upsert.
-          // Use moveAction for moving.
+          // Check if exists (update)
+          const exists = findActionById(s.actions, action.id);
+          if (exists) {
+            // If updating, we don't (currently) support moving via upsert.
+            // Use moveAction for moving.
+            return {
+              ...s,
+              actions: updateActionInTree(s.actions, action),
+            };
+          }
+
+          // Add new
+          // If index is provided, use it. Otherwise append.
+          const insertIndex = index ?? s.actions.length;
+
           return {
             ...s,
-            actions: updateActionInTree(s.actions, action)
+            actions: insertActionIntoTree(
+              s.actions,
+              action,
+              parentId,
+              insertIndex,
+            ),
           };
-        }
-
-        // Add new
-        // If index is provided, use it. Otherwise append.
-        const insertIndex = index ?? s.actions.length;
-
+        });
         return {
-          ...s,
-          actions: insertActionIntoTree(s.actions, action, parentId, insertIndex)
+          steps: stepsDraft,
+          dirtyEntities: new Set<string>([
+            ...state.dirtyEntities,
+            action.id,
+            stepId,
+          ]),
         };
-      });
-      return {
-        steps: stepsDraft,
-        dirtyEntities: new Set<string>([
-          ...state.dirtyEntities,
-          action.id,
-          stepId,
-        ]),
-      };
-    }),
+      }),
 
-  removeAction: (stepId: string, actionId: string) =>
-    set((state: DesignerState) => {
-      const stepsDraft: ExperimentStep[] = state.steps.map((s) =>
-        s.id === stepId
-          ? {
-            ...s,
-            actions: removeActionFromTree(s.actions, actionId),
-          }
-          : s,
-      );
-      const dirty = new Set<string>(state.dirtyEntities);
-      dirty.add(actionId);
-      dirty.add(stepId);
-      return {
-        steps: stepsDraft,
-        dirtyEntities: dirty,
-        selectedActionId:
-          state.selectedActionId === actionId
-            ? undefined
-            : state.selectedActionId,
-      };
-    }),
+    removeAction: (stepId: string, actionId: string) =>
+      set((state: DesignerState) => {
+        const stepsDraft: ExperimentStep[] = state.steps.map((s) =>
+          s.id === stepId
+            ? {
+                ...s,
+                actions: removeActionFromTree(s.actions, actionId),
+              }
+            : s,
+        );
+        const dirty = new Set<string>(state.dirtyEntities);
+        dirty.add(actionId);
+        dirty.add(stepId);
+        return {
+          steps: stepsDraft,
+          dirtyEntities: dirty,
+          selectedActionId:
+            state.selectedActionId === actionId
+              ? undefined
+              : state.selectedActionId,
+        };
+      }),
 
-  moveAction: (stepId: string, actionId: string, newParentId: string | null, newIndex: number) =>
-    set((state: DesignerState) => {
-      const stepsDraft = state.steps.map((s) => {
-        if (s.id !== stepId) return s;
+    moveAction: (
+      stepId: string,
+      actionId: string,
+      newParentId: string | null,
+      newIndex: number,
+    ) =>
+      set((state: DesignerState) => {
+        const stepsDraft = state.steps.map((s) => {
+          if (s.id !== stepId) return s;
 
-        const actionToMove = findActionById(s.actions, actionId);
-        if (!actionToMove) return s;
+          const actionToMove = findActionById(s.actions, actionId);
+          if (!actionToMove) return s;
 
-        const pruned = removeActionFromTree(s.actions, actionId);
-        const inserted = insertActionIntoTree(pruned, actionToMove, newParentId, newIndex);
-        return { ...s, actions: inserted };
-      });
-      return {
-        steps: stepsDraft,
-        dirtyEntities: new Set<string>([...state.dirtyEntities, stepId, actionId]),
-      };
-    }),
+          const pruned = removeActionFromTree(s.actions, actionId);
+          const inserted = insertActionIntoTree(
+            pruned,
+            actionToMove,
+            newParentId,
+            newIndex,
+          );
+          return { ...s, actions: inserted };
+        });
+        return {
+          steps: stepsDraft,
+          dirtyEntities: new Set<string>([
+            ...state.dirtyEntities,
+            stepId,
+            actionId,
+          ]),
+        };
+      }),
 
-  reorderAction: (stepId: string, from: number, to: number) =>
-    get().moveAction(stepId, get().steps.find(s => s.id === stepId)?.actions[from]?.id!, null, to), // Legacy compat support (only works for root level reorder)
+    reorderAction: (stepId: string, from: number, to: number) =>
+      get().moveAction(
+        stepId,
+        get().steps.find((s) => s.id === stepId)?.actions[from]?.id!,
+        null,
+        to,
+      ), // Legacy compat support (only works for root level reorder)
 
-  setInsertionProjection: (projection) => set({ insertionProjection: projection }),
+    setInsertionProjection: (projection) =>
+      set({ insertionProjection: projection }),
 
-  /* -------------------------------- Dirty ---------------------------------- */
-  markDirty: (id: string) =>
-    set((state: DesignerState) => ({
-      dirtyEntities: state.dirtyEntities.has(id)
-        ? state.dirtyEntities
-        : new Set<string>([...state.dirtyEntities, id]),
-    })),
-  clearDirty: (id: string) =>
-    set((state: DesignerState) => {
-      if (!state.dirtyEntities.has(id)) return state;
-      const next = new Set(state.dirtyEntities);
-      next.delete(id);
-      return { dirtyEntities: next };
-    }),
-  clearAllDirty: () => set({ dirtyEntities: new Set<string>() }),
+    /* -------------------------------- Dirty ---------------------------------- */
+    markDirty: (id: string) =>
+      set((state: DesignerState) => ({
+        dirtyEntities: state.dirtyEntities.has(id)
+          ? state.dirtyEntities
+          : new Set<string>([...state.dirtyEntities, id]),
+      })),
+    clearDirty: (id: string) =>
+      set((state: DesignerState) => {
+        if (!state.dirtyEntities.has(id)) return state;
+        const next = new Set(state.dirtyEntities);
+        next.delete(id);
+        return { dirtyEntities: next };
+      }),
+    clearAllDirty: () => set({ dirtyEntities: new Set<string>() }),
 
-  /* ------------------------------- Hashing --------------------------------- */
-  recomputeHash: async (options?: { forceFull?: boolean }) => {
-    const { steps, incremental } = get();
-    if (steps.length === 0) {
-      set({ currentDesignHash: undefined });
-      return null;
-    }
-    set({ busyHashing: true });
-    try {
-      const result = await computeIncrementalDesignHash(
-        steps,
-        options?.forceFull ? undefined : incremental,
-      );
-      set({
-        currentDesignHash: result.designHash,
-        incremental: {
-          actionHashes: result.actionHashes,
-          stepHashes: result.stepHashes,
-        },
-      });
-      return result;
-    } finally {
-      set({ busyHashing: false });
-    }
-  },
-
-  setPersistedHash: (hash: string) => set({ lastPersistedHash: hash }),
-  setValidatedHash: (hash: string) => set({ lastValidatedHash: hash }),
-
-  /* ----------------------------- Validation -------------------------------- */
-  setValidationIssues: (entityId: string, issues: ValidationIssue[]) =>
-    set((state: DesignerState) => ({
-      validationIssues: {
-        ...state.validationIssues,
-        [entityId]: issues,
-      },
-    })),
-  clearValidationIssues: (entityId: string) =>
-    set((state: DesignerState) => {
-      if (!state.validationIssues[entityId]) return state;
-      const next = { ...state.validationIssues };
-      delete next[entityId];
-      return { validationIssues: next };
-    }),
-  clearAllValidationIssues: () => set({ validationIssues: {} }),
-
-  /* ------------------------- Action Signature Drift ------------------------ */
-  setActionSignature: (actionId: string, signature: string) =>
-    set((state: DesignerState) => {
-      const index = new Map(state.actionSignatureIndex);
-      index.set(actionId, signature);
-      return { actionSignatureIndex: index };
-    }),
-  detectActionSignatureDrift: (
-    action: ExperimentAction,
-    latestSignature: string,
-  ) =>
-    set((state: DesignerState) => {
-      const current = state.actionSignatureIndex.get(action.id);
-      if (!current) {
-        const idx = new Map(state.actionSignatureIndex);
-        idx.set(action.id, latestSignature);
-        return { actionSignatureIndex: idx };
+    /* ------------------------------- Hashing --------------------------------- */
+    recomputeHash: async (options?: { forceFull?: boolean }) => {
+      const { steps, incremental } = get();
+      if (steps.length === 0) {
+        set({ currentDesignHash: undefined });
+        return null;
       }
-      if (current === latestSignature) return {};
-      const drift = new Set(state.actionSignatureDrift);
-      drift.add(action.id);
-      return { actionSignatureDrift: drift };
-    }),
-  clearActionSignatureDrift: (actionId: string) =>
-    set((state: DesignerState) => {
-      if (!state.actionSignatureDrift.has(actionId)) return state;
-      const next = new Set(state.actionSignatureDrift);
-      next.delete(actionId);
-      return { actionSignatureDrift: next };
-    }),
+      set({ busyHashing: true });
+      try {
+        const result = await computeIncrementalDesignHash(
+          steps,
+          options?.forceFull ? undefined : incremental,
+        );
+        set({
+          currentDesignHash: result.designHash,
+          incremental: {
+            actionHashes: result.actionHashes,
+            stepHashes: result.stepHashes,
+          },
+        });
+        return result;
+      } finally {
+        set({ busyHashing: false });
+      }
+    },
 
-  /* ------------------------------- Save Flow -------------------------------- */
-  setPendingSave: (pending: boolean) => set({ pendingSave: pending }),
-  recordConflict: (serverHash: string, localHash: string) =>
-    set({
-      conflict: { serverHash, localHash, at: new Date() },
-      pendingSave: false,
-    }),
-  clearConflict: () => set({ conflict: undefined }),
-  setVersionStrategy: (strategy: VersionStrategy) =>
-    set({ versionStrategy: strategy }),
-  setAutoSaveEnabled: (enabled: boolean) => set({ autoSaveEnabled: enabled }),
+    setPersistedHash: (hash: string) => set({ lastPersistedHash: hash }),
+    setValidatedHash: (hash: string) => set({ lastValidatedHash: hash }),
 
-  /* ------------------------------ Server Sync ------------------------------ */
-  applyServerSync: (payload: {
-    steps: ExperimentStep[];
-    persistedHash?: string;
-    validatedHash?: string;
-  }) =>
-    set((state: DesignerState) => {
-      const syncedSteps = reindexSteps(cloneSteps(payload.steps));
-      const dirty = new Set<string>();
-      return {
-        steps: syncedSteps,
-        lastPersistedHash: payload.persistedHash ?? state.lastPersistedHash,
-        lastValidatedHash: payload.validatedHash ?? state.lastValidatedHash,
-        dirtyEntities: dirty,
-        conflict: undefined,
-      };
-    }),
-}));
+    /* ----------------------------- Validation -------------------------------- */
+    setValidationIssues: (entityId: string, issues: ValidationIssue[]) =>
+      set((state: DesignerState) => ({
+        validationIssues: {
+          ...state.validationIssues,
+          [entityId]: issues,
+        },
+      })),
+    clearValidationIssues: (entityId: string) =>
+      set((state: DesignerState) => {
+        if (!state.validationIssues[entityId]) return state;
+        const next = { ...state.validationIssues };
+        delete next[entityId];
+        return { validationIssues: next };
+      }),
+    clearAllValidationIssues: () => set({ validationIssues: {} }),
+
+    /* ------------------------- Action Signature Drift ------------------------ */
+    setActionSignature: (actionId: string, signature: string) =>
+      set((state: DesignerState) => {
+        const index = new Map(state.actionSignatureIndex);
+        index.set(actionId, signature);
+        return { actionSignatureIndex: index };
+      }),
+    detectActionSignatureDrift: (
+      action: ExperimentAction,
+      latestSignature: string,
+    ) =>
+      set((state: DesignerState) => {
+        const current = state.actionSignatureIndex.get(action.id);
+        if (!current) {
+          const idx = new Map(state.actionSignatureIndex);
+          idx.set(action.id, latestSignature);
+          return { actionSignatureIndex: idx };
+        }
+        if (current === latestSignature) return {};
+        const drift = new Set(state.actionSignatureDrift);
+        drift.add(action.id);
+        return { actionSignatureDrift: drift };
+      }),
+    clearActionSignatureDrift: (actionId: string) =>
+      set((state: DesignerState) => {
+        if (!state.actionSignatureDrift.has(actionId)) return state;
+        const next = new Set(state.actionSignatureDrift);
+        next.delete(actionId);
+        return { actionSignatureDrift: next };
+      }),
+
+    /* ------------------------------- Save Flow -------------------------------- */
+    setPendingSave: (pending: boolean) => set({ pendingSave: pending }),
+    recordConflict: (serverHash: string, localHash: string) =>
+      set({
+        conflict: { serverHash, localHash, at: new Date() },
+        pendingSave: false,
+      }),
+    clearConflict: () => set({ conflict: undefined }),
+    setVersionStrategy: (strategy: VersionStrategy) =>
+      set({ versionStrategy: strategy }),
+    setAutoSaveEnabled: (enabled: boolean) => set({ autoSaveEnabled: enabled }),
+
+    /* ------------------------------ Server Sync ------------------------------ */
+    applyServerSync: (payload: {
+      steps: ExperimentStep[];
+      persistedHash?: string;
+      validatedHash?: string;
+    }) =>
+      set((state: DesignerState) => {
+        const syncedSteps = reindexSteps(cloneSteps(payload.steps));
+        const dirty = new Set<string>();
+        return {
+          steps: syncedSteps,
+          lastPersistedHash: payload.persistedHash ?? state.lastPersistedHash,
+          lastValidatedHash: payload.validatedHash ?? state.lastValidatedHash,
+          dirtyEntities: dirty,
+          conflict: undefined,
+        };
+      }),
+  }));
 
 export const useDesignerStore = createDesignerStore({});
 

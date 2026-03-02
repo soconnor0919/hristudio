@@ -9,7 +9,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -56,25 +56,30 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+    <div className="bg-background relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl opacity-30 dark:opacity-20" />
+      <div className="bg-primary/20 absolute top-0 left-1/2 -z-10 h-[500px] w-[1000px] -translate-x-1/2 rounded-full opacity-30 blur-3xl dark:opacity-20" />
       <div className="absolute bottom-0 left-0 -z-10 h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-3xl" />
 
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-md duration-500">
         {/* Header */}
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center justify-center transition-opacity hover:opacity-80">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center transition-opacity hover:opacity-80"
+          >
             <Logo iconSize="lg" showText={false} />
           </Link>
-          <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">Create an account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="text-foreground mt-6 text-2xl font-bold tracking-tight">
+            Create an account
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
             Start your journey in HRI research
           </p>
         </div>
 
         {/* Sign Up Card */}
-        <Card className="border-muted/40 bg-card/50 backdrop-blur-sm shadow-xl">
+        <Card className="border-muted/40 bg-card/50 shadow-xl backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>
@@ -84,7 +89,7 @@ export default function SignUpPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
+                <div className="bg-destructive/15 text-destructive border-destructive/20 rounded-md border p-3 text-sm font-medium">
                   {error}
                 </div>
               )}
@@ -155,15 +160,17 @@ export default function SignUpPage() {
                 disabled={createUser.isPending}
                 size="lg"
               >
-                {createUser.isPending ? "Creating account..." : "Create Account"}
+                {createUser.isPending
+                  ? "Creating account..."
+                  : "Create Account"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground mt-6 text-center text-sm">
               Already have an account?{" "}
               <Link
                 href="/auth/signin"
-                className="font-medium text-primary hover:text-primary/80"
+                className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign in
               </Link>
@@ -172,7 +179,7 @@ export default function SignUpPage() {
         </Card>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-8 text-center text-xs">
           <p>
             &copy; {new Date().getFullYear()} HRIStudio. All rights reserved.
           </p>

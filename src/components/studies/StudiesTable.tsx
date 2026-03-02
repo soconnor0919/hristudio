@@ -5,7 +5,14 @@ import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
-import { AlertCircle, Filter } from "lucide-react";
+import {
+  AlertCircle,
+  Filter,
+  Activity,
+  FileEdit,
+  CheckCircle2,
+  Archive,
+} from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -14,12 +21,12 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { api } from "~/trpc/react";
 
@@ -69,22 +76,22 @@ const statusConfig = {
   draft: {
     label: "Draft",
     className: "bg-gray-100 text-gray-800",
-    icon: "📝",
+    icon: FileEdit,
   },
   active: {
     label: "Active",
     className: "bg-green-100 text-green-800",
-    icon: "🟢",
+    icon: Activity,
   },
   completed: {
     label: "Completed",
     className: "bg-blue-100 text-blue-800",
-    icon: "✅",
+    icon: CheckCircle2,
   },
   archived: {
     label: "Archived",
     className: "bg-orange-100 text-orange-800",
-    icon: "📦",
+    icon: Archive,
   },
 };
 
@@ -172,7 +179,7 @@ export const columns: ColumnDef<Study>[] = [
       const statusInfo = statusConfig[status as keyof typeof statusConfig];
       return (
         <Badge className={statusInfo.className}>
-          <span className="mr-1">{statusInfo.icon}</span>
+          <statusInfo.icon className="mr-1 h-3.5 w-3.5" />
           {statusInfo.label}
         </Badge>
       );
@@ -186,7 +193,9 @@ export const columns: ColumnDef<Study>[] = [
       const isOwner = row.original.isOwner;
 
       return (
-        <Badge variant={isOwner ? "default" : "secondary"}>{String(userRole)}</Badge>
+        <Badge variant={isOwner ? "default" : "secondary"}>
+          {String(userRole)}
+        </Badge>
       );
     },
   },
@@ -215,7 +224,9 @@ export const columns: ColumnDef<Study>[] = [
         );
       }
       return (
-        <Badge className="bg-blue-100 text-blue-800">{Number(experimentCount)}</Badge>
+        <Badge className="bg-blue-100 text-blue-800">
+          {Number(experimentCount)}
+        </Badge>
       );
     },
   },
@@ -257,7 +268,9 @@ export const columns: ColumnDef<Study>[] = [
       return (
         <div className="max-w-[120px]">
           <div className="text-sm">
-            {formatDistanceToNow(new Date(date as string | number | Date), { addSuffix: true })}
+            {formatDistanceToNow(new Date(date as string | number | Date), {
+              addSuffix: true,
+            })}
           </div>
           <div className="text-muted-foreground truncate text-xs">
             by {createdBy}

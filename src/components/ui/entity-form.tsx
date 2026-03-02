@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Lightbulb, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode } from "react";
@@ -126,17 +126,21 @@ export function EntityForm<T extends FieldValues = FieldValues>({
       {/* Form Layout */}
       <div
         className={cn(
-          "grid gap-8 w-full",
+          "grid w-full gap-8",
           // If sidebar exists, use 2-column layout. If not, use full width.
           sidebar && layout === "default"
             ? "grid-cols-1 lg:grid-cols-3"
             : layout === "full-width"
-              ? "grid-cols-1 w-full"
-              : "grid-cols-1 max-w-7xl mx-auto",
+              ? "w-full grid-cols-1"
+              : "mx-auto max-w-7xl grid-cols-1",
         )}
       >
         {/* Main Form */}
-        <div className={sidebar && layout === "default" ? "lg:col-span-2" : "col-span-1"}>
+        <div
+          className={
+            sidebar && layout === "default" ? "lg:col-span-2" : "col-span-1"
+          }
+        >
           <Card>
             <CardHeader>
               <CardTitle>
@@ -329,7 +333,7 @@ interface TipsProps {
 
 export function Tips({ tips }: TipsProps) {
   return (
-    <SidebarCard title="💡 Tips">
+    <SidebarCard title="Tips" icon={Lightbulb}>
       <div className="text-muted-foreground space-y-3 text-sm">
         {tips.map((tip, index) => (
           <p key={index}>{tip}</p>

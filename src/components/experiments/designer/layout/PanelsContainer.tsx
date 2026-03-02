@@ -64,29 +64,30 @@ export interface PanelsContainerProps {
  * - Resize handles are absolutely positioned over the grid at the left and right boundaries.
  * - Fractions are clamped with configurable min/max so panels remain usable at all sizes.
  */
-const Panel: React.FC<React.PropsWithChildren<{
-  className?: string;
-  panelClassName?: string;
-  contentClassName?: string;
-}>> = ({
-  className: panelCls,
-  panelClassName,
-  contentClassName,
-  children,
-}) => (
-    <section
-      className={cn("min-w-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out", panelCls, panelClassName)}
+const Panel: React.FC<
+  React.PropsWithChildren<{
+    className?: string;
+    panelClassName?: string;
+    contentClassName?: string;
+  }>
+> = ({ className: panelCls, panelClassName, contentClassName, children }) => (
+  <section
+    className={cn(
+      "min-w-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out",
+      panelCls,
+      panelClassName,
+    )}
+  >
+    <div
+      className={cn(
+        "h-full min-h-0 w-full overflow-x-hidden overflow-y-auto",
+        contentClassName,
+      )}
     >
-      <div
-        className={cn(
-          "h-full min-h-0 w-full overflow-x-hidden overflow-y-auto",
-          contentClassName,
-        )}
-      >
-        {children}
-      </div>
-    </section>
-  );
+      {children}
+    </div>
+  </section>
+);
 
 export function PanelsContainer({
   left,
@@ -178,7 +179,7 @@ export function PanelsContainer({
       minRightPct,
       maxRightPct,
       leftCollapsed,
-      rightCollapsed
+      rightCollapsed,
     ],
   );
 
@@ -206,7 +207,16 @@ export function PanelsContainer({
         setRightPct(nextRight);
       }
     },
-    [hasLeft, hasRight, minLeftPct, maxLeftPct, minRightPct, maxRightPct, leftCollapsed, rightCollapsed],
+    [
+      hasLeft,
+      hasRight,
+      minLeftPct,
+      maxLeftPct,
+      minRightPct,
+      maxRightPct,
+      leftCollapsed,
+      rightCollapsed,
+    ],
   );
 
   const endDrag = React.useCallback(() => {
@@ -270,10 +280,10 @@ export function PanelsContainer({
   // We use FR units instead of % to let the browser handle exact pixel fitting without rounding errors causing overflow
   const styleVars: React.CSSProperties & Record<string, string> = hasCenter
     ? {
-      "--col-left": `${hasLeft ? l : 0}fr`,
-      "--col-center": `${c}fr`,
-      "--col-right": `${hasRight ? r : 0}fr`,
-    }
+        "--col-left": `${hasLeft ? l : 0}fr`,
+        "--col-center": `${c}fr`,
+        "--col-right": `${hasRight ? r : 0}fr`,
+      }
     : {};
 
   // Explicit grid template depending on which side panels exist
@@ -299,19 +309,17 @@ export function PanelsContainer({
   const centerDividers =
     showDividers && hasCenter
       ? cn({
-        "border-l": hasLeft,
-        "border-r": hasRight,
-      })
+          "border-l": hasLeft,
+          "border-r": hasRight,
+        })
       : undefined;
-
-
 
   return (
     <>
       {/* Mobile Layout (Flex + Sheets) */}
-      <div className={cn("flex flex-col h-full w-full md:hidden", className)}>
+      <div className={cn("flex h-full w-full flex-col md:hidden", className)}>
         {/* Mobile Header/Toolbar for access to panels */}
-        <div className="flex items-center justify-between border-b px-4 py-2 bg-background">
+        <div className="bg-background flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
             {hasLeft && (
               <Sheet>
@@ -321,9 +329,7 @@ export function PanelsContainer({
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[85vw] p-0 sm:max-w-md">
-                  <div className="h-full overflow-hidden">
-                    {left}
-                  </div>
+                  <div className="h-full overflow-hidden">{left}</div>
                 </SheetContent>
               </Sheet>
             )}
@@ -338,16 +344,14 @@ export function PanelsContainer({
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[85vw] p-0 sm:max-w-md">
-                <div className="h-full overflow-hidden">
-                  {right}
-                </div>
+                <div className="h-full overflow-hidden">{right}</div>
               </SheetContent>
             </Sheet>
           )}
         </div>
 
         {/* Main Content (Center) */}
-        <div className="flex-1 min-h-0 min-w-0 overflow-hidden relative">
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
           {center}
         </div>
       </div>
@@ -357,15 +361,31 @@ export function PanelsContainer({
         ref={rootRef}
         aria-label={ariaLabel}
         className={cn(
-          "relative hidden md:grid h-full min-h-0 w-full max-w-full overflow-hidden select-none",
+          "relative hidden h-full min-h-0 w-full max-w-full overflow-hidden select-none md:grid",
           // 2-3-2 ratio for left-center-right panels when all visible
-          hasLeft && hasRight && !leftCollapsed && !rightCollapsed && "grid-cols-[2fr_3fr_2fr]",
+          hasLeft &&
+            hasRight &&
+            !leftCollapsed &&
+            !rightCollapsed &&
+            "grid-cols-[2fr_3fr_2fr]",
           // Left collapsed: center + right (3:2 ratio)
-          hasLeft && hasRight && leftCollapsed && !rightCollapsed && "grid-cols-[3fr_2fr]",
+          hasLeft &&
+            hasRight &&
+            leftCollapsed &&
+            !rightCollapsed &&
+            "grid-cols-[3fr_2fr]",
           // Right collapsed: left + center (2:3 ratio)
-          hasLeft && hasRight && !leftCollapsed && rightCollapsed && "grid-cols-[2fr_3fr]",
+          hasLeft &&
+            hasRight &&
+            !leftCollapsed &&
+            rightCollapsed &&
+            "grid-cols-[2fr_3fr]",
           // Both collapsed: center only
-          hasLeft && hasRight && leftCollapsed && rightCollapsed && "grid-cols-1",
+          hasLeft &&
+            hasRight &&
+            leftCollapsed &&
+            rightCollapsed &&
+            "grid-cols-1",
           // Only left and center
           hasLeft && !hasRight && !leftCollapsed && "grid-cols-[2fr_3fr]",
           hasLeft && !hasRight && leftCollapsed && "grid-cols-1",
@@ -409,7 +429,7 @@ export function PanelsContainer({
         {hasLeft && !leftCollapsed && (
           <button
             type="button"
-            className="absolute top-0 bottom-0 w-1.5 -ml-0.75 z-50 cursor-col-resize hover:bg-blue-400/50 transition-colors focus:outline-none"
+            className="absolute top-0 bottom-0 z-50 -ml-0.75 w-1.5 cursor-col-resize transition-colors hover:bg-blue-400/50 focus:outline-none"
             style={{ left: "var(--col-left)" }}
             onPointerDown={startDrag("left")}
             onKeyDown={onKeyResize("left")}
@@ -419,7 +439,7 @@ export function PanelsContainer({
         {hasRight && !rightCollapsed && (
           <button
             type="button"
-            className="absolute top-0 bottom-0 w-1.5 -mr-0.75 z-50 cursor-col-resize hover:bg-blue-400/50 transition-colors focus:outline-none"
+            className="absolute top-0 bottom-0 z-50 -mr-0.75 w-1.5 cursor-col-resize transition-colors hover:bg-blue-400/50 focus:outline-none"
             style={{ right: "var(--col-right)" }}
             onPointerDown={startDrag("right")}
             onKeyDown={onKeyResize("right")}

@@ -85,7 +85,9 @@ function DateTimePicker({
   return (
     <div className="flex items-end gap-2">
       <div className="grid gap-1.5">
-        <Label htmlFor="date-picker" className="text-xs">Date</Label>
+        <Label htmlFor="date-picker" className="text-xs">
+          Date
+        </Label>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -93,7 +95,7 @@ function DateTimePicker({
               id="date-picker"
               className={cn(
                 "w-[240px] justify-start text-left font-normal",
-                !value && "text-muted-foreground"
+                !value && "text-muted-foreground",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -112,7 +114,9 @@ function DateTimePicker({
       </div>
 
       <div className="grid gap-1.5">
-        <Label htmlFor="time-picker" className="text-xs">Time</Label>
+        <Label htmlFor="time-picker" className="text-xs">
+          Time
+        </Label>
         <div className="relative">
           <Input
             id="time-picker"
@@ -122,7 +126,7 @@ function DateTimePicker({
             disabled={!value}
             className="w-[120px]"
           />
-          <Clock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Clock className="text-muted-foreground pointer-events-none absolute top-2.5 right-3 h-4 w-4" />
         </div>
       </div>
     </div>
@@ -197,8 +201,8 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     { participantId: selectedParticipantId },
     {
       enabled: !!selectedParticipantId && mode === "create",
-      refetchOnWindowFocus: false
-    }
+      refetchOnWindowFocus: false,
+    },
   );
 
   useEffect(() => {
@@ -213,33 +217,33 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     { label: "Studies", href: "/studies" },
     ...(contextStudyId
       ? [
-        {
-          label: "Study",
-          href: `/studies/${contextStudyId}`,
-        },
-        { label: "Trials", href: `/studies/${contextStudyId}/trials` },
-        ...(mode === "edit" && trial
-          ? [
-            {
-              label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-              href: `/studies/${contextStudyId}/trials/${trial.id}`,
-            },
-            { label: "Edit" },
-          ]
-          : [{ label: "New Trial" }]),
-      ]
+          {
+            label: "Study",
+            href: `/studies/${contextStudyId}`,
+          },
+          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
+          ...(mode === "edit" && trial
+            ? [
+                {
+                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Trial" }]),
+        ]
       : [
-        { label: "Trials", href: `/studies/${contextStudyId}/trials` },
-        ...(mode === "edit" && trial
-          ? [
-            {
-              label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
-              href: `/studies/${contextStudyId}/trials/${trial.id}`,
-            },
-            { label: "Edit" },
-          ]
-          : [{ label: "New Trial" }]),
-      ]),
+          { label: "Trials", href: `/studies/${contextStudyId}/trials` },
+          ...(mode === "edit" && trial
+            ? [
+                {
+                  label: `Trial ${trial.sessionNumber || trial.id.slice(-8)}`,
+                  href: `/studies/${contextStudyId}/trials/${trial.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Trial" }]),
+        ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -250,7 +254,9 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
       form.reset({
         experimentId: trial.experimentId,
         participantId: trial?.participantId ?? "",
-        scheduledAt: trial.scheduledAt ? new Date(trial.scheduledAt) : undefined,
+        scheduledAt: trial.scheduledAt
+          ? new Date(trial.scheduledAt)
+          : undefined,
         wizardId: trial.wizardId ?? undefined,
         notes: trial.notes ?? "",
         sessionNumber: trial.sessionNumber ?? 1,
@@ -334,9 +340,9 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
       submitText={mode === "create" ? "Schedule Trial" : "Save Changes"}
       layout="full-width"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Left Column: Main Info (Spans 2) */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="space-y-6 md:col-span-2">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <FormField>
               <Label htmlFor="experimentId">Experiment *</Label>

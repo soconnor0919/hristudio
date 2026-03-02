@@ -13,6 +13,7 @@ import {
   studyStatusEnum,
   users,
   userSystemRoles,
+  consentForms,
 } from "~/server/db/schema";
 
 export const studiesRouter = createTRPCRouter({
@@ -604,6 +605,180 @@ export const studiesRouter = createTRPCRouter({
       });
 
       return members;
+    }),
+
+  getActiveConsentForm: protectedProcedure
+    .input(z.object({ studyId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Check access
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, input.studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have access to this study",
+        });
+      }
+
+      const activeForm = await ctx.db.query.consentForms.findFirst({
+        where: and(
+          eq(consentForms.studyId, input.studyId),
+          eq(consentForms.active, true),
+        ),
+        orderBy: [desc(consentForms.version)],
+      });
+
+      return activeForm;
+    }),
+
+  generateConsentForm: protectedProcedure
+    .input(z.object({ studyId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { studyId } = input;
+
+      // Check access
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership || !["owner", "researcher"].includes(membership.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "You don't have permission to generate consent forms for this study",
+        });
+      }
+
+      // Fetch study info
+      const study = await ctx.db.query.studies.findFirst({
+        where: eq(studies.id, studyId),
+        with: {
+          createdBy: true,
+        },
+      });
+
+      if (!study) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Study not found" });
+      }
+
+      // Deactivate existing
+      await ctx.db
+        .update(consentForms)
+        .set({ active: false })
+        .where(eq(consentForms.studyId, studyId));
+
+      // Get latest version
+      const latestForm = await ctx.db.query.consentForms.findFirst({
+        where: eq(consentForms.studyId, studyId),
+        orderBy: [desc(consentForms.version)],
+      });
+      const newVersion = (latestForm?.version ?? 0) + 1;
+
+      const mdContent = `# Informed Consent Form\n\n**Study Title**: ${study.name}\n${study.institution ? `**Institution**: ${study.institution}\n` : ""}${study.irbProtocol ? `**IRB Protocol Number**: ${study.irbProtocol}\n` : ""}**Principal Investigator**: ${study.createdBy.name ?? study.createdBy.email}\n\n## Introduction\nYou are invited to participate in a research study. Before you agree, please read this document carefully. It explains the purpose, procedures, risks, and benefits of the study.\n\n## Purpose of the Study\nThe main goal of this research is to evaluate human-robot interaction using the HRIStudio platform. \n\n## Procedures\nIf you agree to participate, you will be interacting with a robotic system or simulation interface. We will be recording your actions, choices, and interactions with the system.\n\n## Risks and Benefits\nThere are no expected risks beyond those encountered in everyday laptop/computer use. Your participation will help improve human-robot interaction technologies.\n\n## Confidentiality\nYour identity will be kept confidential. Any data collected will be anonymized before publication or presentation.\n\n**Participant**: {{PARTICIPANT_NAME}} ({{PARTICIPANT_CODE}})\n\n## Voluntary Participation\nYour participation is completely voluntary. You may withdraw from the study at any time without penalty.\n\n## Statement of Consent\nI have read the above information. I understand the procedures, risks, and benefits of the study. I understand my participation is voluntary and I can withdraw at any time.\n\n\n| Participant Signature | Date |\n| :--- | :--- |\n| {{SIGNATURE_IMAGE}} | {{DATE}} |\n\n\n| Researcher Signature | Date |\n| :--- | :--- |\n| | |\n`;
+
+      const [newForm] = await ctx.db
+        .insert(consentForms)
+        .values({
+          studyId,
+          version: newVersion,
+          title: `Consent Form v${newVersion}`,
+          content: mdContent,
+          active: true,
+          createdBy: userId,
+        })
+        .returning();
+
+      if (!newForm) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create new consent form",
+        });
+      }
+
+      await ctx.db.insert(activityLogs).values({
+        studyId,
+        userId,
+        action: "consent_form_generated",
+        description: `Generated boilerplate consent form v${newVersion}`,
+      });
+
+      return newForm;
+    }),
+
+  updateConsentForm: protectedProcedure
+    .input(z.object({ studyId: z.string().uuid(), content: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { studyId, content } = input;
+
+      // Check access
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership || !["owner", "researcher"].includes(membership.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "You don't have permission to modify consent forms for this study",
+        });
+      }
+
+      // Deactivate existing
+      await ctx.db
+        .update(consentForms)
+        .set({ active: false })
+        .where(eq(consentForms.studyId, studyId));
+
+      // Get latest version
+      const latestForm = await ctx.db.query.consentForms.findFirst({
+        where: eq(consentForms.studyId, studyId),
+        orderBy: [desc(consentForms.version)],
+      });
+
+      const newVersion = (latestForm?.version ?? 0) + 1;
+
+      const [newForm] = await ctx.db
+        .insert(consentForms)
+        .values({
+          studyId,
+          version: newVersion,
+          title: `Consent Form v${newVersion}`,
+          content,
+          active: true,
+          createdBy: userId,
+        })
+        .returning();
+
+      if (!newForm) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to save consent form",
+        });
+      }
+
+      await ctx.db.insert(activityLogs).values({
+        studyId,
+        userId,
+        action: "consent_form_updated",
+        description: `Updated consent form to v${newVersion}`,
+      });
+
+      return newForm;
     }),
 
   getActivity: protectedProcedure

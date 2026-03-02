@@ -1,7 +1,16 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Play, Gamepad2, LineChart, Ban, Printer } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  MoreHorizontal,
+  Play,
+  Gamepad2,
+  LineChart,
+  Ban,
+  Printer,
+} from "lucide-react";
 import * as React from "react";
 
 import { format, formatDistanceToNow } from "date-fns";
@@ -125,10 +134,7 @@ export const columns: ColumnDef<Trial>[] = [
 
       return (
         <div className="font-mono text-sm">
-          <Link
-            href={href}
-            className="hover:underline"
-          >
+          <Link href={href} className="hover:underline">
             #{Number(sessionNumber)}
           </Link>
         </div>
@@ -240,12 +246,7 @@ export const columns: ColumnDef<Trial>[] = [
         );
       }
 
-      return (
-        <Badge className={statusInfo.className}>
-          {statusInfo.label}
-        </Badge>
-      );
-
+      return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
     },
   },
   {
@@ -363,7 +364,7 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
   }
 
   return (
-    <div className="flex items-center gap-2 justify-end">
+    <div className="flex items-center justify-end gap-2">
       {trial.status === "scheduled" && (
         <Button size="sm" asChild>
           <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
@@ -383,14 +384,18 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
       {trial.status === "completed" && (
         <>
           <Button size="sm" variant="outline" asChild>
-            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/analysis`}>
+            <Link
+              href={`/studies/${trial.studyId}/trials/${trial.id}/analysis`}
+            >
               <LineChart className="mr-1.5 h-3.5 w-3.5" />
               View
             </Link>
           </Button>
           <Button size="sm" variant="outline" asChild>
             {/* We link to the analysis page with a query param to trigger print/export */}
-            <Link href={`/studies/${trial.studyId}/trials/${trial.id}/analysis?export=true`}>
+            <Link
+              href={`/studies/${trial.studyId}/trials/${trial.id}/analysis?export=true`}
+            >
               <Printer className="mr-1.5 h-3.5 w-3.5" />
               Export
             </Link>
@@ -398,7 +403,11 @@ function ActionsCell({ row }: { row: { original: Trial } }) {
         </>
       )}
       {(trial.status === "scheduled" || trial.status === "failed") && (
-        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-muted-foreground h-8 w-8 p-0 hover:text-red-600"
+        >
           <Ban className="h-4 w-4" />
           <span className="sr-only">Cancel</span>
         </Button>

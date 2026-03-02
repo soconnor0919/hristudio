@@ -95,7 +95,7 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     session: async ({ session, token }) => {
-      if (token.id && typeof token.id === 'string') {
+      if (token.id && typeof token.id === "string") {
         // Fetch user roles from database
         const userWithRoles = await db.query.users.findFirst({
           where: eq(users.id, token.id),

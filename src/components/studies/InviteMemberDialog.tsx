@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 
-import { Mail, Plus, UserPlus } from "lucide-react";
+import { Mail, Plus, UserPlus, Microscope, Wand2, Eye } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { useStudyManagement } from "~/hooks/useStudyManagement";
 
@@ -54,17 +54,17 @@ const roleDescriptions = {
   researcher: {
     label: "Researcher",
     description: "Can manage experiments, view all data, and invite members",
-    icon: "🔬",
+    icon: Microscope,
   },
   wizard: {
     label: "Wizard",
     description: "Can control trials and execute experiments",
-    icon: "🎭",
+    icon: Wand2,
   },
   observer: {
     label: "Observer",
     description: "Read-only access to view trials and data",
-    icon: "👁️",
+    icon: Eye,
   },
 };
 
@@ -167,7 +167,10 @@ export function InviteMemberDialog({
                         ([value, config]) => (
                           <SelectItem key={value} value={value}>
                             <div className="flex items-center space-x-2">
-                              <span>{config.icon}</span>
+                              {(() => {
+                                const Icon = config.icon;
+                                return <Icon className="h-4 w-4" />;
+                              })()}
                               <span>{config.label}</span>
                             </div>
                           </SelectItem>
@@ -180,8 +183,18 @@ export function InviteMemberDialog({
                     <div className="mt-2 rounded-lg bg-slate-50 p-3">
                       <div className="mb-1 flex items-center space-x-2">
                         <Badge variant="secondary" className="text-xs">
-                          {roleDescriptions[field.value].icon}{" "}
-                          {roleDescriptions[field.value].label}
+                          {(() => {
+                            const Icon =
+                              roleDescriptions[
+                                field.value as keyof typeof roleDescriptions
+                              ].icon;
+                            return <Icon className="mr-1 h-3.5 w-3.5" />;
+                          })()}
+                          {
+                            roleDescriptions[
+                              field.value as keyof typeof roleDescriptions
+                            ].label
+                          }
                         </Badge>
                       </div>
                       <p className="text-xs text-slate-600">

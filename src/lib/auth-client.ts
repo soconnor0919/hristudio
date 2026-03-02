@@ -37,11 +37,12 @@ export function isWizard(session: Session | null): boolean {
 /**
  * Check if the current user has any of the specified roles
  */
-export function hasAnyRole(session: Session | null, roles: SystemRole[]): boolean {
+export function hasAnyRole(
+  session: Session | null,
+  roles: SystemRole[],
+): boolean {
   if (!session?.user?.roles) return false;
-  return session.user.roles.some((userRole) =>
-    roles.includes(userRole.role)
-  );
+  return session.user.roles.some((userRole) => roles.includes(userRole.role));
 }
 
 /**
@@ -49,7 +50,7 @@ export function hasAnyRole(session: Session | null, roles: SystemRole[]): boolea
  */
 export function canAccessResource(
   session: Session | null,
-  resourceOwnerId: string
+  resourceOwnerId: string,
 ): boolean {
   if (!session?.user) return false;
 
@@ -98,7 +99,12 @@ export function getAvailableRoles(): Array<{
   label: string;
   description: string;
 }> {
-  const roles: SystemRole[] = ["administrator", "researcher", "wizard", "observer"];
+  const roles: SystemRole[] = [
+    "administrator",
+    "researcher",
+    "wizard",
+    "observer",
+  ];
 
   return roles.map((role) => ({
     value: role,

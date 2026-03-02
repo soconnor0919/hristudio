@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "~/components/ui/card";
 
 export default function SignOutPage() {
@@ -44,7 +44,7 @@ export default function SignOutPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
           <p className="text-slate-600">Loading...</p>
         </div>
       </div>
@@ -79,7 +79,8 @@ export default function SignOutPage() {
           <CardContent className="space-y-4">
             <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
               <p className="font-medium">
-                Currently signed in as: {session.user.name ?? session.user.email}
+                Currently signed in as:{" "}
+                {session.user.name ?? session.user.email}
               </p>
             </div>
 

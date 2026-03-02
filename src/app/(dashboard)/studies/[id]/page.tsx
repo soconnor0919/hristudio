@@ -71,6 +71,7 @@ type Member = {
 
 export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   const { data: session } = useSession();
+  const utils = api.useUtils();
   const [study, setStudy] = useState<Study | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,7 +177,7 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
           {
             label: statusInfo?.label ?? "Unknown",
             variant: statusInfo?.variant ?? "secondary",
-          }
+          },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -301,12 +302,18 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/studies/${study.id}/experiments/${experiment.id}/designer`}>
+                        <Link
+                          href={`/studies/${study.id}/experiments/${experiment.id}/designer`}
+                        >
                           Design
                         </Link>
                       </Button>
                       <Button asChild variant="outline" size="sm">
-                        <Link href={`/studies/${study.id}/experiments/${experiment.id}`}>View</Link>
+                        <Link
+                          href={`/studies/${study.id}/experiments/${experiment.id}`}
+                        >
+                          View
+                        </Link>
                       </Button>
                     </div>
                   </div>

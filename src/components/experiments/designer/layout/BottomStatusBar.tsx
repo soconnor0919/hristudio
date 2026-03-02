@@ -82,7 +82,7 @@ export function BottomStatusBar({
         );
       default:
         return (
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1.5">
             <Hash className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Unvalidated</span>
           </div>
@@ -102,7 +102,7 @@ export function BottomStatusBar({
 
   const savingIndicator =
     pendingSave || saving ? (
-      <div className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
+      <div className="text-muted-foreground flex animate-pulse items-center gap-1.5">
         <RefreshCw className="h-3 w-3 animate-spin" />
         <span>Saving...</span>
       </div>
@@ -117,7 +117,7 @@ export function BottomStatusBar({
       )}
     >
       {/* Status Indicators */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex min-w-0 items-center gap-3">
         {validationBadge}
         {unsavedBadge}
         {savingIndicator}

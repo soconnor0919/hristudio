@@ -109,7 +109,7 @@ export const columns: ColumnDef<Participant>[] = [
       return (
         <TooltipProvider>
           <div>
-            <div className="truncate font-medium max-w-[200px]">
+            <div className="max-w-[200px] truncate font-medium">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span>{String(name) || "No name provided"}</span>
@@ -120,7 +120,7 @@ export const columns: ColumnDef<Participant>[] = [
               </Tooltip>
             </div>
             {email && (
-              <div className="text-muted-foreground truncate text-sm max-w-[200px]">
+              <div className="text-muted-foreground max-w-[200px] truncate text-sm">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>{email}</span>
@@ -214,18 +214,20 @@ export const columns: ColumnDef<Participant>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href={`/studies/${studyId}/participants/${participant.id}/edit`}>
+              <Link
+                href={`/studies/${studyId}/participants/${participant.id}/edit`}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit participant
-              </Link >
-            </DropdownMenuItem >
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Remove
             </DropdownMenuItem>
-          </DropdownMenuContent >
-        </DropdownMenu >
+          </DropdownMenuContent>
+        </DropdownMenu>
       );
     },
   },

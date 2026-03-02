@@ -46,7 +46,10 @@ export default function DebugPage() {
 
   const ROS_BRIDGE_URL = "ws://134.82.159.25:9090";
 
-  const addLog = (message: string, type: "info" | "error" | "success" = "info") => {
+  const addLog = (
+    message: string,
+    type: "info" | "error" | "success" = "info",
+  ) => {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
     setLogs((prev) => [...prev.slice(-99), logEntry]);
@@ -79,7 +82,9 @@ export default function DebugPage() {
     setConnectionStatus("connecting");
     setConnectionAttempts((prev) => prev + 1);
     setLastError(null);
-    addLog(`Attempting connection #${connectionAttempts + 1} to ${ROS_BRIDGE_URL}`);
+    addLog(
+      `Attempting connection #${connectionAttempts + 1} to ${ROS_BRIDGE_URL}`,
+    );
 
     const socket = new WebSocket(ROS_BRIDGE_URL);
 
@@ -96,7 +101,10 @@ export default function DebugPage() {
       setConnectionStatus("connected");
       setRosSocket(socket);
       setLastError(null);
-      addLog("✅ WebSocket connection established successfully", "success");
+      addLog(
+        "[SUCCESS] WebSocket connection established successfully",
+        "success",
+      );
 
       // Test basic functionality by advertising
       const advertiseMsg = {
@@ -138,16 +146,20 @@ export default function DebugPage() {
         addLog(`Connection closed normally: ${event.reason || reason}`);
       } else if (event.code === 1006) {
         reason = "Connection lost/refused";
-        setLastError("ROS Bridge server not responding - check if rosbridge_server is running");
-        addLog(`❌ Connection failed: ${reason} (${event.code})`, "error");
+        setLastError(
+          "ROS Bridge server not responding - check if rosbridge_server is running",
+        );
+        addLog(`[ERROR] Connection failed: ${reason} (${event.code})`, "error");
       } else if (event.code === 1011) {
         reason = "Server error";
         setLastError("ROS Bridge server encountered an error");
-        addLog(`❌ Server error: ${reason} (${event.code})`, "error");
+        addLog(`[ERROR] Server error: ${reason} (${event.code})`, "error");
       } else {
         reason = `Code ${event.code}`;
-        setLastError(`Connection closed with code ${event.code}: ${event.reason || "No reason given"}`);
-        addLog(`❌ Connection closed: ${reason}`, "error");
+        setLastError(
+          `Connection closed with code ${event.code}: ${event.reason || "No reason given"}`,
+        );
+        addLog(`[ERROR] Connection closed: ${reason}`, "error");
       }
 
       if (wasConnected) {
@@ -160,7 +172,7 @@ export default function DebugPage() {
       setConnectionStatus("error");
       const errorMsg = "WebSocket error occurred";
       setLastError(errorMsg);
-      addLog(`❌ ${errorMsg}`, "error");
+      addLog(`[ERROR] ${errorMsg}`, "error");
       console.error("WebSocket error details:", error);
     };
   };
@@ -298,7 +310,7 @@ export default function DebugPage() {
               >
                 {connectionStatus.toUpperCase()}
               </Badge>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 Attempts: {connectionAttempts}
               </span>
             </div>
@@ -306,7 +318,9 @@ export default function DebugPage() {
             {lastError && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{lastError}</AlertDescription>
+                <AlertDescription className="text-sm">
+                  {lastError}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -318,7 +332,9 @@ export default function DebugPage() {
                   className="flex-1"
                 >
                   <Play className="mr-2 h-4 w-4" />
-                  {connectionStatus === "connecting" ? "Connecting..." : "Connect"}
+                  {connectionStatus === "connecting"
+                    ? "Connecting..."
+                    : "Connect"}
                 </Button>
               ) : (
                 <Button
@@ -479,27 +495,32 @@ export default function DebugPage() {
                     key={index}
                     className={`rounded p-2 text-xs ${
                       msg.direction === "sent"
-                        ? "bg-blue-50 border-l-2 border-blue-400"
-                        : "bg-green-50 border-l-2 border-green-400"
+                        ? "border-l-2 border-blue-400 bg-blue-50"
+                        : "border-l-2 border-green-400 bg-green-50"
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="mb-1 flex items-center justify-between">
                       <Badge
-                        variant={msg.direction === "sent" ? "default" : "secondary"}
+                        variant={
+                          msg.direction === "sent" ? "default" : "secondary"
+                        }
                         className="text-xs"
                       >
                         {msg.direction === "sent" ? "SENT" : "RECEIVED"}
                       </Badge>
-                      <span className="text-muted-foreground">{msg.timestamp}</span>
+                      <span className="text-muted-foreground">
+                        {msg.timestamp}
+                      </span>
                     </div>
-                    <pre className="whitespace-pre-wrap text-xs">
+                    <pre className="text-xs whitespace-pre-wrap">
                       {JSON.stringify(msg.data, null, 2)}
                     </pre>
                   </div>
                 ))}
                 {messages.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    No messages yet. Connect and send a test message to see data here.
+                  <div className="text-muted-foreground py-8 text-center">
+                    No messages yet. Connect and send a test message to see data
+                    here.
                   </div>
                 )}
                 <div ref={messagesEndRef} />

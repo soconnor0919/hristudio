@@ -31,10 +31,7 @@ import { Button } from "../ui/button";
 
 const studySchema = z.object({
   name: z.string().min(1, "Study name is required").max(255, "Name too long"),
-  description: z
-    .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description too long"),
+  description: z.string().max(1000, "Description too long").optional(),
   institution: z
     .string()
     .min(1, "Institution is required")
@@ -115,7 +112,7 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
           institution: data.institution,
           irbProtocol: data.irbProtocolNumber ?? undefined,
         });
-        router.push(`/studies/${newStudy.id}`);
+        router.push(`/studies/${newStudy.id}/participants/new`);
       } else {
         const updatedStudy = await updateStudyMutation.mutateAsync({
           id: studyId!,
@@ -171,7 +168,7 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
         title="Study Details"
         description="Basic information and status of your research study."
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <FormField>
             <Label htmlFor="tour-study-name">Study Name *</Label>
             <Input
@@ -202,7 +199,9 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft - Study in preparation</SelectItem>
+                <SelectItem value="draft">
+                  Draft - Study in preparation
+                </SelectItem>
                 <SelectItem value="active">
                   Active - Currently recruiting/running
                 </SelectItem>
@@ -218,7 +217,7 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
 
           <div className="md:col-span-2">
             <FormField>
-              <Label htmlFor="tour-study-description">Description *</Label>
+              <Label htmlFor="tour-study-description">Description</Label>
               <Textarea
                 id="tour-study-description"
                 {...form.register("description")}
@@ -244,7 +243,7 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
         title="Configuration"
         description="Institutional details and ethics approval."
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <FormField>
             <Label htmlFor="institution">Institution *</Label>
             <Input
@@ -349,10 +348,16 @@ export function StudyForm({ mode, studyId }: StudyFormProps) {
       sidebar={mode === "create" ? sidebar : undefined}
       submitButtonId="tour-study-submit"
       extraActions={
-        <Button variant="ghost" size="sm" onClick={() => startTour("study_creation")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => startTour("study_creation")}
+        >
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Help</span>
-            <div className="flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground">?</div>
+            <div className="text-muted-foreground flex h-5 w-5 items-center justify-center rounded-full border text-xs">
+              ?
+            </div>
           </div>
         </Button>
       }

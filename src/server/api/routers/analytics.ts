@@ -4,7 +4,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    annotations, experiments, exportJobs, exportStatusEnum, studyMembers, trials
+  annotations,
+  experiments,
+  exportJobs,
+  exportStatusEnum,
+  studyMembers,
+  trials,
 } from "~/server/db/schema";
 
 // Helper function to check if user has access to trial for analytics operations
@@ -91,16 +96,16 @@ async function checkStudyAccess(
 export const analyticsRouter = createTRPCRouter({
   createAnnotation: protectedProcedure
     .input(
-              z.object({
-          trialId: z.string(),
-          startTime: z.date(),
-          endTime: z.date().optional(),
-          category: z.string(),
-          label: z.string(),
-          description: z.string().optional(),
-          tags: z.array(z.string()).optional(),
-          metadata: z.any().optional(),
-        }),
+      z.object({
+        trialId: z.string(),
+        startTime: z.date(),
+        endTime: z.date().optional(),
+        category: z.string(),
+        label: z.string(),
+        description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        metadata: z.any().optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
@@ -136,16 +141,16 @@ export const analyticsRouter = createTRPCRouter({
 
   updateAnnotation: protectedProcedure
     .input(
-              z.object({
-          id: z.string(),
-          startTime: z.date().optional(),
-          endTime: z.date().optional(),
-          category: z.string().optional(),
-          label: z.string().optional(),
-          description: z.string().optional(),
-          tags: z.array(z.string()).optional(),
-          metadata: z.any().optional(),
-        }),
+      z.object({
+        id: z.string(),
+        startTime: z.date().optional(),
+        endTime: z.date().optional(),
+        category: z.string().optional(),
+        label: z.string().optional(),
+        description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        metadata: z.any().optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
@@ -201,7 +206,8 @@ export const analyticsRouter = createTRPCRouter({
       if (input.description !== undefined)
         updateData.description = input.description;
       if (input.tags !== undefined) updateData.tags = input.tags;
-      if (input.metadata !== undefined) updateData.metadata = input.metadata as Record<string, unknown>;
+      if (input.metadata !== undefined)
+        updateData.metadata = input.metadata as Record<string, unknown>;
 
       const annotationResults = await db
         .update(annotations)
@@ -266,16 +272,16 @@ export const analyticsRouter = createTRPCRouter({
 
   getAnnotations: protectedProcedure
     .input(
-              z.object({
-          trialId: z.string(),
-          category: z.string().optional(),
-          annotatorId: z.string().optional(),
-          startTime: z.date().optional(),
-          endTime: z.date().optional(),
-          tags: z.array(z.string()).optional(),
-          limit: z.number().min(1).max(1000).default(100),
-          offset: z.number().min(0).default(0),
-        }),
+      z.object({
+        trialId: z.string(),
+        category: z.string().optional(),
+        annotatorId: z.string().optional(),
+        startTime: z.date().optional(),
+        endTime: z.date().optional(),
+        tags: z.array(z.string()).optional(),
+        limit: z.number().min(1).max(1000).default(100),
+        offset: z.number().min(0).default(0),
+      }),
     )
     .query(async ({ ctx, input }) => {
       const { db } = ctx;
@@ -326,9 +332,7 @@ export const analyticsRouter = createTRPCRouter({
       if (input.tags && input.tags.length > 0) {
         return results.filter((annotation) => {
           if (!annotation.tags || !Array.isArray(annotation.tags)) return false;
-          return input.tags!.some((tag) =>
-            annotation.tags.includes(tag),
-          );
+          return input.tags!.some((tag) => annotation.tags.includes(tag));
         });
       }
 
@@ -337,12 +341,12 @@ export const analyticsRouter = createTRPCRouter({
 
   exportData: protectedProcedure
     .input(
-              z.object({
-          studyId: z.string(),
-          exportType: z.enum(["full", "trials", "analysis", "media"]),
-          format: z.enum(["csv", "json", "xlsx"]),
-          filters: z.any().optional(),
-        }),
+      z.object({
+        studyId: z.string(),
+        exportType: z.enum(["full", "trials", "analysis", "media"]),
+        format: z.enum(["csv", "json", "xlsx"]),
+        filters: z.any().optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { db } = ctx;
@@ -399,15 +403,15 @@ export const analyticsRouter = createTRPCRouter({
             // Success handled
           })
           .catch((error: unknown) => {
-                          database
-                .update(exportJobs)
-                .set({
-                  status: "failed",
-                  errorMessage:
-                    error instanceof Error
-                      ? error.message
-                      : "Export processing failed",
-                })
+            database
+              .update(exportJobs)
+              .set({
+                status: "failed",
+                errorMessage:
+                  error instanceof Error
+                    ? error.message
+                    : "Export processing failed",
+              })
               .where(eq(exportJobs.id, jobId))
               .catch(() => {
                 // Error handling the error update - ignore for now
@@ -526,11 +530,14 @@ export const analyticsRouter = createTRPCRouter({
       // Calculate statistics
       const stats = {
         totalTrials: trialStats.length,
-        completedTrials: trialStats.filter((t) => t.trial.status === "completed")
+        completedTrials: trialStats.filter(
+          (t) => t.trial.status === "completed",
+        ).length,
+        runningTrials: trialStats.filter(
+          (t) => t.trial.status === "in_progress",
+        ).length,
+        abortedTrials: trialStats.filter((t) => t.trial.status === "aborted")
           .length,
-        runningTrials: trialStats.filter((t) => t.trial.status === "in_progress")
-          .length,
-        abortedTrials: trialStats.filter((t) => t.trial.status === "aborted").length,
         avgDuration: 0,
         totalDuration: 0,
       };

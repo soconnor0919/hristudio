@@ -153,7 +153,8 @@ export function parseVisualDesignSteps(raw: unknown): {
     issues.push(
       ...zodErr.issues.map(
         (issue) =>
-          `steps${issue.path.length ? "." + issue.path.join(".") : ""
+          `steps${
+            issue.path.length ? "." + issue.path.join(".") : ""
           }: ${issue.message} (code=${issue.code})`,
       ),
     );
@@ -172,37 +173,37 @@ export function parseVisualDesignSteps(raw: unknown): {
       robotId?: string | null;
       baseActionId?: string;
     } = a.source
-        ? {
+      ? {
           kind: a.source.kind,
           pluginId: a.source.pluginId,
           pluginVersion: a.source.pluginVersion,
           robotId: a.source.robotId ?? null,
           baseActionId: a.source.baseActionId,
         }
-        : { kind: "core" };
+      : { kind: "core" };
 
     // Default execution
     const execution: ExecutionDescriptor = a.execution
       ? {
-        transport: a.execution.transport,
-        timeoutMs: a.execution.timeoutMs,
-        retryable: a.execution.retryable,
-        ros2: a.execution.ros2,
-        rest: a.execution.rest
-          ? {
-            method: a.execution.rest.method,
-            path: a.execution.rest.path,
-            headers: a.execution.rest.headers
-              ? Object.fromEntries(
-                Object.entries(a.execution.rest.headers).filter(
-                  (kv): kv is [string, string] =>
-                    typeof kv[1] === "string",
-                ),
-              )
-              : undefined,
-          }
-          : undefined,
-      }
+          transport: a.execution.transport,
+          timeoutMs: a.execution.timeoutMs,
+          retryable: a.execution.retryable,
+          ros2: a.execution.ros2,
+          rest: a.execution.rest
+            ? {
+                method: a.execution.rest.method,
+                path: a.execution.rest.path,
+                headers: a.execution.rest.headers
+                  ? Object.fromEntries(
+                      Object.entries(a.execution.rest.headers).filter(
+                        (kv): kv is [string, string] =>
+                          typeof kv[1] === "string",
+                      ),
+                    )
+                  : undefined,
+              }
+            : undefined,
+        }
       : { transport: "internal" };
 
     return {

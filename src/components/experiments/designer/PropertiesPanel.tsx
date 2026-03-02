@@ -173,8 +173,8 @@ export function PropertiesPanelBase({
     let def = registry.getAction(selectedAction.type);
 
     // Fallback: If action not found in registry, try without plugin prefix
-    if (!def && selectedAction.type.includes('.')) {
-      const baseType = selectedAction.type.split('.').pop();
+    if (!def && selectedAction.type.includes(".")) {
+      const baseType = selectedAction.type.split(".").pop();
       if (baseType) {
         def = registry.getAction(baseType);
       }
@@ -187,9 +187,9 @@ export function PropertiesPanelBase({
         type: selectedAction.type,
         name: selectedAction.name,
         description: `Action type: ${selectedAction.type}`,
-        category: selectedAction.category || 'control',
-        icon: 'Zap',
-        color: '#6366f1',
+        category: selectedAction.category || "control",
+        icon: "Zap",
+        color: "#6366f1",
         parameters: [],
         source: selectedAction.source,
       };
@@ -225,12 +225,15 @@ export function PropertiesPanelBase({
     const ResolvedIcon: React.ComponentType<{ className?: string }> =
       def?.icon && iconComponents[def.icon]
         ? (iconComponents[def.icon] as React.ComponentType<{
-          className?: string;
-        }>)
+            className?: string;
+          }>)
         : Zap;
 
     return (
-      <div className={cn("w-full min-w-0 space-y-3 px-3", className)} id="tour-designer-properties">
+      <div
+        className={cn("w-full min-w-0 space-y-3 px-3", className)}
+        id="tour-designer-properties"
+      >
         {/* Header / Metadata */}
         <div className="border-b pb-3">
           <div className="mb-2 flex items-center gap-2">
@@ -305,17 +308,23 @@ export function PropertiesPanelBase({
         {/* Branching Configuration (Special Case) */}
         {selectedAction.type === "branch" ? (
           <div className="space-y-3">
-            <div className="text-muted-foreground text-[10px] tracking-wide uppercase flex justify-between items-center">
+            <div className="text-muted-foreground flex items-center justify-between text-[10px] tracking-wide uppercase">
               <span>Branch Options</span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-5 w-5 p-0"
                 onClick={() => {
-                  const currentOptions = ((containingStep.trigger.conditions as any).options as any[]) || [];
+                  const currentOptions =
+                    ((containingStep.trigger.conditions as any)
+                      .options as any[]) || [];
                   const newOptions = [
                     ...currentOptions,
-                    { label: "New Option", nextStepId: design.steps[containingStep.order + 1]?.id, variant: "default" }
+                    {
+                      label: "New Option",
+                      nextStepId: design.steps[containingStep.order + 1]?.id,
+                      variant: "default",
+                    },
                   ];
 
                   // Sync to Step Trigger (Source of Truth)
@@ -324,16 +333,16 @@ export function PropertiesPanelBase({
                       ...containingStep.trigger,
                       conditions: {
                         ...containingStep.trigger.conditions,
-                        options: newOptions
-                      }
-                    }
+                        options: newOptions,
+                      },
+                    },
                   });
                   // Sync to Action Params (for consistency)
                   onActionUpdate(containingStep.id, selectedAction.id, {
                     parameters: {
                       ...selectedAction.parameters,
-                      options: newOptions
-                    }
+                      options: newOptions,
+                    },
                   });
                 }}
               >
@@ -342,26 +351,43 @@ export function PropertiesPanelBase({
             </div>
 
             <div className="space-y-3">
-              {(((containingStep.trigger.conditions as any).options as any[]) || []).map((opt: any, idx: number) => (
-                <div key={idx} className="space-y-2 p-2 rounded border bg-muted/50">
+              {(
+                ((containingStep.trigger.conditions as any).options as any[]) ||
+                []
+              ).map((opt: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="bg-muted/50 space-y-2 rounded border p-2"
+                >
                   <div className="grid grid-cols-5 gap-2">
                     <div className="col-span-3">
                       <Label className="text-[10px]">Label</Label>
                       <Input
                         value={opt.label}
                         onChange={(e) => {
-                          const currentOptions = ((containingStep.trigger.conditions as any).options as any[]) || [];
+                          const currentOptions =
+                            ((containingStep.trigger.conditions as any)
+                              .options as any[]) || [];
                           const newOpts = [...currentOptions];
-                          newOpts[idx] = { ...newOpts[idx], label: e.target.value };
+                          newOpts[idx] = {
+                            ...newOpts[idx],
+                            label: e.target.value,
+                          };
 
                           onStepUpdate(containingStep.id, {
                             trigger: {
                               ...containingStep.trigger,
-                              conditions: { ...containingStep.trigger.conditions, options: newOpts }
-                            }
+                              conditions: {
+                                ...containingStep.trigger.conditions,
+                                options: newOpts,
+                              },
+                            },
                           });
                           onActionUpdate(containingStep.id, selectedAction.id, {
-                            parameters: { ...selectedAction.parameters, options: newOpts }
+                            parameters: {
+                              ...selectedAction.parameters,
+                              options: newOpts,
+                            },
                           });
                         }}
                         className="h-7 text-xs"
@@ -370,34 +396,53 @@ export function PropertiesPanelBase({
                     <div className="col-span-2">
                       <Label className="text-[10px]">Target Step</Label>
                       {design.steps.length <= 1 ? (
-                        <div className="h-7 flex items-center text-[10px] text-muted-foreground border rounded px-2 bg-muted/50 truncate" title="Add more steps to link">
+                        <div
+                          className="text-muted-foreground bg-muted/50 flex h-7 items-center truncate rounded border px-2 text-[10px]"
+                          title="Add more steps to link"
+                        >
                           No linkable steps
                         </div>
                       ) : (
                         <Select
                           value={opt.nextStepId ?? ""}
                           onValueChange={(val) => {
-                            const currentOptions = ((containingStep.trigger.conditions as any).options as any[]) || [];
+                            const currentOptions =
+                              ((containingStep.trigger.conditions as any)
+                                .options as any[]) || [];
                             const newOpts = [...currentOptions];
                             newOpts[idx] = { ...newOpts[idx], nextStepId: val };
 
                             onStepUpdate(containingStep.id, {
                               trigger: {
                                 ...containingStep.trigger,
-                                conditions: { ...containingStep.trigger.conditions, options: newOpts }
-                              }
+                                conditions: {
+                                  ...containingStep.trigger.conditions,
+                                  options: newOpts,
+                                },
+                              },
                             });
-                            onActionUpdate(containingStep.id, selectedAction.id, {
-                              parameters: { ...selectedAction.parameters, options: newOpts }
-                            });
+                            onActionUpdate(
+                              containingStep.id,
+                              selectedAction.id,
+                              {
+                                parameters: {
+                                  ...selectedAction.parameters,
+                                  options: newOpts,
+                                },
+                              },
+                            );
                           }}
                         >
-                          <SelectTrigger className="h-7 text-xs w-full">
+                          <SelectTrigger className="h-7 w-full text-xs">
                             <SelectValue placeholder="Select..." />
                           </SelectTrigger>
                           <SelectContent className="min-w-[180px]">
                             {design.steps.map((s) => (
-                              <SelectItem key={s.id} value={s.id} disabled={s.id === containingStep.id}>
+                              <SelectItem
+                                key={s.id}
+                                value={s.id}
+                                disabled={s.id === containingStep.id}
+                              >
                                 {s.order + 1}. {s.name}
                               </SelectItem>
                             ))}
@@ -410,18 +455,26 @@ export function PropertiesPanelBase({
                     <Select
                       value={opt.variant || "default"}
                       onValueChange={(val) => {
-                        const currentOptions = ((containingStep.trigger.conditions as any).options as any[]) || [];
+                        const currentOptions =
+                          ((containingStep.trigger.conditions as any)
+                            .options as any[]) || [];
                         const newOpts = [...currentOptions];
                         newOpts[idx] = { ...newOpts[idx], variant: val };
 
                         onStepUpdate(containingStep.id, {
                           trigger: {
                             ...containingStep.trigger,
-                            conditions: { ...containingStep.trigger.conditions, options: newOpts }
-                          }
+                            conditions: {
+                              ...containingStep.trigger.conditions,
+                              options: newOpts,
+                            },
+                          },
                         });
                         onActionUpdate(containingStep.id, selectedAction.id, {
-                          parameters: { ...selectedAction.parameters, options: newOpts }
+                          parameters: {
+                            ...selectedAction.parameters,
+                            options: newOpts,
+                          },
                         });
                       }}
                     >
@@ -430,7 +483,9 @@ export function PropertiesPanelBase({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="default">Default (Next)</SelectItem>
-                        <SelectItem value="destructive">Destructive (Red)</SelectItem>
+                        <SelectItem value="destructive">
+                          Destructive (Red)
+                        </SelectItem>
                         <SelectItem value="outline">Outline</SelectItem>
                       </SelectContent>
                     </Select>
@@ -438,20 +493,28 @@ export function PropertiesPanelBase({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500"
+                      className="text-muted-foreground h-6 w-6 p-0 hover:text-red-500"
                       onClick={() => {
-                        const currentOptions = ((containingStep.trigger.conditions as any).options as any[]) || [];
+                        const currentOptions =
+                          ((containingStep.trigger.conditions as any)
+                            .options as any[]) || [];
                         const newOpts = [...currentOptions];
                         newOpts.splice(idx, 1);
 
                         onStepUpdate(containingStep.id, {
                           trigger: {
                             ...containingStep.trigger,
-                            conditions: { ...containingStep.trigger.conditions, options: newOpts }
-                          }
+                            conditions: {
+                              ...containingStep.trigger.conditions,
+                              options: newOpts,
+                            },
+                          },
                         });
                         onActionUpdate(containingStep.id, selectedAction.id, {
-                          parameters: { ...selectedAction.parameters, options: newOpts }
+                          parameters: {
+                            ...selectedAction.parameters,
+                            options: newOpts,
+                          },
                         });
                       }}
                     >
@@ -460,9 +523,12 @@ export function PropertiesPanelBase({
                   </div>
                 </div>
               ))}
-              {(!(((containingStep.trigger.conditions as any).options as any[])?.length)) && (
-                <div className="text-center py-4 border border-dashed rounded text-xs text-muted-foreground">
-                  No options defined.<br />Click + to add a branch.
+              {!((containingStep.trigger.conditions as any).options as any[])
+                ?.length && (
+                <div className="text-muted-foreground rounded border border-dashed py-4 text-center text-xs">
+                  No options defined.
+                  <br />
+                  Click + to add a branch.
                 </div>
               )}
             </div>
@@ -478,7 +544,7 @@ export function PropertiesPanelBase({
               {/* Iterations */}
               <div>
                 <Label className="text-xs">Iterations</Label>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex items-center gap-2">
                   <Slider
                     min={1}
                     max={20}
@@ -493,44 +559,42 @@ export function PropertiesPanelBase({
                       });
                     }}
                   />
-                  <span className="text-xs font-mono w-8 text-right">
+                  <span className="w-8 text-right font-mono text-xs">
                     {Number(selectedAction.parameters.iterations || 1)}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          /* Standard Parameters */
-          def?.parameters.length ? (
+        ) : /* Standard Parameters */
+        def?.parameters.length ? (
+          <div className="space-y-3">
+            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+              Parameters
+            </div>
             <div className="space-y-3">
-              <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Parameters
-              </div>
-              <div className="space-y-3">
-                {def.parameters.map((param) => (
-                  <ParameterEditor
-                    key={param.id}
-                    param={param}
-                    value={selectedAction.parameters[param.id]}
-                    onUpdate={(val) => {
-                      onActionUpdate(containingStep.id, selectedAction.id, {
-                        parameters: {
-                          ...selectedAction.parameters,
-                          [param.id]: val,
-                        },
-                      });
-                    }}
-                    onCommit={() => { }}
-                  />
-                ))}
-              </div>
+              {def.parameters.map((param) => (
+                <ParameterEditor
+                  key={param.id}
+                  param={param}
+                  value={selectedAction.parameters[param.id]}
+                  onUpdate={(val) => {
+                    onActionUpdate(containingStep.id, selectedAction.id, {
+                      parameters: {
+                        ...selectedAction.parameters,
+                        [param.id]: val,
+                      },
+                    });
+                  }}
+                  onCommit={() => {}}
+                />
+              ))}
             </div>
-          ) : (
-            <div className="text-muted-foreground text-xs">
-              No parameters for this action.
-            </div>
-          )
+          </div>
+        ) : (
+          <div className="text-muted-foreground text-xs">
+            No parameters for this action.
+          </div>
         )}
       </div>
     );
@@ -539,7 +603,10 @@ export function PropertiesPanelBase({
   /* --------------------------- Step Properties View --------------------------- */
   if (selectedStep) {
     return (
-      <div className={cn("w-full min-w-0 space-y-3 px-3", className)} id="tour-designer-properties">
+      <div
+        className={cn("w-full min-w-0 space-y-3 px-3", className)}
+        id="tour-designer-properties"
+      >
         <div className="border-b pb-2">
           <h3 className="flex items-center gap-2 text-sm font-medium">
             <div
@@ -625,7 +692,8 @@ export function PropertiesPanelBase({
                   </SelectContent>
                 </Select>
                 <p className="text-muted-foreground mt-1 text-[10px]">
-                  Steps always execute sequentially. Use control flow actions for parallel/conditional logic.
+                  Steps always execute sequentially. Use control flow actions
+                  for parallel/conditional logic.
                 </p>
               </div>
               <div>
@@ -697,7 +765,7 @@ const ParameterEditor = React.memo(function ParameterEditor({
   param,
   value: rawValue,
   onUpdate,
-  onCommit
+  onCommit,
 }: ParameterEditorProps) {
   // Local state for immediate feedback
   const [localValue, setLocalValue] = useState<unknown>(rawValue);
@@ -708,19 +776,22 @@ const ParameterEditor = React.memo(function ParameterEditor({
     setLocalValue(rawValue);
   }, [rawValue]);
 
-  const handleUpdate = useCallback((newVal: unknown, immediate = false) => {
-    setLocalValue(newVal);
+  const handleUpdate = useCallback(
+    (newVal: unknown, immediate = false) => {
+      setLocalValue(newVal);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (immediate) {
-      onUpdate(newVal);
-    } else {
-      debounceRef.current = setTimeout(() => {
+      if (immediate) {
         onUpdate(newVal);
-      }, 300);
-    }
-  }, [onUpdate]);
+      } else {
+        debounceRef.current = setTimeout(() => {
+          onUpdate(newVal);
+        }, 300);
+      }
+    },
+    [onUpdate],
+  );
 
   const handleCommit = useCallback(() => {
     if (localValue !== rawValue) {
@@ -772,13 +843,22 @@ const ParameterEditor = React.memo(function ParameterEditor({
       </div>
     );
   } else if (param.type === "number") {
-    const numericVal = typeof localValue === "number" ? localValue : (param.min ?? 0);
+    const numericVal =
+      typeof localValue === "number" ? localValue : (param.min ?? 0);
 
     if (param.min !== undefined || param.max !== undefined) {
       const min = param.min ?? 0;
-      const max = param.max ?? Math.max(min + 1, Number.isFinite(numericVal) ? numericVal : min + 1);
+      const max =
+        param.max ??
+        Math.max(min + 1, Number.isFinite(numericVal) ? numericVal : min + 1);
       const range = max - min;
-      const step = param.step ?? (range <= 5 ? 0.1 : range <= 50 ? 0.5 : Math.max(1, Math.round(range / 100)));
+      const step =
+        param.step ??
+        (range <= 5
+          ? 0.1
+          : range <= 50
+            ? 0.5
+            : Math.max(1, Math.round(range / 100)));
 
       control = (
         <div className="mt-1">
@@ -792,7 +872,9 @@ const ParameterEditor = React.memo(function ParameterEditor({
               onPointerUp={() => handleUpdate(localValue)} // Commit on release
             />
             <span className="text-muted-foreground min-w-[2.5rem] text-right text-[10px] tabular-nums">
-              {step < 1 ? Number(numericVal).toFixed(2) : Number(numericVal).toString()}
+              {step < 1
+                ? Number(numericVal).toFixed(2)
+                : Number(numericVal).toString()}
             </span>
           </div>
           <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">

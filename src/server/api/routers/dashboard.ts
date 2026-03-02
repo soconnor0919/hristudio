@@ -41,19 +41,25 @@ export const dashboardRouter = createTRPCRouter({
       // Build where conditions
       const whereConditions = input.studyId
         ? and(
-          eq(experiments.studyId, input.studyId),
-          inArray(
-            trialEvents.eventType,
-            ['trial_started', 'trial_completed', 'intervention', 'error', 'annotation']
+            eq(experiments.studyId, input.studyId),
+            inArray(trialEvents.eventType, [
+              "trial_started",
+              "trial_completed",
+              "intervention",
+              "error",
+              "annotation",
+            ]),
           )
-        )
         : and(
-          inArray(experiments.studyId, studyIds),
-          inArray(
-            trialEvents.eventType,
-            ['trial_started', 'trial_completed', 'intervention', 'error', 'annotation']
-          )
-        );
+            inArray(experiments.studyId, studyIds),
+            inArray(trialEvents.eventType, [
+              "trial_started",
+              "trial_completed",
+              "intervention",
+              "error",
+              "annotation",
+            ]),
+          );
 
       // Get recent interesting trial events
       const activities = await ctx.db
@@ -93,7 +99,12 @@ export const dashboardRouter = createTRPCRouter({
           title: title,
           description: description,
           time: activity.timestamp,
-          status: activity.type === "error" ? "error" : activity.type === "trial_completed" ? "success" : "info" as const,
+          status:
+            activity.type === "error"
+              ? "error"
+              : activity.type === "trial_completed"
+                ? "success"
+                : ("info" as const),
           data: activity.data,
           trialId: activity.trialId,
         };
@@ -120,8 +131,14 @@ export const dashboardRouter = createTRPCRouter({
       if (studyIds.length === 0) return [];
 
       const whereConditions = input.studyId
-        ? and(eq(experiments.studyId, input.studyId), eq(trials.status, "in_progress"))
-        : and(inArray(experiments.studyId, studyIds), eq(trials.status, "in_progress"));
+        ? and(
+            eq(experiments.studyId, input.studyId),
+            eq(trials.status, "in_progress"),
+          )
+        : and(
+            inArray(experiments.studyId, studyIds),
+            eq(trials.status, "in_progress"),
+          );
 
       const live = await ctx.db
         .select({
@@ -154,10 +171,10 @@ export const dashboardRouter = createTRPCRouter({
       // Build where conditions
       const whereConditions = input.studyId
         ? and(
-          eq(studyMembers.userId, userId),
-          eq(studies.status, "active"),
-          eq(studies.id, input.studyId),
-        )
+            eq(studyMembers.userId, userId),
+            eq(studies.status, "active"),
+            eq(studies.id, input.studyId),
+          )
         : and(eq(studyMembers.userId, userId), eq(studies.status, "active"));
 
       // Get studies the user has access to with participant counts
@@ -183,19 +200,19 @@ export const dashboardRouter = createTRPCRouter({
       const trialCounts =
         studyIds.length > 0
           ? await ctx.db
-            .select({
-              studyId: experiments.studyId,
-              completedTrials: count(trials.id),
-            })
-            .from(experiments)
-            .innerJoin(trials, eq(experiments.id, trials.experimentId))
-            .where(
-              and(
-                inArray(experiments.studyId, studyIds),
-                eq(trials.status, "completed"),
-              ),
-            )
-            .groupBy(experiments.studyId)
+              .select({
+                studyId: experiments.studyId,
+                completedTrials: count(trials.id),
+              })
+              .from(experiments)
+              .innerJoin(trials, eq(experiments.id, trials.experimentId))
+              .where(
+                and(
+                  inArray(experiments.studyId, studyIds),
+                  eq(trials.status, "completed"),
+                ),
+              )
+              .groupBy(experiments.studyId)
           : [];
 
       const trialCountMap = new Map(
@@ -211,9 +228,9 @@ export const dashboardRouter = createTRPCRouter({
         const progress =
           totalParticipants > 0
             ? Math.min(
-              100,
-              Math.round((completedTrials / totalParticipants) * 100),
-            )
+                100,
+                Math.round((completedTrials / totalParticipants) * 100),
+              )
             : 0;
 
         return {
@@ -396,10 +413,10 @@ export const dashboardRouter = createTRPCRouter({
     return {
       user: user
         ? {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        }
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          }
         : null,
       systemRoles: systemRoles.map((r) => r.role),
       studyMemberships: studyMemberships.map((m) => ({

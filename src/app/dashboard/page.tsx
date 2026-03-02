@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
   const { data: liveTrials } = api.dashboard.getLiveTrials.useQuery(
     { studyId: studyFilter ?? undefined },
-    { refetchInterval: 5000 }
+    { refetchInterval: 5000 },
   );
 
   const { data: recentActivity } = api.dashboard.getRecentActivity.useQuery({
@@ -102,11 +102,14 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="animate-in fade-in space-y-8 duration-500">
       {/* Header Section */}
-      <div id="dashboard-header" className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div
+        id="dashboard-header"
+        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+      >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-foreground text-3xl font-bold tracking-tight">
             {getWelcomeMessage()}
           </h1>
           <p className="text-muted-foreground">
@@ -115,7 +118,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => startTour("dashboard")} title="Start Tour">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => startTour("dashboard")}
+            title="Start Tour"
+          >
             <HelpCircle className="h-5 w-5" />
           </Button>
           <Select
@@ -124,7 +132,7 @@ export default function DashboardPage() {
               setStudyFilter(value === "all" ? null : value)
             }
           >
-            <SelectTrigger className="w-[200px] bg-background">
+            <SelectTrigger className="bg-background w-[200px]">
               <SelectValue placeholder="All Studies" />
             </SelectTrigger>
             <SelectContent>
@@ -146,7 +154,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Stats Grid */}
-      <div id="tour-dashboard-stats" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div
+        id="tour-dashboard-stats"
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      >
         <StatsCard
           title="Active Trials"
           value={stats?.activeTrials ?? 0}
@@ -179,9 +190,8 @@ export default function DashboardPage() {
 
       {/* Action Center & Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-
         {/* Quick Actions Card */}
-        <Card className="col-span-3 bg-gradient-to-br from-primary/5 to-background border-primary/20 h-fit">
+        <Card className="from-primary/5 to-background border-primary/20 col-span-3 h-fit bg-gradient-to-br">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Common tasks to get you started</CardDescription>
@@ -189,35 +199,35 @@ export default function DashboardPage() {
           <CardContent className="grid gap-4">
             <Button
               variant="outline"
-              className="justify-start h-auto py-4 px-4 border-primary/20 hover:border-primary/50 hover:bg-primary/5 group"
+              className="border-primary/20 hover:border-primary/50 hover:bg-primary/5 group h-auto justify-start px-4 py-4"
               asChild
             >
               <Link href="/studies/new">
-                <div className="p-2 bg-primary/10 rounded-full mr-4 group-hover:bg-primary/20 transition-colors">
-                  <FlaskConical className="h-5 w-5 text-primary" />
+                <div className="bg-primary/10 group-hover:bg-primary/20 mr-4 rounded-full p-2 transition-colors">
+                  <FlaskConical className="text-primary h-5 w-5" />
                 </div>
                 <div className="text-left">
                   <div className="font-semibold">Create New Study</div>
-                  <div className="text-xs text-muted-foreground font-normal">
+                  <div className="text-muted-foreground text-xs font-normal">
                     Design a new experiment protocol
                   </div>
                 </div>
-                <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                <ArrowRight className="text-muted-foreground group-hover:text-primary ml-auto h-4 w-4 opacity-0 transition-all group-hover:opacity-100" />
               </Link>
             </Button>
 
             <Button
               variant="outline"
-              className="justify-start h-auto py-4 px-4 group"
+              className="group h-auto justify-start px-4 py-4"
               asChild
             >
               <Link href="/studies">
-                <div className="p-2 bg-secondary rounded-full mr-4">
-                  <Search className="h-5 w-5 text-foreground" />
+                <div className="bg-secondary mr-4 rounded-full p-2">
+                  <Search className="text-foreground h-5 w-5" />
                 </div>
                 <div className="text-left">
                   <div className="font-semibold">Browse Studies</div>
-                  <div className="text-xs text-muted-foreground font-normal">
+                  <div className="text-muted-foreground text-xs font-normal">
                     Find and manage existing studies
                   </div>
                 </div>
@@ -226,16 +236,16 @@ export default function DashboardPage() {
 
             <Button
               variant="outline"
-              className="justify-start h-auto py-4 px-4 group"
+              className="group h-auto justify-start px-4 py-4"
               asChild
             >
               <Link href="/trials">
-                <div className="p-2 bg-emerald-500/10 rounded-full mr-4">
+                <div className="mr-4 rounded-full bg-emerald-500/10 p-2">
                   <Activity className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div className="text-left">
                   <div className="font-semibold">Monitor Active Trials</div>
-                  <div className="text-xs text-muted-foreground font-normal">
+                  <div className="text-muted-foreground text-xs font-normal">
                     Jump into the Wizard Interface
                   </div>
                 </div>
@@ -245,7 +255,10 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activity Card */}
-        <Card id="tour-recent-activity" className="col-span-4 border-muted/40 shadow-sm">
+        <Card
+          id="tour-recent-activity"
+          className="border-muted/40 col-span-4 shadow-sm"
+        >
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
@@ -262,37 +275,53 @@ export default function DashboardPage() {
                     eventColor = "bg-blue-500 ring-blue-100 dark:ring-blue-900";
                     Icon = PlayCircle;
                   } else if (activity.type === "trial_completed") {
-                    eventColor = "bg-green-500 ring-green-100 dark:ring-green-900";
+                    eventColor =
+                      "bg-green-500 ring-green-100 dark:ring-green-900";
                     Icon = CheckCircle;
                   } else if (activity.type === "error") {
                     eventColor = "bg-red-500 ring-red-100 dark:ring-red-900";
                     Icon = AlertTriangle;
                   } else if (activity.type === "intervention") {
-                    eventColor = "bg-orange-500 ring-orange-100 dark:ring-orange-900";
+                    eventColor =
+                      "bg-orange-500 ring-orange-100 dark:ring-orange-900";
                     Icon = Gamepad2;
                   } else if (activity.type === "annotation") {
-                    eventColor = "bg-yellow-500 ring-yellow-100 dark:ring-yellow-900";
+                    eventColor =
+                      "bg-yellow-500 ring-yellow-100 dark:ring-yellow-900";
                     Icon = MessageSquare;
                   }
 
                   return (
-                    <div key={activity.id} className="relative pl-6 pb-4 border-l last:border-0 border-muted-foreground/20">
-                      <span className={`absolute left-[-9px] top-0 h-4 w-4 rounded-full flex items-center justify-center ring-4 ${eventColor}`}>
+                    <div
+                      key={activity.id}
+                      className="border-muted-foreground/20 relative border-l pb-4 pl-6 last:border-0"
+                    >
+                      <span
+                        className={`absolute top-0 left-[-9px] flex h-4 w-4 items-center justify-center rounded-full ring-4 ${eventColor}`}
+                      >
                         <Icon className="h-2.5 w-2.5 text-white" />
                       </span>
-                      <div className="mb-0.5 text-sm font-medium leading-none">{activity.title}</div>
-                      <div className="text-xs text-muted-foreground mb-1">{activity.description}</div>
-                      <div className="text-[10px] text-muted-foreground/70 uppercase font-mono">
-                        {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
+                      <div className="mb-0.5 text-sm leading-none font-medium">
+                        {activity.title}
+                      </div>
+                      <div className="text-muted-foreground mb-1 text-xs">
+                        {activity.description}
+                      </div>
+                      <div className="text-muted-foreground/70 font-mono text-[10px] uppercase">
+                        {formatDistanceToNow(new Date(activity.time), {
+                          addSuffix: true,
+                        })}
                       </div>
                     </div>
-                  )
+                  );
                 })}
                 {!recentActivity?.length && (
-                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                    <Clock className="h-10 w-10 mb-3 opacity-20" />
+                  <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
+                    <Clock className="mb-3 h-10 w-10 opacity-20" />
                     <p>No recent activity recorded.</p>
-                    <p className="text-xs mt-1">Start a trial to see experiment events stream here.</p>
+                    <p className="mt-1 text-xs">
+                      Start a trial to see experiment events stream here.
+                    </p>
                   </div>
                 )}
               </div>
@@ -303,31 +332,40 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Live Trials */}
-        <Card id="tour-live-trials" className={`${liveTrials && liveTrials.length > 0 ? 'border-primary shadow-sm bg-primary/5' : 'border-muted/40'} col-span-4 transition-colors duration-500`}>
+        <Card
+          id="tour-live-trials"
+          className={`${liveTrials && liveTrials.length > 0 ? "border-primary bg-primary/5 shadow-sm" : "border-muted/40"} col-span-4 transition-colors duration-500`}
+        >
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   Live Sessions
-                  {liveTrials && liveTrials.length > 0 && <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>}
+                  {liveTrials && liveTrials.length > 0 && (
+                    <span className="relative flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
+                    </span>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   Currently running trials in the Wizard interface
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/trials">View All <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/trials">
+                  View All <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {!liveTrials?.length ? (
-              <div className="flex h-[150px] flex-col items-center justify-center rounded-md border border-dashed border-muted-foreground/30 text-center animate-in fade-in-50 bg-background/50">
-                <Radio className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">No trials are currently running.</p>
+              <div className="border-muted-foreground/30 animate-in fade-in-50 bg-background/50 flex h-[150px] flex-col items-center justify-center rounded-md border border-dashed text-center">
+                <Radio className="text-muted-foreground/50 mb-2 h-8 w-8" />
+                <p className="text-muted-foreground text-sm">
+                  No trials are currently running.
+                </p>
                 <Button variant="link" size="sm" asChild className="mt-1">
                   <Link href="/trials">Start a Trial</Link>
                 </Button>
@@ -335,23 +373,37 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {liveTrials.map((trial) => (
-                  <div key={trial.id} className="flex items-center justify-between rounded-lg border border-primary/20 p-3 bg-background shadow-sm hover:shadow transition-all duration-200">
+                  <div
+                    key={trial.id}
+                    className="border-primary/20 bg-background flex items-center justify-between rounded-lg border p-3 shadow-sm transition-all duration-200 hover:shadow"
+                  >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
                         <Radio className="h-5 w-5 animate-pulse" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className="text-sm font-medium">
                           {trial.participantCode}
-                          <span className="ml-2 text-muted-foreground font-normal text-xs">• {trial.experimentName}</span>
+                          <span className="text-muted-foreground ml-2 text-xs font-normal">
+                            • {trial.experimentName}
+                          </span>
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-2 text-xs">
                           <Clock className="h-3 w-3" />
-                          Started {trial.startedAt ? formatDistanceToNow(new Date(trial.startedAt), { addSuffix: true }) : 'just now'}
+                          Started{" "}
+                          {trial.startedAt
+                            ? formatDistanceToNow(new Date(trial.startedAt), {
+                                addSuffix: true,
+                              })
+                            : "just now"}
                         </div>
                       </div>
                     </div>
-                    <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90" asChild>
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 gap-2"
+                      asChild
+                    >
                       <Link href={`/wizard/${trial.id}`}>
                         <Play className="h-3.5 w-3.5" /> Spectate / Jump In
                       </Link>
@@ -364,7 +416,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Study Progress */}
-        <Card className="col-span-3 border-muted/40 shadow-sm">
+        <Card className="border-muted/40 col-span-3 shadow-sm">
           <CardHeader>
             <CardTitle>Study Progress</CardTitle>
             <CardDescription>
@@ -376,13 +428,18 @@ export default function DashboardPage() {
               <div key={study.id} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="font-medium">{study.name}</div>
-                  <div className="text-muted-foreground">{study.participants} / {study.totalParticipants} Participants</div>
+                  <div className="text-muted-foreground">
+                    {study.participants} / {study.totalParticipants}{" "}
+                    Participants
+                  </div>
                 </div>
                 <Progress value={study.progress} className="h-2" />
               </div>
             ))}
             {!studyProgress?.length && (
-              <p className="text-sm text-muted-foreground text-center py-4">No active studies to track.</p>
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                No active studies to track.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -407,16 +464,20 @@ function StatsCard({
   iconColor?: string;
 }) {
   return (
-    <Card className="border-muted/40 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+    <Card className="border-muted/40 hover:border-primary/20 shadow-sm transition-all duration-200 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className={`h-4 w-4 ${iconColor || "text-muted-foreground"}`} />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {description}
-          {trend && <span className="ml-1 text-green-600 dark:text-green-400 font-medium">{trend}</span>}
+          {trend && (
+            <span className="ml-1 font-medium text-green-600 dark:text-green-400">
+              {trend}
+            </span>
+          )}
         </p>
       </CardContent>
     </Card>

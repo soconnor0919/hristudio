@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   Pause,
-  SkipForward
+  SkipForward,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
@@ -78,11 +78,7 @@ interface StepData {
   id: string;
   name: string;
   description: string | null;
-  type:
-  | "wizard_action"
-  | "robot_action"
-  | "parallel_steps"
-  | "conditional";
+  type: "wizard_action" | "robot_action" | "parallel_steps" | "conditional";
   parameters: Record<string, unknown>;
   conditions?: {
     nextStepId?: string;
@@ -91,7 +87,13 @@ interface StepData {
       value: string;
       nextStepId?: string;
       nextStepIndex?: number;
-      variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+      variant?:
+        | "default"
+        | "destructive"
+        | "outline"
+        | "secondary"
+        | "ghost"
+        | "link";
     }[];
   };
   order: number;
@@ -112,7 +114,9 @@ export const WizardInterface = React.memo(function WizardInterface({
   const router = useRouter();
 
   // UI State
-  const [executionPanelTab, setExecutionPanelTab] = useState<"current" | "timeline" | "events">("timeline");
+  const [executionPanelTab, setExecutionPanelTab] = useState<
+    "current" | "timeline" | "events"
+  >("timeline");
 
   const [isExecutingAction, setIsExecutingAction] = useState(false);
   const [monitoringPanelTab, setMonitoringPanelTab] = useState<
@@ -189,11 +193,14 @@ export const WizardInterface = React.memo(function WizardInterface({
     toast.success(`Robot action completed: ${execution.actionId}`);
   }, []);
 
-  const onActionFailed = useCallback((execution: { actionId: string; error?: string }) => {
-    toast.error(`Robot action failed: ${execution.actionId}`, {
-      description: execution.error,
-    });
-  }, []);
+  const onActionFailed = useCallback(
+    (execution: { actionId: string; error?: string }) => {
+      toast.error(`Robot action failed: ${execution.actionId}`, {
+        description: execution.error,
+      });
+    },
+    [],
+  );
 
   // ROS WebSocket connection for robot control
   const {
@@ -218,7 +225,7 @@ export const WizardInterface = React.memo(function WizardInterface({
     async (enabled: boolean) => {
       return setAutonomousLifeRaw(enabled);
     },
-    [setAutonomousLifeRaw]
+    [setAutonomousLifeRaw],
   );
 
   // Use polling for trial status updates (no trial WebSocket server exists)
@@ -237,7 +244,7 @@ export const WizardInterface = React.memo(function WizardInterface({
     {
       refetchInterval: 3000,
       staleTime: 1000,
-    }
+    },
   );
 
   // Update local trial state from polling only if changed
@@ -245,15 +252,18 @@ export const WizardInterface = React.memo(function WizardInterface({
     if (pollingData && JSON.stringify(pollingData) !== JSON.stringify(trial)) {
       // Only update if specific fields we care about have changed to avoid
       // unnecessary re-renders that might cause UI flashing
-      if (pollingData.status !== trial.status ||
+      if (
+        pollingData.status !== trial.status ||
         pollingData.startedAt?.getTime() !== trial.startedAt?.getTime() ||
-        pollingData.completedAt?.getTime() !== trial.completedAt?.getTime()) {
-
+        pollingData.completedAt?.getTime() !== trial.completedAt?.getTime()
+      ) {
         setTrial((prev) => {
           // Double check inside setter to be safe
-          if (prev.status === pollingData.status &&
+          if (
+            prev.status === pollingData.status &&
             prev.startedAt?.getTime() === pollingData.startedAt?.getTime() &&
-            prev.completedAt?.getTime() === pollingData.completedAt?.getTime()) {
+            prev.completedAt?.getTime() === pollingData.completedAt?.getTime()
+          ) {
             return prev;
           }
           return {
@@ -288,60 +298,80 @@ export const WizardInterface = React.memo(function WizardInterface({
       message?: string;
     }>
   >(() => {
-    return (fetchedEvents ?? []).map(event => {
-      let message: string | undefined;
-      const eventData = event.data as any;
+    return (fetchedEvents ?? [])
+      .map((event) => {
+        let message: string | undefined;
+        const eventData = event.data as any;
 
-      // Extract or generate message based on event type
-      if (event.eventType.startsWith('annotation_')) {
-        message = eventData?.description || eventData?.label || 'Annotation added';
-      } else if (event.eventType.startsWith('robot_action_')) {
-        const actionName = event.eventType.replace('robot_action_', '').replace(/_/g, ' ');
-        message = `Robot action: ${actionName}`;
-      } else if (event.eventType === 'trial_started') {
-        message = 'Trial started';
-      } else if (event.eventType === 'trial_completed') {
-        message = 'Trial completed';
-      } else if (event.eventType === 'step_changed') {
-        message = `Step changed to: ${eventData?.stepName || 'next step'}`;
-      } else if (event.eventType.startsWith('wizard_')) {
-        message = eventData?.notes || eventData?.message || event.eventType.replace('wizard_', '').replace(/_/g, ' ');
-      } else {
-        // Generic fallback
-        message = eventData?.notes || eventData?.message || eventData?.description || event.eventType.replace(/_/g, ' ');
-      }
+        // Extract or generate message based on event type
+        if (event.eventType.startsWith("annotation_")) {
+          message =
+            eventData?.description || eventData?.label || "Annotation added";
+        } else if (event.eventType.startsWith("robot_action_")) {
+          const actionName = event.eventType
+            .replace("robot_action_", "")
+            .replace(/_/g, " ");
+          message = `Robot action: ${actionName}`;
+        } else if (event.eventType === "trial_started") {
+          message = "Trial started";
+        } else if (event.eventType === "trial_completed") {
+          message = "Trial completed";
+        } else if (event.eventType === "step_changed") {
+          message = `Step changed to: ${eventData?.stepName || "next step"}`;
+        } else if (event.eventType.startsWith("wizard_")) {
+          message =
+            eventData?.notes ||
+            eventData?.message ||
+            event.eventType.replace("wizard_", "").replace(/_/g, " ");
+        } else {
+          // Generic fallback
+          message =
+            eventData?.notes ||
+            eventData?.message ||
+            eventData?.description ||
+            event.eventType.replace(/_/g, " ");
+        }
 
-      return {
-        type: event.eventType,
-        timestamp: new Date(event.timestamp),
-        data: event.data,
-        message,
-      };
-    }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()); // Newest first
+        return {
+          type: event.eventType,
+          timestamp: new Date(event.timestamp),
+          data: event.data,
+          message,
+        };
+      })
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()); // Newest first
   }, [fetchedEvents]);
 
   // Transform experiment steps to component format
-  const steps: StepData[] = useMemo(() =>
-    experimentSteps?.map((step, index) => ({
-      id: step.id,
-      name: step.name ?? `Step ${index + 1}`,
-      description: step.description,
-      type: mapStepType(step.type),
-      // Fix: Conditions are at root level from API
-      conditions: (step as any).conditions ?? (step as any).trigger?.conditions ?? undefined,
-      parameters: step.parameters ?? {},
-      order: step.order ?? index,
-      actions: step.actions?.filter(a => a.type !== 'branch').map((action) => ({
-        id: action.id,
-        name: action.name,
-        description: action.description,
-        type: action.type,
-        parameters: action.parameters ?? {},
-        order: action.order,
-        pluginId: action.pluginId,
+  const steps: StepData[] = useMemo(
+    () =>
+      experimentSteps?.map((step, index) => ({
+        id: step.id,
+        name: step.name ?? `Step ${index + 1}`,
+        description: step.description,
+        type: mapStepType(step.type),
+        // Fix: Conditions are at root level from API
+        conditions:
+          (step as any).conditions ??
+          (step as any).trigger?.conditions ??
+          undefined,
+        parameters: step.parameters ?? {},
+        order: step.order ?? index,
+        actions:
+          step.actions
+            ?.filter((a) => a.type !== "branch")
+            .map((action) => ({
+              id: action.id,
+              name: action.name,
+              description: action.description,
+              type: action.type,
+              parameters: action.parameters ?? {},
+              order: action.order,
+              pluginId: action.pluginId,
+            })) ?? [],
       })) ?? [],
-    })) ?? [], [experimentSteps]);
-
+    [experimentSteps],
+  );
 
   const currentStep = steps[currentStepIndex] ?? null;
   const totalSteps = steps.length;
@@ -416,7 +446,9 @@ export const WizardInterface = React.memo(function WizardInterface({
           completedAt: data.completedAt,
         });
         toast.success("Trial completed! Redirecting to analysis...");
-        router.push(`/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`);
+        router.push(
+          `/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`,
+        );
       }
     },
   });
@@ -472,8 +504,6 @@ export const WizardInterface = React.memo(function WizardInterface({
       const result = await startTrialMutation.mutateAsync({ id: trial.id });
       console.log("[WizardInterface] Trial started successfully", result);
 
-
-
       // Update local state immediately
       setTrial((prev) => ({
         ...prev,
@@ -506,7 +536,7 @@ export const WizardInterface = React.memo(function WizardInterface({
       logEventMutation.mutate({
         trialId: trial.id,
         type: "trial_resumed",
-        data: { timestamp: new Date() }
+        data: { timestamp: new Date() },
       });
       setIsPaused(false);
       toast.success("Trial resumed");
@@ -517,7 +547,7 @@ export const WizardInterface = React.memo(function WizardInterface({
 
   const handleNextStep = (targetIndex?: number) => {
     // If explicit target provided (from branching choice), use it
-    if (typeof targetIndex === 'number') {
+    if (typeof targetIndex === "number") {
       // Find step by index to ensure safety
       if (targetIndex >= 0 && targetIndex < steps.length) {
         console.log(`[WizardInterface] Manual jump to step ${targetIndex}`);
@@ -531,8 +561,8 @@ export const WizardInterface = React.memo(function WizardInterface({
             toIndex: targetIndex,
             fromStepId: steps[currentStepIndex]?.id,
             toStepId: steps[targetIndex]?.id,
-            reason: "manual_choice"
-          }
+            reason: "manual_choice",
+          },
         });
 
         setCompletedActionsCount(0);
@@ -546,13 +576,23 @@ export const WizardInterface = React.memo(function WizardInterface({
     const currentStep = steps[currentStepIndex];
 
     // Check if we have a stored response that dictates the next step
-    if (currentStep?.type === 'conditional' && currentStep.conditions?.options && lastResponse) {
-      const matchedOption = currentStep.conditions.options.find(opt => opt.value === lastResponse);
+    if (
+      currentStep?.type === "conditional" &&
+      currentStep.conditions?.options &&
+      lastResponse
+    ) {
+      const matchedOption = currentStep.conditions.options.find(
+        (opt) => opt.value === lastResponse,
+      );
       if (matchedOption && matchedOption.nextStepId) {
         // Find index of the target step
-        const targetIndex = steps.findIndex(s => s.id === matchedOption.nextStepId);
+        const targetIndex = steps.findIndex(
+          (s) => s.id === matchedOption.nextStepId,
+        );
         if (targetIndex !== -1) {
-          console.log(`[WizardInterface] Branching to step ${targetIndex} (${matchedOption.label})`);
+          console.log(
+            `[WizardInterface] Branching to step ${targetIndex} (${matchedOption.label})`,
+          );
 
           logEventMutation.mutate({
             trialId: trial.id,
@@ -561,8 +601,8 @@ export const WizardInterface = React.memo(function WizardInterface({
               fromIndex: currentStepIndex,
               toIndex: targetIndex,
               condition: matchedOption.label,
-              value: lastResponse
-            }
+              value: lastResponse,
+            },
           });
 
           setCurrentStepIndex(targetIndex);
@@ -573,12 +613,17 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
 
     // Check for explicit nextStepId in conditions (e.g. for end of branch)
-    console.log("[WizardInterface] Checking for nextStepId condition:", currentStep?.conditions);
+    console.log(
+      "[WizardInterface] Checking for nextStepId condition:",
+      currentStep?.conditions,
+    );
     if (currentStep?.conditions?.nextStepId) {
       const nextId = String(currentStep.conditions.nextStepId);
-      const targetIndex = steps.findIndex(s => s.id === nextId);
+      const targetIndex = steps.findIndex((s) => s.id === nextId);
       if (targetIndex !== -1) {
-        console.log(`[WizardInterface] Condition-based jump to step ${targetIndex} (${nextId})`);
+        console.log(
+          `[WizardInterface] Condition-based jump to step ${targetIndex} (${nextId})`,
+        );
 
         logEventMutation.mutate({
           trialId: trial.id,
@@ -586,12 +631,12 @@ export const WizardInterface = React.memo(function WizardInterface({
           data: {
             fromIndex: currentStepIndex,
             toIndex: targetIndex,
-            reason: "condition_next_step"
-          }
+            reason: "condition_next_step",
+          },
         });
 
         // Mark steps as skipped
-        setSkippedSteps(prev => {
+        setSkippedSteps((prev) => {
           const next = new Set(prev);
           for (let i = currentStepIndex + 1; i < targetIndex; i++) {
             if (!completedSteps.has(i)) {
@@ -602,7 +647,7 @@ export const WizardInterface = React.memo(function WizardInterface({
         });
 
         // Mark current as complete
-        setCompletedSteps(prev => {
+        setCompletedSteps((prev) => {
           const next = new Set(prev);
           next.add(currentStepIndex);
           return next;
@@ -612,17 +657,21 @@ export const WizardInterface = React.memo(function WizardInterface({
         setCompletedActionsCount(0);
         return;
       } else {
-        console.warn(`[WizardInterface] Targeted nextStepId ${nextId} not found in steps list.`);
+        console.warn(
+          `[WizardInterface] Targeted nextStepId ${nextId} not found in steps list.`,
+        );
       }
     } else {
-      console.log("[WizardInterface] No nextStepId found in conditions, proceeding linearly.");
+      console.log(
+        "[WizardInterface] No nextStepId found in conditions, proceeding linearly.",
+      );
     }
 
     // Default: Linear progression
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       // Mark current step as complete
-      setCompletedSteps(prev => {
+      setCompletedSteps((prev) => {
         const next = new Set(prev);
         next.add(currentStepIndex);
         return next;
@@ -638,8 +687,8 @@ export const WizardInterface = React.memo(function WizardInterface({
           fromStepId: currentStep?.id,
           toStepId: steps[nextIndex]?.id,
           stepName: steps[nextIndex]?.name,
-          method: "auto"
-        }
+          method: "auto",
+        },
       });
 
       setCurrentStepIndex(nextIndex);
@@ -661,13 +710,13 @@ export const WizardInterface = React.memo(function WizardInterface({
         fromStepId: currentStep?.id,
         toStepId: steps[index]?.id,
         stepName: steps[index]?.name,
-        method: "manual"
-      }
+        method: "manual",
+      },
     });
 
     // Mark current as complete if leaving it?
     // Maybe better to only mark on "Next" or explicit complete.
-    // If I jump away, I might not be done. 
+    // If I jump away, I might not be done.
     // I'll leave 'completedSteps' update to explicit actions or completion.
 
     setCurrentStepIndex(index);
@@ -676,7 +725,7 @@ export const WizardInterface = React.memo(function WizardInterface({
   const handleCompleteTrial = async () => {
     try {
       // Mark final step as complete
-      setCompletedSteps(prev => {
+      setCompletedSteps((prev) => {
         const next = new Set(prev);
         next.add(currentStepIndex);
         return next;
@@ -692,7 +741,9 @@ export const WizardInterface = React.memo(function WizardInterface({
       archiveTrialMutation.mutate({ id: trial.id });
 
       // Immediately navigate to analysis
-      router.push(`/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`);
+      router.push(
+        `/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`,
+      );
     } catch (error) {
       console.error("Failed to complete trial:", error);
     }
@@ -701,8 +752,6 @@ export const WizardInterface = React.memo(function WizardInterface({
   const handleAbortTrial = async () => {
     try {
       await abortTrialMutation.mutateAsync({ id: trial.id });
-
-
     } catch (error) {
       console.error("Failed to abort trial:", error);
     }
@@ -731,8 +780,6 @@ export const WizardInterface = React.memo(function WizardInterface({
     });
   };
 
-
-
   // Mutation for interventions
   const addInterventionMutation = api.trials.addIntervention.useMutation({
     onSuccess: () => toast.success("Intervention logged"),
@@ -753,9 +800,11 @@ export const WizardInterface = React.memo(function WizardInterface({
         // If nextStepId is provided, jump immediately
         if (parameters.nextStepId) {
           const nextId = String(parameters.nextStepId);
-          const targetIndex = steps.findIndex(s => s.id === nextId);
+          const targetIndex = steps.findIndex((s) => s.id === nextId);
           if (targetIndex !== -1) {
-            console.log(`[WizardInterface] Choice-based jump to step ${targetIndex} (${nextId})`);
+            console.log(
+              `[WizardInterface] Choice-based jump to step ${targetIndex} (${nextId})`,
+            );
             handleNextStep(targetIndex);
             return; // Exit after jump
           }
@@ -780,7 +829,7 @@ export const WizardInterface = React.memo(function WizardInterface({
         await addAnnotationMutation.mutateAsync({
           trialId: trial.id,
           description: String(parameters?.content || "Quick note"),
-          category: String(parameters?.category || "quick_note")
+          category: String(parameters?.category || "quick_note"),
         });
       } else {
         // Generic action logging - now with more details
@@ -789,11 +838,17 @@ export const WizardInterface = React.memo(function WizardInterface({
         let actionType = "unknown";
 
         // Helper to search recursively
-        const findAction = (actions: ActionData[], id: string): ActionData | undefined => {
+        const findAction = (
+          actions: ActionData[],
+          id: string,
+        ): ActionData | undefined => {
           for (const action of actions) {
             if (action.id === id) return action;
             if (action.parameters?.children) {
-              const found = findAction(action.parameters.children as ActionData[], id);
+              const found = findAction(
+                action.parameters.children as ActionData[],
+                id,
+              );
               if (found) return found;
             }
           }
@@ -821,10 +876,13 @@ export const WizardInterface = React.memo(function WizardInterface({
           actionType = foundAction.type;
         } else {
           // Fallback for Wizard Actions (often have label/value in parameters)
-          if (parameters?.label && typeof parameters.label === 'string') {
+          if (parameters?.label && typeof parameters.label === "string") {
             actionName = parameters.label;
             actionType = "wizard_button";
-          } else if (parameters?.value && typeof parameters.value === 'string') {
+          } else if (
+            parameters?.value &&
+            typeof parameters.value === "string"
+          ) {
             actionName = parameters.value;
             actionType = "wizard_input";
           }
@@ -837,8 +895,8 @@ export const WizardInterface = React.memo(function WizardInterface({
             actionId,
             actionName,
             actionType,
-            parameters
-          }
+            parameters,
+          },
         });
       }
 
@@ -877,7 +935,11 @@ export const WizardInterface = React.memo(function WizardInterface({
         // Try direct WebSocket execution first for better performance
         if (rosConnected) {
           try {
-            const result = await executeRosAction(pluginName, actionId, parameters);
+            const result = await executeRosAction(
+              pluginName,
+              actionId,
+              parameters,
+            );
 
             const duration =
               result.endTime && result.startTime
@@ -962,8 +1024,8 @@ export const WizardInterface = React.memo(function WizardInterface({
             type: "intervention_action_skipped",
             data: {
               actionId,
-              parameters
-            }
+              parameters,
+            },
           });
         }
 
@@ -979,18 +1041,19 @@ export const WizardInterface = React.memo(function WizardInterface({
     [logRobotActionMutation, trial.id, logEventMutation, handleNextStep],
   );
 
-  const handleLogEvent = useCallback((type: string, data?: any) => {
-    logEventMutation.mutate({
-      trialId: trial.id,
-      type,
-      data
-    });
-  }, [logEventMutation, trial.id]);
-
-
+  const handleLogEvent = useCallback(
+    (type: string, data?: any) => {
+      logEventMutation.mutate({
+        trialId: trial.id,
+        type,
+        data,
+      });
+    },
+    [logEventMutation, trial.id],
+  );
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-background">
+    <div className="bg-background flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden">
       <PageHeader
         title="Trial Execution"
         description={`Session ${trial.sessionNumber} • Participant ${trial.participant.participantCode}`}
@@ -998,11 +1061,7 @@ export const WizardInterface = React.memo(function WizardInterface({
         actions={
           <div className="flex items-center gap-2">
             {trial.status === "scheduled" && (
-              <Button
-                onClick={handleStartTrial}
-                size="sm"
-                className="gap-2"
-              >
+              <Button onClick={handleStartTrial} size="sm" className="gap-2">
                 <Play className="h-4 w-4" />
                 Start Trial
               </Button>
@@ -1016,7 +1075,11 @@ export const WizardInterface = React.memo(function WizardInterface({
                   onClick={isPaused ? handleResumeTrial : handlePauseTrial}
                   className="gap-2"
                 >
-                  {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {isPaused ? (
+                    <Play className="h-4 w-4" />
+                  ) : (
+                    <Pause className="h-4 w-4" />
+                  )}
                   {isPaused ? "Resume" : "Pause"}
                 </Button>
 
@@ -1065,11 +1128,10 @@ export const WizardInterface = React.memo(function WizardInterface({
       />
 
       {/* Main Grid - Single Row */}
-      <div className="flex-1 min-h-0 flex gap-2 px-2 pb-2">
-
+      <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2">
         {/* Center - Execution Workspace */}
-        <div className="flex-1 flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
-          <div className="flex items-center border-b px-3 py-2 bg-muted/30 min-h-[45px]">
+        <div className="bg-background flex flex-1 flex-col overflow-hidden rounded-lg border shadow-sm">
+          <div className="bg-muted/30 flex min-h-[45px] items-center border-b px-3 py-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Trial Execution</span>
               {currentStep && (
@@ -1081,7 +1143,7 @@ export const WizardInterface = React.memo(function WizardInterface({
 
             <div className="flex-1" />
 
-            <div className="mr-2 text-xs text-muted-foreground font-medium">
+            <div className="text-muted-foreground mr-2 text-xs font-medium">
               Step {currentStepIndex + 1} / {steps.length}
             </div>
 
@@ -1097,7 +1159,7 @@ export const WizardInterface = React.memo(function WizardInterface({
               </Button>
             )}
           </div>
-          <div className="flex-1 overflow-auto bg-muted/10 pb-0">
+          <div className="bg-muted/10 flex-1 overflow-auto pb-0">
             <div id="tour-wizard-timeline" className="h-full">
               <WizardExecutionPanel
                 trial={trial}
@@ -1116,9 +1178,11 @@ export const WizardInterface = React.memo(function WizardInterface({
                 isExecuting={isExecutingAction}
                 onNextStep={handleNextStep}
                 completedActionsCount={completedActionsCount}
-                onActionCompleted={() => setCompletedActionsCount(c => c + 1)}
+                onActionCompleted={() => setCompletedActionsCount((c) => c + 1)}
                 onCompleteTrial={handleCompleteTrial}
-                readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                readOnly={
+                  trial.status === "completed" || _userRole === "observer"
+                }
                 rosConnected={rosConnected}
                 onLogEvent={handleLogEvent}
               />
@@ -1127,11 +1191,13 @@ export const WizardInterface = React.memo(function WizardInterface({
         </div>
 
         {/* Right Sidebar - Tools Tabs (Collapsible) */}
-        <div className={cn(
-          "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm w-[350px] lg:w-[400px]",
-          rightCollapsed && "hidden"
-        )}>
-          <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30 shrink-0">
+        <div
+          className={cn(
+            "bg-background flex w-[350px] flex-col overflow-hidden rounded-lg border shadow-sm lg:w-[400px]",
+            rightCollapsed && "hidden",
+          )}
+        >
+          <div className="bg-muted/30 flex shrink-0 items-center justify-between border-b px-3 py-2">
             <span className="text-sm font-medium">Tools</span>
             <Button
               variant="ghost"
@@ -1142,29 +1208,46 @@ export const WizardInterface = React.memo(function WizardInterface({
               <PanelRightClose className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex-1 overflow-hidden bg-background">
-            <Tabs defaultValue="camera_obs" className="flex flex-col h-full w-full">
-              <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 px-3 py-1 shrink-0 h-10">
-                <TabsTrigger value="camera_obs" className="text-xs flex-1">Camera & Obs</TabsTrigger>
-                <TabsTrigger value="robot" className="text-xs flex-1">Robot Control</TabsTrigger>
+          <div className="bg-background flex-1 overflow-hidden">
+            <Tabs
+              defaultValue="camera_obs"
+              className="flex h-full w-full flex-col"
+            >
+              <TabsList className="bg-muted/30 h-10 w-full shrink-0 justify-start rounded-none border-b px-3 py-1">
+                <TabsTrigger value="camera_obs" className="flex-1 text-xs">
+                  Camera & Obs
+                </TabsTrigger>
+                <TabsTrigger value="robot" className="flex-1 text-xs">
+                  Robot Control
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="camera_obs" className="flex-1 flex-col m-0 p-0 h-full overflow-hidden min-h-0 data-[state=active]:flex">
-                <div className="flex-none bg-muted/30 border-b h-48 sm:h-56 relative group shrink-0">
-                  <WebcamPanel readOnly={trial.status === 'completed'} trialId={trial.id} trialStatus={trial.status} />
+              <TabsContent
+                value="camera_obs"
+                className="m-0 h-full min-h-0 flex-1 flex-col overflow-hidden p-0 data-[state=active]:flex"
+              >
+                <div className="bg-muted/30 group relative h-48 flex-none shrink-0 border-b sm:h-56">
+                  <WebcamPanel
+                    readOnly={trial.status === "completed"}
+                    trialId={trial.id}
+                    trialStatus={trial.status}
+                  />
                 </div>
-                <div className="flex-1 overflow-auto min-h-0 bg-muted/10">
+                <div className="bg-muted/10 min-h-0 flex-1 overflow-auto">
                   <WizardObservationPane
                     onAddAnnotation={handleAddAnnotation}
                     onFlagIntervention={() => handleExecuteAction("intervene")}
                     isSubmitting={addAnnotationMutation.isPending}
                     trialEvents={trialEvents}
-                    readOnly={trial.status === 'completed'}
+                    readOnly={trial.status === "completed"}
                   />
                 </div>
               </TabsContent>
 
-              <TabsContent value="robot" className="flex-1 flex-col m-0 p-0 h-full overflow-hidden min-h-0 data-[state=active]:flex">
+              <TabsContent
+                value="robot"
+                className="m-0 h-full min-h-0 flex-1 flex-col overflow-hidden p-0 data-[state=active]:flex"
+              >
                 <WizardMonitoringPanel
                   rosConnected={rosConnected}
                   rosConnecting={rosConnecting}
@@ -1178,7 +1261,9 @@ export const WizardInterface = React.memo(function WizardInterface({
                   studyId={trial.experiment.studyId}
                   trialId={trial.id}
                   trialStatus={trial.status}
-                  readOnly={trial.status === 'completed' || _userRole === 'observer'}
+                  readOnly={
+                    trial.status === "completed" || _userRole === "observer"
+                  }
                 />
               </TabsContent>
             </Tabs>

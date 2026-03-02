@@ -1,4 +1,3 @@
-
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/server/db/schema";
@@ -9,18 +8,18 @@ const connection = postgres(connectionString);
 const db = drizzle(connection, { schema });
 
 async function main() {
-    const exp = await db.query.experiments.findFirst({
-        where: eq(schema.experiments.name, "Control Flow Demo"),
-        columns: { id: true }
-    });
+  const exp = await db.query.experiments.findFirst({
+    where: eq(schema.experiments.name, "Control Flow Demo"),
+    columns: { id: true },
+  });
 
-    if (exp) {
-        console.log(`Experiment ID: ${exp.id}`);
-    } else {
-        console.error("Experiment not found");
-    }
+  if (exp) {
+    console.log(`Experiment ID: ${exp.id}`);
+  } else {
+    console.error("Experiment not found");
+  }
 
-    await connection.end();
+  await connection.end();
 }
 
 main();

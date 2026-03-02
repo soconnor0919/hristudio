@@ -1,7 +1,17 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { Calendar, FlaskConical, Plus, Settings, Users } from "lucide-react";
+import {
+  Calendar,
+  FlaskConical,
+  Plus,
+  Settings,
+  Users,
+  FileEdit,
+  TestTube,
+  CheckCircle2,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "~/components/ui/badge";
@@ -45,22 +55,22 @@ const statusConfig = {
   draft: {
     label: "Draft",
     className: "bg-gray-100 text-gray-800 hover:bg-gray-200",
-    icon: "📝",
+    icon: FileEdit,
   },
   testing: {
     label: "Testing",
     className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-    icon: "🧪",
+    icon: TestTube,
   },
   ready: {
     label: "Ready",
     className: "bg-green-100 text-green-800 hover:bg-green-200",
-    icon: "✅",
+    icon: CheckCircle2,
   },
   deprecated: {
     label: "Deprecated",
     className: "bg-red-100 text-red-800 hover:bg-red-200",
-    icon: "🗑️",
+    icon: Trash2,
   },
 };
 
@@ -98,7 +108,7 @@ function ExperimentCard({ experiment }: ExperimentCardProps) {
             </div>
           </div>
           <Badge className={statusInfo.className} variant="secondary">
-            <span className="mr-1">{statusInfo.icon}</span>
+            <statusInfo.icon className="mr-1 h-3.5 w-3.5" />
             {statusInfo.label}
           </Badge>
         </div>
@@ -158,10 +168,16 @@ function ExperimentCard({ experiment }: ExperimentCardProps) {
         {/* Actions */}
         <div className="flex gap-2 pt-2">
           <Button asChild size="sm" className="flex-1">
-            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}>View Details</Link>
+            <Link
+              href={`/studies/${experiment.studyId}/experiments/${experiment.id}`}
+            >
+              View Details
+            </Link>
           </Button>
           <Button asChild size="sm" variant="outline" className="flex-1">
-            <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+            <Link
+              href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}
+            >
               <Settings className="mr-1 h-3 w-3" />
               Design
             </Link>

@@ -16,7 +16,7 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
-    
+
     // Minio/S3 Configuration
     MINIO_ENDPOINT: z.string().optional(),
     MINIO_REGION: z.string().optional(),
@@ -43,7 +43,7 @@ export const env = createEnv({
 
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
-    
+
     // Minio/S3 Configuration
     MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
     MINIO_REGION: process.env.MINIO_REGION,

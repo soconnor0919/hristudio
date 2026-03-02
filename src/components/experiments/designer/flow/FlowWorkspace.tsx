@@ -97,8 +97,12 @@ interface StepRowProps {
   onDeleteAction: (stepId: string, actionId: string) => void;
   setRenamingStepId: (id: string | null) => void;
   registerMeasureRef: (stepId: string, el: HTMLDivElement | null) => void;
-  onReorderStep: (stepId: string, direction: 'up' | 'down') => void;
-  onReorderAction?: (stepId: string, actionId: string, direction: 'up' | 'down') => void;
+  onReorderStep: (stepId: string, direction: "up" | "down") => void;
+  onReorderAction?: (
+    stepId: string,
+    actionId: string,
+    direction: "up" | "down",
+  ) => void;
   isChild?: boolean;
 }
 
@@ -157,12 +161,12 @@ function StepRow({
         ref={(el) => registerMeasureRef(step.id, el)}
         className={cn(
           "relative px-3 py-4 transition-all duration-300",
-          isChild && "ml-8 pl-0"
+          isChild && "ml-8 pl-0",
         )}
         data-step-id={step.id}
       >
         {isChild && (
-          <div className="absolute left-[-24px] top-8 text-muted-foreground/40">
+          <div className="text-muted-foreground/40 absolute top-8 left-[-24px]">
             <CornerDownRight className="h-5 w-5" />
           </div>
         )}
@@ -172,7 +176,7 @@ function StepRow({
             "mb-2 rounded-lg border shadow-sm transition-colors",
             selectedStepId === step.id
               ? "border-border bg-accent/30"
-              : "hover:bg-accent/30"
+              : "hover:bg-accent/30",
           )}
         >
           <div
@@ -220,7 +224,7 @@ function StepRow({
                       onRenameStep(
                         step,
                         (e.target as HTMLInputElement).value.trim() ||
-                        step.name,
+                          step.name,
                       );
                       setRenamingStepId(null);
                     } else if (e.key === "Escape") {
@@ -268,10 +272,10 @@ function StepRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-[11px] text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7 p-0 text-[11px]"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onReorderStep(step.id, 'up');
+                  onReorderStep(step.id, "up");
                 }}
                 disabled={item.index === 0}
                 aria-label="Move step up"
@@ -281,57 +285,68 @@ function StepRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-[11px] text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-7 w-7 p-0 text-[11px]"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onReorderStep(step.id, 'down');
+                  onReorderStep(step.id, "down");
                 }}
                 disabled={item.index === totalSteps - 1}
                 aria-label="Move step down"
               >
                 <ChevronRight className="h-4 w-4 rotate-90" />
               </Button>
-
             </div>
           </div>
 
-
-
           {/* Conditional Branching Visualization */}
-
 
           {/* Loop Visualization */}
           {step.type === "loop" && (
-            <div className="mx-3 my-3 rounded-md border text-xs" style={{
-              backgroundColor: 'var(--validation-info-bg, #f0f9ff)',
-              borderColor: 'var(--validation-info-border, #bae6fd)',
-            }}>
-              <div className="flex items-center gap-2 border-b px-3 py-2 font-medium" style={{
-                borderColor: 'var(--validation-info-border, #bae6fd)',
-                color: 'var(--validation-info-text, #0369a1)'
-              }}>
+            <div
+              className="mx-3 my-3 rounded-md border text-xs"
+              style={{
+                backgroundColor: "var(--validation-info-bg, #f0f9ff)",
+                borderColor: "var(--validation-info-border, #bae6fd)",
+              }}
+            >
+              <div
+                className="flex items-center gap-2 border-b px-3 py-2 font-medium"
+                style={{
+                  borderColor: "var(--validation-info-border, #bae6fd)",
+                  color: "var(--validation-info-text, #0369a1)",
+                }}
+              >
                 <Repeat className="h-3.5 w-3.5" />
                 <span>Loop Logic</span>
               </div>
 
-              <div className="p-2 space-y-2">
+              <div className="space-y-2 p-2">
                 <div className="flex items-center gap-2 text-[11px]">
                   <span className="text-muted-foreground">Repeat:</span>
                   <Badge variant="outline" className="font-mono">
-                    {(step.trigger.conditions as any).loop?.iterations || 1} times
+                    {(step.trigger.conditions as any).loop?.iterations || 1}{" "}
+                    times
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 text-[11px]">
                   <span className="text-muted-foreground">Approval:</span>
-                  <Badge variant={(step.trigger.conditions as any).loop?.requireApproval !== false ? "default" : "secondary"}>
-                    {(step.trigger.conditions as any).loop?.requireApproval !== false ? "Required" : "Auto-proceed"}
+                  <Badge
+                    variant={
+                      (step.trigger.conditions as any).loop?.requireApproval !==
+                      false
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {(step.trigger.conditions as any).loop?.requireApproval !==
+                    false
+                      ? "Required"
+                      : "Auto-proceed"}
                   </Badge>
                 </div>
               </div>
             </div>
           )}
-
-
 
           {/* Action List (Collapsible/Virtual content) */}
           {step.expanded && (
@@ -342,7 +357,7 @@ function StepRow({
               >
                 <div className="flex w-full flex-col gap-2">
                   {displayActions.length === 0 ? (
-                    <div className="flex h-12 items-center justify-center rounded border border-dashed text-xs text-muted-foreground">
+                    <div className="text-muted-foreground flex h-12 items-center justify-center rounded border border-dashed text-xs">
                       Drop actions here
                     </div>
                   ) : (
@@ -367,7 +382,7 @@ function StepRow({
           )}
         </div>
       </div>
-    </div >
+    </div>
   );
 }
 
@@ -375,15 +390,21 @@ function StepRow({
 /* Step Card Preview (for DragOverlay)                                         */
 /* -------------------------------------------------------------------------- */
 
-export function StepCardPreview({ step, dragHandle }: { step: ExperimentStep; dragHandle?: boolean }) {
+export function StepCardPreview({
+  step,
+  dragHandle,
+}: {
+  step: ExperimentStep;
+  dragHandle?: boolean;
+}) {
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background shadow-xl ring-2 ring-blue-500/20",
-        dragHandle && "cursor-grabbing"
+        "bg-background rounded-lg border shadow-xl ring-2 ring-blue-500/20",
+        dragHandle && "cursor-grabbing",
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5 p-3">
+      <div className="flex items-center justify-between gap-2 border-b p-3 px-2 py-1.5">
         <div className="flex items-center gap-2">
           <div className="text-muted-foreground rounded p-1">
             <ChevronRight className="h-4 w-4" />
@@ -401,13 +422,13 @@ export function StepCardPreview({ step, dragHandle }: { step: ExperimentStep; dr
             {step.actions.length} actions
           </span>
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-1">
           <GripVertical className="h-4 w-4" />
         </div>
       </div>
       {/* Preview optional: show empty body hint or just the header? Header is usually enough for sorting. */}
-      <div className="bg-muted/10 p-2 h-12 flex items-center justify-center border-t border-dashed">
-        <span className="text-[10px] text-muted-foreground">
+      <div className="bg-muted/10 flex h-12 items-center justify-center border-t border-dashed p-2">
+        <span className="text-muted-foreground text-[10px]">
           {step.actions.length} actions hidden while dragging
         </span>
       </div>
@@ -422,8 +443,6 @@ export function StepCardPreview({ step, dragHandle }: { step: ExperimentStep; dr
 function generateStepId(): string {
   return `step-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
-
-
 
 function sortableStepId(stepId: string) {
   return `s-step-${stepId}`;
@@ -447,7 +466,7 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
 
   const { isOver, setNodeRef } = useDroppable({
     id: `step-${stepId}`,
-    disabled: isStepDragging
+    disabled: isStepDragging,
   });
 
   if (isStepDragging) return null;
@@ -459,13 +478,11 @@ function StepDroppableArea({ stepId }: { stepId: string }) {
       className={cn(
         "pointer-events-none absolute inset-0 rounded-md transition-colors",
         isOver &&
-        "bg-blue-50/40 ring-2 ring-blue-400/60 ring-offset-0 dark:bg-blue-950/20",
+          "bg-blue-50/40 ring-2 ring-blue-400/60 ring-offset-0 dark:bg-blue-950/20",
       )}
     />
   );
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 /* FlowWorkspace Component                                                     */
@@ -520,7 +537,10 @@ export function FlowWorkspace({
   const childStepIds = useMemo(() => {
     const children = new Set<string>();
     for (const step of steps) {
-      if (step.type === 'conditional' && (step.trigger.conditions as any)?.options) {
+      if (
+        step.type === "conditional" &&
+        (step.trigger.conditions as any)?.options
+      ) {
         for (const opt of (step.trigger.conditions as any).options) {
           if (opt.nextStepId) {
             children.add(opt.nextStepId);
@@ -695,26 +715,33 @@ export function FlowWorkspace({
   );
 
   const handleReorderStep = useCallback(
-    (stepId: string, direction: 'up' | 'down') => {
-      console.log('handleReorderStep', stepId, direction);
+    (stepId: string, direction: "up" | "down") => {
+      console.log("handleReorderStep", stepId, direction);
       const currentIndex = steps.findIndex((s) => s.id === stepId);
-      console.log('currentIndex', currentIndex, 'total', steps.length);
+      console.log("currentIndex", currentIndex, "total", steps.length);
       if (currentIndex === -1) return;
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      console.log('newIndex', newIndex);
+      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      console.log("newIndex", newIndex);
       if (newIndex < 0 || newIndex >= steps.length) return;
       reorderStep(currentIndex, newIndex);
     },
-    [steps, reorderStep]
+    [steps, reorderStep],
   );
 
   const handleReorderAction = useCallback(
-    (stepId: string, actionId: string, direction: 'up' | 'down') => {
-      const step = steps.find(s => s.id === stepId);
+    (stepId: string, actionId: string, direction: "up" | "down") => {
+      const step = steps.find((s) => s.id === stepId);
       if (!step) return;
 
-      const findInTree = (list: ExperimentAction[], pId: string | null): { list: ExperimentAction[], parentId: string | null, index: number } | null => {
-        const idx = list.findIndex(a => a.id === actionId);
+      const findInTree = (
+        list: ExperimentAction[],
+        pId: string | null,
+      ): {
+        list: ExperimentAction[];
+        parentId: string | null;
+        index: number;
+      } | null => {
+        const idx = list.findIndex((a) => a.id === actionId);
         if (idx !== -1) return { list, parentId: pId, index: idx };
 
         for (const a of list) {
@@ -730,15 +757,14 @@ export function FlowWorkspace({
       if (!context) return;
 
       const { parentId, index, list } = context;
-      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      const newIndex = direction === "up" ? index - 1 : index + 1;
 
       if (newIndex < 0 || newIndex >= list.length) return;
 
       moveAction(stepId, actionId, parentId, newIndex);
     },
-    [steps, moveAction]
+    [steps, moveAction],
   );
-
 
   /* ------------------------------------------------------------------------ */
   /* Sortable (Local) DnD Monitoring                                          */
@@ -768,9 +794,11 @@ export function FlowWorkspace({
         const overData = over.data.current;
 
         if (
-          activeData && overData &&
+          activeData &&
+          overData &&
           activeData.stepId === overData.stepId &&
-          activeData.type === 'action' && overData.type === 'action'
+          activeData.type === "action" &&
+          overData.type === "action"
         ) {
           const stepId = activeData.stepId as string;
           // Fix: SortableActionChip puts 'id' directly on data, not inside 'action' property
@@ -809,8 +837,8 @@ export function FlowWorkspace({
         if (
           activeData &&
           overData &&
-          activeData.type === 'action' &&
-          overData.type === 'action'
+          activeData.type === "action" &&
+          overData.type === "action"
         ) {
           // Fix: Access 'id' directly from data payload
           const activeActionId = activeData.id;
@@ -825,12 +853,17 @@ export function FlowWorkspace({
           if (activeParentId !== overParentId || activeStepId !== overStepId) {
             // Determine new index
             // verification of safe move handled by store
-            moveAction(overStepId, activeActionId, overParentId, overData.sortable.index);
+            moveAction(
+              overStepId,
+              activeActionId,
+              overParentId,
+              overData.sortable.index,
+            );
           }
         }
       }
     },
-    [moveAction]
+    [moveAction],
   );
 
   useDndMonitor({
@@ -960,4 +993,3 @@ export function FlowWorkspace({
 
 // Wrap in React.memo to prevent unnecessary re-renders causing flashing
 export default React.memo(FlowWorkspace);
-

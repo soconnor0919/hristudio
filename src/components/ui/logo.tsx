@@ -32,8 +32,19 @@ export function Logo({
       {showText && (
         <div className="grid flex-1 text-left leading-none">
           <div className="flex items-baseline gap-0">
-            <span className={cn(textSizes[iconSize], "font-extrabold tracking-tight")}>HRI</span>
-            <span className={cn(textSizes[iconSize], "font-normal tracking-tight")}>Studio</span>
+            <span
+              className={cn(
+                textSizes[iconSize],
+                "font-extrabold tracking-tight",
+              )}
+            >
+              HRI
+            </span>
+            <span
+              className={cn(textSizes[iconSize], "font-normal tracking-tight")}
+            >
+              Studio
+            </span>
           </div>
         </div>
       )}

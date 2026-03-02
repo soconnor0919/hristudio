@@ -175,8 +175,12 @@ export class TrialExecutionEngine {
         description: step.description || undefined,
         type: step.type,
         orderIndex: step.orderIndex,
-        condition: typeof step.conditions === 'string' ? step.conditions : undefined,
-        conditions: typeof step.conditions === 'object' ? (step.conditions as Record<string, any>) : undefined,
+        condition:
+          typeof step.conditions === "string" ? step.conditions : undefined,
+        conditions:
+          typeof step.conditions === "object"
+            ? (step.conditions as Record<string, any>)
+            : undefined,
         actions: actionDefinitions,
       });
     }
@@ -443,7 +447,10 @@ export class TrialExecutionEngine {
 
       default:
         // Check if it's a robot action (contains plugin prefix)
-        if (action.type.includes(".") && !action.type.startsWith("hristudio-")) {
+        if (
+          action.type.includes(".") &&
+          !action.type.startsWith("hristudio-")
+        ) {
           return await this.executeRobotAction(trialId, action);
         }
 
@@ -455,7 +462,7 @@ export class TrialExecutionEngine {
           data: {
             message: `Action type '${action.type}' not implemented yet`,
             parameters: action.parameters,
-            localHandler: true // Indicate this fell through to default local handler
+            localHandler: true, // Indicate this fell through to default local handler
           },
         };
     }
@@ -469,13 +476,18 @@ export class TrialExecutionEngine {
   ): Promise<ActionExecutionResult> {
     const rawDuration = action.parameters.duration;
     // Duration is in SECONDS per definition, default to 1s
-    const durationSeconds = typeof rawDuration === 'string'
-      ? parseFloat(rawDuration)
-      : (typeof rawDuration === 'number' ? rawDuration : 1);
+    const durationSeconds =
+      typeof rawDuration === "string"
+        ? parseFloat(rawDuration)
+        : typeof rawDuration === "number"
+          ? rawDuration
+          : 1;
 
     const durationMs = durationSeconds * 1000;
 
-    console.log(`[TrialExecution] Executing wait action: ${action.id}, rawDuration: ${rawDuration}, parsedSeconds: ${durationSeconds}, ms: ${durationMs}`);
+    console.log(
+      `[TrialExecution] Executing wait action: ${action.id}, rawDuration: ${rawDuration}, parsedSeconds: ${durationSeconds}, ms: ${durationMs}`,
+    );
 
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -549,7 +561,9 @@ export class TrialExecutionEngine {
       // Parse plugin.action format
       const [pluginName, actionId] = action.type.split(".");
 
-      console.log(`[TrialExecution] Parsed action: pluginName=${pluginName}, actionId=${actionId}`);
+      console.log(
+        `[TrialExecution] Parsed action: pluginName=${pluginName}, actionId=${actionId}`,
+      );
 
       if (!pluginName || !actionId) {
         throw new Error(
@@ -563,8 +577,12 @@ export class TrialExecutionEngine {
         throw new Error(`Plugin '${pluginName}' not found`);
       }
 
-      console.log(`[TrialExecution] Plugin loaded: ${plugin.name} (ID: ${plugin.id})`);
-      console.log(`[TrialExecution] Available actions: ${plugin.actions?.map((a: any) => a.id).join(", ")}`);
+      console.log(
+        `[TrialExecution] Plugin loaded: ${plugin.name} (ID: ${plugin.id})`,
+      );
+      console.log(
+        `[TrialExecution] Available actions: ${plugin.actions?.map((a: any) => a.id).join(", ")}`,
+      );
 
       // Find action definition in plugin
       const actionDefinition = plugin.actions?.find(
@@ -889,47 +907,73 @@ export class TrialExecutionEngine {
 
     // Check for branching conditions
     if (currentStep.conditions) {
-      const { variable, options, nextStepId: unconditionalNextId } = currentStep.conditions as any;
+      const {
+        variable,
+        options,
+        nextStepId: unconditionalNextId,
+      } = currentStep.conditions as any;
 
       if (options) {
         // Default to "last_wizard_response" if variable not specified, for backward compatibility
         const variableName = variable || "last_wizard_response";
         const variableValue = context.variables[variableName];
 
-        console.log(`[TrialExecution] Checking branch condition for step ${currentStep.id}: variable=${variableName}, value=${variableValue}`);
+        console.log(
+          `[TrialExecution] Checking branch condition for step ${currentStep.id}: variable=${variableName}, value=${variableValue}`,
+        );
 
         if (variableValue !== undefined) {
           // Find matching option
           // option.value matches variableValue (e.g., label string)
-          const matchedOption = options.find((opt: any) => opt.value === variableValue || opt.label === variableValue);
+          const matchedOption = options.find(
+            (opt: any) =>
+              opt.value === variableValue || opt.label === variableValue,
+          );
 
           if (matchedOption) {
             if (matchedOption.nextStepId) {
               // Find step by ID
-              const targetStepIndex = steps.findIndex(s => s.id === matchedOption.nextStepId);
+              const targetStepIndex = steps.findIndex(
+                (s) => s.id === matchedOption.nextStepId,
+              );
               if (targetStepIndex !== -1) {
                 nextStepIndex = targetStepIndex;
-                console.log(`[TrialExecution] Taking branch to step ID ${matchedOption.nextStepId} (Index ${nextStepIndex})`);
+                console.log(
+                  `[TrialExecution] Taking branch to step ID ${matchedOption.nextStepId} (Index ${nextStepIndex})`,
+                );
               } else {
-                console.warn(`[TrialExecution] Branch target step ID ${matchedOption.nextStepId} not found`);
+                console.warn(
+                  `[TrialExecution] Branch target step ID ${matchedOption.nextStepId} not found`,
+                );
               }
             } else if (matchedOption.nextStepIndex !== undefined) {
               // Fallback to relative/absolute index if ID not present (legacy)
               nextStepIndex = matchedOption.nextStepIndex;
-              console.log(`[TrialExecution] Taking branch to index ${nextStepIndex}`);
+              console.log(
+                `[TrialExecution] Taking branch to index ${nextStepIndex}`,
+              );
             }
           }
         }
       }
 
       // Check for unconditional jump if no branch was taken
-      if (nextStepIndex === context.currentStepIndex + 1 && unconditionalNextId) {
-        const targetStepIndex = steps.findIndex(s => s.id === unconditionalNextId);
+      if (
+        nextStepIndex === context.currentStepIndex + 1 &&
+        unconditionalNextId
+      ) {
+        const targetStepIndex = steps.findIndex(
+          (s) => s.id === unconditionalNextId,
+        );
         if (targetStepIndex !== -1) {
           nextStepIndex = targetStepIndex;
-          console.log(`[TrialExecution] Taking unconditional jump to step ID ${unconditionalNextId} (Index ${nextStepIndex})`);
+          console.log(
+            `[TrialExecution] Taking unconditional jump to step ID ${unconditionalNextId} (Index ${nextStepIndex})`,
+          );
         } else {
-          console.warn(`[TrialExecution] Unconditional jump target step ID ${unconditionalNextId} not found`);
+          console.warn(
+            `[TrialExecution] Unconditional jump target step ID ${unconditionalNextId} not found`,
+          );
         }
       }
     }
@@ -939,7 +983,7 @@ export class TrialExecutionEngine {
     await this.logTrialEvent(trialId, "step_transition", {
       fromStepIndex: previousStepIndex,
       toStepIndex: context.currentStepIndex,
-      reason: nextStepIndex !== previousStepIndex + 1 ? "branch" : "sequence"
+      reason: nextStepIndex !== previousStepIndex + 1 ? "branch" : "sequence",
     });
 
     // Check if we've completed all steps
@@ -1151,7 +1195,9 @@ export class TrialExecutionEngine {
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
     const startTime = Date.now();
-    const children = action.parameters.children as ActionDefinition[] | undefined;
+    const children = action.parameters.children as
+      | ActionDefinition[]
+      | undefined;
 
     if (!children || !Array.isArray(children) || children.length === 0) {
       return {
@@ -1219,7 +1265,9 @@ export class TrialExecutionEngine {
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
     const startTime = Date.now();
-    const children = action.parameters.children as ActionDefinition[] | undefined;
+    const children = action.parameters.children as
+      | ActionDefinition[]
+      | undefined;
 
     if (!children || !Array.isArray(children) || children.length === 0) {
       return {
@@ -1240,7 +1288,7 @@ export class TrialExecutionEngine {
           error: error instanceof Error ? error.message : String(error),
           actionName: childAction.name,
         },
-      }))
+      })),
     );
 
     const results = await Promise.all(promises);
@@ -1269,7 +1317,9 @@ export class TrialExecutionEngine {
     action: ActionDefinition,
   ): Promise<ActionExecutionResult> {
     const startTime = Date.now();
-    const children = action.parameters.children as ActionDefinition[] | undefined;
+    const children = action.parameters.children as
+      | ActionDefinition[]
+      | undefined;
     const iterations = (action.parameters.iterations as number) || 1;
 
     if (!children || !Array.isArray(children) || children.length === 0) {
@@ -1379,7 +1429,10 @@ export class TrialExecutionEngine {
         data: {
           message: "Branch action presented to wizard",
           optionsCount: options.length,
-          options: options.map(opt => ({ label: opt.label, nextStepId: opt.nextStepId })),
+          options: options.map((opt) => ({
+            label: opt.label,
+            nextStepId: opt.nextStepId,
+          })),
         },
       });
 

@@ -1,7 +1,13 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Edit, LayoutTemplate, Trash2 } from "lucide-react";
+import {
+  ArrowUpDown,
+  MoreHorizontal,
+  Edit,
+  LayoutTemplate,
+  Trash2,
+} from "lucide-react";
 import * as React from "react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -261,10 +267,12 @@ function ExperimentActions({ experiment }: { experiment: Experiment }) {
         variant="ghost"
         size="icon"
         asChild
-        className="h-8 w-8 text-muted-foreground hover:text-primary"
+        className="text-muted-foreground hover:text-primary h-8 w-8"
         title="Open Designer"
       >
-        <Link href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}>
+        <Link
+          href={`/studies/${experiment.studyId}/experiments/${experiment.id}/designer`}
+        >
           <LayoutTemplate className="h-4 w-4" />
           <span className="sr-only">Design</span>
         </Link>
@@ -278,7 +286,7 @@ function ExperimentActions({ experiment }: { experiment: Experiment }) {
             deleteMutation.mutate({ id: experiment.id });
           }
         }}
-        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        className="text-muted-foreground hover:text-destructive h-8 w-8"
         title="Delete Experiment"
       >
         <Trash2 className="h-4 w-4" />

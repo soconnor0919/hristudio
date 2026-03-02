@@ -155,9 +155,12 @@ function projectActionForDesign(
       pluginVersion: action.source.pluginVersion,
       baseActionId: action.source.baseActionId,
     },
-    execution: action.execution ? projectExecutionDescriptor(action.execution) : null,
+    execution: action.execution
+      ? projectExecutionDescriptor(action.execution)
+      : null,
     parameterKeysOrValues: parameterProjection,
-    children: action.children?.map(c => projectActionForDesign(c, options)) ?? [],
+    children:
+      action.children?.map((c) => projectActionForDesign(c, options)) ?? [],
   };
 
   if (options.includeActionNames) {
@@ -176,16 +179,16 @@ function projectExecutionDescriptor(
     timeoutMs: exec.timeoutMs ?? null,
     ros2: exec.ros2
       ? {
-        topic: exec.ros2.topic ?? null,
-        service: exec.ros2.service ?? null,
-        action: exec.ros2.action ?? null,
-      }
+          topic: exec.ros2.topic ?? null,
+          service: exec.ros2.service ?? null,
+          action: exec.ros2.action ?? null,
+        }
       : null,
     rest: exec.rest
       ? {
-        method: exec.rest.method,
-        path: exec.rest.path,
-      }
+          method: exec.rest.method,
+          path: exec.rest.path,
+        }
       : null,
   };
 }
@@ -244,12 +247,14 @@ export async function computeActionSignature(
     baseActionId: def.baseActionId ?? null,
     execution: def.execution
       ? {
-        transport: def.execution.transport,
-        retryable: def.execution.retryable ?? false,
-        timeoutMs: def.execution.timeoutMs ?? null,
-      }
+          transport: def.execution.transport,
+          retryable: def.execution.retryable ?? false,
+          timeoutMs: def.execution.timeoutMs ?? null,
+        }
       : null,
-    schema: def.parameterSchemaRaw ? canonicalize(def.parameterSchemaRaw) : null,
+    schema: def.parameterSchemaRaw
+      ? canonicalize(def.parameterSchemaRaw)
+      : null,
   };
   return hashObject(projection);
 }
@@ -271,29 +276,33 @@ export async function computeDesignHash(
   const sortedSteps = steps.slice().sort((a, b) => a.order - b.order);
 
   // 2. Map hierarchically (Merkle style)
-  const stepHashes = await Promise.all(sortedSteps.map(async (s) => {
-    // Action hashes
-    const actionHashes = await Promise.all(s.actions.map(a => hashObject(projectActionForDesign(a, options))));
+  const stepHashes = await Promise.all(
+    sortedSteps.map(async (s) => {
+      // Action hashes
+      const actionHashes = await Promise.all(
+        s.actions.map((a) => hashObject(projectActionForDesign(a, options))),
+      );
 
-    // Step hash
-    const pStep = {
-      id: s.id,
-      type: s.type,
-      order: s.order,
-      trigger: {
-        type: s.trigger.type,
-        conditions: canonicalize(s.trigger.conditions),
-      },
-      actions: actionHashes,
-      ...(options.includeStepNames ? { name: s.name } : {}),
-    };
-    return hashObject(pStep);
-  }));
+      // Step hash
+      const pStep = {
+        id: s.id,
+        type: s.type,
+        order: s.order,
+        trigger: {
+          type: s.trigger.type,
+          conditions: canonicalize(s.trigger.conditions),
+        },
+        actions: actionHashes,
+        ...(options.includeStepNames ? { name: s.name } : {}),
+      };
+      return hashObject(pStep);
+    }),
+  );
 
   // 3. Aggregate design hash
   return hashObject({
     steps: stepHashes,
-    count: steps.length
+    count: steps.length,
   });
 }
 

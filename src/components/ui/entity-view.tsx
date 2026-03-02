@@ -46,14 +46,12 @@ interface EntityViewSidebarProps {
   children: ReactNode;
 }
 
-
 interface EntityViewProps {
   children: ReactNode;
   layout?: "default" | "full-width";
 }
 
 // ... existing code ...
-
 
 export function EntityViewHeader({
   title,
@@ -125,11 +123,7 @@ export function EntityView({ children, layout = "default" }: EntityViewProps) {
   // Simplification: Always take full width of the parent container provided by DashboardLayout
   // The DashboardLayout already provides padding (p-4).
   // We remove 'container mx-auto max-w-5xl' to stop it from shrinking.
-  return (
-    <div className="flex flex-col gap-6 w-full h-full">
-      {children}
-    </div>
-  );
+  return <div className="flex h-full w-full flex-col gap-6">{children}</div>;
 }
 
 // Utility component for empty states
@@ -171,12 +165,13 @@ interface InfoGridProps {
 export function InfoGrid({ items, columns = 2 }: InfoGridProps) {
   return (
     <div
-      className={`grid gap-4 ${columns === 1
-        ? "grid-cols-1"
-        : columns === 2
-          ? "md:grid-cols-2"
-          : "md:grid-cols-2 lg:grid-cols-3"
-        }`}
+      className={`grid gap-4 ${
+        columns === 1
+          ? "grid-cols-1"
+          : columns === 2
+            ? "md:grid-cols-2"
+            : "md:grid-cols-2 lg:grid-cols-3"
+      }`}
     >
       {items.map((item, index) => (
         <div

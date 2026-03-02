@@ -70,7 +70,9 @@ export function getCameraImage(
 ): Record<string, unknown> {
   const camera = params.camera as string;
   const topic =
-    camera === "front" ? "/naoqi_driver/camera/front/image_raw" : "/naoqi_driver/camera/bottom/image_raw";
+    camera === "front"
+      ? "/naoqi_driver/camera/front/image_raw"
+      : "/naoqi_driver/camera/bottom/image_raw";
 
   return {
     subscribe: true,
@@ -129,7 +131,10 @@ export function getTouchSensors(
   params: Record<string, unknown>,
 ): Record<string, unknown> {
   const sensorType = params.sensor_type as string;
-  const topic = sensorType === "hand" ? "/naoqi_driver/hand_touch" : "/naoqi_driver/head_touch";
+  const topic =
+    sensorType === "hand"
+      ? "/naoqi_driver/hand_touch"
+      : "/naoqi_driver/head_touch";
   const messageType =
     sensorType === "hand"
       ? "naoqi_bridge_msgs/msg/HandTouch"

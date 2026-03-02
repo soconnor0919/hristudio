@@ -89,8 +89,8 @@ function DraggableAction({
 
   const style: React.CSSProperties = transform
     ? {
-      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    }
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
     : {};
 
   const IconComponent = iconMap[action.icon] ?? Sparkles;
@@ -174,7 +174,10 @@ export interface ActionLibraryPanelProps {
   onCollapse?: (collapsed: boolean) => void;
 }
 
-export function ActionLibraryPanel({ collapsed, onCollapse }: ActionLibraryPanelProps = {}) {
+export function ActionLibraryPanel({
+  collapsed,
+  onCollapse,
+}: ActionLibraryPanelProps = {}) {
   const registry = useActionRegistry();
 
   const [search, setSearch] = useState("");
@@ -299,8 +302,6 @@ export function ActionLibraryPanel({ collapsed, onCollapse }: ActionLibraryPanel
     setShowOnlyFavorites(false);
   }, [categories]);
 
-
-
   const filtered = useMemo(() => {
     const activeCats = selectedCategories;
     const q = search.trim().toLowerCase();
@@ -339,7 +340,10 @@ export function ActionLibraryPanel({ collapsed, onCollapse }: ActionLibraryPanel
   ).length;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden" id="tour-designer-blocks">
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      id="tour-designer-blocks"
+    >
       <div className="bg-background/60 flex-shrink-0 border-b p-2">
         <div className="relative mb-2">
           <Search className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
@@ -493,4 +497,3 @@ export function ActionLibraryPanel({ collapsed, onCollapse }: ActionLibraryPanel
 
 // Wrap in React.memo to prevent unnecessary re-renders causing flashing in categories
 export default React.memo(ActionLibraryPanel);
-

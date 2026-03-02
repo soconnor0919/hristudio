@@ -144,7 +144,9 @@ export function convertActionToDatabase(
   if (action.children && action.children.length > 0) {
     // Recursively convert children for container actions (sequence, parallel, loop)
     // Branch actions don't have children - they control step routing
-    parameters.children = action.children.map((child, idx) => convertActionToDatabase(child, idx));
+    parameters.children = action.children.map((child, idx) =>
+      convertActionToDatabase(child, idx),
+    );
   }
 
   return {
@@ -170,11 +172,13 @@ export function convertActionToDatabase(
 
 // Reconstruct designer steps from database records
 export function convertDatabaseToSteps(
-  dbSteps: any[] // Typing as any[] because Drizzle types are complex to import here without circular deps
+  dbSteps: any[], // Typing as any[] because Drizzle types are complex to import here without circular deps
 ): ExperimentStep[] {
   // Paranoid Sort: Ensure steps are strictly ordered by index before assigning Triggers.
   // This safeguards against API returning unsorted data.
-  const sortedSteps = [...dbSteps].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  const sortedSteps = [...dbSteps].sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
+  );
 
   return sortedSteps.map((dbStep, idx) => {
     return {
@@ -191,7 +195,7 @@ export function convertDatabaseToSteps(
       },
       expanded: true, // Default to expanded in designer
       actions: (dbStep.actions || []).map((dbAction: any) =>
-        convertDatabaseToAction(dbAction)
+        convertDatabaseToAction(dbAction),
       ),
     };
   });
@@ -213,9 +217,12 @@ function mapDatabaseToStepType(type: string): ExperimentStep["type"] {
 export function convertDatabaseToAction(dbAction: any): ExperimentAction {
   // Reconstruct nested source object
   const source: ExperimentAction["source"] = {
-    kind: (dbAction.sourceKind || dbAction.source_kind || "core") as "core" | "plugin",
+    kind: (dbAction.sourceKind || dbAction.source_kind || "core") as
+      | "core"
+      | "plugin",
     pluginId: dbAction.pluginId || dbAction.plugin_id || undefined,
-    pluginVersion: dbAction.pluginVersion || dbAction.plugin_version || undefined,
+    pluginVersion:
+      dbAction.pluginVersion || dbAction.plugin_version || undefined,
     robotId: dbAction.robotId || dbAction.robot_id || undefined,
     baseActionId: dbAction.baseActionId || dbAction.base_action_id || undefined,
   };
@@ -250,7 +257,9 @@ export function convertDatabaseToAction(dbAction: any): ExperimentAction {
   const paramChildren = parameters.children;
 
   if (Array.isArray(paramChildren)) {
-    children = paramChildren.map((child: any) => convertDatabaseToAction(child));
+    children = paramChildren.map((child: any) =>
+      convertDatabaseToAction(child),
+    );
   }
 
   return {

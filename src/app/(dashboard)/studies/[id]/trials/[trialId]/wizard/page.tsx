@@ -211,11 +211,7 @@ function WizardPageContent() {
     }
   };
 
-  return (
-    <div>
-      {renderView()}
-    </div>
-  );
+  return <div>{renderView()}</div>;
 }
 
 export default function TrialWizardPage() {

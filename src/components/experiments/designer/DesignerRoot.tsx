@@ -18,7 +18,7 @@ import {
   PanelRightOpen,
   Maximize2,
   Minimize2,
-  Settings
+  Settings,
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
@@ -134,31 +134,43 @@ interface RawExperiment {
 /* -------------------------------------------------------------------------- */
 
 function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
-  console.log('[adaptExistingDesign] Entry - exp.steps:', exp.steps);
+  console.log("[adaptExistingDesign] Entry - exp.steps:", exp.steps);
 
   // 1. Prefer database steps (Source of Truth) if valid, to ensure we have the latest
   //    plugin provenance data (which might be missing from stale visualDesign snapshots).
   // 1. Prefer database steps (Source of Truth) if valid.
   if (Array.isArray(exp.steps) && exp.steps.length > 0) {
-    console.log('[adaptExistingDesign] Has steps array, length:', exp.steps.length);
+    console.log(
+      "[adaptExistingDesign] Has steps array, length:",
+      exp.steps.length,
+    );
     try {
       // Check if steps are already converted (have trigger property) to avoid double-conversion data loss
       const firstStep = exp.steps[0] as any;
       let dbSteps: ExperimentStep[];
 
-      if (firstStep && typeof firstStep === 'object' && 'trigger' in firstStep) {
+      if (
+        firstStep &&
+        typeof firstStep === "object" &&
+        "trigger" in firstStep
+      ) {
         // Already converted by server
         dbSteps = exp.steps as ExperimentStep[];
       } else {
         // Raw DB steps, need conversion
-        console.log('[adaptExistingDesign] Taking raw DB conversion path');
+        console.log("[adaptExistingDesign] Taking raw DB conversion path");
         dbSteps = convertDatabaseToSteps(exp.steps);
 
         // DEBUG: Check children after conversion
         dbSteps.forEach((step) => {
           step.actions.forEach((action) => {
-            if (["sequence", "parallel", "loop", "branch"].includes(action.type)) {
-              console.log(`[adaptExistingDesign] Post-conversion ${action.type} (${action.name}) children:`, action.children);
+            if (
+              ["sequence", "parallel", "loop", "branch"].includes(action.type)
+            ) {
+              console.log(
+                `[adaptExistingDesign] Post-conversion ${action.type} (${action.name}) children:`,
+                action.children,
+              );
             }
           });
         });
@@ -173,7 +185,10 @@ function adaptExistingDesign(exp: RawExperiment): ExperimentDesign | undefined {
         lastSaved: new Date(),
       };
     } catch (err) {
-      console.warn('[DesignerRoot] Failed to convert/hydrate steps, falling back to visualDesign:', err);
+      console.warn(
+        "[DesignerRoot] Failed to convert/hydrate steps, falling back to visualDesign:",
+        err,
+      );
     }
   }
 
@@ -250,7 +265,7 @@ export function DesignerRoot({
       refetchOnWindowFocus: true,
       staleTime: 0,
       gcTime: 0, // Garbage collect immediately
-    }
+    },
   );
 
   const updateExperiment = api.experiments.update.useMutation({
@@ -381,18 +396,23 @@ export function DesignerRoot({
   } | null>(null);
 
   const [activeSortableItem, setActiveSortableItem] = useState<{
-    type: 'step' | 'action';
+    type: "step" | "action";
     data: any;
   } | null>(null);
 
   /* ----------------------------- Initialization ---------------------------- */
   useEffect(() => {
-    console.log('[DesignerRoot] useEffect triggered', { initialized, loadingExperiment, hasExperiment: !!experiment, hasInitialDesign: !!initialDesign });
+    console.log("[DesignerRoot] useEffect triggered", {
+      initialized,
+      loadingExperiment,
+      hasExperiment: !!experiment,
+      hasInitialDesign: !!initialDesign,
+    });
 
     if (initialized) return;
     if (loadingExperiment && !initialDesign) return;
 
-    console.log('[DesignerRoot] Proceeding with initialization');
+    console.log("[DesignerRoot] Proceeding with initialization");
 
     const adapted =
       initialDesign ??
@@ -486,7 +506,6 @@ export function DesignerRoot({
     return () => clearTimeout(timeoutId);
   }, [steps, initialized, recomputeHash]);
 
-
   /* ----------------------------- Derived State ----------------------------- */
   const hasUnsavedChanges =
     !!currentDesignHash && lastPersistedHash !== currentDesignHash;
@@ -539,20 +558,30 @@ export function DesignerRoot({
       // Debug: Improved structured logging for validation results
       console.group("🧪 Experiment Validation Results");
       if (result.valid) {
-        console.log(`%c✓ VALID (0 errors, ${result.warningCount} warnings, ${result.infoCount} hints)`, "color: green; font-weight: bold; font-size: 12px;");
+        console.log(
+          `%c✓ VALID (0 errors, ${result.warningCount} warnings, ${result.infoCount} hints)`,
+          "color: green; font-weight: bold; font-size: 12px;",
+        );
       } else {
-        console.log(`%c✗ INVALID (${result.errorCount} errors, ${result.warningCount} warnings)`, "color: red; font-weight: bold; font-size: 12px;");
+        console.log(
+          `%c✗ INVALID (${result.errorCount} errors, ${result.warningCount} warnings)`,
+          "color: red; font-weight: bold; font-size: 12px;",
+        );
       }
 
       if (result.issues.length > 0) {
         console.table(
-          result.issues.map(i => ({
+          result.issues.map((i) => ({
             Severity: i.severity.toUpperCase(),
             Category: i.category,
             Message: i.message,
             Suggest: i.suggestion,
-            Location: i.actionId ? `Action ${i.actionId}` : (i.stepId ? `Step ${i.stepId}` : 'Global')
-          }))
+            Location: i.actionId
+              ? `Action ${i.actionId}`
+              : i.stepId
+                ? `Step ${i.stepId}`
+                : "Global",
+          })),
         );
       } else {
         console.log("No issues found. Design is perfectly compliant.");
@@ -583,7 +612,8 @@ export function DesignerRoot({
       }
     } catch (err) {
       toast.error(
-        `Validation error: ${err instanceof Error ? err.message : "Unknown error"
+        `Validation error: ${
+          err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -610,7 +640,7 @@ export function DesignerRoot({
   const persist = useCallback(async () => {
     if (!initialized) return;
 
-    console.log('[DesignerRoot] 💾 SAVE initiated', {
+    console.log("[DesignerRoot] 💾 SAVE initiated", {
       stepsCount: steps.length,
       actionsCount: steps.reduce((sum, s) => sum + s.actions.length, 0),
       currentHash: currentDesignHash?.slice(0, 16),
@@ -625,7 +655,7 @@ export function DesignerRoot({
         lastSaved: new Date().toISOString(),
       };
 
-      console.log('[DesignerRoot] 💾 Sending to server...', {
+      console.log("[DesignerRoot] 💾 Sending to server...", {
         experimentId,
         stepsCount: steps.length,
         version: designMeta.version,
@@ -639,7 +669,7 @@ export function DesignerRoot({
         compileExecution: autoCompile,
       });
 
-      console.log('[DesignerRoot] 💾 Server save successful');
+      console.log("[DesignerRoot] 💾 Server save successful");
 
       // NOTE: We do NOT refetch here because it would reset the local steps state
       // to the server state, which would cause the hash to match the persisted hash,
@@ -649,7 +679,7 @@ export function DesignerRoot({
       // Recompute hash and update persisted hash
       const hashResult = await recomputeHash();
       if (hashResult?.designHash) {
-        console.log('[DesignerRoot] 💾 Updated persisted hash:', {
+        console.log("[DesignerRoot] 💾 Updated persisted hash:", {
           newPersistedHash: hashResult.designHash.slice(0, 16),
           fullHash: hashResult.designHash,
         });
@@ -662,7 +692,7 @@ export function DesignerRoot({
       // Auto-validate after save to clear "Modified" (drift) status
       void validateDesign();
 
-      console.log('[DesignerRoot] 💾 SAVE complete');
+      console.log("[DesignerRoot] 💾 SAVE complete");
 
       onPersist?.({
         id: experimentId,
@@ -673,7 +703,7 @@ export function DesignerRoot({
         lastSaved: new Date(),
       });
     } catch (error) {
-      console.error('[DesignerRoot] 💾 SAVE failed:', error);
+      console.error("[DesignerRoot] 💾 SAVE failed:", error);
       // Error already handled by mutation onError
     } finally {
       setIsSaving(false);
@@ -729,7 +759,8 @@ export function DesignerRoot({
       toast.success("Exported design bundle");
     } catch (err) {
       toast.error(
-        `Export failed: ${err instanceof Error ? err.message : "Unknown error"
+        `Export failed: ${
+          err instanceof Error ? err.message : "Unknown error"
         }`,
       );
     } finally {
@@ -801,10 +832,7 @@ export function DesignerRoot({
 
       console.log("[DesignerRoot] DragStart", { activeId, activeData });
 
-      if (
-        activeId.startsWith("action-") &&
-        activeData?.action
-      ) {
+      if (activeId.startsWith("action-") && activeData?.action) {
         const a = activeData.action as {
           id: string;
           name: string;
@@ -822,14 +850,17 @@ export function DesignerRoot({
       } else if (activeId.startsWith("s-step-")) {
         console.log("[DesignerRoot] Setting active sortable STEP", activeData);
         setActiveSortableItem({
-          type: 'step',
-          data: activeData
+          type: "step",
+          data: activeData,
         });
       } else if (activeId.startsWith("s-act-")) {
-        console.log("[DesignerRoot] Setting active sortable ACTION", activeData);
+        console.log(
+          "[DesignerRoot] Setting active sortable ACTION",
+          activeData,
+        );
         setActiveSortableItem({
-          type: 'action',
-          data: activeData
+          type: "action",
+          data: activeData,
         });
       }
     },
@@ -855,8 +886,6 @@ export function DesignerRoot({
       }
       return;
     }
-
-
 
     const overId = over.id.toString();
     const activeDef = active.data.current?.action;
@@ -892,10 +921,10 @@ export function DesignerRoot({
         // Let's assume index 0 for now (prepend) or implement lookup.
         // Better: lookup action -> children length.
         const actionId = parentId;
-        const step = store.steps.find(s => s.id === stepId);
+        const step = store.steps.find((s) => s.id === stepId);
         // Find action recursive? Store has `findActionById` helper but it is not exported/accessible easily here?
         // Actually, `store.steps` is available.
-        // We can implement a quick BFS/DFS or just assume 0. 
+        // We can implement a quick BFS/DFS or just assume 0.
         // If dragging over the container *background* (empty space), append is usually expected.
         // Let's try 9999?
         index = 9999;
@@ -907,7 +936,6 @@ export function DesignerRoot({
         : overId.slice("step-".length);
       const step = store.steps.find((s) => s.id === stepId);
       index = step ? step.actions.length : 0;
-
     } else if (overId === "projection-placeholder") {
       // Hovering over our own projection placeholder -> keep current state
       return;
@@ -969,13 +997,19 @@ export function DesignerRoot({
       if (activeId.startsWith("s-step-")) {
         const overId = over.id.toString();
         // Allow reordering over both sortable steps (s-step-) and drop zones (step-)
-        if (!overId.startsWith("s-step-") && !overId.startsWith("step-")) return;
+        if (!overId.startsWith("s-step-") && !overId.startsWith("step-"))
+          return;
 
         // Strip prefixes to get raw IDs
         const rawActiveId = activeId.replace(/^s-step-/, "");
         const rawOverId = overId.replace(/^s-step-/, "").replace(/^step-/, "");
 
-        console.log("[DesignerRoot] DragEnd - Step Sort", { activeId, overId, rawActiveId, rawOverId });
+        console.log("[DesignerRoot] DragEnd - Step Sort", {
+          activeId,
+          overId,
+          rawActiveId,
+          rawOverId,
+        });
 
         const oldIndex = steps.findIndex((s) => s.id === rawActiveId);
         const newIndex = steps.findIndex((s) => s.id === rawOverId);
@@ -1020,7 +1054,10 @@ export function DesignerRoot({
       if (!targetStep) return;
 
       // 2. Instantiate Action
-      if (active.id.toString().startsWith("action-") && active.data.current?.action) {
+      if (
+        active.id.toString().startsWith("action-") &&
+        active.data.current?.action
+      ) {
         const actionDef = active.data.current.action as {
           id: string; // type
           type: string;
@@ -1044,13 +1081,13 @@ export function DesignerRoot({
 
         const execution: ExperimentAction["execution"] =
           actionDef.execution &&
-            (actionDef.execution.transport === "internal" ||
-              actionDef.execution.transport === "rest" ||
-              actionDef.execution.transport === "ros2")
+          (actionDef.execution.transport === "internal" ||
+            actionDef.execution.transport === "rest" ||
+            actionDef.execution.transport === "ros2")
             ? {
-              transport: actionDef.execution.transport,
-              retryable: actionDef.execution.retryable ?? false,
-            }
+                transport: actionDef.execution.transport,
+                retryable: actionDef.execution.retryable ?? false,
+              }
             : undefined;
 
         const newId = `action-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1061,12 +1098,14 @@ export function DesignerRoot({
           category: actionDef.category as any,
           description: "",
           parameters: defaultParams,
-          source: actionDef.source ? {
-            kind: actionDef.source.kind as any,
-            pluginId: actionDef.source.pluginId,
-            pluginVersion: actionDef.source.pluginVersion,
-            baseActionId: actionDef.id
-          } : { kind: "core" },
+          source: actionDef.source
+            ? {
+                kind: actionDef.source.kind as any,
+                pluginId: actionDef.source.pluginId,
+                pluginVersion: actionDef.source.pluginVersion,
+                baseActionId: actionDef.id,
+              }
+            : { kind: "core" },
           execution,
           children: [],
         };
@@ -1080,13 +1119,25 @@ export function DesignerRoot({
         void recomputeHash();
       }
     },
-    [steps, upsertAction, selectAction, recomputeHash, toggleLibraryScrollLock, reorderStep],
+    [
+      steps,
+      upsertAction,
+      selectAction,
+      recomputeHash,
+      toggleLibraryScrollLock,
+      reorderStep,
+    ],
   );
   // validation status badges removed (unused)
   /* ------------------------------- Panels ---------------------------------- */
   const leftPanel = useMemo(
     () => (
-      <div id="tour-designer-blocks" ref={libraryRootRef} data-library-root className="h-full">
+      <div
+        id="tour-designer-blocks"
+        ref={libraryRootRef}
+        data-library-root
+        className="h-full"
+      >
         <ActionLibraryPanel />
       </div>
     ),
@@ -1167,10 +1218,10 @@ export function DesignerRoot({
   );
 
   return (
-    <div className="relative flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-background">
+    <div className="bg-background relative flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden">
       {/* Subtle Background Gradients */}
-      <div className="absolute top-0 left-1/2 -z-10 h-[400px] w-[800px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl opacity-20 dark:opacity-10" />
-      <div className="absolute bottom-0 right-0 -z-10 h-[250px] w-[250px] rounded-full bg-violet-500/5 blur-3xl" />
+      <div className="bg-primary/10 absolute top-0 left-1/2 -z-10 h-[400px] w-[800px] -translate-x-1/2 rounded-full opacity-20 blur-3xl dark:opacity-10" />
+      <div className="absolute right-0 bottom-0 -z-10 h-[250px] w-[250px] rounded-full bg-violet-500/5 blur-3xl" />
       <PageHeader
         title={designMeta.name}
         description={designMeta.description || "No description"}
@@ -1181,7 +1232,7 @@ export function DesignerRoot({
 
       {/* Main Grid Container - 2-4-2 Split */}
       {/* Main Grid Container - 2-4-2 Split */}
-      <div className="flex-1 min-h-0 w-full px-2 overflow-hidden">
+      <div className="min-h-0 w-full flex-1 overflow-hidden px-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -1190,14 +1241,16 @@ export function DesignerRoot({
           onDragEnd={handleDragEnd}
           onDragCancel={() => toggleLibraryScrollLock(false)}
         >
-          <div className="grid grid-cols-8 gap-4 h-full w-full transition-all duration-300 ease-in-out">
+          <div className="grid h-full w-full grid-cols-8 gap-4 transition-all duration-300 ease-in-out">
             {/* Left Panel (Library) */}
             {!leftCollapsed && (
-              <div className={cn(
-                "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
-                rightCollapsed ? "col-span-3" : "col-span-2"
-              )}>
-                <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+              <div
+                className={cn(
+                  "bg-background flex flex-col overflow-hidden rounded-lg border shadow-sm",
+                  rightCollapsed ? "col-span-3" : "col-span-2",
+                )}
+              >
+                <div className="bg-muted/30 flex items-center justify-between border-b px-3 py-2">
                   <span className="text-sm font-medium">Action Library</span>
                   <Button
                     variant="ghost"
@@ -1208,26 +1261,31 @@ export function DesignerRoot({
                     <PanelLeftClose className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex-1 overflow-hidden min-h-0 bg-muted/10">
+                <div className="bg-muted/10 min-h-0 flex-1 overflow-hidden">
                   {leftPanel}
                 </div>
               </div>
             )}
 
             {/* Center Panel (Workspace) */}
-            <div className={cn(
-              "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
-              leftCollapsed && rightCollapsed ? "col-span-8" :
-                leftCollapsed ? "col-span-6" :
-                  rightCollapsed ? "col-span-5" :
-                    "col-span-4"
-            )}>
-              <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+            <div
+              className={cn(
+                "bg-background flex flex-col overflow-hidden rounded-lg border shadow-sm",
+                leftCollapsed && rightCollapsed
+                  ? "col-span-8"
+                  : leftCollapsed
+                    ? "col-span-6"
+                    : rightCollapsed
+                      ? "col-span-5"
+                      : "col-span-4",
+              )}
+            >
+              <div className="bg-muted/30 flex items-center justify-between border-b px-3 py-2">
                 {leftCollapsed && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 mr-2"
+                    className="mr-2 h-6 w-6"
                     onClick={() => setLeftCollapsed(false)}
                     title="Open Library"
                   >
@@ -1237,14 +1295,19 @@ export function DesignerRoot({
                 <span className="text-sm font-medium">Flow Workspace</span>
                 {rightCollapsed && (
                   <div className="flex items-center">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startTour('designer')}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => startTour("designer")}
+                    >
                       <HelpCircle className="h-4 w-4" />
                     </Button>
                     {rightCollapsed && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 ml-2"
+                        className="ml-2 h-6 w-6"
                         onClick={() => setRightCollapsed(false)}
                         title="Open Inspector"
                       >
@@ -1254,7 +1317,7 @@ export function DesignerRoot({
                   </div>
                 )}
               </div>
-              <div className="flex-1 overflow-hidden min-h-0 relative">
+              <div className="relative min-h-0 flex-1 overflow-hidden">
                 {centerPanel}
               </div>
               <div className="border-t">
@@ -1273,11 +1336,13 @@ export function DesignerRoot({
 
             {/* Right Panel (Inspector) */}
             {!rightCollapsed && (
-              <div className={cn(
-                "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",
-                leftCollapsed ? "col-span-2" : "col-span-2"
-              )}>
-                <div className="flex items-center justify-between border-b px-3 py-2 bg-muted/30">
+              <div
+                className={cn(
+                  "bg-background flex flex-col overflow-hidden rounded-lg border shadow-sm",
+                  leftCollapsed ? "col-span-2" : "col-span-2",
+                )}
+              >
+                <div className="bg-muted/30 flex items-center justify-between border-b px-3 py-2">
                   <span className="text-sm font-medium">Inspector</span>
                   <Button
                     variant="ghost"
@@ -1288,7 +1353,7 @@ export function DesignerRoot({
                     <PanelRightClose className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex-1 overflow-hidden min-h-0 bg-muted/10">
+                <div className="bg-muted/10 min-h-0 flex-1 overflow-hidden">
                   {rightPanel}
                 </div>
               </div>
@@ -1298,35 +1363,38 @@ export function DesignerRoot({
           <DragOverlay dropAnimation={null}>
             {dragOverlayAction ? (
               // Library Item Drag
-              <div className="bg-background pointer-events-none flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg select-none ring-2 ring-blue-500/20">
+              <div className="bg-background pointer-events-none flex items-center gap-2 rounded border px-3 py-2 text-xs font-medium shadow-lg ring-2 ring-blue-500/20 select-none">
                 <div
                   className={cn(
                     "flex h-4 w-4 items-center justify-center rounded text-white",
                     dragOverlayAction.category === "robot" && "bg-emerald-600",
                     dragOverlayAction.category === "control" && "bg-amber-500",
                     dragOverlayAction.category === "observation" &&
-                    "bg-purple-600",
+                      "bg-purple-600",
                   )}
                 />
                 {dragOverlayAction.name}
               </div>
-            ) : activeSortableItem?.type === 'action' ? (
+            ) : activeSortableItem?.type === "action" ? (
               // Existing Action Sort
-              <div className="w-[300px] opacity-90 pointer-events-none">
+              <div className="pointer-events-none w-[300px] opacity-90">
                 <SortableActionChip
                   stepId={activeSortableItem.data.stepId}
                   action={activeSortableItem.data.action}
                   parentId={activeSortableItem.data.parentId}
                   selectedActionId={selectedActionId}
-                  onSelectAction={() => { }}
-                  onDeleteAction={() => { }}
+                  onSelectAction={() => {}}
+                  onDeleteAction={() => {}}
                   dragHandle={true}
                 />
               </div>
-            ) : activeSortableItem?.type === 'step' ? (
+            ) : activeSortableItem?.type === "step" ? (
               // Existing Step Sort
-              <div className="w-[400px] pointer-events-none opacity-90">
-                <StepCardPreview step={activeSortableItem.data.step} dragHandle />
+              <div className="pointer-events-none w-[400px] opacity-90">
+                <StepCardPreview
+                  step={activeSortableItem.data.step}
+                  dragHandle
+                />
               </div>
             ) : null}
           </DragOverlay>

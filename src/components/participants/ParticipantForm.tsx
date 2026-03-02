@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { useStudyContext } from "~/lib/study-context";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useTour } from "~/components/onboarding/TourProvider";
 import { Button } from "~/components/ui/button";
@@ -94,6 +95,7 @@ export function ParticipantForm({
     defaultValues: {
       consentGiven: false,
       studyId: contextStudyId ?? "",
+      participantCode: "",
     },
   });
 
@@ -183,6 +185,20 @@ export function ParticipantForm({
     }
   }, [contextStudyId, mode, form]);
 
+  // Fetch next participant code
+  const { data: nextCode, isLoading: isNextCodeLoading } =
+    api.participants.getNextCode.useQuery(
+      { studyId: contextStudyId! },
+      { enabled: mode === "create" && !!contextStudyId },
+    );
+
+  // Update default value if we switch modes or remount
+  useEffect(() => {
+    if (mode === "create" && nextCode) {
+      form.setValue("participantCode", nextCode, { shouldValidate: true });
+    }
+  }, [mode, nextCode, form]);
+
   const createParticipantMutation = api.participants.create.useMutation();
   const updateParticipantMutation = api.participants.update.useMutation();
   const deleteParticipantMutation = api.participants.delete.useMutation();
@@ -206,7 +222,9 @@ export function ParticipantForm({
           email: data.email ?? undefined,
           demographics,
         });
-        router.push(`/studies/${data.studyId}/participants/${newParticipant.id}`);
+        router.push(
+          `/studies/${data.studyId}/participants/${newParticipant.id}`,
+        );
       } else {
         const updatedParticipant = await updateParticipantMutation.mutateAsync({
           id: participantId!,
@@ -215,7 +233,9 @@ export function ParticipantForm({
           email: data.email ?? undefined,
           demographics,
         });
-        router.push(`/studies/${contextStudyId}/participants/${updatedParticipant.id}`);
+        router.push(
+          `/studies/${contextStudyId}/participants/${updatedParticipant.id}`,
+        );
       }
     } catch (error) {
       setError(
@@ -261,16 +281,18 @@ export function ParticipantForm({
         title="Participant Information"
         description="Basic identity and study association."
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <FormField>
             <Label htmlFor="participantCode">Participant Code *</Label>
             <Input
               id="tour-participant-code"
               {...form.register("participantCode")}
-              placeholder="e.g., P001"
-              className={
+              placeholder={isNextCodeLoading ? "Generating..." : "e.g., P001"}
+              readOnly={true}
+              className={cn(
+                "bg-muted text-muted-foreground",
                 form.formState.errors.participantCode ? "border-red-500" : ""
-              }
+              )}
             />
             {form.formState.errors.participantCode && (
               <p className="text-sm text-red-600">
@@ -315,44 +337,46 @@ export function ParticipantForm({
       <div className="my-6" />
 
       <FormSection
-        title="Demographics & Study"
-        description="study association and demographic details."
+        title={contextStudyId ? "Demographics" : "Demographics & Study"}
+        description={contextStudyId ? "Participant demographic details." : "Study association and demographic details."}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField>
-            <Label htmlFor="studyId" id="tour-participant-study-label">Study *</Label>
-            <div id="tour-participant-study-container">
-              <Select
-                value={form.watch("studyId")}
-                onValueChange={(value) => form.setValue("studyId", value)}
-                disabled={studiesLoading || mode === "edit"}
-              >
-                <SelectTrigger
-                  className={
-                    form.formState.errors.studyId ? "border-red-500" : ""
-                  }
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {!contextStudyId && (
+            <FormField>
+              <Label htmlFor="studyId" id="tour-participant-study-label">
+                Study *
+              </Label>
+              <div id="tour-participant-study-container">
+                <Select
+                  value={form.watch("studyId")}
+                  onValueChange={(value) => form.setValue("studyId", value)}
+                  disabled={studiesLoading || mode === "edit"}
                 >
-                  <SelectValue
-                    placeholder={
-                      studiesLoading ? "Loading..." : "Select study"
+                  <SelectTrigger
+                    className={
+                      form.formState.errors.studyId ? "border-red-500" : ""
                     }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {studiesData?.studies?.map((study) => (
-                    <SelectItem key={study.id} value={study.id}>
-                      {study.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.studyId && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.studyId.message}
-                </p>
-              )}
-            </div>
-          </FormField>
+                  >
+                    <SelectValue
+                      placeholder={studiesLoading ? "Loading..." : "Select study"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {studiesData?.studies?.map((study) => (
+                      <SelectItem key={study.id} value={study.id}>
+                        {study.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.studyId && (
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.studyId.message}
+                  </p>
+                )}
+              </div>
+            </FormField>
+          )}
 
           <FormField>
             <Label htmlFor="age">Age</Label>
@@ -503,10 +527,16 @@ export function ParticipantForm({
       submitButtonId="tour-participant-submit"
       extraActions={
         mode === "create" ? (
-          <Button variant="ghost" size="sm" onClick={() => startTour("participant_creation")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => startTour("participant_creation")}
+          >
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Help</span>
-              <div className="flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground">?</div>
+              <div className="text-muted-foreground flex h-5 w-5 items-center justify-center rounded-full border text-xs">
+                ?
+              </div>
             </div>
           </Button>
         ) : undefined

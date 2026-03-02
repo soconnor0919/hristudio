@@ -1,6 +1,5 @@
 "use client";
 
-
 import React from "react";
 import { WizardActionItem } from "./WizardActionItem";
 import {
@@ -23,11 +22,7 @@ interface StepData {
   id: string;
   name: string;
   description: string | null;
-  type:
-  | "wizard_action"
-  | "robot_action"
-  | "parallel_steps"
-  | "conditional";
+  type: "wizard_action" | "robot_action" | "parallel_steps" | "conditional";
   parameters: Record<string, unknown>;
   conditions?: {
     options?: {
@@ -35,7 +30,13 @@ interface StepData {
       value: string;
       nextStepId?: string;
       nextStepIndex?: number;
-      variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+      variant?:
+        | "default"
+        | "destructive"
+        | "outline"
+        | "secondary"
+        | "ghost"
+        | "link";
     }[];
   };
   order: number;
@@ -166,7 +167,7 @@ export function WizardExecutionPanel({
   if (trial.status === "scheduled") {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex-1 flex items-center justify-center p-6">
+        <div className="flex flex-1 items-center justify-center p-6">
           <div className="w-full max-w-md space-y-4 text-center">
             <Clock className="text-muted-foreground mx-auto h-12 w-12 opacity-20" />
             <div>
@@ -219,16 +220,17 @@ export function WizardExecutionPanel({
 
   // Active trial state
   return (
-    <div className="flex h-full flex-col overflow-hidden relative">
+    <div className="relative flex h-full flex-col overflow-hidden">
       {/* Paused Overlay */}
       {isPaused && (
-        <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
-          <div className="bg-background border shadow-lg rounded-xl p-8 flex flex-col items-center max-w-sm text-center space-y-4">
-            <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <div className="bg-background/60 absolute inset-0 z-50 flex items-center justify-center backdrop-blur-[2px]">
+          <div className="bg-background flex max-w-sm flex-col items-center space-y-4 rounded-xl border p-8 text-center shadow-lg">
+            <AlertCircle className="text-muted-foreground h-12 w-12" />
             <div>
               <h2 className="text-xl font-bold tracking-tight">Trial Paused</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                The trial execution has been paused. Resume from the control bar to continue interacting.
+              <p className="text-muted-foreground mt-1 text-sm">
+                The trial execution has been paused. Resume from the control bar
+                to continue interacting.
               </p>
             </div>
           </div>
@@ -236,48 +238,45 @@ export function WizardExecutionPanel({
       )}
 
       {/* Horizontal Step Progress Bar */}
-      <div className="flex-none border-b bg-muted/30 p-3">
+      <div className="bg-muted/30 flex-none border-b p-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {steps.map((step, idx) => {
             const isCurrent = idx === currentStepIndex;
             const isSkipped = skippedStepIndices.has(idx);
-            const isCompleted = completedStepIndices.has(idx) || (!isSkipped && idx < currentStepIndex);
+            const isCompleted =
+              completedStepIndices.has(idx) ||
+              (!isSkipped && idx < currentStepIndex);
             const isUpcoming = idx > currentStepIndex;
 
             return (
               <div
                 key={step.id}
-                className="flex items-center gap-2 flex-shrink-0"
+                className="flex flex-shrink-0 items-center gap-2"
               >
                 <button
                   onClick={() => onStepSelect(idx)}
                   disabled={readOnly}
-                  className={`
-                    group relative flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all
-                    ${isCurrent
+                  className={`group relative flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all ${
+                    isCurrent
                       ? "border-primary bg-primary/10 shadow-sm"
                       : isCompleted
                         ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
                         : isSkipped
                           ? "border-muted-foreground/30 bg-muted/20 border-dashed"
                           : "border-muted-foreground/20 bg-background hover:bg-muted/50"
-                    }
-                    ${readOnly ? "cursor-default" : "cursor-pointer"}
-                  `}
+                  } ${readOnly ? "cursor-default" : "cursor-pointer"} `}
                 >
                   {/* Step Number/Icon */}
                   <div
-                    className={`
-                      flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold
-                      ${isCompleted
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                      isCompleted
                         ? "bg-primary text-primary-foreground"
                         : isSkipped
-                          ? "bg-transparent border border-muted-foreground/40 text-muted-foreground"
+                          ? "border-muted-foreground/40 text-muted-foreground border bg-transparent"
                           : isCurrent
-                            ? "bg-primary text-primary-foreground ring-2 ring-primary/20"
+                            ? "bg-primary text-primary-foreground ring-primary/20 ring-2"
                             : "bg-muted text-muted-foreground"
-                      }
-                    `}
+                    } `}
                   >
                     {isCompleted ? (
                       <CheckCircle className="h-3.5 w-3.5" />
@@ -288,12 +287,13 @@ export function WizardExecutionPanel({
 
                   {/* Step Name */}
                   <span
-                    className={`text-xs font-medium max-w-[120px] truncate ${isCurrent
-                      ? "text-foreground"
-                      : isCompleted
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground/60"
-                      }`}
+                    className={`max-w-[120px] truncate text-xs font-medium ${
+                      isCurrent
+                        ? "text-foreground"
+                        : isCompleted
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/60"
+                    }`}
                     title={step.name}
                   >
                     {step.name}
@@ -303,8 +303,11 @@ export function WizardExecutionPanel({
                 {/* Arrow Connector */}
                 {idx < steps.length - 1 && (
                   <ArrowRight
-                    className={`h-4 w-4 flex-shrink-0 ${isCompleted ? "text-primary/40" : "text-muted-foreground/30"
-                      }`}
+                    className={`h-4 w-4 flex-shrink-0 ${
+                      isCompleted
+                        ? "text-primary/40"
+                        : "text-muted-foreground/30"
+                    }`}
                   />
                 )}
               </div>
@@ -314,16 +317,20 @@ export function WizardExecutionPanel({
       </div>
 
       {/* Current Step Details - NO SCROLL */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="pr-4">
             {currentStep ? (
-              <div className="flex flex-col gap-4 p-4 max-w-5xl mx-auto w-full">
+              <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4">
                 {/* Header Info */}
-                <div className="space-y-1 pb-4 border-b">
-                  <h2 className="text-xl font-bold tracking-tight">{currentStep.name}</h2>
+                <div className="space-y-1 border-b pb-4">
+                  <h2 className="text-xl font-bold tracking-tight">
+                    {currentStep.name}
+                  </h2>
                   {currentStep.description && (
-                    <div className="text-muted-foreground">{currentStep.description}</div>
+                    <div className="text-muted-foreground">
+                      {currentStep.description}
+                    </div>
                   )}
                 </div>
 
@@ -333,34 +340,38 @@ export function WizardExecutionPanel({
                     {currentStep.actions.map((action, idx) => {
                       const isCompleted = idx < activeActionIndex;
                       const isActive: boolean = idx === activeActionIndex;
-                      const isLast = idx === (currentStep.actions?.length || 0) - 1;
+                      const isLast =
+                        idx === (currentStep.actions?.length || 0) - 1;
 
                       return (
                         <div
                           key={action.id}
-                          className="relative pl-8 pb-10 last:pb-0"
+                          className="relative pb-10 pl-8 last:pb-0"
                           ref={isActive ? activeActionRef : undefined}
                         >
                           {/* Connecting Line */}
                           {!isLast && (
                             <div
-                              className={`absolute left-[11px] top-8 bottom-0 w-[2px] ${isCompleted ? "bg-primary/20" : "bg-border/40"}`}
+                              className={`absolute top-8 bottom-0 left-[11px] w-[2px] ${isCompleted ? "bg-primary/20" : "bg-border/40"}`}
                             />
                           )}
 
                           {/* Marker */}
                           <div
-                            className={`absolute left-0 top-1 h-6 w-6 rounded-full border-2 flex items-center justify-center z-10 bg-background transition-all duration-300 ${isCompleted
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : isActive
-                                ? "border-primary ring-4 ring-primary/10 scale-110"
-                                : "border-muted-foreground/30 text-muted-foreground"
-                              }`}
+                            className={`bg-background absolute top-1 left-0 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                              isCompleted
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : isActive
+                                  ? "border-primary ring-primary/10 scale-110 ring-4"
+                                  : "border-muted-foreground/30 text-muted-foreground"
+                            }`}
                           >
                             {isCompleted ? (
                               <CheckCircle className="h-3.5 w-3.5" />
                             ) : (
-                              <span className="text-[10px] font-bold">{idx + 1}</span>
+                              <span className="text-[10px] font-bold">
+                                {idx + 1}
+                              </span>
                             )}
                           </div>
 
@@ -390,21 +401,28 @@ export function WizardExecutionPanel({
                   <div className="mt-6 flex justify-center pb-8">
                     <Button
                       size="lg"
-                      onClick={currentStepIndex === steps.length - 1 ? onCompleteTrial : onNextStep}
-                      className={`w-full max-w-sm text-white shadow-lg transition-all hover:scale-[1.02] ${currentStepIndex === steps.length - 1
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-green-600 hover:bg-green-700"
-                        }`}
+                      onClick={
+                        currentStepIndex === steps.length - 1
+                          ? onCompleteTrial
+                          : onNextStep
+                      }
+                      className={`w-full max-w-sm text-white shadow-lg transition-all hover:scale-[1.02] ${
+                        currentStepIndex === steps.length - 1
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
                       disabled={readOnly || isExecuting}
                     >
-                      {currentStepIndex === steps.length - 1 ? "Complete Trial" : "Complete Step"}
+                      {currentStepIndex === steps.length - 1
+                        ? "Complete Trial"
+                        : "Complete Step"}
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center text-muted-foreground space-y-3">
+              <div className="text-muted-foreground flex h-full flex-col items-center justify-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin opacity-50" />
                 <div className="text-sm">Waiting for trial to start...</div>
               </div>

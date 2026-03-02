@@ -4,11 +4,11 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import {
-    experiments,
-    mediaCaptures,
-    sensorData,
-    studyMembers,
-    trials
+  experiments,
+  mediaCaptures,
+  sensorData,
+  studyMembers,
+  trials,
 } from "~/server/db/schema";
 
 // Helper function to check if user has access to trial for media operations
@@ -43,7 +43,10 @@ async function checkTrialAccess(
       and(
         eq(studyMembers.studyId, trial[0].studyId),
         eq(studyMembers.userId, userId),
-        inArray(studyMembers.role, requiredRoles as ("owner" | "researcher" | "wizard" | "observer")[]),
+        inArray(
+          studyMembers.role,
+          requiredRoles as ("owner" | "researcher" | "wizard" | "observer")[],
+        ),
       ),
     )
     .limit(1);
@@ -217,13 +220,18 @@ export const mediaRouter = createTRPCRouter({
         conditions.push(eq(mediaCaptures.trialId, input.trialId));
       }
 
-              if (input.type) {
-          conditions.push(eq(mediaCaptures.mediaType, input.type));
-        }
+      if (input.type) {
+        conditions.push(eq(mediaCaptures.mediaType, input.type));
+      }
 
       const whereClause = and(
         eq(studyMembers.userId, userId),
-        inArray(studyMembers.role, ["owner", "researcher", "wizard"] as ("owner" | "researcher" | "wizard" | "observer")[]),
+        inArray(studyMembers.role, ["owner", "researcher", "wizard"] as (
+          | "owner"
+          | "researcher"
+          | "wizard"
+          | "observer"
+        )[]),
         ...conditions,
       );
 
@@ -290,8 +298,8 @@ export const mediaRouter = createTRPCRouter({
       // For now, return the stored file path
       return {
         url: media[0].storagePath,
-        fileName: media[0].storagePath.split('/').pop() ?? 'unknown',
-        contentType: media[0].format ?? 'application/octet-stream',
+        fileName: media[0].storagePath.split("/").pop() ?? "unknown",
+        contentType: media[0].format ?? "application/octet-stream",
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       };
     }),
@@ -346,8 +354,8 @@ export const mediaRouter = createTRPCRouter({
           trialId: z.string(),
           sensorType: z.string(),
           timestamp: z.date(),
-                  data: z.any(),
-        metadata: z.any().optional(),
+          data: z.any(),
+          metadata: z.any().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {

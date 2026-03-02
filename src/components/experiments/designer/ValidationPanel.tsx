@@ -106,8 +106,6 @@ function flattenIssues(issuesMap: Record<string, ValidationIssue[]>) {
   return flattened;
 }
 
-
-
 /* -------------------------------------------------------------------------- */
 /* Issue Item Component                                                       */
 /* -------------------------------------------------------------------------- */
@@ -145,7 +143,7 @@ function IssueItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] leading-snug break-words whitespace-normal text-foreground">
+            <p className="text-foreground text-[12px] leading-snug break-words whitespace-normal">
               {issue.message}
             </p>
 
@@ -248,8 +246,6 @@ export function ValidationPanel({
     console.log("[ValidationPanel] issues", issues, { flatIssues, counts });
   }, [issues, flatIssues, counts]);
 
-
-
   return (
     <div
       className={cn(
@@ -289,7 +285,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "error" &&
-              "bg-red-600 text-white hover:opacity-90",
+                "bg-red-600 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("error")}
             aria-pressed={severityFilter === "error"}
@@ -305,7 +301,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "warning" &&
-              "bg-amber-500 text-white hover:opacity-90",
+                "bg-amber-500 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("warning")}
             aria-pressed={severityFilter === "warning"}
@@ -321,7 +317,7 @@ export function ValidationPanel({
             className={cn(
               "h-7 justify-start gap-1 text-[11px]",
               severityFilter === "info" &&
-              "bg-blue-600 text-white hover:opacity-90",
+                "bg-blue-600 text-white hover:opacity-90",
             )}
             onClick={() => setSeverityFilter("info")}
             aria-pressed={severityFilter === "info"}

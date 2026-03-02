@@ -1,15 +1,16 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
+import { CheckCircle2, Activity, FileEdit, Archive } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 
@@ -45,22 +46,22 @@ const statusConfig = {
   draft: {
     label: "Draft",
     className: "bg-gray-100 text-gray-800 hover:bg-gray-200",
-    icon: "📝",
+    icon: FileEdit,
   },
   active: {
     label: "Active",
     className: "bg-green-100 text-green-800 hover:bg-green-200",
-    icon: "🟢",
+    icon: Activity,
   },
   completed: {
     label: "Completed",
     className: "bg-blue-100 text-blue-800 hover:bg-blue-200",
-    icon: "✅",
+    icon: CheckCircle2,
   },
   archived: {
     label: "Archived",
     className: "bg-orange-100 text-orange-800 hover:bg-orange-200",
-    icon: "📦",
+    icon: Archive,
   },
 };
 
@@ -84,7 +85,7 @@ export function StudyCard({ study, userRole, isOwner }: StudyCardProps) {
             </CardDescription>
           </div>
           <Badge className={statusInfo.className} variant="secondary">
-            <span className="mr-1">{statusInfo.icon}</span>
+            <statusInfo.icon className="mr-1 h-3.5 w-3.5" />
             {statusInfo.label}
           </Badge>
         </div>

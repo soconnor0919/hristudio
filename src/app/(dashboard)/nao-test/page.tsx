@@ -365,7 +365,9 @@ export default function NaoTestPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Walk Speed: {(walkSpeed[0] ?? 0).toFixed(2)} m/s</Label>
+                      <Label>
+                        Walk Speed: {(walkSpeed[0] ?? 0).toFixed(2)} m/s
+                      </Label>
                       <Slider
                         value={walkSpeed}
                         onValueChange={setWalkSpeed}
@@ -375,7 +377,9 @@ export default function NaoTestPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Turn Speed: {(turnSpeed[0] ?? 0).toFixed(2)} rad/s</Label>
+                      <Label>
+                        Turn Speed: {(turnSpeed[0] ?? 0).toFixed(2)} rad/s
+                      </Label>
                       <Slider
                         value={turnSpeed}
                         onValueChange={setTurnSpeed}
@@ -415,7 +419,9 @@ export default function NaoTestPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Head Yaw: {(headYaw[0] ?? 0).toFixed(2)} rad</Label>
+                      <Label>
+                        Head Yaw: {(headYaw[0] ?? 0).toFixed(2)} rad
+                      </Label>
                       <Slider
                         value={headYaw}
                         onValueChange={setHeadYaw}
@@ -425,7 +431,9 @@ export default function NaoTestPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Head Pitch: {(headPitch[0] ?? 0).toFixed(2)} rad</Label>
+                      <Label>
+                        Head Pitch: {(headPitch[0] ?? 0).toFixed(2)} rad
+                      </Label>
                       <Slider
                         value={headPitch}
                         onValueChange={setHeadPitch}

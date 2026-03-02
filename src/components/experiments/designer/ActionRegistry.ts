@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ActionDefinition, ExperimentAction } from "~/lib/experiment-designer/types";
+import type {
+  ActionDefinition,
+  ExperimentAction,
+} from "~/lib/experiment-designer/types";
 import corePluginDef from "~/plugins/definitions/hristudio-core.json";
 import wozPluginDef from "~/plugins/definitions/hristudio-woz.json";
 
@@ -56,7 +59,9 @@ export class ActionRegistry {
     this.registerPluginDefinition(corePluginDef);
     this.registerPluginDefinition(wozPluginDef);
 
-    console.log(`[ActionRegistry] Loaded system plugins: ${this.SYSTEM_PLUGIN_IDS.join(", ")}`);
+    console.log(
+      `[ActionRegistry] Loaded system plugins: ${this.SYSTEM_PLUGIN_IDS.join(", ")}`,
+    );
 
     this.coreActionsLoaded = true;
     this.notifyListeners();
@@ -64,10 +69,7 @@ export class ActionRegistry {
 
   /* ---------------- Plugin Actions ---------------- */
 
-  loadPluginActions(
-    studyId: string,
-    studyPlugins: any[],
-  ): void {
+  loadPluginActions(studyId: string, studyPlugins: any[]): void {
     if (this.pluginActionsLoaded && this.loadedStudyId === studyId) return;
 
     if (this.loadedStudyId !== studyId) {
@@ -78,7 +80,7 @@ export class ActionRegistry {
 
     (studyPlugins ?? []).forEach((plugin) => {
       this.registerPluginDefinition(plugin);
-      totalActionsLoaded += (plugin.actionDefinitions?.length || 0);
+      totalActionsLoaded += plugin.actionDefinitions?.length || 0;
     });
 
     console.log(
@@ -114,41 +116,41 @@ export class ActionRegistry {
       // Default category based on plugin type or explicit category
       let category = categoryMap[rawCategory];
       if (!category) {
-        if (plugin.id === 'hristudio-woz') category = 'wizard';
-        else if (plugin.id === 'hristudio-core') category = 'control';
-        else category = 'robot';
+        if (plugin.id === "hristudio-woz") category = "wizard";
+        else if (plugin.id === "hristudio-core") category = "control";
+        else category = "robot";
       }
 
       const execution = action.ros2
         ? {
-          transport: "ros2" as const,
-          timeoutMs: action.timeout,
-          retryable: action.retryable,
-          ros2: {
-            topic: action.ros2.topic,
-            messageType: action.ros2.messageType,
-            service: action.ros2.service,
-            action: action.ros2.action,
-            qos: action.ros2.qos,
-            payloadMapping: action.ros2.payloadMapping,
-          },
-        }
-        : action.rest
-          ? {
-            transport: "rest" as const,
+            transport: "ros2" as const,
             timeoutMs: action.timeout,
             retryable: action.retryable,
-            rest: {
-              method: action.rest.method,
-              path: action.rest.path,
-              headers: action.rest.headers,
+            ros2: {
+              topic: action.ros2.topic,
+              messageType: action.ros2.messageType,
+              service: action.ros2.service,
+              action: action.ros2.action,
+              qos: action.ros2.qos,
+              payloadMapping: action.ros2.payloadMapping,
             },
           }
+        : action.rest
+          ? {
+              transport: "rest" as const,
+              timeoutMs: action.timeout,
+              retryable: action.retryable,
+              rest: {
+                method: action.rest.method,
+                path: action.rest.path,
+                headers: action.rest.headers,
+              },
+            }
           : {
-            transport: "internal" as const,
-            timeoutMs: action.timeout,
-            retryable: action.retryable,
-          };
+              transport: "internal" as const,
+              timeoutMs: action.timeout,
+              retryable: action.retryable,
+            };
 
       // Extract semantic ID from metadata if available, otherwise fall back to database IDs
       // Priority: metadata.robotId > metadata.id (for system plugins) > robotId > id
@@ -184,7 +186,7 @@ export class ActionRegistry {
         },
         execution,
         parameterSchemaRaw: action.parameterSchema ?? undefined,
-        nestable: action.nestable
+        nestable: action.nestable,
       };
 
       // Prevent overwriting if it already exists (first-come-first-served, usually core first)
@@ -193,7 +195,9 @@ export class ActionRegistry {
       }
 
       // Register aliases
-      const aliases = Array.isArray(action.aliases) ? action.aliases : undefined;
+      const aliases = Array.isArray(action.aliases)
+        ? action.aliases
+        : undefined;
       if (aliases) {
         for (const alias of aliases) {
           if (typeof alias === "string" && alias.trim()) {
@@ -224,7 +228,8 @@ export class ActionRegistry {
     if (!schema?.properties) return [];
 
     return Object.entries(schema.properties).map(([key, paramDef]) => {
-      let type: "text" | "number" | "select" | "boolean" | "json" | "array" = "text";
+      let type: "text" | "number" | "select" | "boolean" | "json" | "array" =
+        "text";
 
       if (paramDef.type === "number") {
         type = "number";
@@ -259,7 +264,10 @@ export class ActionRegistry {
     // Robust Reset: Remove valid plugin actions, BUT protect system plugins.
     const idsToDelete: string[] = [];
     this.actions.forEach((action, id) => {
-      if (action.source.kind === "plugin" && !this.SYSTEM_PLUGIN_IDS.includes(action.source.pluginId || "")) {
+      if (
+        action.source.kind === "plugin" &&
+        !this.SYSTEM_PLUGIN_IDS.includes(action.source.pluginId || "")
+      ) {
         idsToDelete.push(id);
       }
     });

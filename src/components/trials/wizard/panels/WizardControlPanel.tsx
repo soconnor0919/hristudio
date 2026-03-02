@@ -25,11 +25,7 @@ interface StepData {
   id: string;
   name: string;
   description: string | null;
-  type:
-  | "wizard_action"
-  | "robot_action"
-  | "parallel_steps"
-  | "conditional"; // Updated to match DB enum
+  type: "wizard_action" | "robot_action" | "parallel_steps" | "conditional"; // Updated to match DB enum
   parameters: Record<string, unknown>;
   conditions?: {
     options?: {
@@ -37,7 +33,13 @@ interface StepData {
       value: string;
       nextStepId?: string;
       nextStepIndex?: number;
-      variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+      variant?:
+        | "default"
+        | "destructive"
+        | "outline"
+        | "secondary"
+        | "ghost"
+        | "link";
     }[];
   };
   order: number;
@@ -109,12 +111,8 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
   isStarting = false,
   readOnly = false,
 }: WizardControlPanelProps) {
-
-
   return (
     <div className="flex h-full flex-col" id="tour-wizard-controls">
-
-
       <div className="min-h-0 flex-1">
         <ScrollArea className="h-full">
           <div className="space-y-4 p-3">
@@ -137,7 +135,7 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full justify-start border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700/50 dark:hover:bg-yellow-900/40"
+                    className="w-full justify-start border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-900/20 dark:text-yellow-300 dark:hover:bg-yellow-900/40"
                     onClick={() => onExecuteAction("intervene")}
                     disabled={readOnly}
                   >
@@ -149,7 +147,9 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
                     variant="outline"
                     size="sm"
                     className="w-full justify-start"
-                    onClick={() => onExecuteAction("note", { content: "Wizard note" })}
+                    onClick={() =>
+                      onExecuteAction("note", { content: "Wizard note" })
+                    }
                     disabled={readOnly}
                   >
                     <User className="mr-2 h-3 w-3" />
@@ -170,16 +170,18 @@ export const WizardControlPanel = React.memo(function WizardControlPanel({
                   )}
                 </div>
               ) : (
-                <div className="text-xs text-muted-foreground p-2 text-center border border-dashed rounded-md bg-muted/20">
+                <div className="text-muted-foreground bg-muted/20 rounded-md border border-dashed p-2 text-center text-xs">
                   Controls available during trial
                 </div>
               )}
 
               {/* Step Navigation */}
-              <div className="pt-4 border-t space-y-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Navigation</span>
+              <div className="space-y-2 border-t pt-4">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Navigation
+                </span>
                 <select
-                  className="w-full text-xs p-2 rounded-md border bg-background"
+                  className="bg-background w-full rounded-md border p-2 text-xs"
                   value={currentStepIndex}
                   onChange={(e) => onNextStep(parseInt(e.target.value, 10))}
                   disabled={readOnly}

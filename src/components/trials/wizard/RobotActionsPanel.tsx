@@ -255,10 +255,10 @@ export function RobotActionsPanel({
           // Look for ROS2 configuration in the action definition
           const actionConfig = (actionDef as any).ros2
             ? {
-              topic: (actionDef as any).ros2.topic,
-              messageType: (actionDef as any).ros2.messageType,
-              payloadMapping: (actionDef as any).ros2.payloadMapping,
-            }
+                topic: (actionDef as any).ros2.topic,
+                messageType: (actionDef as any).ros2.messageType,
+                payloadMapping: (actionDef as any).ros2.payloadMapping,
+              }
             : undefined;
 
           await executeRosAction(
@@ -635,7 +635,7 @@ export function RobotActionsPanel({
           <CardContent className="space-y-4">
             {/* Parameters */}
             {selectedAction.parameters &&
-              selectedAction.parameters.length > 0 ? (
+            selectedAction.parameters.length > 0 ? (
               <div className="space-y-4">
                 <Label className="text-base">Parameters</Label>
                 {selectedAction.parameters.map((param, index) =>
@@ -662,9 +662,9 @@ export function RobotActionsPanel({
               className="w-full"
             >
               {selectedPluginData &&
-                executingActions.has(
-                  `${selectedPluginData.plugin.name}.${selectedAction.id}`,
-                ) ? (
+              executingActions.has(
+                `${selectedPluginData.plugin.name}.${selectedAction.id}`,
+              ) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Executing...
@@ -962,7 +962,7 @@ export function RobotActionsPanel({
           <CardContent className="space-y-4">
             {/* Parameters */}
             {selectedAction?.parameters &&
-              (selectedAction?.parameters?.length ?? 0) > 0 ? (
+            (selectedAction?.parameters?.length ?? 0) > 0 ? (
               <div className="space-y-4">
                 <Label className="text-base">Parameters</Label>
                 {selectedAction?.parameters?.map((param, index) =>
@@ -990,10 +990,10 @@ export function RobotActionsPanel({
               className="w-full"
             >
               {selectedPluginData &&
-                selectedAction &&
-                executingActions.has(
-                  `${selectedPluginData?.plugin.name}.${selectedAction?.id}`,
-                ) ? (
+              selectedAction &&
+              executingActions.has(
+                `${selectedPluginData?.plugin.name}.${selectedAction?.id}`,
+              ) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Executing...

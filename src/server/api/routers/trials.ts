@@ -285,29 +285,37 @@ export const trialsRouter = createTRPCRouter({
         ...trial[0],
         eventCount: eventCount[0]?.count ?? 0,
         mediaCount: media.length,
-        media: await Promise.all(media.map(async (m) => {
-          let url = "";
-          try {
-            // Generate Presigned GET URL
-            const command = new GetObjectCommand({
-              Bucket: env.MINIO_BUCKET_NAME ?? "hristudio-data",
-              Key: m.storagePath,
-            });
-            url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-          } catch (e) {
-            console.error("Failed to sign URL for media", m.id, e);
-          }
-          return {
-            ...m,
-            url, // Add the signed URL to the response
-            contentType: m.format === 'webm' ? 'video/webm'
-              : m.format === 'mp4' ? 'video/mp4'
-                : m.format === 'mkv' ? 'video/x-matroska'
-                  : m.storagePath.endsWith('.webm') ? 'video/webm'
-                    : m.storagePath.endsWith('.mp4') ? 'video/mp4'
-                      : 'application/octet-stream', // Infer or store content type
-          };
-        })),
+        media: await Promise.all(
+          media.map(async (m) => {
+            let url = "";
+            try {
+              // Generate Presigned GET URL
+              const command = new GetObjectCommand({
+                Bucket: env.MINIO_BUCKET_NAME ?? "hristudio-data",
+                Key: m.storagePath,
+              });
+              url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            } catch (e) {
+              console.error("Failed to sign URL for media", m.id, e);
+            }
+            return {
+              ...m,
+              url, // Add the signed URL to the response
+              contentType:
+                m.format === "webm"
+                  ? "video/webm"
+                  : m.format === "mp4"
+                    ? "video/mp4"
+                    : m.format === "mkv"
+                      ? "video/x-matroska"
+                      : m.storagePath.endsWith(".webm")
+                        ? "video/webm"
+                        : m.storagePath.endsWith(".mp4")
+                          ? "video/mp4"
+                          : "application/octet-stream", // Infer or store content type
+            };
+          }),
+        ),
       };
     }),
 
@@ -610,7 +618,9 @@ export const trialsRouter = createTRPCRouter({
 
       let durationSeconds = null;
       if (currentTrial?.startedAt) {
-        durationSeconds = Math.floor((new Date().getTime() - currentTrial.startedAt.getTime()) / 1000);
+        durationSeconds = Math.floor(
+          (new Date().getTime() - currentTrial.startedAt.getTime()) / 1000,
+        );
       }
 
       const [trial] = await db
@@ -913,7 +923,7 @@ export const trialsRouter = createTRPCRouter({
       if (annotation) {
         await db.insert(trialEvents).values({
           trialId: input.trialId,
-          eventType: `annotation_${input.category || 'note'}`,
+          eventType: `annotation_${input.category || "note"}`,
           timestamp: input.timestampStart ?? new Date(),
           data: {
             annotationId: annotation.id,
@@ -1054,51 +1064,51 @@ export const trialsRouter = createTRPCRouter({
       const filteredTrials =
         trialIds.length > 0
           ? await ctx.db.query.trials.findMany({
-            where: inArray(trials.id, trialIds),
-            with: {
-              experiment: {
-                with: {
-                  study: {
-                    columns: {
-                      id: true,
-                      name: true,
+              where: inArray(trials.id, trialIds),
+              with: {
+                experiment: {
+                  with: {
+                    study: {
+                      columns: {
+                        id: true,
+                        name: true,
+                      },
                     },
                   },
+                  columns: {
+                    id: true,
+                    name: true,
+                    studyId: true,
+                  },
                 },
-                columns: {
-                  id: true,
-                  name: true,
-                  studyId: true,
+                participant: {
+                  columns: {
+                    id: true,
+                    participantCode: true,
+                    email: true,
+                    name: true,
+                  },
+                },
+                wizard: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+                events: {
+                  columns: {
+                    id: true,
+                  },
+                },
+                mediaCaptures: {
+                  columns: {
+                    id: true,
+                  },
                 },
               },
-              participant: {
-                columns: {
-                  id: true,
-                  participantCode: true,
-                  email: true,
-                  name: true,
-                },
-              },
-              wizard: {
-                columns: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-              events: {
-                columns: {
-                  id: true,
-                },
-              },
-              mediaCaptures: {
-                columns: {
-                  id: true,
-                },
-              },
-            },
-            orderBy: [desc(trials.scheduledAt)],
-          })
+              orderBy: [desc(trials.scheduledAt)],
+            })
           : [];
 
       // Get total count
@@ -1232,8 +1242,12 @@ export const trialsRouter = createTRPCRouter({
         });
 
         // Also set a generic "last_wizard_response" if response field exists
-        if ('response' in input.data) {
-          executionEngine.setVariable(input.trialId, "last_wizard_response", input.data.response);
+        if ("response" in input.data) {
+          executionEngine.setVariable(
+            input.trialId,
+            "last_wizard_response",
+            input.data.response,
+          );
         }
       }
 

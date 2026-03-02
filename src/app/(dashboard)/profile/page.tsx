@@ -25,7 +25,7 @@ import {
   Lock,
   UserCog,
   Mail,
-  Fingerprint
+  Fingerprint,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { cn } from "~/lib/utils";
@@ -43,7 +43,7 @@ interface ProfileUser {
 
 function ProfileContent({ user }: { user: ProfileUser }) {
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="animate-in fade-in space-y-8 duration-500">
       <PageHeader
         title={user.name ?? "User"}
         description={user.email}
@@ -60,17 +60,18 @@ function ProfileContent({ user }: { user: ProfileUser }) {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Main Content (Left Column) */}
         <div className="space-y-8 lg:col-span-2">
-
           {/* Personal Information */}
           <section className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <User className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 border-b pb-2">
+              <User className="text-primary h-5 w-5" />
               <h3 className="text-lg font-semibold">Personal Information</h3>
             </div>
             <Card className="border-border/60 hover:border-border transition-colors">
               <CardHeader>
                 <CardTitle className="text-base">Contact Details</CardTitle>
-                <CardDescription>Update your public profile information</CardDescription>
+                <CardDescription>
+                  Update your public profile information
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ProfileEditForm
@@ -87,14 +88,16 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 
           {/* Security */}
           <section className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <Lock className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Lock className="text-primary h-5 w-5" />
               <h3 className="text-lg font-semibold">Security</h3>
             </div>
             <Card className="border-border/60 hover:border-border transition-colors">
               <CardHeader>
                 <CardTitle className="text-base">Password</CardTitle>
-                <CardDescription>Ensure your account stays secure</CardDescription>
+                <CardDescription>
+                  Ensure your account stays secure
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <PasswordChangeForm />
@@ -105,11 +108,10 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 
         {/* Sidebar (Right Column) */}
         <div className="space-y-8">
-
           {/* Permissions */}
           <section className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <Shield className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Shield className="text-primary h-5 w-5" />
               <h3 className="text-lg font-semibold">Permissions</h3>
             </div>
             <Card>
@@ -119,30 +121,40 @@ function ProfileContent({ user }: { user: ProfileUser }) {
                     {user.roles.map((roleInfo, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">{formatRole(roleInfo.role)}</span>
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            Since {new Date(roleInfo.grantedAt).toLocaleDateString()}
+                          <span className="text-sm font-medium">
+                            {formatRole(roleInfo.role)}
+                          </span>
+                          <span className="text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-[10px]">
+                            Since{" "}
+                            {new Date(roleInfo.grantedAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-muted-foreground text-xs leading-relaxed">
                           {getRoleDescription(roleInfo.role)}
                         </p>
-                        {index < (user.roles?.length || 0) - 1 && <Separator className="my-2" />}
+                        {index < (user.roles?.length || 0) - 1 && (
+                          <Separator className="my-2" />
+                        )}
                       </div>
                     ))}
-                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30 text-xs text-muted-foreground mt-4">
-                      <div className="flex items-center gap-2 mb-1 text-primary font-medium">
+                    <div className="text-muted-foreground mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900/30 dark:bg-blue-900/10">
+                      <div className="text-primary mb-1 flex items-center gap-2 font-medium">
                         <Shield className="h-3 w-3" />
                         <span>Role Management</span>
                       </div>
-                      System roles are managed by administrators. Contact support if you need access adjustments.
+                      System roles are managed by administrators. Contact
+                      support if you need access adjustments.
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-4">
+                  <div className="py-4 text-center">
                     <p className="text-sm font-medium">No Roles Assigned</p>
-                    <p className="text-xs text-muted-foreground mt-1">Contact an admin to request access.</p>
-                    <Button size="sm" variant="outline" className="mt-3 w-full">Request Access</Button>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Contact an admin to request access.
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-3 w-full">
+                      Request Access
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -151,26 +163,42 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 
           {/* Data & Privacy */}
           <section className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <Download className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Download className="text-primary h-5 w-5" />
               <h3 className="text-lg font-semibold">Data & Privacy</h3>
             </div>
 
             <Card className="border-destructive/10 bg-destructive/5 overflow-hidden">
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div>
-                  <h4 className="text-sm font-semibold mb-1">Export Data</h4>
-                  <p className="text-xs text-muted-foreground mb-3">Download a copy of your personal data.</p>
-                  <Button variant="outline" size="sm" className="w-full bg-background" disabled>
+                  <h4 className="mb-1 text-sm font-semibold">Export Data</h4>
+                  <p className="text-muted-foreground mb-3 text-xs">
+                    Download a copy of your personal data.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-background w-full"
+                    disabled
+                  >
                     <Download className="mr-2 h-3 w-3" />
                     Download Archive
                   </Button>
                 </div>
                 <Separator className="bg-destructive/10" />
                 <div>
-                  <h4 className="text-sm font-semibold text-destructive mb-1">Delete Account</h4>
-                  <p className="text-xs text-muted-foreground mb-3">This action is irreversible.</p>
-                  <Button variant="destructive" size="sm" className="w-full" disabled>
+                  <h4 className="text-destructive mb-1 text-sm font-semibold">
+                    Delete Account
+                  </h4>
+                  <p className="text-muted-foreground mb-3 text-xs">
+                    This action is irreversible.
+                  </p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    disabled
+                  >
                     <Trash2 className="mr-2 h-3 w-3" />
                     Delete Account
                   </Button>
@@ -193,7 +221,11 @@ export default function ProfilePage() {
   ]);
 
   if (status === "loading") {
-    return <div className="p-8 text-muted-foreground animate-pulse">Loading profile...</div>;
+    return (
+      <div className="text-muted-foreground animate-pulse p-8">
+        Loading profile...
+      </div>
+    );
   }
 
   if (!session?.user) {
