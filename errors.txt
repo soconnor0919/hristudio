@@ -1,0 +1,45 @@
+scripts/seed-dev.ts(762,61): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { experimentId: string | SQL<unknown> | Placeholder<string, any>; duration?: number | SQL<unknown> | Placeholder<string, any> | null | undefined; id?: string | ... 2 more ... | undefined; ... 11 more ...; parameters?: unknown; }): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'currentStepId' does not exist in type '{ experimentId: string | SQL<unknown> | Placeholder<string, any>; duration?: number | SQL<unknown> | Placeholder<string, any> | null | undefined; id?: string | SQL<...> | Placeholder<...> | undefined; ... 11 more ...; parameters?: unknown; }'.
+  Overload 2 of 2, '(values: { experimentId: string | SQL<unknown> | Placeholder<string, any>; duration?: number | SQL<unknown> | Placeholder<string, any> | null | undefined; id?: string | ... 2 more ... | undefined; ... 11 more ...; parameters?: unknown; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'experimentId' does not exist in type '{ experimentId: string | SQL<unknown> | Placeholder<string, any>; duration?: number | SQL<unknown> | Placeholder<string, any> | null | undefined; id?: string | SQL<...> | Placeholder<...> | undefined; ... 11 more ...; parameters?: unknown; }[]'.
+src/app/(dashboard)/studies/[id]/trials/[trialId]/analysis/page.tsx(99,13): error TS2322: Type '{ startedAt: Date | null; completedAt: Date | null; eventCount: any; mediaCount: any; media: { url: string; contentType: string; id: string; trialId: string; mediaType: "video" | "audio" | "image" | null; ... 8 more ...; createdAt: Date; }[]; ... 13 more ...; participant: { ...; }; }' is not assignable to type '{ id: string; status: string; startedAt: Date | null; completedAt: Date | null; duration: number | null; experiment: { name: string; studyId: string; }; participant: { participantCode: string; }; eventCount?: number | undefined; mediaCount?: number | undefined; media?: { ...; }[] | undefined; }'.
+  Types of property 'media' are incompatible.
+    Type '{ url: string; contentType: string; id: string; trialId: string; mediaType: "video" | "audio" | "image" | null; storagePath: string; fileSize: number | null; duration: number | null; format: string | null; ... 4 more ...; createdAt: Date; }[]' is not assignable to type '{ url: string; mediaType: string; format?: string | undefined; contentType?: string | undefined; }[]'.
+      Type '{ url: string; contentType: string; id: string; trialId: string; mediaType: "video" | "audio" | "image" | null; storagePath: string; fileSize: number | null; duration: number | null; format: string | null; ... 4 more ...; createdAt: Date; }' is not assignable to type '{ url: string; mediaType: string; format?: string | undefined; contentType?: string | undefined; }'.
+        Types of property 'mediaType' are incompatible.
+          Type 'string | null' is not assignable to type 'string'.
+            Type 'null' is not assignable to type 'string'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(2,38): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(64,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(65,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(70,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(71,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(72,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(100,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(101,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(107,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/control-flow.test.ts(108,17): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/hashing.test.ts(2,38): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/lib/experiment-designer/__tests__/hashing.test.ts(65,19): error TS2741: Property 'category' is missing in type '{ id: string; type: string; name: string; parameters: { message: string; }; source: { kind: "core"; baseActionId: string; }; execution: { transport: "internal"; }; }' but required in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/hashing.test.ts(86,19): error TS2741: Property 'category' is missing in type '{ id: string; type: string; name: string; parameters: { message: string; }; source: { kind: "core"; baseActionId: string; }; execution: { transport: "internal"; }; }' but required in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/store.test.ts(2,50): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/lib/experiment-designer/__tests__/store.test.ts(39,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(58,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(103,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(104,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(107,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(108,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(123,15): error TS2741: Property 'category' is missing in type '{ id: string; type: string; name: string; parameters: {}; source: { kind: "core"; baseActionId: string; }; execution: { transport: "internal"; }; }' but required in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/store.test.ts(135,16): error TS18048: 'storedStep' is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(136,16): error TS18048: 'storedStep' is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/store.test.ts(136,16): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/validators.test.ts(2,38): error TS2307: Cannot find module 'vitest' or its corresponding type declarations.
+src/lib/experiment-designer/__tests__/validators.test.ts(11,5): error TS2322: Type '"utility"' is not assignable to type 'ActionCategory'.
+src/lib/experiment-designer/__tests__/validators.test.ts(14,91): error TS2353: Object literal may only specify known properties, and 'default' does not exist in type 'ActionParameter'.
+src/lib/experiment-designer/__tests__/validators.test.ts(36,20): error TS2532: Object is possibly 'undefined'.
+src/lib/experiment-designer/__tests__/validators.test.ts(58,17): error TS2353: Object literal may only specify known properties, and 'order' does not exist in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/validators.test.ts(78,17): error TS2353: Object literal may only specify known properties, and 'order' does not exist in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/validators.test.ts(107,17): error TS2353: Object literal may only specify known properties, and 'order' does not exist in type 'ExperimentAction'.
+src/lib/experiment-designer/__tests__/validators.test.ts(119,20): error TS2532: Object is possibly 'undefined'.
+src/server/services/__tests__/trial-execution.test.ts(2,56): error TS2307: Cannot find module 'bun:test' or its corresponding type declarations.

@@ -82,10 +82,6 @@ const WizardMonitoringPanel = function WizardMonitoringPanel({
     <div className="flex h-full flex-col p-2">
       {/* Robot Controls - Scrollable */}
       <div className="flex-1 min-h-0 bg-background rounded-lg border shadow-sm overflow-hidden flex flex-col">
-        <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
-          <Bot className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Robot Control</span>
-        </div>
         <ScrollArea className="flex-1">
           <div className="space-y-4 p-3">
             {/* Robot Status */}

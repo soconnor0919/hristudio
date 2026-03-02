@@ -61,15 +61,15 @@ describe("Control Flow Persistence", () => {
         // console.log("DB Rows Conditions:", JSON.stringify(dbRows[0].conditions, null, 2));
         // END DEBUG
 
-        expect(dbRows[0].type).toBe("conditional");
-        expect((dbRows[0].conditions as any).options).toHaveLength(2);
+        expect(dbRows[0]!.type).toBe("conditional");
+        expect((dbRows[0]!.conditions as any).options).toHaveLength(2);
 
         // Simulate Load
         const hydratedSteps = convertDatabaseToSteps(dbRows);
 
-        expect(hydratedSteps[0].type).toBe("conditional");
-        expect((hydratedSteps[0].trigger.conditions as any).options).toHaveLength(2);
-        expect((hydratedSteps[0].trigger.conditions as any).options[0].label).toBe("Yes");
+        expect(hydratedSteps[0]!.type).toBe("conditional");
+        expect((hydratedSteps[0]!.trigger.conditions as any).options).toHaveLength(2);
+        expect((hydratedSteps[0]!.trigger.conditions as any).options[0].label).toBe("Yes");
     });
 
     it("should persist loop configuration", () => {
@@ -97,14 +97,14 @@ describe("Control Flow Persistence", () => {
         const dbRows = convertStepsToDatabase(originalSteps);
 
         // Note: 'loop' type is mapped to 'conditional' in DB, but detailed conditions should survive
-        expect(dbRows[0].type).toBe("conditional");
-        expect((dbRows[0].conditions as any).loop.iterations).toBe(5);
+        expect(dbRows[0]!.type).toBe("conditional");
+        expect((dbRows[0]!.conditions as any).loop.iterations).toBe(5);
 
         // Simulate Load
         const hydratedSteps = convertDatabaseToSteps(dbRows);
 
         // Checking data integrity
-        expect((hydratedSteps[0].trigger.conditions as any).loop).toBeDefined();
-        expect((hydratedSteps[0].trigger.conditions as any).loop.iterations).toBe(5);
+        expect((hydratedSteps[0]!.trigger.conditions as any).loop).toBeDefined();
+        expect((hydratedSteps[0]!.trigger.conditions as any).loop.iterations).toBe(5);
     });
 });

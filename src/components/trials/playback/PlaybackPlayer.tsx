@@ -70,7 +70,6 @@ export function PlaybackPlayer({ src }: PlaybackPlayerProps) {
 
     const handleLoadedMetadata = () => {
         if (videoRef.current) {
-            setDuration(videoRef.current.duration);
             setIsBuffering(false);
         }
     };
@@ -85,7 +84,6 @@ export function PlaybackPlayer({ src }: PlaybackPlayerProps) {
                 <video
                     ref={videoRef}
                     src={src}
-                    controls
                     muted={muted}
                     className="w-full h-full object-contain"
                     onTimeUpdate={handleTimeUpdate}

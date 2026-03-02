@@ -758,20 +758,12 @@ async function main() {
     startTime.setMinutes(startTime.getMinutes() - 10); // Started 10 mins ago
     const endTime = new Date(); // Ended just now
 
-    // Create the trial
     const [analyticsTrial] = await db.insert(schema.trials).values({
       experimentId: experiment!.id,
       participantId: p101.id,
-      // studyId is not in trials table, it is inferred from experiment
       status: "completed",
       startedAt: startTime,
       completedAt: endTime,
-      currentStepId: step5!.id, // Ended at last step
-      runId: randomUUID(),
-      metadata: {
-        condition: "HRIStudio",
-        notes: "Seeded for analytics testing"
-      }
     }).returning();
 
     // Create a series of events

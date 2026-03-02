@@ -211,12 +211,6 @@ export class TrialExecutionEngine {
         })
         .where(eq(trials.id, trialId));
 
-      // Log trial start event
-      await this.logTrialEvent(trialId, "trial_started", {
-        wizardId: context.wizardId,
-        startTime: context.startTime.toISOString(),
-      });
-
       return {
         success: true,
         data: {
@@ -982,13 +976,6 @@ export class TrialExecutionEngine {
           duration: Math.round(duration / 1000), // Convert to seconds
         })
         .where(eq(trials.id, trialId));
-
-      // Log completion
-      await this.logTrialEvent(trialId, "trial_completed", {
-        endTime: endTime.toISOString(),
-        duration,
-        totalSteps: this.stepDefinitions.get(trialId)?.length || 0,
-      });
 
       // Clean up
       this.activeTrials.delete(trialId);

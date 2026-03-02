@@ -14,6 +14,7 @@ import {
   Home,
   LogOut,
   MoreHorizontal,
+  PlayCircle,
   Puzzle,
   Settings,
   TestTube,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { useSidebar } from "~/components/ui/sidebar";
+import { useTour } from "~/components/onboarding/TourProvider";
 
 import {
   DropdownMenu,
@@ -118,7 +120,13 @@ const helpItems = [
   {
     title: "Help Center",
     url: "/help",
-    icon: BookOpen, // Make sure to import this from lucide-react
+    icon: BookOpen,
+  },
+  {
+    title: "Interactive Tour",
+    url: "#tour",
+    icon: PlayCircle,
+    action: "tour",
   },
 ];
 
@@ -137,6 +145,8 @@ export function AppSidebar({
   const isCollapsed = sidebarState === "collapsed";
   const { selectedStudyId, userStudies, selectStudy, refreshStudyData, isLoadingUserStudies } =
     useStudyManagement();
+
+  const { startTour } = useTour();
 
   // Reference to track if we've already attempted auto-selection to avoid fighting with manual clearing
   const hasAutoSelected = useRef(false);
@@ -566,7 +576,15 @@ export function AppSidebar({
             {helpItems.map((item) => {
               const isActive = pathname.startsWith(item.url);
 
-              const menuButton = (
+              const menuButton = item.action === "tour" ? (
+                <SidebarMenuButton
+                  onClick={() => startTour("full_platform")}
+                  isActive={false}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              ) : (
                 <SidebarMenuButton asChild isActive={isActive}>
                   <Link href={item.url}>
                     <item.icon className="h-4 w-4" />

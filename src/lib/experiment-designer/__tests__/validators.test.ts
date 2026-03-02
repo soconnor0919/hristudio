@@ -8,10 +8,13 @@ const mockActionDef: ActionDefinition = {
     id: "core.log",
     name: "Log Info",
     type: "log",
-    category: "utility",
+    description: "Logs information",
+    category: "observation",
+    icon: "lucide-info",
+    color: "blue",
     parameters: [
         { id: "message", name: "Message", type: "text", required: true },
-        { id: "level", name: "Level", type: "select", options: ["info", "warn", "error"], default: "info" }
+        { id: "level", name: "Level", type: "select", options: ["info", "warn", "error"], value: "info" }
     ],
     source: { kind: "core", baseActionId: "log" }
 };
@@ -33,7 +36,7 @@ describe("Experiment Validators", () => {
         it("should fail if experiment has no steps", () => {
             const result = validateExperimentDesign([], { steps: [], actionDefinitions: [] });
             expect(result.valid).toBe(false);
-            expect(result.issues[0].message).toContain("at least one step");
+            expect(result.issues[0]!.message).toContain("at least one step");
         });
 
         it("should fail if step name is empty", () => {
@@ -55,7 +58,7 @@ describe("Experiment Validators", () => {
                 id: "act-1",
                 type: "log",
                 name: "Log",
-                order: 0,
+                category: "observation",
                 parameters: {}, // Missing 'message'
                 source: { kind: "core", baseActionId: "log" },
                 execution: { transport: "internal" }
@@ -75,7 +78,7 @@ describe("Experiment Validators", () => {
                 id: "act-1",
                 type: "log",
                 name: "Log",
-                order: 0,
+                category: "observation",
                 parameters: { message: "Hello" },
                 source: { kind: "core", baseActionId: "log" },
                 execution: { transport: "internal" }
@@ -104,7 +107,7 @@ describe("Experiment Validators", () => {
                 id: "act-1",
                 type: "math",
                 name: "Math",
-                order: 0,
+                category: "observation",
                 parameters: { val: 15 }, // Too high
                 source: { kind: "core", baseActionId: "math" },
                 execution: { transport: "internal" }
@@ -116,7 +119,7 @@ describe("Experiment Validators", () => {
                 actionDefinitions: [rangeActionDef]
             });
 
-            expect(issues[0].message).toContain("must be at most 10");
+            expect(issues[0]!.message).toContain("must be at most 10");
         });
     });
 });

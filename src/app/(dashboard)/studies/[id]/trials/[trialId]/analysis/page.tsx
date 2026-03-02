@@ -92,6 +92,12 @@ function AnalysisPageContent() {
         completedAt: trial.completedAt ? new Date(trial.completedAt) : null,
         eventCount: (trial as any).eventCount,
         mediaCount: (trial as any).mediaCount,
+        media: trial.media?.map(m => ({
+            ...m,
+            mediaType: m.mediaType ?? "video",
+            format: m.format ?? undefined,
+            contentType: m.contentType ?? undefined
+        })) ?? [],
     };
 
     return (

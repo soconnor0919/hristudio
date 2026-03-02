@@ -1149,7 +1149,7 @@ export const WizardInterface = React.memo(function WizardInterface({
                 <TabsTrigger value="robot" className="text-xs flex-1">Robot Control</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="camera_obs" className="flex-1 flex flex-col m-0 p-0 h-full overflow-hidden min-h-0">
+              <TabsContent value="camera_obs" className="flex-1 flex-col m-0 p-0 h-full overflow-hidden min-h-0 data-[state=active]:flex">
                 <div className="flex-none bg-muted/30 border-b h-48 sm:h-56 relative group shrink-0">
                   <WebcamPanel readOnly={trial.status === 'completed'} trialId={trial.id} trialStatus={trial.status} />
                 </div>
@@ -1164,7 +1164,7 @@ export const WizardInterface = React.memo(function WizardInterface({
                 </div>
               </TabsContent>
 
-              <TabsContent value="robot" className="flex-1 m-0 h-full overflow-hidden">
+              <TabsContent value="robot" className="flex-1 flex-col m-0 p-0 h-full overflow-hidden min-h-0 data-[state=active]:flex">
                 <WizardMonitoringPanel
                   rosConnected={rosConnected}
                   rosConnecting={rosConnecting}

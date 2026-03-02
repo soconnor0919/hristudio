@@ -43,16 +43,13 @@ export function EventTimeline() {
 
     const startTime = useMemo(() => {
         if (contextStartTime) return new Date(contextStartTime).getTime();
-        if (sortedEvents.length > 0) return new Date(sortedEvents[0]!.timestamp).getTime();
         return 0;
-    }, [contextStartTime, sortedEvents]);
+    }, [contextStartTime]);
 
     const effectiveDuration = useMemo(() => {
         if (duration > 0) return duration * 1000;
-        if (sortedEvents.length === 0) return 60000; // 1 min default
-        const end = new Date(sortedEvents[sortedEvents.length - 1]!.timestamp).getTime();
-        return Math.max(end - startTime, 1000);
-    }, [duration, sortedEvents, startTime]);
+        return 60000; // 1 min default
+    }, [duration]);
 
     // Dimensions
     const containerRef = useRef<HTMLDivElement>(null);

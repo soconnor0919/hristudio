@@ -192,34 +192,34 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                 <div className="flex flex-col xl:flex-row gap-3 shrink-0">
                     <Card id="tour-trial-metrics" className="shadow-sm flex-1">
                         <CardContent className="p-0 h-full">
-                            <div className="flex flex-row divide-x h-full">
-                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
-                                        <Clock className="h-3.5 w-3.5 text-blue-500" /> Duration
+                            <div className="grid grid-cols-2 grid-rows-2 h-full divide-x divide-y">
+                                <div className="flex flex-col p-4 md:p-6 justify-center">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                                        <Clock className="h-4 w-4 text-blue-500" /> Duration
                                     </p>
-                                    <p className="text-base font-bold">
+                                    <p className="text-2xl font-bold">
                                         {trial.duration ? <span>{Math.floor(trial.duration / 60)}m {trial.duration % 60}s</span> : "--:--"}
                                     </p>
                                 </div>
-                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
-                                        <Bot className="h-3.5 w-3.5 text-purple-500" /> Robot Actions
+                                <div className="flex flex-col p-4 md:p-6 justify-center border-t-0">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                                        <Bot className="h-4 w-4 text-purple-500" /> Robot Actions
                                     </p>
-                                    <p className="text-base font-bold">{robotActionCount}</p>
+                                    <p className="text-2xl font-bold">{robotActionCount}</p>
                                 </div>
-                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
-                                        <AlertTriangle className="h-3.5 w-3.5 text-orange-500" /> Interventions
+                                <div className="flex flex-col p-4 md:p-6 justify-center">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                                        <AlertTriangle className="h-4 w-4 text-orange-500" /> Interventions
                                     </p>
-                                    <p className="text-base font-bold">{interventionCount}</p>
+                                    <p className="text-2xl font-bold">{interventionCount}</p>
                                 </div>
-                                <div className="flex-1 flex flex-col p-3 px-4 justify-center">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
-                                        <Activity className="h-3.5 w-3.5 text-green-500" /> Completeness
+                                <div className="flex flex-col p-4 md:p-6 justify-center">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                                        <Activity className="h-4 w-4 text-green-500" /> Completeness
                                     </p>
-                                    <div className="flex items-center gap-1.5 text-base font-bold">
+                                    <div className="flex items-center gap-2 text-2xl font-bold">
                                         <span className={cn(
-                                            "inline-block h-2 w-2 rounded-full",
+                                            "inline-block h-3 w-3 rounded-full",
                                             trial.status === 'completed' ? "bg-green-500" : "bg-yellow-500"
                                         )} />
                                         {trial.status === 'completed' ? '100%' : 'Incomplete'}
@@ -244,7 +244,7 @@ export function TrialAnalysisView({ trial, backHref }: TrialAnalysisViewProps) {
                 <div className="flex-1 min-h-0 rounded-xl border shadow-sm overflow-hidden bg-background flex flex-col">
 
                     {/* FIXED TIMELINE: Always visible at top */}
-                    <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-1">
+                    <div id="tour-trial-timeline" className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-1">
                         <EventTimeline />
                     </div>
 

@@ -66,6 +66,7 @@ describe("Hashing Utilities", () => {
                 id: "act-1",
                 type: "log",
                 name: "Log",
+                category: "observation",
                 parameters: { message: "A" },
                 source: { kind: "core", baseActionId: "log" },
                 execution: { transport: "internal" }
@@ -87,6 +88,7 @@ describe("Hashing Utilities", () => {
                 id: "act-1",
                 type: "log",
                 name: "Log",
+                category: "observation",
                 parameters: { message: "A" },
                 source: { kind: "core", baseActionId: "log" },
                 execution: { transport: "internal" }

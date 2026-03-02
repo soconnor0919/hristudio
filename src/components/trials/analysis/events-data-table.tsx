@@ -115,6 +115,7 @@ export function EventsDataTable({ data, startTime }: EventsDataTableProps) {
             <div className="flex items-center justify-between">
                 <div className="flex flex-1 items-center space-x-2">
                     <Input
+                        id="tour-analytics-filter"
                         placeholder="Search event data..."
                         value={globalFilter}
                         onChange={(e) => setGlobalFilter(e.target.value)}
@@ -141,7 +142,7 @@ export function EventsDataTable({ data, startTime }: EventsDataTableProps) {
                 </div>
             </div>
 
-            <div className="rounded-md border bg-background">
+            <div id="tour-analytics-table" className="rounded-md border bg-background">
                 <div>
                     <Table className="w-full">
                         <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">

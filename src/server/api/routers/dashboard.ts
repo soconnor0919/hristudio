@@ -9,6 +9,7 @@ import {
   studies,
   studyMembers,
   trials,
+  trialEvents,
   users,
   userSystemRoles,
 } from "~/server/db/schema";
@@ -39,39 +40,105 @@ export const dashboardRouter = createTRPCRouter({
 
       // Build where conditions
       const whereConditions = input.studyId
-        ? eq(activityLogs.studyId, input.studyId)
-        : inArray(activityLogs.studyId, studyIds);
+        ? and(
+          eq(experiments.studyId, input.studyId),
+          inArray(
+            trialEvents.eventType,
+            ['trial_started', 'trial_completed', 'intervention', 'error', 'annotation']
+          )
+        )
+        : and(
+          inArray(experiments.studyId, studyIds),
+          inArray(
+            trialEvents.eventType,
+            ['trial_started', 'trial_completed', 'intervention', 'error', 'annotation']
+          )
+        );
 
-      // Get recent activity logs
+      // Get recent interesting trial events
       const activities = await ctx.db
         .select({
-          id: activityLogs.id,
-          action: activityLogs.action,
-          description: activityLogs.description,
-          createdAt: activityLogs.createdAt,
+          id: trialEvents.id,
+          type: trialEvents.eventType,
+          data: trialEvents.data,
+          timestamp: trialEvents.timestamp,
+          trialId: trials.id,
+          experimentName: experiments.name,
+          participantCode: participants.participantCode,
           user: {
             name: users.name,
-            email: users.email,
-          },
-          study: {
-            name: studies.name,
           },
         })
-        .from(activityLogs)
-        .innerJoin(users, eq(activityLogs.userId, users.id))
-        .innerJoin(studies, eq(activityLogs.studyId, studies.id))
+        .from(trialEvents)
+        .innerJoin(trials, eq(trialEvents.trialId, trials.id))
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .innerJoin(participants, eq(trials.participantId, participants.id))
+        .leftJoin(users, eq(trialEvents.createdBy, users.id))
         .where(whereConditions)
-        .orderBy(desc(activityLogs.createdAt))
+        .orderBy(desc(trialEvents.timestamp))
         .limit(input.limit);
 
-      return activities.map((activity) => ({
-        id: activity.id,
-        type: activity.action,
-        title: activity.description,
-        description: `${activity.study.name} - ${activity.user.name}`,
-        time: activity.createdAt,
-        status: "info" as const,
-      }));
+      return activities.map((activity) => {
+        let title = activity.type.replace(/_/g, " ");
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+
+        let description = `${activity.participantCode} • ${activity.experimentName}`;
+        if (activity.user?.name) {
+          description += ` • by ${activity.user.name}`;
+        }
+
+        return {
+          id: activity.id,
+          type: activity.type,
+          title: title,
+          description: description,
+          time: activity.timestamp,
+          status: activity.type === "error" ? "error" : activity.type === "trial_completed" ? "success" : "info" as const,
+          data: activity.data,
+          trialId: activity.trialId,
+        };
+      });
+    }),
+
+  getLiveTrials: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Get studies the user has access to
+      const accessibleStudies = await ctx.db
+        .select({ studyId: studyMembers.studyId })
+        .from(studyMembers)
+        .where(eq(studyMembers.userId, userId));
+
+      const studyIds = accessibleStudies.map((s) => s.studyId);
+
+      if (studyIds.length === 0) return [];
+
+      const whereConditions = input.studyId
+        ? and(eq(experiments.studyId, input.studyId), eq(trials.status, "in_progress"))
+        : and(inArray(experiments.studyId, studyIds), eq(trials.status, "in_progress"));
+
+      const live = await ctx.db
+        .select({
+          id: trials.id,
+          startedAt: trials.startedAt,
+          experimentName: experiments.name,
+          participantCode: participants.participantCode,
+          studyName: studies.name,
+        })
+        .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .innerJoin(participants, eq(trials.participantId, participants.id))
+        .innerJoin(studies, eq(experiments.studyId, studies.id))
+        .where(whereConditions)
+        .orderBy(desc(trials.startedAt));
+
+      return live;
     }),
 
   getStudyProgress: protectedProcedure
@@ -87,10 +154,10 @@ export const dashboardRouter = createTRPCRouter({
       // Build where conditions
       const whereConditions = input.studyId
         ? and(
-            eq(studyMembers.userId, userId),
-            eq(studies.status, "active"),
-            eq(studies.id, input.studyId),
-          )
+          eq(studyMembers.userId, userId),
+          eq(studies.status, "active"),
+          eq(studies.id, input.studyId),
+        )
         : and(eq(studyMembers.userId, userId), eq(studies.status, "active"));
 
       // Get studies the user has access to with participant counts
@@ -116,19 +183,19 @@ export const dashboardRouter = createTRPCRouter({
       const trialCounts =
         studyIds.length > 0
           ? await ctx.db
-              .select({
-                studyId: experiments.studyId,
-                completedTrials: count(trials.id),
-              })
-              .from(experiments)
-              .innerJoin(trials, eq(experiments.id, trials.experimentId))
-              .where(
-                and(
-                  inArray(experiments.studyId, studyIds),
-                  eq(trials.status, "completed"),
-                ),
-              )
-              .groupBy(experiments.studyId)
+            .select({
+              studyId: experiments.studyId,
+              completedTrials: count(trials.id),
+            })
+            .from(experiments)
+            .innerJoin(trials, eq(experiments.id, trials.experimentId))
+            .where(
+              and(
+                inArray(experiments.studyId, studyIds),
+                eq(trials.status, "completed"),
+              ),
+            )
+            .groupBy(experiments.studyId)
           : [];
 
       const trialCountMap = new Map(
@@ -144,9 +211,9 @@ export const dashboardRouter = createTRPCRouter({
         const progress =
           totalParticipants > 0
             ? Math.min(
-                100,
-                Math.round((completedTrials / totalParticipants) * 100),
-              )
+              100,
+              Math.round((completedTrials / totalParticipants) * 100),
+            )
             : 0;
 
         return {
@@ -262,6 +329,19 @@ export const dashboardRouter = createTRPCRouter({
           ),
         );
 
+      // Get total interventions
+      const [interventionsCount] = await ctx.db
+        .select({ count: count() })
+        .from(trialEvents)
+        .innerJoin(trials, eq(trialEvents.trialId, trials.id))
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
+        .where(
+          and(
+            inArray(experiments.studyId, studyIds),
+            eq(trialEvents.eventType, "intervention"),
+          ),
+        );
+
       return {
         totalStudies: studyCount?.count ?? 0,
         totalExperiments: experimentCount?.count ?? 0,
@@ -270,6 +350,7 @@ export const dashboardRouter = createTRPCRouter({
         activeTrials: activeTrialsCount?.count ?? 0,
         scheduledTrials: scheduledTrialsCount?.count ?? 0,
         completedToday: completedTodayCount?.count ?? 0,
+        totalInterventions: interventionsCount?.count ?? 0,
       };
     }),
 
@@ -315,10 +396,10 @@ export const dashboardRouter = createTRPCRouter({
     return {
       user: user
         ? {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          }
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        }
         : null,
       systemRoles: systemRoles.map((r) => r.role),
       studyMemberships: studyMemberships.map((m) => ({

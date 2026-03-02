@@ -36,7 +36,7 @@ describe("Designer Store Integration", () => {
 
         store.getState().upsertStep(step);
         expect(store.getState().steps).toHaveLength(1);
-        expect(store.getState().steps[0].id).toBe("step-1");
+        expect(store.getState().steps[0]!.id).toBe("step-1");
     });
 
     it("should update an existing step", () => {
@@ -55,7 +55,7 @@ describe("Designer Store Integration", () => {
         store.getState().upsertStep(updatedStep);
 
         expect(store.getState().steps).toHaveLength(1);
-        expect(store.getState().steps[0].name).toBe("Updated Step");
+        expect(store.getState().steps[0]!.name).toBe("Updated Step");
     });
 
     it("should remove a step", () => {
@@ -100,12 +100,12 @@ describe("Designer Store Integration", () => {
         store.getState().reorderStep(0, 1);
 
         const steps = store.getState().steps;
-        expect(steps[0].id).toBe("step-2");
-        expect(steps[1].id).toBe("step-1");
+        expect(steps[0]!.id).toBe("step-2");
+        expect(steps[1]!.id).toBe("step-1");
 
         // Orders should be updated
-        expect(steps[0].order).toBe(0);
-        expect(steps[1].order).toBe(1);
+        expect(steps[0]!.order).toBe(0);
+        expect(steps[1]!.order).toBe(1);
     });
 
     it("should upsert an action into a step", () => {
@@ -124,6 +124,7 @@ describe("Designer Store Integration", () => {
             id: "act-1",
             type: "log",
             name: "Log",
+            category: "observation",
             parameters: {},
             source: { kind: "core", baseActionId: "log" },
             execution: { transport: "internal" }
@@ -132,7 +133,7 @@ describe("Designer Store Integration", () => {
         store.getState().upsertAction("step-1", action);
 
         const storedStep = store.getState().steps[0];
-        expect(storedStep.actions).toHaveLength(1);
-        expect(storedStep.actions[0].id).toBe("act-1");
+        expect(storedStep!.actions).toHaveLength(1);
+        expect(storedStep!.actions[0]!.id).toBe("act-1");
     });
 });

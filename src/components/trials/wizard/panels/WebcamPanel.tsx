@@ -4,21 +4,12 @@ import React, { useCallback, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { Camera, CameraOff, Video, StopCircle, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "~/components/ui/select";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOnly?: boolean; trialId?: string; trialStatus?: string }) {
-    const [deviceId, setDeviceId] = useState<string | null>(null);
-    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [isCameraEnabled, setIsCameraEnabled] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -35,19 +26,11 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
     const saveRecordingMutation = api.storage.saveRecording.useMutation();
     const logEventMutation = api.trials.logEvent.useMutation();
 
-    const handleDevices = useCallback(
-        (mediaDevices: MediaDeviceInfo[]) => {
-            setDevices(mediaDevices.filter(({ kind, deviceId }) => kind === "videoinput" && deviceId !== ""));
-        },
-        [setDevices],
-    );
-
     const [isMounted, setIsMounted] = useState(false);
 
     React.useEffect(() => {
         setIsMounted(true);
-        navigator.mediaDevices.enumerateDevices().then(handleDevices);
-    }, [handleDevices]);
+    }, []);
 
     const handleEnableCamera = () => {
         setIsCameraEnabled(true);
@@ -87,6 +70,10 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
 
     const handleStartRecording = () => {
         if (!webcamRef.current?.stream) return;
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            console.log("Already recording, skipping start");
+            return;
+        }
 
         setIsRecording(true);
         chunksRef.current = [];
@@ -125,7 +112,7 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
     };
 
     const handleStopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
+        if (mediaRecorderRef.current && isRecording && mediaRecorderRef.current.state === "recording") {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
             if (trialId) {
@@ -197,32 +184,10 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
 
     return (
         <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b p-3">
-                <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    Webcam Feed
-                </h2>
+            <div className="flex items-center justify-end border-b px-2 py-1 bg-muted/10 h-10 shrink-0">
 
                 {!readOnly && (
                     <div className="flex items-center gap-2">
-                        {devices.length > 0 && isMounted && (
-                            <Select
-                                value={deviceId ?? undefined}
-                                onValueChange={setDeviceId}
-                                disabled={!isCameraEnabled || isRecording}
-                            >
-                                <SelectTrigger className="h-7 w-[130px] text-xs">
-                                    <SelectValue placeholder="Select Camera" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {devices.map((device, key) => (
-                                        <SelectItem key={key} value={device.deviceId} className="text-xs">
-                                            {device.label || `Camera ${key + 1}`}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
 
                         {isCameraEnabled && (
                             !isRecording ? (
@@ -284,7 +249,6 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
                                 audio={false}
                                 width="100%"
                                 height="100%"
-                                videoConstraints={{ deviceId: deviceId ?? undefined }}
                                 onUserMedia={handleUserMedia}
                                 onUserMediaError={(err) => setError(String(err))}
                                 className="object-contain w-full h-full"
@@ -334,6 +298,6 @@ export function WebcamPanel({ readOnly = false, trialId, trialStatus }: { readOn
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

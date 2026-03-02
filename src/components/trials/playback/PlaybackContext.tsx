@@ -15,6 +15,7 @@ interface PlaybackContextType {
     isPlaying: boolean;
     playbackRate: number;
     startTime?: Date;
+    endTime?: Date;
 
     // Actions
     play: () => void;
@@ -44,11 +45,23 @@ interface PlaybackProviderProps {
     children: React.ReactNode;
     events?: TrialEvent[];
     startTime?: Date;
+    endTime?: Date;
 }
 
-export function PlaybackProvider({ children, events = [], startTime }: PlaybackProviderProps) {
+export function PlaybackProvider({ children, events = [], startTime, endTime }: PlaybackProviderProps) {
+    const trialDuration = React.useMemo(() => {
+        if (startTime && endTime) return (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000;
+        return 0;
+    }, [startTime, endTime]);
+
     const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const [duration, setDuration] = useState(trialDuration);
+
+    useEffect(() => {
+        if (trialDuration > 0 && duration === 0) {
+            setDuration(trialDuration);
+        }
+    }, [trialDuration, duration]);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
 
@@ -105,6 +118,8 @@ export function PlaybackProvider({ children, events = [], startTime }: PlaybackP
         setCurrentTime,
         events,
         currentEventIndex,
+        startTime,
+        endTime,
     };
 
     return (
