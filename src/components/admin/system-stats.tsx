@@ -2,13 +2,12 @@
 
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { api } from "~/trpc/react";
 
 export function SystemStats() {
-  // TODO: Implement admin.getSystemStats API endpoint
-  // const { data: stats, isLoading } = api.admin.getSystemStats.useQuery({});
-  const isLoading = false;
+  const { data: stats, isLoading } = api.admin.getSystemStats.useQuery({});
 
-  if (isLoading) {
+  if (isLoading || !stats) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -26,19 +25,30 @@ export function SystemStats() {
     );
   }
 
-  // Mock data for now since we don't have the actual admin router implemented
-  const mockStats = {
-    totalUsers: 42,
-    totalStudies: 15,
-    totalExperiments: 38,
-    totalTrials: 127,
-    activeTrials: 3,
-    systemHealth: "healthy",
-    uptime: "7 days, 14 hours",
-    storageUsed: "2.3 GB",
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
-  const displayStats = mockStats;
+  const formatUptime = (seconds: number) => {
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    return `${d} days, ${h} hours`;
+  };
+
+  const displayStats = {
+    totalUsers: stats.users.total,
+    totalStudies: stats.studies.total,
+    totalExperiments: stats.experiments.total,
+    totalTrials: stats.trials.total,
+    activeTrials: stats.trials.running,
+    systemHealth: "healthy",
+    uptime: formatUptime(stats.system.uptime),
+    storageUsed: formatBytes(stats.storage.totalSize),
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

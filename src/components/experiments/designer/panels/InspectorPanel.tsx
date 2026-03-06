@@ -21,6 +21,7 @@ import {
   PackageSearch,
   PanelRightClose,
 } from "lucide-react";
+import { toast } from "sonner";
 
 /**
  * InspectorPanel
@@ -371,15 +372,13 @@ export function InspectorPanel({
                   actionDefinitions={actionRegistry.getAllActions()}
                   studyPlugins={studyPlugins}
                   onReconcileAction={(actionId) => {
-                    // Placeholder: future diff modal / signature update
-
-                    console.log("Reconcile TODO for action:", actionId);
+                    toast.info("Action Reconcile coming soon!");
                   }}
                   onRefreshDependencies={() => {
-                    console.log("Refresh dependencies TODO");
+                    toast.info("Refresh dependencies coming soon!");
                   }}
                   onInstallPlugin={(pluginId) => {
-                    console.log("Install plugin TODO:", pluginId);
+                    toast.info("Install plugin coming soon!");
                   }}
                 />
               </div>

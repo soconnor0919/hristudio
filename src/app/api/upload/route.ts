@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
@@ -9,7 +9,7 @@ import {
 } from "~/lib/storage/minio";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { mediaCaptures, trials } from "~/server/db/schema";
+import { experiments, mediaCaptures, studyMembers, trials } from "~/server/db/schema";
 
 const uploadSchema = z.object({
   trialId: z.string().optional(),
@@ -71,16 +71,37 @@ export async function POST(request: NextRequest) {
     // Check trial access if trialId is provided
     if (validatedTrialId) {
       const trial = await db
-        .select()
+        .select({
+          id: trials.id,
+          studyId: experiments.studyId,
+        })
         .from(trials)
+        .innerJoin(experiments, eq(trials.experimentId, experiments.id))
         .where(eq(trials.id, validatedTrialId))
         .limit(1);
 
-      if (!trial.length) {
+      if (!trial.length || !trial[0]) {
         return NextResponse.json({ error: "Trial not found" }, { status: 404 });
       }
 
-      // TODO: Check if user has access to this trial through study membership
+      // Check if user has access to this trial through study membership
+      const membership = await db
+        .select()
+        .from(studyMembers)
+        .where(
+          and(
+            eq(studyMembers.studyId, trial[0].studyId),
+            eq(studyMembers.userId, session.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!membership.length) {
+        return NextResponse.json(
+          { error: "Insufficient permissions to upload to this trial" },
+          { status: 403 }
+        );
+      }
     }
 
     // Generate unique file key
