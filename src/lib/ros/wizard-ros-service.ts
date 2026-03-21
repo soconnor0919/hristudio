@@ -451,6 +451,59 @@ export class WizardRosService extends EventEmitter {
     parameters: Record<string, unknown>,
   ): Promise<void> {
     switch (actionId) {
+      case "say_text":
+        const text = String(parameters.text || "Hello");
+        this.publish("/speech", "std_msgs/String", { data: text });
+        const wordCount = text.split(/\s+/).length;
+        const duration = Math.max(800, wordCount * 250 + 500);
+        await new Promise((resolve) => setTimeout(resolve, duration));
+        break;
+
+      case "walk_forward":
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: Number(parameters.speed) || 0.1, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: 0 },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        break;
+
+      case "walk_backward":
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: -(Number(parameters.speed) || 0.1), y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: 0 },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        break;
+
+      case "turn_left":
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: 0, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: -(Number(parameters.speed) || 0.3) },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        break;
+
+      case "turn_right":
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: 0, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: Number(parameters.speed) || 0.3 },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        break;
+
+      case "move_head":
+      case "turn_head":
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: ["HeadYaw", "HeadPitch"],
+          joint_angles: [
+            Number(parameters.yaw) || 0,
+            Number(parameters.pitch) || 0,
+          ],
+          speed: Number(parameters.speed) || 0.3,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        break;
+
       case "emergency_stop":
         this.publish("/cmd_vel", "geometry_msgs/Twist", {
           linear: { x: 0, y: 0, z: 0 },
