@@ -448,7 +448,10 @@ async function main() {
         // Define the options that will be presented to the Wizard
         parameters: {
           prompt_text: "Did participant answer 'Red' correctly?",
-          options: ["Correct", "Incorrect"],
+          options: [
+            { label: "Correct", value: "Correct", nextStepId: step4a!.id },
+            { label: "Incorrect", value: "Incorrect", nextStepId: step4b!.id },
+          ],
         },
         sourceKind: "core",
         pluginId: "hristudio-woz", // Explicit link

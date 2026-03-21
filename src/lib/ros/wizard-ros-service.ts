@@ -209,6 +209,7 @@ export class WizardRosService extends EventEmitter {
       };
     },
   ): Promise<RobotActionExecution> {
+    console.log(`[WizardROS] executeRobotAction called: plugin=${pluginName}, action=${actionId}`, { actionConfig, parameters });
     if (!this.isConnected) {
       throw new Error("Not connected to ROS bridge");
     }
@@ -298,6 +299,7 @@ export class WizardRosService extends EventEmitter {
     messageType: string,
     msg: Record<string, unknown>,
   ): void {
+    console.log(`[WizardROS] Publishing to ${topic}:`, msg);
     const message: RosMessage = {
       op: "publish",
       topic,
@@ -313,9 +315,10 @@ export class WizardRosService extends EventEmitter {
    */
   private send(message: RosMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log("[WizardROS] send: Sending message:", JSON.stringify(message).substring(0, 200));
       this.ws.send(JSON.stringify(message));
     } else {
-      console.warn("[WizardROS] Cannot send message - not connected");
+      console.warn("[WizardROS] Cannot send message - not connected", { readyState: this.ws?.readyState });
     }
   }
 
@@ -448,9 +451,11 @@ export class WizardRosService extends EventEmitter {
     actionId: string,
     parameters: Record<string, unknown>,
   ): Promise<void> {
+    console.log(`[WizardROS] executeBuiltinAction: ${actionId}`, parameters);
     switch (actionId) {
       case "say_text":
         const text = String(parameters.text || "Hello");
+        console.log(`[WizardROS] Publishing to /speech:`, text);
         this.publish("/speech", "std_msgs/String", {
           data: text,
         });
@@ -458,6 +463,119 @@ export class WizardRosService extends EventEmitter {
         const wordCount = text.split(/\s+/).length;
         const estimatedDuration = Math.max(800, wordCount * 250 + 500);
         await new Promise((resolve) => setTimeout(resolve, estimatedDuration));
+        break;
+
+      case "say_with_emotion":
+        const emotionText = String(parameters.text || "Hello");
+        const emotion = String(parameters.emotion || "neutral");
+        const speed = Number(parameters.speed || 1.0);
+        console.log(`[WizardROS] Publishing with emotion:`, emotionText, emotion);
+        // NAOqi speech format: \rspd=speed \rst=emotion text
+        this.publish("/speech", "std_msgs/String", {
+          data: `\\rspd=${speed}\\\\rst=${emotion}\\${emotionText}`,
+        });
+        const emotionWordCount = emotionText.split(/\s+/).length;
+        const emotionDuration = Math.max(800, emotionWordCount * 250 + 500);
+        await new Promise((resolve) => setTimeout(resolve, emotionDuration));
+        break;
+
+      case "bow":
+        // Combo: head look down + lean forward + return
+        console.log(`[WizardROS] Executing bow animation`);
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: ["HeadYaw", "HeadPitch"],
+          joint_angles: [0, 0.5],
+          speed: 0.3,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: 0.1, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: 0 },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        // Return to neutral
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: ["HeadYaw", "HeadPitch"],
+          joint_angles: [0, 0],
+          speed: 0.3,
+        });
+        this.publish("/cmd_vel", "geometry_msgs/Twist", {
+          linear: { x: 0, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: 0 },
+        });
+        break;
+
+      case "wave":
+        // Combo: right arm wave gesture
+        console.log(`[WizardROS] Executing wave gesture`);
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
+          joint_angles: [1.5, 0.2, -1.0, 0.5],
+          speed: 0.4,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        // Wave motion
+        for (let i = 0; i < 3; i++) {
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["RElbowRoll"],
+            joint_angles: [0.2],
+            speed: 0.6,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["RElbowRoll"],
+            joint_angles: [0.8],
+            speed: 0.6,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        break;
+
+      case "nod":
+        console.log(`[WizardROS] Executing nod gesture`);
+        for (let i = 0; i < 2; i++) {
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["HeadPitch"],
+            joint_angles: [0.3],
+            speed: 0.5,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["HeadPitch"],
+            joint_angles: [-0.1],
+            speed: 0.5,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        break;
+
+      case "shake_head":
+        console.log(`[WizardROS] Executing head shake gesture`);
+        for (let i = 0; i < 2; i++) {
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["HeadYaw"],
+            joint_angles: [0.4],
+            speed: 0.5,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+            joint_names: ["HeadYaw"],
+            joint_angles: [-0.4],
+            speed: 0.5,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        break;
+
+      case "point":
+        // Point gesture with left arm
+        console.log(`[WizardROS] Executing point gesture`);
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"],
+          joint_angles: [0.8, 0.3, -1.0, 0.1, 0],
+          speed: 0.4,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         break;
 
       case "walk_forward":

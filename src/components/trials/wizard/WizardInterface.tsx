@@ -613,33 +613,49 @@ export const WizardInterface = React.memo(function WizardInterface({
       currentStep.conditions?.options &&
       lastResponse
     ) {
-      const matchedOption = currentStep.conditions.options.find(
-        (opt) => opt.value === lastResponse,
-      );
-      if (matchedOption && matchedOption.nextStepId) {
-        // Find index of the target step
-        const targetIndex = steps.findIndex(
-          (s) => s.id === matchedOption.nextStepId,
-        );
-        if (targetIndex !== -1) {
-          console.log(
-            `[WizardInterface] Branching to step ${targetIndex} (${matchedOption.label})`,
-          );
+      // Handle both string options and object options
+      const matchedOption = currentStep.conditions.options.find((opt) => {
+        // If opt is a string, compare directly with lastResponse
+        if (typeof opt === "string") {
+          return opt === lastResponse;
+        }
+        // If opt is an object, check .value property
+        return opt.value === lastResponse;
+      });
 
-          logEventMutation.mutate({
-            trialId: trial.id,
-            type: "step_branched",
-            data: {
-              fromIndex: currentStepIndex,
-              toIndex: targetIndex,
-              condition: matchedOption.label,
-              value: lastResponse,
-            },
-          });
+      if (matchedOption) {
+        // Handle both string options and object options for nextStepId
+        const nextStepId = typeof matchedOption === "string"
+          ? null  // String options don't have nextStepId
+          : matchedOption.nextStepId;
 
-          setCurrentStepIndex(targetIndex);
-          setLastResponse(null); // Reset after consuming
-          return;
+        if (nextStepId) {
+          // Find index of the target step
+          const targetIndex = steps.findIndex((s) => s.id === nextStepId);
+          if (targetIndex !== -1) {
+            const label = typeof matchedOption === "string"
+              ? matchedOption
+              : matchedOption.label;
+
+            console.log(
+              `[WizardInterface] Branching to step ${targetIndex} (${label})`,
+            );
+
+            logEventMutation.mutate({
+              trialId: trial.id,
+              type: "step_branched",
+              data: {
+                fromIndex: currentStepIndex,
+                toIndex: targetIndex,
+                condition: label,
+                value: lastResponse,
+              },
+            });
+
+            setCurrentStepIndex(targetIndex);
+            setLastResponse(null); // Reset after consuming
+            return;
+          }
         }
       }
     }
