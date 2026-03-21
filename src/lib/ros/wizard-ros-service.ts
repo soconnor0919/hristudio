@@ -209,7 +209,6 @@ export class WizardRosService extends EventEmitter {
       };
     },
   ): Promise<RobotActionExecution> {
-    console.log(`[WizardROS] executeRobotAction called: plugin=${pluginName}, action=${actionId}`, { actionConfig, parameters });
     if (!this.isConnected) {
       throw new Error("Not connected to ROS bridge");
     }
@@ -315,10 +314,9 @@ export class WizardRosService extends EventEmitter {
    */
   private send(message: RosMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log("[WizardROS] send: Sending message:", JSON.stringify(message).substring(0, 200));
       this.ws.send(JSON.stringify(message));
     } else {
-      console.warn("[WizardROS] Cannot send message - not connected", { readyState: this.ws?.readyState });
+      console.warn("[WizardROS] Cannot send message - not connected");
     }
   }
 
@@ -451,11 +449,9 @@ export class WizardRosService extends EventEmitter {
     actionId: string,
     parameters: Record<string, unknown>,
   ): Promise<void> {
-    console.log(`[WizardROS] executeBuiltinAction: ${actionId}`, parameters);
     switch (actionId) {
       case "say_text":
         const text = String(parameters.text || "Hello");
-        console.log(`[WizardROS] Publishing to /speech:`, text);
         this.publish("/speech", "std_msgs/String", {
           data: text,
         });
@@ -469,7 +465,6 @@ export class WizardRosService extends EventEmitter {
         const emotionText = String(parameters.text || "Hello");
         const emotion = String(parameters.emotion || "neutral");
         const speed = Number(parameters.speed || 1.0);
-        console.log(`[WizardROS] Publishing with emotion:`, emotionText, emotion);
         // NAOqi speech format: \rspd=speed \rst=emotion text
         this.publish("/speech", "std_msgs/String", {
           data: `\\rspd=${speed}\\\\rst=${emotion}\\${emotionText}`,
@@ -481,7 +476,6 @@ export class WizardRosService extends EventEmitter {
 
       case "bow":
         // Combo: head look down + lean forward + return
-        console.log(`[WizardROS] Executing bow animation`);
         this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
           joint_names: ["HeadYaw", "HeadPitch"],
           joint_angles: [0, 0.5],
@@ -507,7 +501,6 @@ export class WizardRosService extends EventEmitter {
 
       case "wave":
         // Combo: right arm wave gesture
-        console.log(`[WizardROS] Executing wave gesture`);
         this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
           joint_names: ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
           joint_angles: [1.5, 0.2, -1.0, 0.5],
@@ -532,7 +525,6 @@ export class WizardRosService extends EventEmitter {
         break;
 
       case "nod":
-        console.log(`[WizardROS] Executing nod gesture`);
         for (let i = 0; i < 2; i++) {
           this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
             joint_names: ["HeadPitch"],
@@ -550,7 +542,6 @@ export class WizardRosService extends EventEmitter {
         break;
 
       case "shake_head":
-        console.log(`[WizardROS] Executing head shake gesture`);
         for (let i = 0; i < 2; i++) {
           this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
             joint_names: ["HeadYaw"],
@@ -569,7 +560,6 @@ export class WizardRosService extends EventEmitter {
 
       case "point":
         // Point gesture with left arm
-        console.log(`[WizardROS] Executing point gesture`);
         this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
           joint_names: ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"],
           joint_angles: [0.8, 0.3, -1.0, 0.1, 0],
