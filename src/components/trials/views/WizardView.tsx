@@ -22,6 +22,7 @@ interface WizardViewProps {
       name: string;
       description: string | null;
       studyId: string;
+      robotId: string | null;
     };
     participant: {
       id: string;

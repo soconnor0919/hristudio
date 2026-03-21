@@ -15,6 +15,10 @@ export interface UseWizardRosOptions {
   onError?: (error: unknown) => void;
   onActionCompleted?: (execution: RobotActionExecution) => void;
   onActionFailed?: (execution: RobotActionExecution) => void;
+  onSystemAction?: (
+    actionId: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 export interface UseWizardRosReturn {
@@ -287,6 +291,65 @@ export function useWizardRos(
 
       if (!isConnected) {
         throw new Error("Not connected to ROS bridge");
+      }
+
+      // Handle system actions that bypass ROS 2 bridge (e.g. emotional speech via SSH)
+      if (
+        actionId === "say_with_emotion" ||
+        actionId === "say_text_with_emotion" ||
+        actionId === "wake_up" ||
+        actionId === "rest"
+      ) {
+        console.log(`[useWizardRos] Intercepting system action: ${actionId}`);
+        const executionId = `sys_${Date.now()}`;
+
+        // Create a synthetic execution record
+        const execution: RobotActionExecution = {
+          id: executionId,
+          pluginName,
+          actionId,
+          parameters,
+          status: "executing",
+          startTime: new Date(),
+        };
+
+        // Trigger started event
+        service.emit("action_started", execution);
+
+        try {
+          if (options.onSystemAction) {
+            await options.onSystemAction(actionId, parameters);
+          } else {
+            console.warn(
+              "[useWizardRos] No onSystemAction handler provided for system action",
+            );
+            // Fallback to builtin ROS action if no system handler
+            return service.executeRobotAction(
+              pluginName,
+              actionId,
+              parameters,
+              actionConfig,
+            );
+          }
+
+          const completedExecution: RobotActionExecution = {
+            ...execution,
+            status: "completed",
+            endTime: new Date(),
+          };
+
+          service.emit("action_completed", completedExecution);
+          return completedExecution;
+        } catch (error) {
+          const failedExecution: RobotActionExecution = {
+            ...execution,
+            status: "failed",
+            endTime: new Date(),
+            error: error instanceof Error ? error.message : "System action failed",
+          };
+          service.emit("action_failed", failedExecution);
+          throw error;
+        }
       }
 
       return service.executeRobotAction(

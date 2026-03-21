@@ -249,6 +249,7 @@ export const trialsRouter = createTRPCRouter({
             name: experiments.name,
             description: experiments.description,
             studyId: experiments.studyId,
+            robotId: experiments.robotId,
           },
           participant: {
             id: participants.id,

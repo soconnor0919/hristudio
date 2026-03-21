@@ -422,9 +422,12 @@ export class RosBridge extends EventEmitter {
 
   private setupSubscriptions(): void {
     // Subscribe to common robot topics
-    this.subscribe("/battery_state", "sensor_msgs/BatteryState");
     this.subscribe("/joint_states", "sensor_msgs/JointState");
-    this.subscribe("/robot_pose", "geometry_msgs/PoseStamped");
+    this.subscribe("/bumper", "naoqi_bridge_msgs/Bumper");
+    this.subscribe("/hand_touch", "naoqi_bridge_msgs/HandTouch");
+    this.subscribe("/head_touch", "naoqi_bridge_msgs/HeadTouch");
+    this.subscribe("/sonar/left", "sensor_msgs/Range");
+    this.subscribe("/sonar/right", "sensor_msgs/Range");
   }
 
   private scheduleReconnect(): void {

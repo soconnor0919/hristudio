@@ -264,19 +264,11 @@ export class WizardRosService extends EventEmitter {
   private subscribeToRobotTopics(): void {
     const topics = [
       { topic: "/joint_states", type: "sensor_msgs/JointState" },
-      // Battery topic removed - BatteryState message type doesn't exist in naoqi_bridge_msgs
-      // Battery info can be obtained through diagnostics or other means if needed
-      { topic: "/naoqi_driver/bumper", type: "naoqi_bridge_msgs/Bumper" },
-      {
-        topic: "/naoqi_driver/hand_touch",
-        type: "naoqi_bridge_msgs/HandTouch",
-      },
-      {
-        topic: "/naoqi_driver/head_touch",
-        type: "naoqi_bridge_msgs/HeadTouch",
-      },
-      { topic: "/naoqi_driver/sonar/left", type: "sensor_msgs/Range" },
-      { topic: "/naoqi_driver/sonar/right", type: "sensor_msgs/Range" },
+      { topic: "/bumper", type: "naoqi_bridge_msgs/Bumper" },
+      { topic: "/hand_touch", type: "naoqi_bridge_msgs/HandTouch" },
+      { topic: "/head_touch", type: "naoqi_bridge_msgs/HeadTouch" },
+      { topic: "/sonar/left", type: "sensor_msgs/Range" },
+      { topic: "/sonar/right", type: "sensor_msgs/Range" },
     ];
 
     topics.forEach(({ topic, type }) => {
@@ -351,11 +343,11 @@ export class WizardRosService extends EventEmitter {
       case "/naoqi_driver/battery":
         this.updateBatteryStatus(message.msg);
         break;
-      case "/naoqi_driver/bumper":
-      case "/naoqi_driver/hand_touch":
-      case "/naoqi_driver/head_touch":
-      case "/naoqi_driver/sonar/left":
-      case "/naoqi_driver/sonar/right":
+      case "/bumper":
+      case "/hand_touch":
+      case "/head_touch":
+      case "/sonar/left":
+      case "/sonar/right":
         this.updateSensorData(message.topic, message.msg);
         break;
     }
@@ -458,25 +450,36 @@ export class WizardRosService extends EventEmitter {
   ): Promise<void> {
     switch (actionId) {
       case "say_text":
+        const text = String(parameters.text || "Hello");
         this.publish("/speech", "std_msgs/String", {
-          data: parameters.text || "Hello",
+          data: text,
         });
+        // Estimate speech duration (roughly 150ms per word + 500ms baseline)
+        const wordCount = text.split(/\s+/).length;
+        const estimatedDuration = Math.max(800, wordCount * 250 + 500);
+        await new Promise((resolve) => setTimeout(resolve, estimatedDuration));
         break;
 
       case "walk_forward":
       case "walk_backward":
       case "turn_left":
       case "turn_right":
-        this.executeMovementAction(actionId, parameters);
+      case "strafe_left":
+      case "strafe_right":
+        await this.executeMovementAction(actionId, parameters);
+        // Wait for movement to start (short baseline for better UI 'loading' feel)
+        await new Promise((resolve) => setTimeout(resolve, 800));
         break;
 
       case "move_head":
       case "turn_head":
-        this.executeTurnHead(parameters);
+        await this.executeTurnHead(parameters);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         break;
 
       case "move_arm":
-        this.executeMoveArm(parameters);
+        await this.executeMoveArm(parameters);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         break;
 
       case "emergency_stop":
@@ -489,9 +492,6 @@ export class WizardRosService extends EventEmitter {
       default:
         throw new Error(`Unknown action: ${actionId}`);
     }
-
-    // Wait for action completion
-    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   /**
@@ -519,9 +519,15 @@ export class WizardRosService extends EventEmitter {
       case "turn_right":
         angular.z = -speed;
         break;
+      case "strafe_left":
+        linear.y = speed;
+        break;
+      case "strafe_right":
+        linear.y = -speed;
+        break;
     }
 
-    this.publish("/naoqi_driver/cmd_vel", "geometry_msgs/Twist", {
+    this.publish("/cmd_vel", "geometry_msgs/Twist", {
       linear,
       angular,
     });
@@ -556,7 +562,7 @@ export class WizardRosService extends EventEmitter {
     const jointAngles = [pitch, roll];
 
     this.publish(
-      "/naoqi_driver/joint_angles",
+      "/joint_angles",
       "naoqi_bridge_msgs/JointAnglesWithSpeed",
       {
         joint_names: jointNames,

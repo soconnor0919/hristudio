@@ -54,6 +54,7 @@ interface WizardInterfaceProps {
       name: string;
       description: string | null;
       studyId: string;
+      robotId: string | null;
     };
     participant: {
       id: string;
@@ -165,12 +166,29 @@ export const WizardInterface = React.memo(function WizardInterface({
     },
   });
 
+  // Robot initialization mutation (for startup routine)
+  const initializeRobotMutation = api.robots.initialize.useMutation({
+    onSuccess: () => {
+      toast.success("Robot initialized", {
+        description: "Autonomous Life disabled and robot awake.",
+      });
+    },
+    onError: (error: any) => {
+      toast.error("Robot initialization failed", {
+        description: error.message,
+      });
+    },
+  });
+
   // Log robot action mutation (for client-side execution)
   const logRobotActionMutation = api.trials.logRobotAction.useMutation({
     onError: (error) => {
       console.error("Failed to log robot action:", error);
     },
   });
+
+  const executeSystemActionMutation = api.robots.executeSystemAction.useMutation();
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Map database step types to component step types
   const mapStepType = (dbType: string) => {
@@ -214,8 +232,13 @@ export const WizardInterface = React.memo(function WizardInterface({
     setAutonomousLife: setAutonomousLifeRaw,
   } = useWizardRos({
     autoConnect: true,
-    onActionCompleted,
-    onActionFailed,
+    onSystemAction: async (actionId, parameters) => {
+      console.log(`[Wizard] Executing system action: ${actionId}`, parameters);
+      await executeSystemActionMutation.mutateAsync({
+        id: actionId,
+        parameters,
+      });
+    },
   });
 
   // Wrap setAutonomousLife in a stable callback to prevent infinite re-renders
@@ -512,6 +535,15 @@ export const WizardInterface = React.memo(function WizardInterface({
       }));
       setTrialStartTime(new Date());
 
+      // Initialize robot (Wake up and Disable Autonomous Life)
+      if (trial.experiment.robotId) {
+        console.log(
+          "[WizardInterface] Triggering robot initialization:",
+          trial.experiment.robotId,
+        );
+        initializeRobotMutation.mutate({ id: trial.experiment.robotId });
+      }
+
       toast.success("Trial started successfully");
     } catch (error) {
       console.error("Failed to start trial:", error);
@@ -723,6 +755,8 @@ export const WizardInterface = React.memo(function WizardInterface({
   };
 
   const handleCompleteTrial = async () => {
+    if (isCompleting) return;
+    setIsCompleting(true);
     try {
       // Mark final step as complete
       setCompletedSteps((prev) => {
@@ -744,8 +778,10 @@ export const WizardInterface = React.memo(function WizardInterface({
       router.push(
         `/studies/${trial.experiment.studyId}/trials/${trial.id}/analysis`,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to complete trial:", error);
+      toast.error("Failed to complete trial", { description: error.message });
+      setIsCompleting(false);
     }
   };
 
