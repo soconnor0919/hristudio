@@ -14,31 +14,31 @@ const db = drizzle(connection, { schema });
 import * as fs from "fs";
 import * as path from "path";
 
-// Function to load plugin definition (Remote -> Local Fallback)
+// Function to load plugin definition (Local first -> Remote fallback)
 async function loadNaoPluginDef() {
-  const REMOTE_URL = "https://repo.hristudio.com/plugins/nao6-ros2.json";
   const LOCAL_PATH = path.join(
     __dirname,
     "../robot-plugins/plugins/nao6-ros2.json",
   );
+  const REMOTE_URL = "https://repo.hristudio.com/plugins/nao6-ros2.json";
 
+  // Always load from local file first (has latest fixes)
   try {
-    console.log(
-      `🌐 Attempting to fetch plugin definition from ${REMOTE_URL}...`,
+    console.log(`📁 Loading plugin definition from local file...`);
+    const rawPlugin = fs.readFileSync(LOCAL_PATH, "utf-8");
+    console.log("✅ Successfully loaded local plugin definition.");
+    return JSON.parse(rawPlugin);
+  } catch (err) {
+    console.warn(
+      `⚠️ Local file load failed. Falling back to remote: ${REMOTE_URL}`,
     );
     const response = await fetch(REMOTE_URL, {
-      signal: AbortSignal.timeout(3000),
-    }); // 3s timeout
+      signal: AbortSignal.timeout(5000),
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     console.log("✅ Successfully fetched plugin definition from remote.");
     return data;
-  } catch (err) {
-    console.warn(
-      `⚠️ Remote fetch failed (${err instanceof Error ? err.message : String(err)}). Falling back to local file.`,
-    );
-    const rawPlugin = fs.readFileSync(LOCAL_PATH, "utf-8");
-    return JSON.parse(rawPlugin);
   }
 }
 
