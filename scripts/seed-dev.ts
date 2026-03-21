@@ -262,6 +262,35 @@ async function main() {
     // 5. Create Steps & Actions (The Interactive Storyteller Protocol)
     console.log("🎬 Creating experiment steps (Interactive Storyteller)...");
 
+    // Pre-create steps that will be referenced before they're defined
+    // --- Step 5: Story Continues (Convergence point for both branches) ---
+    const [step5] = await db
+      .insert(schema.steps)
+      .values({
+        experimentId: experiment!.id,
+        name: "Story Continues",
+        description: "Both branches converge here",
+        type: "robot",
+        orderIndex: 5,
+        required: true,
+        durationEstimate: 15,
+      })
+      .returning();
+
+    // --- Step 6: Conclusion ---
+    const [step6] = await db
+      .insert(schema.steps)
+      .values({
+        experimentId: experiment!.id,
+        name: "Conclusion",
+        description: "End the story and thank participant",
+        type: "robot",
+        orderIndex: 6,
+        required: true,
+        durationEstimate: 25,
+      })
+      .returning();
+
     // --- Step 1: The Hook ---
     const [step1] = await db
       .insert(schema.steps)
@@ -363,38 +392,6 @@ async function main() {
       },
     ]);
 
-    // --- Step 3: Comprehension Check (Wizard Decision Point) ---
-    const [step3] = await db
-      .insert(schema.steps)
-      .values({
-        experimentId: experiment!.id,
-        name: "Comprehension Check",
-        description:
-          "Ask participant about rock color and wait for wizard input",
-        type: "conditional",
-        orderIndex: 2,
-        required: true,
-        durationEstimate: 30,
-        conditions: {
-          variable: "last_wizard_response",
-          options: [
-            {
-              label: "Correct Response (Red)",
-              value: "Correct",
-              nextStepId: step5!.id,
-              variant: "default",
-            },
-            {
-              label: "Incorrect Response",
-              value: "Incorrect",
-              nextStepId: step5!.id,
-              variant: "destructive",
-            },
-          ],
-        },
-      })
-      .returning();
-
     // --- Step 4a: Correct Response Branch ---
     const [step4a] = await db
       .insert(schema.steps)
@@ -423,6 +420,38 @@ async function main() {
       })
       .returning();
 
+    // --- Step 3: Comprehension Check (Wizard Decision Point) ---
+    const [step3] = await db
+      .insert(schema.steps)
+      .values({
+        experimentId: experiment!.id,
+        name: "Comprehension Check",
+        description:
+          "Ask participant about rock color and wait for wizard input",
+        type: "conditional",
+        orderIndex: 2,
+        required: true,
+        durationEstimate: 30,
+        conditions: {
+          variable: "last_wizard_response",
+          options: [
+            {
+              label: "Correct Response (Red)",
+              value: "Correct",
+              nextStepId: step4a!.id,
+              variant: "default",
+            },
+            {
+              label: "Incorrect Response",
+              value: "Incorrect",
+              nextStepId: step4b!.id,
+              variant: "destructive",
+            },
+          ],
+        },
+      })
+      .returning();
+
     await db.insert(schema.actions).values([
       {
         stepId: step3!.id,
@@ -440,12 +469,11 @@ async function main() {
         name: "Wait for Choice",
         type: "wizard_wait_for_response",
         orderIndex: 1,
-        // Define the options that will be presented to the Wizard
         parameters: {
           prompt_text: "Did participant answer 'Red' correctly?",
           options: [
-            { label: "Correct", value: "Correct", nextStepId: step5!.id },
-            { label: "Incorrect", value: "Incorrect", nextStepId: step5!.id },
+            { label: "Correct", value: "Correct", nextStepId: step4a!.id },
+            { label: "Incorrect", value: "Incorrect", nextStepId: step4b!.id },
           ],
         },
         sourceKind: "core",
@@ -551,20 +579,7 @@ async function main() {
       },
     ]);
 
-    // --- Step 5: Story Continues (Convergence point for both branches) ---
-    const [step5] = await db
-      .insert(schema.steps)
-      .values({
-        experimentId: experiment!.id,
-        name: "Story Continues",
-        description: "Both branches converge here",
-        type: "robot",
-        orderIndex: 5,
-        required: true,
-        durationEstimate: 15,
-      })
-      .returning();
-
+    // --- Step 5 actions: Story Continues ---
     await db.insert(schema.actions).values([
       {
         stepId: step5!.id,
@@ -584,37 +599,19 @@ async function main() {
       {
         stepId: step5!.id,
         name: "Wave Goodbye",
-        type: "nao6-ros2.move_arm",
+        type: "nao6-ros2.wave_goodbye",
         orderIndex: 1,
         parameters: {
-          arm: "right",
-          shoulder_pitch: 0.5,
-          shoulder_roll: 0.3,
-          elbow_yaw: -0.5,
-          elbow_roll: 0.8,
-          speed: 0.4,
+          text: "See you later!",
         },
         pluginId: NAO_PLUGIN_DEF.robotId || "nao6-ros2",
         pluginVersion: "2.2.0",
-        category: "movement",
+        category: "interaction",
         retryable: true,
       },
     ]);
 
-    // --- Step 6: Conclusion ---
-    const [step6] = await db
-      .insert(schema.steps)
-      .values({
-        experimentId: experiment!.id,
-        name: "Conclusion",
-        description: "End the story and thank participant",
-        type: "robot",
-        orderIndex: 6,
-        required: true,
-        durationEstimate: 25,
-      })
-      .returning();
-
+    // --- Step 6 actions: Conclusion ---
     await db.insert(schema.actions).values([
       {
         stepId: step6!.id,
@@ -894,7 +891,7 @@ async function main() {
     // 7. Pre-create a pending trial for immediate testing
     console.log("🧪 Creating a pre-seeded pending trial for testing...");
     const p001 = insertedParticipants.find((p) => p.participantCode === "P101");
-    
+
     const [pendingTrial] = await db
       .insert(schema.trials)
       .values({
@@ -904,7 +901,7 @@ async function main() {
         scheduledAt: new Date(),
       })
       .returning();
-    
+
     console.log(`   Created pending trial: ${pendingTrial?.id}`);
 
     console.log("\n✅ Database seeded successfully!");

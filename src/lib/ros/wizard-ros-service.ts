@@ -493,35 +493,43 @@ export class WizardRosService extends EventEmitter {
 
       case "move_head":
       case "turn_head":
-        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
-          joint_names: ["HeadYaw", "HeadPitch"],
-          joint_angles: [
-            Number(parameters.yaw) || 0,
-            Number(parameters.pitch) || 0,
-          ],
-          speed: Number(parameters.speed) || 0.3,
-        });
+        this.publish(
+          "/joint_angles",
+          "naoqi_bridge_msgs/JointAnglesWithSpeed",
+          {
+            joint_names: ["HeadYaw", "HeadPitch"],
+            joint_angles: [
+              Number(parameters.yaw) || 0,
+              Number(parameters.pitch) || 0,
+            ],
+            speed: Number(parameters.speed) || 0.3,
+          },
+        );
         await new Promise((resolve) => setTimeout(resolve, 1000));
         break;
 
       case "move_arm":
         const arm = String(parameters.arm || "right");
         const prefix = arm.toLowerCase() === "left" ? "L" : "R";
-        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
-          joint_names: [
-            `${prefix}ShoulderPitch`,
-            `${prefix}ShoulderRoll`,
-            `${prefix}ElbowYaw`,
-            `${prefix}ElbowRoll`,
-          ],
-          joint_angles: [
-            Number(parameters.shoulder_pitch) || 0,
-            Number(parameters.shoulder_roll) || 0,
-            Number(parameters.elbow_yaw) || 0,
-            Number(parameters.elbow_roll) || 0,
-          ],
-          speed: Number(parameters.speed) || 0.3,
-        });
+        this.publish(
+          "/joint_angles",
+          "naoqi_bridge_msgs/JointAnglesWithSpeed",
+          {
+            joint_names: [
+              `${prefix}ShoulderPitch`,
+              `${prefix}ShoulderRoll`,
+              `${prefix}ElbowYaw`,
+              `${prefix}ElbowRoll`,
+            ],
+            joint_angles: [
+              Number(parameters.shoulder_pitch) || 0,
+              Number(parameters.shoulder_roll) || 0,
+              Number(parameters.elbow_yaw) || 0,
+              Number(parameters.elbow_roll) || 0,
+            ],
+            speed: Number(parameters.speed) || 0.3,
+          },
+        );
         await new Promise((resolve) => setTimeout(resolve, 1000));
         break;
 
@@ -533,7 +541,9 @@ export class WizardRosService extends EventEmitter {
         break;
 
       default:
-        throw new Error(`Unknown action: ${actionId}. Define this action in your robot plugin.`);
+        throw new Error(
+          `Unknown action: ${actionId}. Define this action in your robot plugin.`,
+        );
     }
   }
 
@@ -741,10 +751,72 @@ export class WizardRosService extends EventEmitter {
           speed: Number(parameters.speed) || 0.2,
         };
 
+      case "transformToEmotionalSpeech":
+        return this.transformToEmotionalSpeech(parameters);
+
       default:
         console.warn(`Unknown transform function: ${transformFn}`);
         return parameters;
     }
+  }
+
+  /**
+   * Transform parameters for emotional speech
+   * NAOqi markup: \rspd=<speed>\<text>
+   * For animated speech: ^start(animations/Stand/Gestures/...)
+   */
+  private transformToEmotionalSpeech(parameters: Record<string, unknown>): {
+    data: string;
+  } {
+    const text = String(parameters.text || "Hello");
+    const emotion = String(parameters.emotion || "neutral");
+    const speed = Number(parameters.speed || 1.0);
+    const speedPercent = Math.round(speed * 100);
+
+    let markedText = text;
+
+    switch (emotion) {
+      case "happy":
+        markedText = `\\rspd=120\\^start(animations/Stand/Gestures/Happy_4) ${text}`;
+        break;
+      case "excited":
+        markedText = `\\rspd=140\\^start(animations/Stand/Gestures/Enthusiastic_1) ${text}`;
+        break;
+      case "sad":
+        markedText = `\\rspd=80\\vct=80\\${text}`;
+        break;
+      case "calm":
+        markedText = `\\rspd=90\\${text}`;
+        break;
+      case "neutral":
+      default:
+        markedText = `\\rspd=${speedPercent}\\${text}`;
+        break;
+    }
+
+    return { data: markedText };
+  }
+
+  /**
+   * Transform for wave goodbye - animated speech with waving
+   */
+  private transformToWaveGoodbye(parameters: Record<string, unknown>): {
+    data: string;
+  } {
+    const text = String(parameters.text || "Goodbye!");
+    const markedText = `\\rspd=110\\^start(animations/Stand/Gestures/Hey_1) ${text} ^start(animations/Stand/Gestures/Hey_1)`;
+    return { data: markedText };
+  }
+
+  /**
+   * Transform for playing animations
+   */
+  private transformToAnimation(parameters: Record<string, unknown>): {
+    data: string;
+  } {
+    const animation = String(parameters.animation || "Hey_1");
+    const markedText = `^start(animations/Stand/Gestures/${animation})`;
+    return { data: markedText };
   }
 
   /**
