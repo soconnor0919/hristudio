@@ -600,6 +600,13 @@ export const WizardInterface = React.memo(function WizardInterface({
         setCompletedActionsCount(0);
         setCurrentStepIndex(targetIndex);
         setLastResponse(null);
+
+        // Mark source step as completed so it won't be revisited
+        setCompletedSteps((prev) => {
+          const next = new Set(prev);
+          next.add(currentStepIndex);
+          return next;
+        });
         return;
       }
     }

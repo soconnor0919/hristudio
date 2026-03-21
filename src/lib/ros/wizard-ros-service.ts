@@ -504,6 +504,27 @@ export class WizardRosService extends EventEmitter {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         break;
 
+      case "move_arm":
+        const arm = String(parameters.arm || "right");
+        const prefix = arm.toLowerCase() === "left" ? "L" : "R";
+        this.publish("/joint_angles", "naoqi_bridge_msgs/JointAnglesWithSpeed", {
+          joint_names: [
+            `${prefix}ShoulderPitch`,
+            `${prefix}ShoulderRoll`,
+            `${prefix}ElbowYaw`,
+            `${prefix}ElbowRoll`,
+          ],
+          joint_angles: [
+            Number(parameters.shoulder_pitch) || 0,
+            Number(parameters.shoulder_roll) || 0,
+            Number(parameters.elbow_yaw) || 0,
+            Number(parameters.elbow_roll) || 0,
+          ],
+          speed: Number(parameters.speed) || 0.3,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        break;
+
       case "emergency_stop":
         this.publish("/cmd_vel", "geometry_msgs/Twist", {
           linear: { x: 0, y: 0, z: 0 },
