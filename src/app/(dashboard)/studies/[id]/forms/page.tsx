@@ -254,6 +254,9 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
 
   if (!study) return <div>Loading...</div>;
 
+  const userRole = (study as any)?.userRole;
+  const canManage = userRole === "owner" || userRole === "researcher";
+
   return (
     <EntityView>
       <PageHeader
@@ -268,48 +271,50 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
           icon="FileText"
           description="Design and manage the consent form that participants must sign before participating in your trials."
           actions={
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  generateConsentMutation.mutate({ studyId: study.id })
-                }
-                disabled={
-                  generateConsentMutation.isPending ||
-                  updateConsentMutation.isPending
-                }
-              >
-                {generateConsentMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
-                Generate Default Template
-              </Button>
-              {activeConsentForm && (
+            canManage ? (
+              <div className="flex gap-2">
                 <Button
+                  variant="outline"
                   size="sm"
                   onClick={() =>
-                    updateConsentMutation.mutate({
-                      studyId: study.id,
-                      content: editorTarget,
-                    })
+                    generateConsentMutation.mutate({ studyId: study.id })
                   }
                   disabled={
-                    updateConsentMutation.isPending ||
-                    editorTarget === activeConsentForm.content
+                    generateConsentMutation.isPending ||
+                    updateConsentMutation.isPending
                   }
                 >
-                  {updateConsentMutation.isPending ? (
+                  {generateConsentMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="mr-2 h-4 w-4" />
+                    <Plus className="mr-2 h-4 w-4" />
                   )}
-                  Save Changes
+                  Generate Default Template
                 </Button>
-              )}
-            </div>
+                {activeConsentForm && (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      updateConsentMutation.mutate({
+                        studyId: study.id,
+                        content: editorTarget,
+                      })
+                    }
+                    disabled={
+                      updateConsentMutation.isPending ||
+                      editorTarget === activeConsentForm.content
+                    }
+                  >
+                    {updateConsentMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Changes
+                  </Button>
+                )}
+              </div>
+            ) : null
           }
         >
           {activeConsentForm ? (
