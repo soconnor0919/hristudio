@@ -27,7 +27,7 @@ import {
 } from "~/components/ui/entity-view";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { api } from "~/trpc/react";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 import { useStudyManagement } from "~/hooks/useStudyManagement";
 
 interface ExperimentDetailPageProps {
@@ -99,6 +99,9 @@ export default function ExperimentDetailPage({
   params,
 }: ExperimentDetailPageProps) {
   const { data: session } = useSession();
+  const { data: userData } = api.auth.me.useQuery(undefined, {
+    enabled: !!session?.user,
+  });
   const [experiment, setExperiment] = useState<Experiment | null>(null);
   const [trials, setTrials] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,7 +184,7 @@ export default function ExperimentDetailPage({
   const description = experiment.description;
 
   // Check if user can edit this experiment
-  const userRoles = session?.user?.roles?.map((r) => r.role) ?? [];
+  const userRoles = userData?.roles ?? [];
   const canEdit =
     userRoles.includes("administrator") || userRoles.includes("researcher");
 

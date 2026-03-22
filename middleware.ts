@@ -1,55 +1,27 @@
-import type { Session } from "next-auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { auth } from "./src/server/auth";
 
-export default auth((req: NextRequest & { auth: Session | null }) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+export default async function middleware(request: NextRequest) {
+  const { nextUrl } = request;
 
-  // Define route patterns
-  const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth");
-  const isPublicRoute = ["/", "/auth/signin", "/auth/signup"].includes(
-    nextUrl.pathname,
-  );
+  // Skip session checks for now to debug the auth issue
+  const isApiRoute = nextUrl.pathname.startsWith("/api");
   const isAuthRoute = nextUrl.pathname.startsWith("/auth");
 
-  // Allow API auth routes to pass through
-  if (isApiAuthRoute) {
+  if (isApiRoute) {
     return NextResponse.next();
   }
 
-  // If user is on auth pages and already logged in, redirect to dashboard
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", nextUrl));
-  }
-
-  // If user is not logged in and trying to access protected routes
-  if (!isLoggedIn && !isPublicRoute && !isAuthRoute) {
-    let callbackUrl = nextUrl.pathname;
-    if (nextUrl.search) {
-      callbackUrl += nextUrl.search;
-    }
-
-    const encodedCallbackUrl = encodeURIComponent(callbackUrl);
-    return NextResponse.redirect(
-      new URL(`/auth/signin?callbackUrl=${encodedCallbackUrl}`, nextUrl),
-    );
+  // Allow auth routes through for now
+  if (isAuthRoute) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();
-});
+}
 
-// Configure which routes the middleware should run on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (images, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

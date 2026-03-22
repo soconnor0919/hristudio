@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut } from "~/lib/auth-client";
 import { toast } from "sonner";
 import { TRPCClientError } from "@trpc/client";
 
@@ -104,10 +104,8 @@ export async function handleAuthError(
   setTimeout(() => {
     void (async () => {
       try {
-        await signOut({
-          callbackUrl: "/",
-          redirect: true,
-        });
+        await signOut();
+        window.location.href = "/";
       } catch (signOutError) {
         console.error("Error during sign out:", signOutError);
         // Force redirect if signOut fails

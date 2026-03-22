@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -7,10 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { auth } from "~/server/auth";
+import { auth } from "~/lib/auth";
 
 export default async function UnauthorizedPage() {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
@@ -60,13 +63,6 @@ export default async function UnauthorizedPage() {
               <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
                 <p className="font-medium">Current User:</p>
                 <p>{session.user.name ?? session.user.email}</p>
-                {session.user.roles && session.user.roles.length > 0 ? (
-                  <p className="mt-1">
-                    Roles: {session.user.roles.map((r) => r.role).join(", ")}
-                  </p>
-                ) : (
-                  <p className="mt-1">No roles assigned</p>
-                )}
               </div>
             )}
 

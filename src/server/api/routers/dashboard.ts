@@ -428,7 +428,7 @@ export const dashboardRouter = createTRPCRouter({
       session: {
         userId: ctx.session.user.id,
         userEmail: ctx.session.user.email,
-        userRole: ctx.session.user.roles?.[0]?.role ?? null,
+        userRole: systemRoles[0]?.role ?? null,
       },
     };
   }),

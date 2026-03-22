@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,33 +14,29 @@ import {
 } from "~/components/ui/card";
 
 export default function SignOutPage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
-    // If user is not logged in, redirect to home
-    if (status === "loading") return; // Still loading
-    if (!session) {
+    if (!isPending && !session) {
       router.push("/");
-      return;
     }
-  }, [session, status, router]);
+  }, [session, isPending, router]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut({
-        callbackUrl: "/",
-        redirect: true,
-      });
+      await signOut();
+      router.push("/");
+      router.refresh();
     } catch (error) {
       console.error("Error signing out:", error);
       setIsSigningOut(false);
     }
   };
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center">
@@ -52,7 +48,7 @@ export default function SignOutPage() {
   }
 
   if (!session) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return (
@@ -80,7 +76,7 @@ export default function SignOutPage() {
             <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
               <p className="font-medium">
                 Currently signed in as:{" "}
-                {session.user.name ?? session.user.email}
+                {session.user?.name ?? session.user?.email}
               </p>
             </div>
 
@@ -103,7 +99,8 @@ export default function SignOutPage() {
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-slate-500">
           <p>
-            © 2024 HRIStudio. A platform for Human-Robot Interaction research.
+            © {new Date().getFullYear()} HRIStudio. A platform for Human-Robot
+            Interaction research.
           </p>
         </div>
       </div>

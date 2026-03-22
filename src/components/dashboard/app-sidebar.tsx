@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "~/lib/auth-client";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -203,7 +203,8 @@ export function AppSidebar({
     : [];
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await signOut();
+    window.location.href = "/";
   };
 
   const handleStudySelect = async (studyId: string) => {

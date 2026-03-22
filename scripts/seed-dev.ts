@@ -76,6 +76,9 @@ async function main() {
 
     // 1. Clean existing data (Full Wipe)
     console.log("🧹 Cleaning existing data...");
+    await db.delete(schema.sessions).where(sql`1=1`);
+    await db.delete(schema.accounts).where(sql`1=1`);
+    await db.delete(schema.verificationTokens).where(sql`1=1`);
     await db.delete(schema.mediaCaptures).where(sql`1=1`);
     await db.delete(schema.trialEvents).where(sql`1=1`);
     await db.delete(schema.trials).where(sql`1=1`);
@@ -93,20 +96,24 @@ async function main() {
     await db.delete(schema.users).where(sql`1=1`);
     await db.delete(schema.robots).where(sql`1=1`);
 
-    // 2. Create Users
+    // 2. Create Users (Better Auth manages credentials)
     console.log("👥 Creating users...");
     const hashedPassword = await bcrypt.hash("password123", 12);
 
     const gravatarUrl = (email: string) =>
       `https://www.gravatar.com/avatar/${createHash("md5").update(email.toLowerCase().trim()).digest("hex")}?d=identicon`;
 
+    // Generate text IDs (Better Auth uses text-based IDs)
+    const adminId = `admin_${randomUUID()}`;
+    const researcherId = `researcher_${randomUUID()}`;
+
     const [adminUser] = await db
       .insert(schema.users)
       .values({
+        id: adminId,
         name: "Sean O'Connor",
         email: "sean@soconnor.dev",
-        password: hashedPassword,
-        emailVerified: new Date(),
+        emailVerified: true,
         image: gravatarUrl("sean@soconnor.dev"),
       })
       .returning();
@@ -114,15 +121,38 @@ async function main() {
     const [researcherUser] = await db
       .insert(schema.users)
       .values({
+        id: researcherId,
         name: "Dr. Felipe Perrone",
         email: "felipe.perrone@bucknell.edu",
-        password: hashedPassword,
-        emailVerified: new Date(),
+        emailVerified: true,
         image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felipe",
       })
       .returning();
 
     if (!adminUser) throw new Error("Failed to create admin user");
+
+    // Create credential accounts for Better Auth (accountId = userId for credential provider)
+    await db.insert(schema.accounts).values({
+      id: `acc_${randomUUID()}`,
+      userId: adminUser.id,
+      providerId: "credential",
+      accountId: adminUser.id,
+      password: hashedPassword,
+    });
+
+    if (researcherUser) {
+      await db.insert(schema.accounts).values({
+        id: `acc_${randomUUID()}`,
+        userId: researcherUser.id,
+        providerId: "credential",
+        accountId: researcherUser.id,
+        password: hashedPassword,
+      });
+
+      await db
+        .insert(schema.userSystemRoles)
+        .values({ userId: researcherUser.id, role: "researcher" });
+    }
 
     await db
       .insert(schema.userSystemRoles)

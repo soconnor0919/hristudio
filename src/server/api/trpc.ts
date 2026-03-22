@@ -12,7 +12,8 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { and, eq } from "drizzle-orm";
-import { auth } from "~/server/auth";
+import { headers } from "next/headers";
+import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import { userSystemRoles } from "~/server/db/schema";
 
@@ -29,7 +30,9 @@ import { userSystemRoles } from "~/server/db/schema";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   return {
     db,

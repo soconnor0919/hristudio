@@ -13,7 +13,7 @@ import { WizardView } from "~/components/trials/views/WizardView";
 import { ObserverView } from "~/components/trials/views/ObserverView";
 import { ParticipantView } from "~/components/trials/views/ParticipantView";
 import { api } from "~/trpc/react";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 
 function WizardPageContent() {
   const params = useParams();
@@ -24,6 +24,11 @@ function WizardPageContent() {
   const { setSelectedStudyId, selectedStudyId } = useStudyContext();
   const { study } = useSelectedStudyDetails();
   const { data: session } = useSession();
+
+  // Get user roles
+  const { data: userData } = api.auth.me.useQuery(undefined, {
+    enabled: !!session?.user,
+  });
 
   // Get trial data
   const {
@@ -67,7 +72,7 @@ function WizardPageContent() {
     }
 
     // Default role logic based on user
-    const userRole = session.user.roles?.[0]?.role ?? "observer";
+    const userRole = userData?.roles?.[0] ?? "observer";
     if (userRole === "administrator" || userRole === "researcher") {
       return "wizard";
     }
@@ -188,6 +193,7 @@ function WizardPageContent() {
         name: trial.experiment.name,
         description: trial.experiment.description,
         studyId: trial.experiment.studyId,
+        robotId: trial.experiment.robotId,
       },
       participant: {
         id: trial.participant.id,

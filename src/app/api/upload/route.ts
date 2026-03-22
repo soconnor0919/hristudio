@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
+import { headers } from "next/headers";
 import { z } from "zod";
 import {
   generateFileKey,
@@ -7,7 +8,7 @@ import {
   uploadFile,
   validateFile,
 } from "~/lib/storage/minio";
-import { auth } from "~/server/auth";
+import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import {
   experiments,
@@ -28,7 +29,9 @@ const uploadSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -181,7 +184,9 @@ export async function POST(request: NextRequest) {
 // Generate presigned upload URL for direct client uploads
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

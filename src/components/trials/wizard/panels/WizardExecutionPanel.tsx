@@ -403,8 +403,8 @@ export function WizardExecutionPanel({
                       size="lg"
                       onClick={
                         currentStepIndex === steps.length - 1
-                          ? onCompleteTrial
-                          : () => onNextStep()
+                          ? (onCompleteTrial ?? (() => {}))
+                          : () => onNextStep?.()
                       }
                       className={`w-full max-w-sm text-white shadow-lg transition-all hover:scale-[1.02] ${
                         currentStepIndex === steps.length - 1

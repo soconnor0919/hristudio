@@ -1,67 +1,14 @@
-// Client-side role utilities without database imports
-import type { Session } from "next-auth";
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+});
+
+export const { signIn, signOut, useSession } = authClient;
 
 // Role types from schema
 export type SystemRole = "administrator" | "researcher" | "wizard" | "observer";
 export type StudyRole = "owner" | "researcher" | "wizard" | "observer";
-
-/**
- * Check if the current user has a specific system role
- */
-export function hasRole(session: Session | null, role: SystemRole): boolean {
-  if (!session?.user?.roles) return false;
-  return session.user.roles.some((userRole) => userRole.role === role);
-}
-
-/**
- * Check if the current user is an administrator
- */
-export function isAdmin(session: Session | null): boolean {
-  return hasRole(session, "administrator");
-}
-
-/**
- * Check if the current user is a researcher or admin
- */
-export function isResearcher(session: Session | null): boolean {
-  return hasRole(session, "researcher") || isAdmin(session);
-}
-
-/**
- * Check if the current user is a wizard or admin
- */
-export function isWizard(session: Session | null): boolean {
-  return hasRole(session, "wizard") || isAdmin(session);
-}
-
-/**
- * Check if the current user has any of the specified roles
- */
-export function hasAnyRole(
-  session: Session | null,
-  roles: SystemRole[],
-): boolean {
-  if (!session?.user?.roles) return false;
-  return session.user.roles.some((userRole) => roles.includes(userRole.role));
-}
-
-/**
- * Check if a user owns or has admin access to a resource
- */
-export function canAccessResource(
-  session: Session | null,
-  resourceOwnerId: string,
-): boolean {
-  if (!session?.user) return false;
-
-  // Admin can access anything
-  if (isAdmin(session)) return true;
-
-  // Owner can access their own resources
-  if (session.user.id === resourceOwnerId) return true;
-
-  return false;
-}
 
 /**
  * Format role for display

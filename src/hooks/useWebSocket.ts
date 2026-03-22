@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type TrialStatus =

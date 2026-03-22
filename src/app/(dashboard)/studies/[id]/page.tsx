@@ -18,7 +18,7 @@ import {
 } from "~/components/ui/entity-view";
 import { PageHeader } from "~/components/ui/page-header";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
 
 interface StudyDetailPageProps {

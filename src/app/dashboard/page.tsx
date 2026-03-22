@@ -57,7 +57,7 @@ import { Badge } from "~/components/ui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { api } from "~/trpc/react";
 import { useTour } from "~/components/onboarding/TourProvider";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 
 export default function DashboardPage() {
   const { startTour } = useTour();

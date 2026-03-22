@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import {
   SidebarInset,
   SidebarProvider,
@@ -7,7 +7,7 @@ import {
 } from "~/components/ui/sidebar";
 import { Separator } from "~/components/ui/separator";
 import { AppSidebar } from "~/components/dashboard/app-sidebar";
-import { auth } from "~/server/auth";
+import { auth } from "~/lib/auth";
 import {
   BreadcrumbProvider,
   BreadcrumbDisplay,
@@ -22,16 +22,15 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   if (!session?.user) {
     redirect("/auth/signin");
   }
 
-  const userRole =
-    typeof session.user.roles?.[0] === "string"
-      ? session.user.roles[0]
-      : (session.user.roles?.[0]?.role ?? "observer");
+  const userRole = "researcher"; // Default role for dashboard access
 
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";

@@ -167,7 +167,7 @@ export const WizardInterface = React.memo(function WizardInterface({
   });
 
   // Robot initialization mutation (for startup routine)
-  const initializeRobotMutation = api.robots.initialize.useMutation({
+  const initializeRobotMutation = api.robots.plugins.initialize.useMutation({
     onSuccess: () => {
       toast.success("Robot initialized", {
         description: "Autonomous Life disabled and robot awake.",
@@ -188,7 +188,7 @@ export const WizardInterface = React.memo(function WizardInterface({
   });
 
   const executeSystemActionMutation =
-    api.robots.executeSystemAction.useMutation();
+    api.robots.plugins.executeSystemAction.useMutation();
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Map database step types to component step types
@@ -579,14 +579,20 @@ export const WizardInterface = React.memo(function WizardInterface({
   };
 
   const handleNextStep = (targetIndex?: number) => {
-    console.log(`[DEBUG] handleNextStep called: targetIndex=${targetIndex}, currentStepIndex=${currentStepIndex}`);
-    console.log(`[DEBUG] Steps: ${steps.map((s, i) => `${i}:${s.name}`).join(' | ')}`);
-    
+    console.log(
+      `[DEBUG] handleNextStep called: targetIndex=${targetIndex}, currentStepIndex=${currentStepIndex}`,
+    );
+    console.log(
+      `[DEBUG] Steps: ${steps.map((s, i) => `${i}:${s.name}`).join(" | ")}`,
+    );
+
     // If explicit target provided (from branching choice), use it
     if (typeof targetIndex === "number") {
       // Find step by index to ensure safety
       if (targetIndex >= 0 && targetIndex < steps.length) {
-        console.log(`[WizardInterface] Manual jump to step ${targetIndex} (${steps[targetIndex]?.name})`);
+        console.log(
+          `[WizardInterface] Manual jump to step ${targetIndex} (${steps[targetIndex]?.name})`,
+        );
 
         // Log manual jump
         logEventMutation.mutate({
@@ -613,7 +619,9 @@ export const WizardInterface = React.memo(function WizardInterface({
         });
         return;
       } else {
-        console.warn(`[DEBUG] Invalid targetIndex: ${targetIndex}, steps.length=${steps.length}`);
+        console.warn(
+          `[DEBUG] Invalid targetIndex: ${targetIndex}, steps.length=${steps.length}`,
+        );
       }
     }
 
@@ -868,10 +876,14 @@ export const WizardInterface = React.memo(function WizardInterface({
         if (parameters.nextStepId) {
           const nextId = String(parameters.nextStepId);
           const targetIndex = steps.findIndex((s) => s.id === nextId);
-          console.log(`[DEBUG] Branch choice: value=${parameters.value}, label=${parameters.label}`);
+          console.log(
+            `[DEBUG] Branch choice: value=${parameters.value}, label=${parameters.label}`,
+          );
           console.log(`[DEBUG] Target step ID: ${nextId}`);
           console.log(`[DEBUG] Target index in steps array: ${targetIndex}`);
-          console.log(`[DEBUG] Available step IDs: ${steps.map(s => s.id).join(', ')}`);
+          console.log(
+            `[DEBUG] Available step IDs: ${steps.map((s) => s.id).join(", ")}`,
+          );
           if (targetIndex !== -1) {
             console.log(
               `[WizardInterface] Choice-based jump to step ${targetIndex} (${nextId})`,

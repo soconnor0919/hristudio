@@ -38,12 +38,15 @@ export const authRouter = createTRPCRouter({
       const hashedPassword = await bcrypt.hash(password, 12);
 
       try {
-        // Create user
+        // Create user with text ID
+        const userId = `user_${crypto.randomUUID()}`;
         const newUsers = await ctx.db
           .insert(users)
           .values({
+            id: userId,
             name,
             email,
+            emailVerified: false,
             password: hashedPassword,
           })
           .returning({

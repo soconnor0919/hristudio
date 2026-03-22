@@ -15,7 +15,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { type AdapterAccount } from "next-auth/adapters";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -114,15 +113,12 @@ export const exportStatusEnum = pgEnum("export_status", [
   "failed",
 ]);
 
-// Users and Authentication
+// Users and Authentication (Better Auth compatible)
 export const users = createTable("user", {
-  id: uuid("id").notNull().primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  emailVerified: timestamp("email_verified", {
-    mode: "date",
-    withTimezone: true,
-  }),
+  id: text("id").notNull().primaryKey(),
   name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   password: varchar("password", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -137,23 +133,20 @@ export const users = createTable("user", {
 export const accounts = createTable(
   "account",
   {
-    userId: uuid("user_id")
+    id: text("id").notNull().primaryKey(),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: 255 })
-      .$type<AdapterAccount["type"]>()
-      .notNull(),
-    provider: varchar("provider", { length: 255 }).notNull(),
-    providerAccountId: varchar("provider_account_id", {
-      length: 255,
-    }).notNull(),
+    providerId: varchar("provider_id", { length: 255 }).notNull(),
+    accountId: varchar("account_id", { length: 255 }).notNull(),
     refreshToken: text("refresh_token"),
     accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: varchar("token_type", { length: 255 }),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
     scope: varchar("scope", { length: 255 }),
-    idToken: text("id_token"),
-    sessionState: varchar("session_state", { length: 255 }),
+    password: text("password"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -162,25 +155,25 @@ export const accounts = createTable(
       .notNull(),
   },
   (table) => ({
-    compoundKey: primaryKey({
-      columns: [table.provider, table.providerAccountId],
-    }),
     userIdIdx: index("account_user_id_idx").on(table.userId),
+    providerAccountIdx: unique().on(table.providerId, table.accountId),
   }),
 );
 
 export const sessions = createTable(
   "session",
   {
-    id: uuid("id").notNull().primaryKey().defaultRandom(),
-    sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
-    userId: uuid("user_id")
+    id: text("id").notNull().primaryKey(),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    expires: timestamp("expires", {
+    expiresAt: timestamp("expires_at", {
       mode: "date",
       withTimezone: true,
     }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -196,18 +189,25 @@ export const sessions = createTable(
 export const verificationTokens = createTable(
   "verification_token",
   {
+    id: text("id").notNull().primaryKey(),
     identifier: varchar("identifier", { length: 255 }).notNull(),
-    token: varchar("token", { length: 255 }).notNull().unique(),
-    expires: timestamp("expires", {
+    value: varchar("value", { length: 255 }).notNull().unique(),
+    expiresAt: timestamp("expires_at", {
       mode: "date",
       withTimezone: true,
     }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
   },
   (table) => ({
-    compoundKey: primaryKey({ columns: [table.identifier, table.token] }),
+    identifierIdx: index("verification_token_identifier_idx").on(
+      table.identifier,
+    ),
+    valueIdx: index("verification_token_value_idx").on(table.value),
   }),
 );
 
@@ -216,14 +216,14 @@ export const userSystemRoles = createTable(
   "user_system_role",
   {
     id: uuid("id").notNull().primaryKey().defaultRandom(),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: systemRoleEnum("role").notNull(),
     grantedAt: timestamp("granted_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    grantedBy: uuid("granted_by").references(() => users.id),
+    grantedBy: text("granted_by").references(() => users.id),
   },
   (table) => ({
     userRoleUnique: unique().on(table.userId, table.role),
@@ -263,7 +263,7 @@ export const studies = createTable("study", {
   institution: varchar("institution", { length: 255 }),
   irbProtocol: varchar("irb_protocol", { length: 100 }),
   status: studyStatusEnum("status").default("draft").notNull(),
-  createdBy: uuid("created_by")
+  createdBy: text("created_by")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -284,7 +284,7 @@ export const studyMembers = createTable(
     studyId: uuid("study_id")
       .notNull()
       .references(() => studies.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: studyMemberRoleEnum("role").notNull(),
@@ -292,7 +292,7 @@ export const studyMembers = createTable(
     joinedAt: timestamp("joined_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    invitedBy: uuid("invited_by").references(() => users.id),
+    invitedBy: text("invited_by").references(() => users.id),
   },
   (table) => ({
     studyUserUnique: unique().on(table.studyId, table.userId),
@@ -380,7 +380,7 @@ export const experiments = createTable(
     robotId: uuid("robot_id").references(() => robots.id),
     status: experimentStatusEnum("status").default("draft").notNull(),
     estimatedDuration: integer("estimated_duration"), // in minutes
-    createdBy: uuid("created_by")
+    createdBy: text("created_by")
       .notNull()
       .references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -449,7 +449,7 @@ export const participantDocuments = createTable(
     type: varchar("type", { length: 100 }), // MIME type or custom category
     storagePath: text("storage_path").notNull(),
     fileSize: integer("file_size"),
-    uploadedBy: uuid("uploaded_by").references(() => users.id),
+    uploadedBy: text("uploaded_by").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -467,7 +467,7 @@ export const trials = createTable("trial", {
     .notNull()
     .references(() => experiments.id),
   participantId: uuid("participant_id").references(() => participants.id),
-  wizardId: uuid("wizard_id").references(() => users.id),
+  wizardId: text("wizard_id").references(() => users.id),
   sessionNumber: integer("session_number").default(1).notNull(),
   status: trialStatusEnum("status").default("scheduled").notNull(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
@@ -562,7 +562,7 @@ export const consentForms = createTable(
     title: varchar("title", { length: 255 }).notNull(),
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
-    createdBy: uuid("created_by")
+    createdBy: text("created_by")
       .notNull()
       .references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -645,7 +645,7 @@ export const studyPlugins = createTable(
     installedAt: timestamp("installed_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    installedBy: uuid("installed_by")
+    installedBy: text("installed_by")
       .notNull()
       .references(() => users.id),
   },
@@ -674,7 +674,7 @@ export const pluginRepositories = createTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    createdBy: uuid("created_by")
+    createdBy: text("created_by")
       .notNull()
       .references(() => users.id),
   },
@@ -697,7 +697,7 @@ export const trialEvents = createTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     data: jsonb("data").default({}),
-    createdBy: uuid("created_by").references(() => users.id), // NULL for system events
+    createdBy: text("created_by").references(() => users.id), // NULL for system events
   },
   (table) => ({
     trialTimestampIdx: index("trial_events_trial_timestamp_idx").on(
@@ -712,7 +712,7 @@ export const wizardInterventions = createTable("wizard_intervention", {
   trialId: uuid("trial_id")
     .notNull()
     .references(() => trials.id, { onDelete: "cascade" }),
-  wizardId: uuid("wizard_id")
+  wizardId: text("wizard_id")
     .notNull()
     .references(() => users.id),
   interventionType: varchar("intervention_type", { length: 100 }).notNull(),
@@ -771,7 +771,7 @@ export const annotations = createTable("annotation", {
   trialId: uuid("trial_id")
     .notNull()
     .references(() => trials.id, { onDelete: "cascade" }),
-  annotatorId: uuid("annotator_id")
+  annotatorId: text("annotator_id")
     .notNull()
     .references(() => users.id),
   timestampStart: timestamp("timestamp_start", {
@@ -799,7 +799,7 @@ export const activityLogs = createTable(
     studyId: uuid("study_id").references(() => studies.id, {
       onDelete: "cascade",
     }),
-    userId: uuid("user_id").references(() => users.id),
+    userId: text("user_id").references(() => users.id),
     action: varchar("action", { length: 100 }).notNull(),
     resourceType: varchar("resource_type", { length: 50 }),
     resourceId: uuid("resource_id"),
@@ -824,7 +824,7 @@ export const comments = createTable("comment", {
   parentId: uuid("parent_id"),
   resourceType: varchar("resource_type", { length: 50 }).notNull(), // 'experiment', 'trial', 'annotation'
   resourceId: uuid("resource_id").notNull(),
-  authorId: uuid("author_id")
+  authorId: text("author_id")
     .notNull()
     .references(() => users.id),
   content: text("content").notNull(),
@@ -846,7 +846,7 @@ export const attachments = createTable("attachment", {
   filePath: text("file_path").notNull(),
   contentType: varchar("content_type", { length: 100 }),
   description: text("description"),
-  uploadedBy: uuid("uploaded_by")
+  uploadedBy: text("uploaded_by")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -860,7 +860,7 @@ export const exportJobs = createTable("export_job", {
   studyId: uuid("study_id")
     .notNull()
     .references(() => studies.id, { onDelete: "cascade" }),
-  requestedBy: uuid("requested_by")
+  requestedBy: text("requested_by")
     .notNull()
     .references(() => users.id),
   exportType: varchar("export_type", { length: 50 }).notNull(), // 'full', 'trials', 'analysis', 'media'
@@ -883,7 +883,7 @@ export const sharedResources = createTable("shared_resource", {
     .references(() => studies.id, { onDelete: "cascade" }),
   resourceType: varchar("resource_type", { length: 50 }).notNull(),
   resourceId: uuid("resource_id").notNull(),
-  sharedBy: uuid("shared_by")
+  sharedBy: text("shared_by")
     .notNull()
     .references(() => users.id),
   shareToken: varchar("share_token", { length: 255 }).unique(),
@@ -901,7 +901,7 @@ export const systemSettings = createTable("system_setting", {
   key: varchar("key", { length: 100 }).notNull().unique(),
   value: jsonb("value").notNull(),
   description: text("description"),
-  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedBy: text("updated_by").references(() => users.id),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -911,7 +911,7 @@ export const auditLogs = createTable(
   "audit_log",
   {
     id: uuid("id").notNull().primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id),
+    userId: text("user_id").references(() => users.id),
     action: varchar("action", { length: 100 }).notNull(),
     resourceType: varchar("resource_type", { length: 50 }),
     resourceId: uuid("resource_id"),

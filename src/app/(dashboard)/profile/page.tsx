@@ -16,19 +16,10 @@ import { Separator } from "~/components/ui/separator";
 import { PageHeader } from "~/components/ui/page-header";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { formatRole, getRoleDescription } from "~/lib/auth-client";
-import {
-  User,
-  Shield,
-  Download,
-  Trash2,
-  ExternalLink,
-  Lock,
-  UserCog,
-  Mail,
-  Fingerprint,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
+import { User, Shield, Download, Trash2, Lock, UserCog } from "lucide-react";
+import { useSession } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
+import { api } from "~/trpc/react";
 
 interface ProfileUser {
   id: string;
@@ -37,7 +28,8 @@ interface ProfileUser {
   image: string | null;
   roles?: Array<{
     role: "administrator" | "researcher" | "wizard" | "observer";
-    grantedAt: string | Date;
+    grantedAt: Date;
+    grantedBy: string | null;
   }>;
 }
 
@@ -213,14 +205,20 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 }
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
+  const { data: userData, isPending: isUserPending } = api.auth.me.useQuery(
+    undefined,
+    {
+      enabled: !!session?.user,
+    },
+  );
 
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
     { label: "Profile" },
   ]);
 
-  if (status === "loading") {
+  if (isPending || isUserPending) {
     return (
       <div className="text-muted-foreground animate-pulse p-8">
         Loading profile...
@@ -232,7 +230,13 @@ export default function ProfilePage() {
     redirect("/auth/signin");
   }
 
-  const user = session.user;
+  const user: ProfileUser = {
+    id: session.user.id,
+    name: userData?.name ?? session.user.name ?? null,
+    email: userData?.email ?? session.user.email,
+    image: userData?.image ?? session.user.image ?? null,
+    roles: userData?.systemRoles as ProfileUser["roles"],
+  };
 
   return <ProfileContent user={user} />;
 }

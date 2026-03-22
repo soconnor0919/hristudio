@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Logo } from "~/components/ui/logo";
-import { auth } from "~/server/auth";
+import { auth } from "~/lib/auth";
 import {
   ArrowRight,
   Beaker,
@@ -20,7 +21,9 @@ import {
 } from "lucide-react";
 
 export default async function Home() {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   if (session?.user) {
     redirect("/dashboard");

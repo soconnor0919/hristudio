@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn } from "~/lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -37,22 +37,21 @@ export default function SignInPage() {
     }
 
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn.email({
         email,
         password,
-        redirect: false,
       });
 
-      if (result?.error) {
-        setError("Invalid email or password");
+      if (result.error) {
+        setError(result.error.message || "Invalid email or password");
       } else {
         router.push("/");
         router.refresh();
       }
-    } catch (error: unknown) {
+    } catch (err: unknown) {
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "An error occurred. Please try again.",
       );
     } finally {
