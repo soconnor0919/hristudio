@@ -76,18 +76,21 @@ docker compose up -d
 - **WebSocket Real-time**: Trial updates with auto-reconnect
 - **Plugin System**: Robot-agnostic via identifier lookup
 - **Docker NAO6**: Three-service ROS2 integration
+- **Forms System**: Consent forms, surveys, questionnaires with templates
+- **Role-based Access**: Owner, Researcher, Wizard, Observer permissions
 
 ## System Components
 
 ### Backend (src/server/)
-- `api/routers/` - 12 tRPC routers
-- `db/schema.ts` - Drizzle schema (31 tables)
+- `api/routers/` - 13 tRPC routers (studies, experiments, trials, participants, forms, etc.)
+- `db/schema.ts` - Drizzle schema (33 tables)
 - `services/trial-execution.ts` - Trial execution engine
 - `services/websocket-manager.ts` - Real-time connections
 
 ### Frontend (src/)
 - `app/` - Next.js App Router pages
 - `components/trials/wizard/` - Wizard interface
+- `components/trials/forms/` - Form builder and viewer
 - `hooks/useWebSocket.ts` - Real-time trial updates
 - `lib/ros/wizard-ros-service.ts` - Robot control
 

@@ -29,11 +29,11 @@ bun dev
 Study → Experiment → Trial → Step → Action
 ```
 
-### User Roles
-- **Administrator**: Full system access
-- **Researcher**: Create studies, design experiments
-- **Wizard**: Execute trials, control robots
-- **Observer**: Read-only monitoring
+### User Roles (Study-level)
+- **Owner**: Full study control, manage members
+- **Researcher**: Design experiments, manage participants
+- **Wizard**: Execute trials, control robot during sessions
+- **Observer**: Read-only access to study data
 
 ### Plugin Identifier System
 - `identifier`: Machine-readable key (e.g., `nao6-ros2`)
@@ -50,8 +50,25 @@ Study → Experiment → Trial → Step → Action
 | `bun build` | Production build |
 | `bun typecheck` | TypeScript validation |
 | `bun db:push` | Push schema changes |
-| `bun db:seed` | Seed data + sync plugins |
-| `bun run docker:up` | Start PostgreSQL |
+| `bun db:seed` | Seed data + sync plugins + forms |
+| `bun run docker:up` | Start PostgreSQL + MinIO |
+
+## Forms System
+
+### Form Types
+- **Consent**: Legal/IRB consent documents with signature fields
+- **Survey**: Multi-question questionnaires (ratings, multiple choice)
+- **Questionnaire**: Custom data collection forms
+
+### Templates (seeded by default)
+- Informed Consent - Standard consent template
+- Post-Session Survey - Participant feedback form
+- Demographics - Basic demographic collection
+
+### Routes
+- `/studies/[id]/forms` - List forms
+- `/studies/[id]/forms/new` - Create form (from template or scratch)
+- `/studies/[id]/forms/[formId]` - View/edit form, preview, responses
 
 ---
 
