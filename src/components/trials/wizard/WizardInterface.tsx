@@ -579,11 +579,14 @@ export const WizardInterface = React.memo(function WizardInterface({
   };
 
   const handleNextStep = (targetIndex?: number) => {
+    console.log(`[DEBUG] handleNextStep called: targetIndex=${targetIndex}, currentStepIndex=${currentStepIndex}`);
+    console.log(`[DEBUG] Steps: ${steps.map((s, i) => `${i}:${s.name}`).join(' | ')}`);
+    
     // If explicit target provided (from branching choice), use it
     if (typeof targetIndex === "number") {
       // Find step by index to ensure safety
       if (targetIndex >= 0 && targetIndex < steps.length) {
-        console.log(`[WizardInterface] Manual jump to step ${targetIndex}`);
+        console.log(`[WizardInterface] Manual jump to step ${targetIndex} (${steps[targetIndex]?.name})`);
 
         // Log manual jump
         logEventMutation.mutate({
@@ -609,6 +612,8 @@ export const WizardInterface = React.memo(function WizardInterface({
           return next;
         });
         return;
+      } else {
+        console.warn(`[DEBUG] Invalid targetIndex: ${targetIndex}, steps.length=${steps.length}`);
       }
     }
 
@@ -863,13 +868,21 @@ export const WizardInterface = React.memo(function WizardInterface({
         if (parameters.nextStepId) {
           const nextId = String(parameters.nextStepId);
           const targetIndex = steps.findIndex((s) => s.id === nextId);
+          console.log(`[DEBUG] Branch choice: value=${parameters.value}, label=${parameters.label}`);
+          console.log(`[DEBUG] Target step ID: ${nextId}`);
+          console.log(`[DEBUG] Target index in steps array: ${targetIndex}`);
+          console.log(`[DEBUG] Available step IDs: ${steps.map(s => s.id).join(', ')}`);
           if (targetIndex !== -1) {
             console.log(
               `[WizardInterface] Choice-based jump to step ${targetIndex} (${nextId})`,
             );
             handleNextStep(targetIndex);
             return; // Exit after jump
+          } else {
+            console.warn(`[DEBUG] Target step not found! nextStepId=${nextId}`);
           }
+        } else {
+          console.warn(`[DEBUG] No nextStepId in parameters!`, parameters);
         }
       }
 

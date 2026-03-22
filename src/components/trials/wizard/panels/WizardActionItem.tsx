@@ -535,6 +535,7 @@ export function WizardActionItem({
                       className="hover:border-primary hover:bg-primary/5 h-auto justify-start px-4 py-3 text-left"
                       onClick={(e) => {
                         e.preventDefault();
+                        console.log(`[DEBUG WizardActionItem] Choice clicked: actionId=${action.id}, value=${value}, label=${label}, nextStepId=${nextStepId}`);
                         onExecute(action.id, { value, label, nextStepId });
                         // Don't call onCompleted() here - the branching logic in handleWizardResponse
                         // will handle the jump and reset completedActionsCount
