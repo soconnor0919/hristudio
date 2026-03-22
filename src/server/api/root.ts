@@ -5,6 +5,7 @@ import { collaborationRouter } from "~/server/api/routers/collaboration";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { experimentsRouter } from "~/server/api/routers/experiments";
 import { filesRouter } from "~/server/api/routers/files";
+import { formsRouter } from "~/server/api/routers/forms";
 import { mediaRouter } from "~/server/api/routers/media";
 import { participantsRouter } from "~/server/api/routers/participants";
 import { pluginsRouter } from "~/server/api/routers/plugins";
@@ -34,6 +35,7 @@ export const appRouter = createTRPCRouter({
   admin: adminRouter,
   dashboard: dashboardRouter,
   storage: storageRouter,
+  forms: formsRouter,
 });
 
 // export type definition of API

@@ -1,131 +1,74 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "~/lib/auth-client";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   FileText,
-  Loader2,
   Plus,
-  Download,
-  Edit2,
+  Search,
+  ClipboardList,
+  FileQuestion,
+  FileSignature,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
   Eye,
-  Save,
+  Copy,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import {
   EntityView,
-  EntityViewHeader,
   EntityViewSection,
   EmptyState,
 } from "~/components/ui/entity-view";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/ui/page-header";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { Markdown } from "tiptap-markdown";
-import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
-import { TableCell } from "@tiptap/extension-table-cell";
-import { TableHeader } from "@tiptap/extension-table-header";
-import {
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
-  Heading1,
-  Heading2,
-  Quote,
-  Table as TableIcon,
-} from "lucide-react";
-import { downloadPdfFromHtml } from "~/lib/pdf-generator";
 
-const Toolbar = ({ editor }: { editor: any }) => {
-  if (!editor) {
-    return null;
-  }
+const formTypeIcons = {
+  consent: FileSignature,
+  survey: ClipboardList,
+  questionnaire: FileQuestion,
+};
 
-  return (
-    <div className="border-input flex flex-wrap items-center gap-1 rounded-tl-md rounded-tr-md border bg-transparent p-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        disabled={!editor.can().chain().focus().toggleBold().run()}
-        className={editor.isActive("bold") ? "bg-muted" : ""}
-      >
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        disabled={!editor.can().chain().focus().toggleItalic().run()}
-        className={editor.isActive("italic") ? "bg-muted" : ""}
-      >
-        <Italic className="h-4 w-4" />
-      </Button>
-      <div className="bg-border mx-1 h-6 w-[1px]" />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        className={editor.isActive("heading", { level: 1 }) ? "bg-muted" : ""}
-      >
-        <Heading1 className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={editor.isActive("heading", { level: 2 }) ? "bg-muted" : ""}
-      >
-        <Heading2 className="h-4 w-4" />
-      </Button>
-      <div className="bg-border mx-1 h-6 w-[1px]" />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={editor.isActive("bulletList") ? "bg-muted" : ""}
-      >
-        <List className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={editor.isActive("orderedList") ? "bg-muted" : ""}
-      >
-        <ListOrdered className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        className={editor.isActive("blockquote") ? "bg-muted" : ""}
-      >
-        <Quote className="h-4 w-4" />
-      </Button>
-      <div className="bg-border mx-1 h-6 w-[1px]" />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() =>
-          editor
-            .chain()
-            .focus()
-            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-            .run()
-        }
-      >
-        <TableIcon className="h-4 w-4" />
-      </Button>
-    </div>
-  );
+const formTypeColors = {
+  consent: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  survey: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  questionnaire: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+};
+
+const statusConfig = {
+  active: {
+    label: "Active",
+    variant: "default" as const,
+    icon: CheckCircle,
+  },
+  draft: {
+    label: "Draft",
+    variant: "secondary" as const,
+    icon: Clock,
+  },
+  deprecated: {
+    label: "Deprecated",
+    variant: "destructive" as const,
+    icon: XCircle,
+  },
 };
 
 interface StudyFormsPageProps {
@@ -136,11 +79,10 @@ interface StudyFormsPageProps {
 
 export default function StudyFormsPage({ params }: StudyFormsPageProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const utils = api.useUtils();
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
-    null,
-  );
-  const [editorTarget, setEditorTarget] = useState<string>("");
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -155,91 +97,33 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
     { enabled: !!resolvedParams?.id },
   );
 
-  const { data: activeConsentForm, refetch: refetchConsentForm } =
-    api.studies.getActiveConsentForm.useQuery(
-      { studyId: resolvedParams?.id ?? "" },
-      { enabled: !!resolvedParams?.id },
-    );
+  const { data: formsData, isLoading } = api.forms.list.useQuery(
+    { studyId: resolvedParams?.id ?? "", search: search || undefined },
+    { enabled: !!resolvedParams?.id },
+  );
 
-  // Only sync once when form loads to avoid resetting user edits
-  useEffect(() => {
-    if (activeConsentForm && !editorTarget) {
-      setEditorTarget(activeConsentForm.content);
-    }
-  }, [activeConsentForm, editorTarget]);
+  const userRole = (study as any)?.userRole;
+  const canManage = userRole === "owner" || userRole === "researcher";
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Markdown.configure({
-        transformPastedText: true,
-      }),
-    ],
-    content: editorTarget || "",
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      // @ts-ignore
-      setEditorTarget(editor.storage.markdown.getMarkdown());
-    },
-  });
-
-  // Sync Tiptap when editorTarget is set (e.g., from DB) but make sure not to overwrite active edits
-  useEffect(() => {
-    if (editor && editorTarget && editor.isEmpty) {
-      editor.commands.setContent(editorTarget);
-    }
-  }, [editorTarget, editor]);
-
-  const generateConsentMutation = api.studies.generateConsentForm.useMutation({
-    onSuccess: (data) => {
-      toast.success("Default Consent Form Generated!");
-      setEditorTarget(data.content);
-      editor?.commands.setContent(data.content);
-      void refetchConsentForm();
-      void utils.studies.getActivity.invalidate({
-        studyId: resolvedParams?.id ?? "",
-      });
-    },
-    onError: (error) => {
-      toast.error("Error generating consent form", {
-        description: error.message,
-      });
-    },
-  });
-
-  const updateConsentMutation = api.studies.updateConsentForm.useMutation({
+  const deleteMutation = api.forms.delete.useMutation({
     onSuccess: () => {
-      toast.success("Consent Form Saved Successfully!");
-      void refetchConsentForm();
-      void utils.studies.getActivity.invalidate({
-        studyId: resolvedParams?.id ?? "",
-      });
+      toast.success("Form deleted successfully");
+      void utils.forms.list.invalidate({ studyId: resolvedParams?.id });
     },
     onError: (error) => {
-      toast.error("Error saving consent form", { description: error.message });
+      toast.error("Failed to delete form", { description: error.message });
     },
   });
 
-  const handleDownloadConsent = async () => {
-    if (!activeConsentForm || !study || !editor) return;
-
-    try {
-      toast.loading("Generating Document...", { id: "pdf-gen" });
-      await downloadPdfFromHtml(editor.getHTML(), {
-        filename: `Consent_Form_${study.name.replace(/\s+/g, "_")}_v${activeConsentForm.version}.pdf`,
-      });
-      toast.success("Document Downloaded Successfully!", { id: "pdf-gen" });
-    } catch (error) {
-      toast.error("Error generating PDF", { id: "pdf-gen" });
-      console.error(error);
-    }
-  };
+  const setActiveMutation = api.forms.setActive.useMutation({
+    onSuccess: () => {
+      toast.success("Form set as active");
+      void utils.forms.list.invalidate({ studyId: resolvedParams?.id });
+    },
+    onError: (error) => {
+      toast.error("Failed to set active", { description: error.message });
+    },
+  });
 
   useBreadcrumbsEffect([
     { label: "Dashboard", href: "/dashboard" },
@@ -254,121 +138,145 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
 
   if (!study) return <div>Loading...</div>;
 
-  const userRole = (study as any)?.userRole;
-  const canManage = userRole === "owner" || userRole === "researcher";
+  const forms = formsData?.forms ?? [];
 
   return (
     <EntityView>
       <PageHeader
-        title="Study Forms"
-        description="Manage consent forms and future questionnaires for this study"
+        title="Forms"
+        description="Manage consent forms, surveys, and questionnaires for this study"
         icon={FileText}
+        actions={
+          canManage && (
+            <Button asChild>
+              <Link href={`/studies/${resolvedParams?.id}/forms/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Form
+              </Link>
+            </Button>
+          )
+        }
       />
 
-      <div className="grid grid-cols-1 gap-8">
-        <EntityViewSection
-          title="Consent Document"
+      {forms.length === 0 && !isLoading ? (
+        <EmptyState
           icon="FileText"
-          description="Design and manage the consent form that participants must sign before participating in your trials."
-          actions={
+          title="No Forms Yet"
+          description="Create consent forms, surveys, or questionnaires to collect data from participants"
+          action={
             canManage ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    generateConsentMutation.mutate({ studyId: study.id })
-                  }
-                  disabled={
-                    generateConsentMutation.isPending ||
-                    updateConsentMutation.isPending
-                  }
-                >
-                  {generateConsentMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="mr-2 h-4 w-4" />
-                  )}
-                  Generate Default Template
-                </Button>
-                {activeConsentForm && (
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      updateConsentMutation.mutate({
-                        studyId: study.id,
-                        content: editorTarget,
-                      })
-                    }
-                    disabled={
-                      updateConsentMutation.isPending ||
-                      editorTarget === activeConsentForm.content
-                    }
-                  >
-                    {updateConsentMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save Changes
-                  </Button>
-                )}
-              </div>
+              <Button asChild>
+                <Link href={`/studies/${resolvedParams?.id}/forms/new`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Your First Form
+                </Link>
+              </Button>
             ) : null
           }
-        >
-          {activeConsentForm ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm leading-none font-medium">
-                    {activeConsentForm.title}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    v{activeConsentForm.version} • Status: Active
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleDownloadConsent}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </Button>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-50 text-green-700 hover:bg-green-50"
-                  >
-                    Active
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="bg-muted/30 border-border flex w-full justify-center overflow-hidden rounded-md border p-8">
-                <div className="dark:bg-card ring-border flex w-full max-w-4xl flex-col rounded-sm bg-white shadow-xl ring-1">
-                  <div className="border-border bg-muted/50 dark:bg-muted/10 border-b">
-                    <Toolbar editor={editor} />
-                  </div>
-                  <div className="editor-container dark:bg-card min-h-[850px] bg-white px-16 py-20 text-sm">
-                    <EditorContent
-                      editor={editor}
-                      className="prose prose-sm dark:prose-invert h-full max-w-none outline-none focus:outline-none focus-visible:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
+        />
+      ) : (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search forms..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          ) : (
-            <EmptyState
-              icon="FileText"
-              title="No Consent Form"
-              description="Generate a boilerplate consent form for this study to download and collect signatures."
-            />
-          )}
-        </EntityViewSection>
-      </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {forms.map((form) => {
+              const TypeIcon = formTypeIcons[form.type as keyof typeof formTypeIcons] || FileText;
+              const typeColor = formTypeColors[form.type as keyof typeof formTypeColors] || "bg-gray-100";
+              const isActive = form.active;
+
+              return (
+                <Card key={form.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`rounded-md p-2 ${typeColor}`}>
+                          <TypeIcon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">{form.title}</CardTitle>
+                          <p className="text-muted-foreground text-xs capitalize">
+                            {form.type}
+                          </p>
+                        </div>
+                      </div>
+                      {isActive && (
+                        <Badge variant="default" className="text-xs">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    {form.description && (
+                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                        {form.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>v{form.version}</span>
+                      <span>{(form as any)._count?.responses ?? 0} responses</span>
+                    </div>
+                  </CardContent>
+                  <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2">
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/studies/${resolvedParams?.id}/forms/${form.id}`}>
+                        <Eye className="mr-1 h-3 w-3" />
+                        View
+                      </Link>
+                    </Button>
+                    {canManage && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/studies/${resolvedParams?.id}/forms/${form.id}/edit`}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          {!isActive && (
+                            <DropdownMenuItem
+                              onClick={() => setActiveMutation.mutate({ id: form.id })}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Set Active
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this form?")) {
+                                deleteMutation.mutate({ id: form.id });
+                              }
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </EntityView>
   );
 }

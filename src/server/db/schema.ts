@@ -68,6 +68,29 @@ export const stepTypeEnum = pgEnum("step_type", [
   "conditional",
 ]);
 
+export const formTypeEnum = pgEnum("form_type", [
+  "consent",
+  "survey",
+  "questionnaire",
+]);
+
+export const formFieldTypeEnum = pgEnum("form_field_type", [
+  "text",
+  "textarea",
+  "multiple_choice",
+  "checkbox",
+  "rating",
+  "yes_no",
+  "date",
+  "signature",
+]);
+
+export const formResponseStatusEnum = pgEnum("form_response_status", [
+  "pending",
+  "completed",
+  "rejected",
+]);
+
 export const communicationProtocolEnum = pgEnum("communication_protocol", [
   "rest",
   "ros2",
@@ -594,6 +617,64 @@ export const consentForms = createTable(
   }),
 );
 
+// New unified forms table
+export const forms = createTable(
+  "form",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    studyId: uuid("study_id")
+      .notNull()
+      .references(() => studies.id, { onDelete: "cascade" }),
+    type: formTypeEnum("type").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    version: integer("version").default(1).notNull(),
+    active: boolean("active").default(true).notNull(),
+    fields: jsonb("fields").notNull().default([]),
+    settings: jsonb("settings").default({}),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => ({
+    studyVersionUnique: unique().on(table.studyId, table.version),
+  }),
+);
+
+// Form responses/submissions
+export const formResponses = createTable(
+  "form_response",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => participants.id, { onDelete: "cascade" }),
+    responses: jsonb("responses").notNull().default({}),
+    status: formResponseStatusEnum("status").default("pending"),
+    signatureData: text("signature_data"),
+    signedAt: timestamp("signed_at", { withTimezone: true }),
+    ipAddress: inet("ip_address"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => ({
+    formParticipantUnique: unique().on(table.formId, table.participantId),
+  }),
+);
+
 export const participantConsents = createTable(
   "participant_consent",
   {
@@ -1117,6 +1198,29 @@ export const participantConsentsRelations = relations(
     }),
   }),
 );
+
+export const formsRelations = relations(forms, ({ one, many }) => ({
+  study: one(studies, {
+    fields: [forms.studyId],
+    references: [studies.id],
+  }),
+  createdBy: one(users, {
+    fields: [forms.createdBy],
+    references: [users.id],
+  }),
+  responses: many(formResponses),
+}));
+
+export const formResponsesRelations = relations(formResponses, ({ one }) => ({
+  form: one(forms, {
+    fields: [formResponses.formId],
+    references: [forms.id],
+  }),
+  participant: one(participants, {
+    fields: [formResponses.participantId],
+    references: [participants.id],
+  }),
+}));
 
 export const robotsRelations = relations(robots, ({ many }) => ({
   experiments: many(experiments),
