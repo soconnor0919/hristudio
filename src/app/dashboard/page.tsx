@@ -239,7 +239,7 @@ export default function DashboardPage() {
               className="group h-auto justify-start px-4 py-4"
               asChild
             >
-              <Link href="/trials">
+              <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials` : "/studies"}>
                 <div className="mr-4 rounded-full bg-emerald-500/10 p-2">
                   <Activity className="h-5 w-5 text-emerald-600" />
                 </div>
@@ -353,7 +353,7 @@ export default function DashboardPage() {
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/trials">
+                <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials` : "/studies"}>
                   View All <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -367,7 +367,7 @@ export default function DashboardPage() {
                   No trials are currently running.
                 </p>
                 <Button variant="link" size="sm" asChild className="mt-1">
-                  <Link href="/trials">Start a Trial</Link>
+                  <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials/new` : "/studies"}>Start a Trial</Link>
                 </Button>
               </div>
             ) : (
@@ -404,7 +404,7 @@ export default function DashboardPage() {
                       className="bg-primary hover:bg-primary/90 gap-2"
                       asChild
                     >
-                      <Link href={`/wizard/${trial.id}`}>
+                      <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
                         <Play className="h-3.5 w-3.5" /> Spectate / Jump In
                       </Link>
                     </Button>

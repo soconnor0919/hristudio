@@ -143,6 +143,7 @@ export const dashboardRouter = createTRPCRouter({
       const live = await ctx.db
         .select({
           id: trials.id,
+          studyId: studies.id,
           startedAt: trials.startedAt,
           experimentName: experiments.name,
           participantCode: participants.participantCode,
