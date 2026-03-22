@@ -2,31 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { useSession } from "~/lib/auth-client";
 import { formatDistanceToNow } from "date-fns";
 import {
-  Activity,
-  ArrowRight,
-  Calendar,
-  CheckCircle,
-  CheckCircle2,
-  Clock,
-  FlaskConical,
-  HelpCircle,
-  LayoutDashboard,
-  MoreHorizontal,
   Play,
-  PlayCircle,
   Plus,
-  Search,
-  Settings,
+  Activity,
+  Clock,
+  CheckCircle2,
   Users,
-  Radio,
-  Gamepad2,
-  AlertTriangle,
+  FlaskConical,
+  ChevronRight,
   Bot,
-  User,
-  MessageSquare,
+  Radio,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -37,448 +27,307 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Progress } from "~/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { api } from "~/trpc/react";
-import { useTour } from "~/components/onboarding/TourProvider";
-import { useSession } from "~/lib/auth-client";
 
 export default function DashboardPage() {
-  const { startTour } = useTour();
   const { data: session } = useSession();
-  const [studyFilter, setStudyFilter] = React.useState<string | null>(null);
+  const userName = session?.user?.name ?? "Researcher";
 
-  // --- Data Fetching ---
-  const { data: userStudiesData } = api.studies.list.useQuery({
+  const { data: userStudies } = api.studies.list.useQuery({
     memberOnly: true,
-    limit: 100,
+    limit: 10,
   });
-  const userStudies = userStudiesData?.studies ?? [];
 
-  const { data: stats } = api.dashboard.getStats.useQuery({
-    studyId: studyFilter ?? undefined,
+  const { data: recentTrials } = api.trials.list.useQuery({
+    limit: 5,
+    status: undefined,
   });
 
   const { data: liveTrials } = api.dashboard.getLiveTrials.useQuery(
-    { studyId: studyFilter ?? undefined },
+    {},
     { refetchInterval: 5000 },
   );
 
-  const { data: recentActivity } = api.dashboard.getRecentActivity.useQuery({
-    limit: 15,
-    studyId: studyFilter ?? undefined,
-  });
+  const { data: stats } = api.dashboard.getStats.useQuery({});
 
-  const { data: studyProgress } = api.dashboard.getStudyProgress.useQuery({
-    limit: 5,
-    studyId: studyFilter ?? undefined,
-  });
-
-  const userName = session?.user?.name ?? "Researcher";
-
-  const getWelcomeMessage = () => {
+  const greeting = (() => {
     const hour = new Date().getHours();
-    let greeting = "Good evening";
-    if (hour < 12) greeting = "Good morning";
-    else if (hour < 18) greeting = "Good afternoon";
-
-    return `${greeting}, ${userName.split(" ")[0]}`;
-  };
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  })();
 
   return (
-    <div className="animate-in fade-in space-y-8 duration-500">
-      {/* Header Section */}
-      <div
-        id="dashboard-header"
-        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-      >
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6 md:p-8">
+      {/* Header */}
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-foreground text-3xl font-bold tracking-tight">
-            {getWelcomeMessage()}
+          <h1 className="text-4xl font-bold tracking-tight">
+            {greeting}, {userName.split(" ")[0]}
           </h1>
-          <p className="text-muted-foreground">
-            Here's what's happening with your research today.
+          <p className="text-muted-foreground mt-1">
+            Ready to run your next session?
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => startTour("dashboard")}
-            title="Start Tour"
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-          <Select
-            value={studyFilter ?? "all"}
-            onValueChange={(value) =>
-              setStudyFilter(value === "all" ? null : value)
-            }
-          >
-            <SelectTrigger className="bg-background w-[200px]">
-              <SelectValue placeholder="All Studies" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Studies</SelectItem>
-              {userStudies.map((study) => (
-                <SelectItem key={study.id} value={study.id}>
-                  {study.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button id="tour-new-study" asChild>
+        <div className="flex gap-3">
+          <Button variant="outline" asChild>
             <Link href="/studies/new">
-              <Plus className="mr-2 h-4 w-4" /> New Study
+              <FlaskConical className="mr-2 h-4 w-4" />
+              New Study
+            </Link>
+          </Button>
+          <Button asChild className="glow-teal">
+            <Link href={userStudies?.studies?.[0]?.id ? `/studies/${userStudies.studies[0].id}/trials/new` : "/studies/new"}>
+              <Play className="mr-2 h-4 w-4" />
+              Start Trial
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* Main Stats Grid */}
-      <div
-        id="tour-dashboard-stats"
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-      >
-        <StatsCard
-          title="Active Trials"
+      {/* Live Trials Banner */}
+      {liveTrials && liveTrials.length > 0 && (
+        <Card className="border-red-200 bg-red-50/50 mb-6 dark:border-red-900 dark:bg-red-900/20">
+          <CardContent className="flex items-center gap-4 py-4">
+            <div className="relative">
+              <Radio className="h-8 w-8 text-red-600 animate-pulse" />
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 animate-ping" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-red-600 dark:text-red-400">
+                {liveTrials.length} Active Session{liveTrials.length > 1 ? "s" : ""}
+              </p>
+              <p className="text-sm text-red-600/70 dark:text-red-400/70">
+                {liveTrials.map((t) => t.participantCode).join(", ")}
+              </p>
+            </div>
+            <Button size="sm" variant="secondary" asChild>
+              <Link href={`/studies/${liveTrials?.[0]?.studyId}/trials/${liveTrials?.[0]?.id}/wizard`}>
+                View <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats Row */}
+      <div className="mb-8 grid gap-4 md:grid-cols-4">
+        <StatCard
+          label="Active Trials"
           value={stats?.activeTrials ?? 0}
           icon={Activity}
-          description="Currently running sessions"
-          iconColor="text-emerald-500"
+          color="teal"
         />
-        <StatsCard
-          title="Completed Today"
+        <StatCard
+          label="Completed Today"
           value={stats?.completedToday ?? 0}
-          icon={CheckCircle}
-          description="Successful completions"
-          iconColor="text-blue-500"
+          icon={CheckCircle2}
+          color="emerald"
         />
-        <StatsCard
-          title="Scheduled"
+        <StatCard
+          label="Total Studies"
+          value={userStudies?.studies?.length ?? 0}
+          icon={FlaskConical}
+          color="blue"
+        />
+        <StatCard
+          label="Total Participants"
           value={stats?.scheduledTrials ?? 0}
-          icon={Calendar}
-          description="Upcoming sessions"
-          iconColor="text-violet-500"
-        />
-        <StatsCard
-          title="Total Interventions"
-          value={stats?.totalInterventions ?? 0}
-          icon={Gamepad2}
-          description="Wizard manual overrides"
-          iconColor="text-orange-500"
+          icon={Users}
+          color="violet"
         />
       </div>
 
-      {/* Action Center & Recent Activity */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Quick Actions Card */}
-        <Card className="from-primary/5 to-background border-primary/20 col-span-3 h-fit bg-gradient-to-br">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks to get you started</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <Button
-              variant="outline"
-              className="border-primary/20 hover:border-primary/50 hover:bg-primary/5 group h-auto justify-start px-4 py-4"
-              asChild
-            >
-              <Link href="/studies/new">
-                <div className="bg-primary/10 group-hover:bg-primary/20 mr-4 rounded-full p-2 transition-colors">
-                  <FlaskConical className="text-primary h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold">Create New Study</div>
-                  <div className="text-muted-foreground text-xs font-normal">
-                    Design a new experiment protocol
-                  </div>
-                </div>
-                <ArrowRight className="text-muted-foreground group-hover:text-primary ml-auto h-4 w-4 opacity-0 transition-all group-hover:opacity-100" />
-              </Link>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="group h-auto justify-start px-4 py-4"
-              asChild
-            >
+      {/* Main Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Studies List */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FlaskConical className="h-5 w-5 text-primary" />
+                Your Studies
+              </CardTitle>
+              <CardDescription>Recent studies and quick access</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
               <Link href="/studies">
-                <div className="bg-secondary mr-4 rounded-full p-2">
-                  <Search className="text-foreground h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold">Browse Studies</div>
-                  <div className="text-muted-foreground text-xs font-normal">
-                    Find and manage existing studies
-                  </div>
-                </div>
+                View all <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
-
-            <Button
-              variant="outline"
-              className="group h-auto justify-start px-4 py-4"
-              asChild
-            >
-              <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials` : "/studies"}>
-                <div className="mr-4 rounded-full bg-emerald-500/10 p-2">
-                  <Activity className="h-5 w-5 text-emerald-600" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold">Monitor Active Trials</div>
-                  <div className="text-muted-foreground text-xs font-normal">
-                    Jump into the Wizard Interface
-                  </div>
-                </div>
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity Card */}
-        <Card
-          id="tour-recent-activity"
-          className="border-muted/40 col-span-4 shadow-sm"
-        >
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest interactions across the platform
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {recentActivity?.map((activity) => {
-                  let eventColor = "bg-primary/30 ring-background";
-                  let Icon = Activity;
-                  if (activity.type === "trial_started") {
-                    eventColor = "bg-blue-500 ring-blue-100 dark:ring-blue-900";
-                    Icon = PlayCircle;
-                  } else if (activity.type === "trial_completed") {
-                    eventColor =
-                      "bg-green-500 ring-green-100 dark:ring-green-900";
-                    Icon = CheckCircle;
-                  } else if (activity.type === "error") {
-                    eventColor = "bg-red-500 ring-red-100 dark:ring-red-900";
-                    Icon = AlertTriangle;
-                  } else if (activity.type === "intervention") {
-                    eventColor =
-                      "bg-orange-500 ring-orange-100 dark:ring-orange-900";
-                    Icon = Gamepad2;
-                  } else if (activity.type === "annotation") {
-                    eventColor =
-                      "bg-yellow-500 ring-yellow-100 dark:ring-yellow-900";
-                    Icon = MessageSquare;
-                  }
-
-                  return (
-                    <div
-                      key={activity.id}
-                      className="border-muted-foreground/20 relative border-l pb-4 pl-6 last:border-0"
-                    >
-                      <span
-                        className={`absolute top-0 left-[-9px] flex h-4 w-4 items-center justify-center rounded-full ring-4 ${eventColor}`}
-                      >
-                        <Icon className="h-2.5 w-2.5 text-white" />
-                      </span>
-                      <div className="mb-0.5 text-sm leading-none font-medium">
-                        {activity.title}
-                      </div>
-                      <div className="text-muted-foreground mb-1 text-xs">
-                        {activity.description}
-                      </div>
-                      <div className="text-muted-foreground/70 font-mono text-[10px] uppercase">
-                        {formatDistanceToNow(new Date(activity.time), {
-                          addSuffix: true,
-                        })}
-                      </div>
+            <div className="space-y-3">
+              {userStudies?.studies?.slice(0, 5).map((study) => (
+                <Link
+                  key={study.id}
+                  href={`/studies/${study.id}`}
+                  className="hover:bg-accent/50 group flex items-center justify-between rounded-lg border p-4 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Bot className="h-6 w-6 text-primary" />
                     </div>
-                  );
-                })}
-                {!recentActivity?.length && (
-                  <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
-                    <Clock className="mb-3 h-10 w-10 opacity-20" />
-                    <p>No recent activity recorded.</p>
-                    <p className="mt-1 text-xs">
-                      Start a trial to see experiment events stream here.
-                    </p>
+                    <div>
+                      <p className="font-semibold group-hover:text-primary">
+                        {study.name}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {study.status === "active" ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">Active</span>
+                        ) : (
+                          <span>{study.status}</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                </Link>
+              ))}
+
+              {!userStudies?.studies?.length && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Bot className="text-muted-foreground/50 mb-4 h-16 w-16" />
+                  <p className="font-medium">No studies yet</p>
+                  <p className="text-muted-foreground mb-4 text-sm">
+                    Create your first study to get started
+                  </p>
+                  <Button asChild>
+                    <Link href="/studies/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Study
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Live Trials */}
-        <Card
-          id="tour-live-trials"
-          className={`${liveTrials && liveTrials.length > 0 ? "border-primary bg-primary/5 shadow-sm" : "border-muted/40"} col-span-4 transition-colors duration-500`}
-        >
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  Live Sessions
-                  {liveTrials && liveTrials.length > 0 && (
-                    <span className="relative flex h-3 w-3">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
-                    </span>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Currently running trials in the Wizard interface
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials` : "/studies"}>
-                  View All <ArrowRight className="ml-2 h-4 w-4" />
+        {/* Quick Links & Recent */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/studies/new">
+                  <Plus className="mr-3 h-4 w-4" />
+                  Create New Study
                 </Link>
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!liveTrials?.length ? (
-              <div className="border-muted-foreground/30 animate-in fade-in-50 bg-background/50 flex h-[150px] flex-col items-center justify-center rounded-md border border-dashed text-center">
-                <Radio className="text-muted-foreground/50 mb-2 h-8 w-8" />
-                <p className="text-muted-foreground text-sm">
-                  No trials are currently running.
-                </p>
-                <Button variant="link" size="sm" asChild className="mt-1">
-                  <Link href={userStudies[0] ? `/studies/${userStudies[0].id}/trials/new` : "/studies"}>Start a Trial</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {liveTrials.map((trial) => (
-                  <div
-                    key={trial.id}
-                    className="border-primary/20 bg-background flex items-center justify-between rounded-lg border p-3 shadow-sm transition-all duration-200 hover:shadow"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">
-                        <Radio className="h-5 w-5 animate-pulse" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {trial.participantCode}
-                          <span className="text-muted-foreground ml-2 text-xs font-normal">
-                            • {trial.experimentName}
-                          </span>
-                        </p>
-                        <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                          <Clock className="h-3 w-3" />
-                          Started{" "}
-                          {trial.startedAt
-                            ? formatDistanceToNow(new Date(trial.startedAt), {
-                                addSuffix: true,
-                              })
-                            : "just now"}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 gap-2"
-                      asChild
-                    >
-                      <Link href={`/studies/${trial.studyId}/trials/${trial.id}/wizard`}>
-                        <Play className="h-3.5 w-3.5" /> Spectate / Jump In
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={userStudies?.studies?.[0]?.id ? `/studies/${userStudies.studies[0].id}/experiments/new` : "/studies"}>
+                  <FlaskConical className="mr-3 h-4 w-4" />
+                  Design Experiment
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={userStudies?.studies?.[0]?.id ? `/studies/${userStudies.studies[0].id}/participants/new` : "/studies"}>
+                  <Users className="mr-3 h-4 w-4" />
+                  Add Participant
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={userStudies?.studies?.[0]?.id ? `/studies/${userStudies.studies[0].id}/trials/new` : "/studies"}>
+                  <Play className="mr-3 h-4 w-4" />
+                  Start Trial
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
-        {/* Study Progress */}
-        <Card className="border-muted/40 col-span-3 shadow-sm">
-          <CardHeader>
-            <CardTitle>Study Progress</CardTitle>
-            <CardDescription>
-              Completion tracking for active studies
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {studyProgress?.map((study) => (
-              <div key={study.id} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="font-medium">{study.name}</div>
-                  <div className="text-muted-foreground">
-                    {study.participants} / {study.totalParticipants}{" "}
-                    Participants
-                  </div>
+          {/* Recent Trials */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-4 w-4" />
+                Recent Trials
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-3">
+                  {recentTrials?.slice(0, 5).map((trial) => (
+                    <Link
+                      key={trial.id}
+                      href={`/studies/${trial.experiment.studyId}/trials/${trial.id}`}
+                      className="hover:bg-accent/50 block rounded-md border p-3 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{trial.participant.participantCode}</span>
+                        <Badge
+                          variant={
+                            trial.status === "completed"
+                              ? "default"
+                              : trial.status === "in_progress"
+                                ? "secondary"
+                                : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {trial.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {trial.experiment.name}
+                      </p>
+                      {trial.completedAt && (
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {formatDistanceToNow(new Date(trial.completedAt), { addSuffix: true })}
+                        </p>
+                      )}
+                    </Link>
+                  ))}
+
+                  {!recentTrials?.length && (
+                    <p className="text-muted-foreground py-4 text-center text-sm">
+                      No trials yet
+                    </p>
+                  )}
                 </div>
-                <Progress value={study.progress} className="h-2" />
-              </div>
-            ))}
-            {!studyProgress?.length && (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                No active studies to track.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
 }
 
-function StatsCard({
-  title,
+function StatCard({
+  label,
   value,
   icon: Icon,
-  description,
-  trend,
-  iconColor,
+  color,
 }: {
-  title: string;
-  value: string | number;
+  label: string;
+  value: number;
   icon: React.ElementType;
-  description: string;
-  trend?: string;
-  iconColor?: string;
+  color: "teal" | "emerald" | "blue" | "violet";
 }) {
+  const colorClasses = {
+    teal: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    violet: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  };
+
   return (
-    <Card className="border-muted/40 hover:border-primary/20 shadow-sm transition-all duration-200 hover:shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className={`h-4 w-4 ${iconColor || "text-muted-foreground"}`} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-muted-foreground text-xs">
-          {description}
-          {trend && (
-            <span className="ml-1 font-medium text-green-600 dark:text-green-400">
-              {trend}
-            </span>
-          )}
-        </p>
+    <Card>
+      <CardContent className="flex items-center gap-4 p-6">
+        <div className={`rounded-full p-3 ${colorClasses[color]}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <div>
+          <p className="text-3xl font-bold">{value}</p>
+          <p className="text-muted-foreground text-sm">{label}</p>
+        </div>
       </CardContent>
     </Card>
   );
