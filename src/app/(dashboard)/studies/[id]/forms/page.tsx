@@ -16,16 +16,8 @@ import {
   Pencil,
   Trash2,
   Eye,
-  Copy,
   CheckCircle,
-  XCircle,
-  Clock,
 } from "lucide-react";
-import {
-  EntityView,
-  EntityViewSection,
-  EmptyState,
-} from "~/components/ui/entity-view";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -51,24 +43,6 @@ const formTypeColors = {
   consent: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   survey: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   questionnaire: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-};
-
-const statusConfig = {
-  active: {
-    label: "Active",
-    variant: "default" as const,
-    icon: CheckCircle,
-  },
-  draft: {
-    label: "Draft",
-    variant: "secondary" as const,
-    icon: Clock,
-  },
-  deprecated: {
-    label: "Deprecated",
-    variant: "destructive" as const,
-    icon: XCircle,
-  },
 };
 
 interface StudyFormsPageProps {
@@ -141,7 +115,7 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
   const forms = formsData?.forms ?? [];
 
   return (
-    <EntityView>
+    <div className="space-y-6">
       <PageHeader
         title="Forms"
         description="Manage consent forms, surveys, and questionnaires for this study"
@@ -159,23 +133,23 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
       />
 
       {forms.length === 0 && !isLoading ? (
-        <EmptyState
-          icon="FileText"
-          title="No Forms Yet"
-          description="Create consent forms, surveys, or questionnaires to collect data from participants"
-          action={
-            canManage ? (
-              <Button asChild>
-                <Link href={`/studies/${resolvedParams?.id}/forms/new`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Form
-                </Link>
-              </Button>
-            ) : null
-          }
-        />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Forms Yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Create consent forms, surveys, or questionnaires to collect data from participants
+          </p>
+          {canManage && (
+            <Button asChild>
+              <Link href={`/studies/${resolvedParams?.id}/forms/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Your First Form
+              </Link>
+            </Button>
+          )}
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -277,6 +251,6 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
           </div>
         </div>
       )}
-    </EntityView>
+    </div>
   );
 }

@@ -180,7 +180,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 py-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
