@@ -406,6 +406,9 @@ async function main() {
         orderIndex: 3,
         required: false,
         durationEstimate: 20,
+        conditions: {
+          nextStepId: step5!.id, // Jump to Story Continues after completing
+        },
       })
       .returning();
 
@@ -420,6 +423,9 @@ async function main() {
         orderIndex: 4,
         required: false,
         durationEstimate: 20,
+        conditions: {
+          nextStepId: step5!.id, // Jump to Story Continues after completing
+        },
       })
       .returning();
 
