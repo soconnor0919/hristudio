@@ -1,10 +1,31 @@
 "use client";
 
+import * as React from "react";
 import { redirect } from "next/navigation";
-import { PasswordChangeForm } from "~/components/profile/password-change-form";
-import { ProfileEditForm } from "~/components/profile/profile-edit-form";
-import { Badge } from "~/components/ui/badge";
+import Link from "next/link";
+import { useSession } from "~/lib/auth-client";
+import { api } from "~/trpc/react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import {
+  User,
+  Mail,
+  Shield,
+  Lock,
+  Settings,
+  Building,
+  Calendar,
+  ChevronRight,
+  Loader2,
+  Save,
+  X,
+} from "lucide-react";
+
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Badge } from "~/components/ui/badge";
+import { Separator } from "~/components/ui/separator";
 import {
   Card,
   CardContent,
@@ -12,192 +33,326 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Separator } from "~/components/ui/separator";
-import { PageHeader } from "~/components/ui/page-header";
-import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
-import { formatRole, getRoleDescription } from "~/lib/auth-client";
-import { User, Shield, Download, Trash2, Lock, UserCog } from "lucide-react";
-import { useSession } from "~/lib/auth-client";
-import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 
-interface ProfileUser {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  roles?: Array<{
-    role: "administrator" | "researcher" | "wizard" | "observer";
-    grantedAt: Date;
-    grantedBy: string | null;
-  }>;
-}
+function ProfilePageContent() {
+  const { data: session } = useSession();
+  const utils = api.useUtils();
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [name, setName] = React.useState(session?.user?.name ?? "");
+  const [email, setEmail] = React.useState(session?.user?.email ?? "");
+  const [passwordOpen, setPasswordOpen] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
 
-function ProfileContent({ user }: { user: ProfileUser }) {
+  const { data: userData } = api.users.get.useQuery(
+    { id: session?.user?.id ?? "" },
+    { enabled: !!session?.user?.id },
+  );
+
+  const updateProfile = api.users.update.useMutation({
+    onSuccess: () => {
+      toast.success("Profile updated successfully");
+      void utils.users.get.invalidate();
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast.error("Failed to update profile", { description: error.message });
+    },
+  });
+
+  const changePassword = api.users.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password changed successfully");
+      setPasswordOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error) => {
+      toast.error("Failed to change password", { description: error.message });
+    },
+  });
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    updateProfile.mutate({ id: session?.user?.id ?? "", name, email });
+  };
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    changePassword.mutate({
+      currentPassword,
+      newPassword,
+    });
+  };
+
+  const user = userData ?? session?.user;
+  const roles = (userData as any)?.systemRoles ?? [];
+  const initials = (user?.name ?? user?.email ?? "U").charAt(0).toUpperCase();
+
   return (
-    <div className="animate-in fade-in space-y-8 duration-500">
-      <PageHeader
-        title={user.name ?? "User"}
-        description={user.email}
-        icon={User}
-        badges={[
-          { label: `ID: ${user.id}`, variant: "outline" },
-          ...(user.roles?.map((r) => ({
-            label: formatRole(r.role),
-            variant: "secondary" as const,
-          })) ?? []),
-        ]}
-      />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+            {initials}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">{user?.name ?? "User"}</h1>
+            <p className="text-muted-foreground">{user?.email}</p>
+            {roles.length > 0 && (
+              <div className="mt-1 flex gap-2">
+                {roles.map((role: any) => (
+                  <Badge key={role.role} variant="secondary" className="text-xs">
+                    {role.role}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={updateProfile.isPending}>
+                {updateProfile.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save Changes
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Settings className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Main Content (Left Column) */}
-        <div className="space-y-8 lg:col-span-2">
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Profile Info */}
+        <div className="space-y-6 lg:col-span-2">
           {/* Personal Information */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 border-b pb-2">
-              <User className="text-primary h-5 w-5" />
-              <h3 className="text-lg font-semibold">Personal Information</h3>
-            </div>
-            <Card className="border-border/60 hover:border-border transition-colors">
-              <CardHeader>
-                <CardTitle className="text-base">Contact Details</CardTitle>
-                <CardDescription>
-                  Update your public profile information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProfileEditForm
-                  user={{
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    image: user.image,
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Personal Information
+              </CardTitle>
+              <CardDescription>
+                Your public profile information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  {isEditing ? (
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 p-2">
+                      <User className="text-muted-foreground h-4 w-4" />
+                      <span>{name || "Not set"}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  {isEditing ? (
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 p-2">
+                      <Mail className="text-muted-foreground h-4 w-4" />
+                      <span>{email}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>User ID</Label>
+                <div className="rounded-md border bg-muted/50 p-2 font-mono text-sm">
+                  {user?.id ?? session?.user?.id}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Security */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 border-b pb-2">
-              <Lock className="text-primary h-5 w-5" />
-              <h3 className="text-lg font-semibold">Security</h3>
-            </div>
-            <Card className="border-border/60 hover:border-border transition-colors">
-              <CardHeader>
-                <CardTitle className="text-base">Password</CardTitle>
-                <CardDescription>
-                  Ensure your account stays secure
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PasswordChangeForm />
-              </CardContent>
-            </Card>
-          </section>
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>
+                Your recent actions across the platform
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Calendar className="text-muted-foreground/50 mb-3 h-12 w-12" />
+                <p className="font-medium">No recent activity</p>
+                <p className="text-muted-foreground text-sm">
+                  Your recent actions will appear here
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Sidebar (Right Column) */}
-        <div className="space-y-8">
-          {/* Permissions */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 border-b pb-2">
-              <Shield className="text-primary h-5 w-5" />
-              <h3 className="text-lg font-semibold">Permissions</h3>
-            </div>
-            <Card>
-              <CardContent className="pt-6">
-                {user.roles && user.roles.length > 0 ? (
-                  <div className="space-y-4">
-                    {user.roles.map((roleInfo, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            {formatRole(roleInfo.role)}
-                          </span>
-                          <span className="text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                            Since{" "}
-                            {new Date(roleInfo.grantedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground text-xs leading-relaxed">
-                          {getRoleDescription(roleInfo.role)}
-                        </p>
-                        {index < (user.roles?.length || 0) - 1 && (
-                          <Separator className="my-2" />
-                        )}
-                      </div>
-                    ))}
-                    <div className="text-muted-foreground mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900/30 dark:bg-blue-900/10">
-                      <div className="text-primary mb-1 flex items-center gap-2 font-medium">
-                        <Shield className="h-3 w-3" />
-                        <span>Role Management</span>
-                      </div>
-                      System roles are managed by administrators. Contact
-                      support if you need access adjustments.
-                    </div>
+        {/* Right Column - Settings */}
+        <div className="space-y-6">
+          {/* Security */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Security
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <Lock className="text-muted-foreground h-4 w-4" />
+                  <div>
+                    <p className="text-sm font-medium">Password</p>
+                    <p className="text-muted-foreground text-xs">Last changed: Never</p>
                   </div>
-                ) : (
-                  <div className="py-4 text-center">
-                    <p className="text-sm font-medium">No Roles Assigned</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Contact an admin to request access.
-                    </p>
-                    <Button size="sm" variant="outline" className="mt-3 w-full">
-                      Request Access
+                </div>
+                <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      Change
                     </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </section>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Change Password</DialogTitle>
+                      <DialogDescription>
+                        Enter your current password and choose a new one.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePasswordChange} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="current">Current Password</Label>
+                        <Input
+                          id="current"
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new">New Password</Label>
+                        <Input
+                          id="new"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                          minLength={8}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm">Confirm Password</Label>
+                        <Input
+                          id="confirm"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setPasswordOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={changePassword.isPending}>
+                          {changePassword.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Change Password
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-          {/* Data & Privacy */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 border-b pb-2">
-              <Download className="text-primary h-5 w-5" />
-              <h3 className="text-lg font-semibold">Data & Privacy</h3>
-            </div>
+              <Separator />
 
-            <Card className="border-destructive/10 bg-destructive/5 overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
-                <div>
-                  <h4 className="mb-1 text-sm font-semibold">Export Data</h4>
-                  <p className="text-muted-foreground mb-3 text-xs">
-                    Download a copy of your personal data.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-background w-full"
-                    disabled
-                  >
-                    <Download className="mr-2 h-3 w-3" />
-                    Download Archive
-                  </Button>
-                </div>
-                <Separator className="bg-destructive/10" />
-                <div>
-                  <h4 className="text-destructive mb-1 text-sm font-semibold">
-                    Delete Account
-                  </h4>
-                  <p className="text-muted-foreground mb-3 text-xs">
-                    This action is irreversible.
-                  </p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full"
-                    disabled
-                  >
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Delete Account
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
+              <div className="rounded-lg border bg-destructive/5 p-3">
+                <p className="text-sm font-medium text-destructive">Danger Zone</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Account deletion is not available. Contact an administrator for assistance.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Studies Access */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-primary" />
+                Studies Access
+              </CardTitle>
+              <CardDescription>
+                Studies you have access to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-4 text-center">
+                <Building className="text-muted-foreground/50 mb-2 h-8 w-8" />
+                <p className="text-sm">View your studies</p>
+                <Button variant="link" size="sm" asChild className="mt-2">
+                  <Link href="/studies">
+                    Go to Studies <ChevronRight className="ml-1 h-3 w-3" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -206,22 +361,11 @@ function ProfileContent({ user }: { user: ProfileUser }) {
 
 export default function ProfilePage() {
   const { data: session, isPending } = useSession();
-  const { data: userData, isPending: isUserPending } = api.auth.me.useQuery(
-    undefined,
-    {
-      enabled: !!session?.user,
-    },
-  );
 
-  useBreadcrumbsEffect([
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Profile" },
-  ]);
-
-  if (isPending || isUserPending) {
+  if (isPending) {
     return (
-      <div className="text-muted-foreground animate-pulse p-8">
-        Loading profile...
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -230,13 +374,5 @@ export default function ProfilePage() {
     redirect("/auth/signin");
   }
 
-  const user: ProfileUser = {
-    id: session.user.id,
-    name: userData?.name ?? session.user.name ?? null,
-    email: userData?.email ?? session.user.email,
-    image: userData?.image ?? session.user.image ?? null,
-    roles: userData?.systemRoles as ProfileUser["roles"],
-  };
-
-  return <ProfileContent user={user} />;
+  return <ProfilePageContent />;
 }
