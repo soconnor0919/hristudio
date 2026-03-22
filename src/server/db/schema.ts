@@ -630,6 +630,8 @@ export const forms = createTable(
     description: text("description"),
     version: integer("version").default(1).notNull(),
     active: boolean("active").default(true).notNull(),
+    isTemplate: boolean("is_template").default(false).notNull(),
+    templateName: varchar("template_name", { length: 100 }),
     fields: jsonb("fields").notNull().default([]),
     settings: jsonb("settings").default({}),
     createdBy: text("created_by")

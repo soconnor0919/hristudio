@@ -223,6 +223,98 @@ async function main() {
       { studyId: study!.id, userId: researcherUser!.id, role: "researcher" },
     ]);
 
+    // Create Forms & Templates
+    console.log("📝 Creating forms and templates...");
+    
+    // Templates (system-wide templates)
+    const [consentTemplate] = await db
+      .insert(schema.forms)
+      .values({
+        studyId: study!.id,
+        type: "consent",
+        title: "Standard Informed Consent",
+        description: "A comprehensive informed consent document template for HRI research studies.",
+        isTemplate: true,
+        templateName: "Informed Consent",
+        fields: [
+          { id: "1", type: "text", label: "Study Title", required: true },
+          { id: "2", type: "text", label: "Principal Investigator Name", required: true },
+          { id: "3", type: "text", label: "Institution", required: true },
+          { id: "4", type: "textarea", label: "Purpose of the Study", required: true },
+          { id: "5", type: "textarea", label: "Procedures", required: true },
+          { id: "6", type: "textarea", label: "Risks and Benefits", required: true },
+          { id: "7", type: "textarea", label: "Confidentiality", required: true },
+          { id: "8", type: "yes_no", label: "I consent to participate in this study", required: true },
+          { id: "9", type: "signature", label: "Participant Signature", required: true },
+        ],
+        settings: {},
+        createdBy: adminUser.id,
+      })
+      .returning();
+
+    const [surveyTemplate] = await db
+      .insert(schema.forms)
+      .values({
+        studyId: study!.id,
+        type: "survey",
+        title: "Post-Session Questionnaire",
+        description: "Standard questionnaire to collect participant feedback after HRI sessions.",
+        isTemplate: true,
+        templateName: "Post-Session Survey",
+        fields: [
+          { id: "1", type: "rating", label: "How engaging was the robot?", required: true, settings: { scale: 5 } },
+          { id: "2", type: "rating", label: "How understandable was the robot's speech?", required: true, settings: { scale: 5 } },
+          { id: "3", type: "rating", label: "How natural did the interaction feel?", required: true, settings: { scale: 5 } },
+          { id: "4", type: "multiple_choice", label: "Did the robot respond appropriately to your actions?", required: true, options: ["Yes, always", "Yes, mostly", "Sometimes", "Rarely", "No"] },
+          { id: "5", type: "textarea", label: "What did you like most about the interaction?", required: false },
+          { id: "6", type: "textarea", label: "What could be improved?", required: false },
+        ],
+        settings: {},
+        createdBy: adminUser.id,
+      })
+      .returning();
+
+    const [questionnaireTemplate] = await db
+      .insert(schema.forms)
+      .values({
+        studyId: study!.id,
+        type: "questionnaire",
+        title: "Demographics Form",
+        description: "Basic demographic information collection form.",
+        isTemplate: true,
+        templateName: "Demographics",
+        fields: [
+          { id: "1", type: "text", label: "Age", required: true },
+          { id: "2", type: "multiple_choice", label: "Gender", required: true, options: ["Male", "Female", "Non-binary", "Prefer not to say"] },
+          { id: "3", type: "multiple_choice", label: "Experience with robots", required: true, options: ["None", "A little", "Moderate", "Extensive"] },
+          { id: "4", type: "multiple_choice", label: "Experience with HRI research", required: true, options: ["Never participated", "Participated once", "Participated several times"] },
+        ],
+        settings: {},
+        createdBy: adminUser.id,
+      })
+      .returning();
+
+    // Study-specific form (not a template)
+    const [consentForm] = await db
+      .insert(schema.forms)
+      .values({
+        studyId: study!.id,
+        type: "consent",
+        title: "Interactive Storyteller Consent",
+        description: "Consent form for the Comparative WoZ Study - Interactive Storyteller scenario.",
+        active: true,
+        fields: [
+          { id: "1", type: "text", label: "Participant Name", required: true },
+          { id: "2", type: "date", label: "Date", required: true },
+          { id: "3", type: "textarea", label: "I understand that I will interact with a robot storyteller and may be asked to respond to questions.", required: true },
+          { id: "4", type: "yes_no", label: "I consent to participate in this study", required: true },
+          { id: "5", type: "signature", label: "Signature", required: true },
+        ],
+        settings: {},
+        createdBy: adminUser.id,
+      })
+      .returning();
+
     // Insert System Plugins
     const [corePlugin] = await db
       .insert(schema.plugins)

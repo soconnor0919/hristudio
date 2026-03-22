@@ -189,9 +189,20 @@ export const formsRouter = createTRPCRouter({
           }),
         ).default([]),
         settings: z.record(z.string(), z.any()).optional(),
+        isTemplate: z.boolean().optional(),
+        templateName: z.string().max(100).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { isTemplate, templateName, ...formData } = input;
+      
+      if (isTemplate && !templateName) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Template name is required when creating a template",
+        });
+      }
+
       await checkStudyAccess(ctx.db, ctx.session.user.id, input.studyId, [
         "owner",
         "researcher",
@@ -200,12 +211,14 @@ export const formsRouter = createTRPCRouter({
       const [newForm] = await ctx.db
         .insert(forms)
         .values({
-          studyId: input.studyId,
-          type: input.type,
-          title: input.title,
-          description: input.description,
-          fields: input.fields,
-          settings: input.settings ?? {},
+          studyId: formData.studyId,
+          type: formData.type,
+          title: formData.title,
+          description: formData.description,
+          fields: formData.fields,
+          settings: formData.settings ?? {},
+          isTemplate: isTemplate ?? false,
+          templateName: templateName,
           createdBy: ctx.session.user.id,
         })
         .returning();
@@ -588,5 +601,76 @@ export const formsRouter = createTRPCRouter({
       );
 
       return formsWithCounts;
+    }),
+
+  listTemplates: protectedProcedure
+    .query(async ({ ctx }) => {
+      const templates = await ctx.db.query.forms.findMany({
+        where: eq(forms.isTemplate, true),
+        orderBy: [desc(forms.updatedAt)],
+      });
+
+      return templates;
+    }),
+
+  createFromTemplate: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid(),
+        templateId: z.string().uuid(),
+        title: z.string().min(1).max(255).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await checkStudyAccess(ctx.db, ctx.session.user.id, input.studyId, [
+        "owner",
+        "researcher",
+      ]);
+
+      const template = await ctx.db.query.forms.findFirst({
+        where: and(
+          eq(forms.id, input.templateId),
+          eq(forms.isTemplate, true),
+        ),
+      });
+
+      if (!template) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Template not found",
+        });
+      }
+
+      const [newForm] = await ctx.db
+        .insert(forms)
+        .values({
+          studyId: input.studyId,
+          type: template.type,
+          title: input.title ?? `${template.title} (Copy)`,
+          description: template.description,
+          fields: template.fields,
+          settings: template.settings,
+          isTemplate: false,
+          createdBy: ctx.session.user.id,
+        })
+        .returning();
+
+      if (!newForm) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create form from template",
+        });
+      }
+
+      await ctx.db.insert(activityLogs).values({
+        studyId: input.studyId,
+        userId: ctx.session.user.id,
+        action: "form_created_from_template",
+        description: `Created form "${newForm.title}" from template "${template.title}"`,
+        resourceType: "form",
+        resourceId: newForm.id,
+      });
+
+      return newForm;
     }),
 });

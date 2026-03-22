@@ -15,6 +15,8 @@ import {
   ClipboardList,
   FileQuestion,
   Save,
+  Copy,
+  LayoutTemplate,
 } from "lucide-react";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
@@ -77,6 +79,18 @@ export default function NewFormPage() {
     { id: studyId },
     { enabled: !!studyId },
   );
+
+  const { data: templates } = api.forms.listTemplates.useQuery();
+
+  const createFromTemplate = api.forms.createFromTemplate.useMutation({
+    onSuccess: (data) => {
+      toast.success("Form created from template!");
+      router.push(`/studies/${studyId}/forms/${data.id}`);
+    },
+    onError: (error) => {
+      toast.error("Failed to create from template", { description: error.message });
+    },
+  });
 
   const createForm = api.forms.create.useMutation({
     onSuccess: (data) => {
@@ -154,6 +168,48 @@ export default function NewFormPage() {
         <h1 className="text-2xl font-bold">Create New Form</h1>
         <p className="text-muted-foreground">Design a consent form, survey, or questionnaire</p>
       </div>
+
+      {templates && templates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5" />
+              Start from Template
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {templates.map((template) => {
+                const TypeIcon = formTypes.find(t => t.value === template.type)?.icon || FileText;
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => {
+                      createFromTemplate.mutate({
+                        studyId,
+                        templateId: template.id,
+                      });
+                    }}
+                    disabled={createFromTemplate.isPending}
+                    className="flex flex-col items-start rounded-lg border p-4 text-left transition-all hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    <TypeIcon className="mb-2 h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">{template.templateName}</span>
+                    <span className="text-muted-foreground text-xs capitalize">{template.type}</span>
+                    <span className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                      {template.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Or design from scratch below
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
