@@ -19,6 +19,10 @@ import {
   Loader2,
   Save,
   X,
+  Crown,
+  FlaskConical,
+  Eye,
+  UserCheck,
 } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -43,6 +47,17 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 
+interface Membership {
+  studyId: string;
+  role: string;
+  joinedAt: Date;
+}
+
+function getMemberRole(memberships: Membership[], studyId: string): string {
+  const membership = memberships.find((m) => m.studyId === studyId);
+  return membership?.role ?? "observer";
+}
+
 function ProfilePageContent() {
   const { data: session } = useSession();
   const utils = api.useUtils();
@@ -58,6 +73,15 @@ function ProfilePageContent() {
     { id: session?.user?.id ?? "" },
     { enabled: !!session?.user?.id },
   );
+
+  const { data: userStudies } = api.studies.list.useQuery({
+    memberOnly: true,
+    limit: 10,
+  });
+
+  const { data: membershipsData } = api.studies.getMyMemberships.useQuery();
+
+  const studyMemberships = membershipsData ?? [];
 
   const updateProfile = api.users.update.useMutation({
     onSuccess: () => {
@@ -341,16 +365,45 @@ function ProfilePageContent() {
                 Studies you have access to
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-4 text-center">
-                <Building className="text-muted-foreground/50 mb-2 h-8 w-8" />
-                <p className="text-sm">View your studies</p>
-                <Button variant="link" size="sm" asChild className="mt-2">
+            <CardContent className="space-y-3">
+              {userStudies?.studies.slice(0, 5).map((study) => (
+                <Link
+                  key={study.id}
+                  href={`/studies/${study.id}`}
+                  className="hover:bg-accent/50 flex items-center justify-between rounded-md border p-3 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                      <span className="text-xs font-medium text-primary">
+                        {(study.name ?? "S").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{study.name}</p>
+                      <p className="text-muted-foreground text-xs capitalize">
+                        {getMemberRole(studyMemberships, study.id)}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              ))}
+              {(!userStudies?.studies.length) && (
+                <div className="flex flex-col items-center justify-center py-4 text-center">
+                  <Building className="text-muted-foreground/50 mb-2 h-8 w-8" />
+                  <p className="text-sm">No studies yet</p>
+                  <Button variant="link" size="sm" asChild className="mt-1">
+                    <Link href="/studies/new">Create a study</Link>
+                  </Button>
+                </div>
+              )}
+              {userStudies && userStudies.studies.length > 5 && (
+                <Button variant="ghost" size="sm" asChild className="w-full">
                   <Link href="/studies">
-                    Go to Studies <ChevronRight className="ml-1 h-3 w-3" />
+                    View all {userStudies.studies.length} studies <ChevronRight className="ml-1 h-3 w-3" />
                   </Link>
                 </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

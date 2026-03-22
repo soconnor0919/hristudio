@@ -32,6 +32,8 @@ export default function StudyTrialsPage() {
     }
   }, [studyId, selectedStudyId, setSelectedStudyId]);
 
+  const canRun = ["owner", "researcher", "wizard"].includes(study?.userRole ?? "");
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -39,12 +41,14 @@ export default function StudyTrialsPage() {
         description="Manage trial execution, scheduling, and data collection for this study"
         icon={TestTube}
         actions={
-          <Button asChild>
-            <Link href={`/studies/${studyId}/trials/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              Schedule Trial
-            </Link>
-          </Button>
+          canRun ? (
+            <Button asChild>
+              <Link href={`/studies/${studyId}/trials/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Schedule Trial
+              </Link>
+            </Button>
+          ) : null
         }
       />
 

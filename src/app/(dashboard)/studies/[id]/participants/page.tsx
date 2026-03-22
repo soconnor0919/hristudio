@@ -31,6 +31,8 @@ export default function StudyParticipantsPage() {
     }
   }, [studyId, selectedStudyId, setSelectedStudyId]);
 
+  const canManage = study?.userRole === "owner" || study?.userRole === "researcher";
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -38,12 +40,14 @@ export default function StudyParticipantsPage() {
         description="Manage participant registration, consent, and trial assignments for this study"
         icon={Users}
         actions={
-          <Button asChild>
-            <a href={`/studies/${studyId}/participants/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Participant
-            </a>
-          </Button>
+          canManage ? (
+            <Button asChild>
+              <a href={`/studies/${studyId}/participants/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Participant
+              </a>
+            </Button>
+          ) : null
         }
       />
 

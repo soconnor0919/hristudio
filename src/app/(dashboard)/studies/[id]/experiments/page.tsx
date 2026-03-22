@@ -31,6 +31,8 @@ export default function StudyExperimentsPage() {
     }
   }, [studyId, selectedStudyId, setSelectedStudyId]);
 
+  const canManage = study?.userRole === "owner" || study?.userRole === "researcher";
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -38,12 +40,14 @@ export default function StudyExperimentsPage() {
         description="Design and manage experiment protocols for this study"
         icon={FlaskConical}
         actions={
-          <Button asChild>
-            <a href={`/studies/${studyId}/experiments/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Experiment
-            </a>
-          </Button>
+          canManage ? (
+            <Button asChild>
+              <a href={`/studies/${studyId}/experiments/new`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Experiment
+              </a>
+            </Button>
+          ) : null
         }
       />
 

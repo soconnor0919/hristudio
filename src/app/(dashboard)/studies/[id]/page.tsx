@@ -60,6 +60,7 @@ type Study = {
   irbProtocol: string | null;
   createdAt: Date;
   updatedAt: Date;
+  userRole?: string;
 };
 
 type Member = {
@@ -157,6 +158,10 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
   ).length;
   const totalTrials = trials.length;
 
+  const userRole = (studyData as any)?.userRole;
+  const canManage = userRole === "owner" || userRole === "researcher";
+  const canRunTrials = userRole === "owner" || userRole === "researcher" || userRole === "wizard";
+
   const stats = {
     experiments: experiments.length,
     totalTrials: totalTrials,
@@ -182,18 +187,22 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link href={`/studies/${study.id}/edit`}>
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Study
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href={`/studies/${study.id}/experiments/new`}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Experiment
-              </Link>
-            </Button>
+            {canManage && (
+              <Button asChild variant="outline">
+                <Link href={`/studies/${study.id}/edit`}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Edit Study
+                </Link>
+              </Button>
+            )}
+            {canManage && (
+              <Button asChild>
+                <Link href={`/studies/${study.id}/experiments/new`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Experiment
+                </Link>
+              </Button>
+            )}
           </div>
         }
       />
@@ -235,12 +244,14 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
             icon="FlaskConical"
             description="Design and manage experimental protocols for this study"
             actions={
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/studies/${study.id}/experiments/new`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Experiment
-                </Link>
-              </Button>
+              canManage ? (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/studies/${study.id}/experiments/new`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Experiment
+                  </Link>
+                </Button>
+              ) : null
             }
           >
             {experiments.length === 0 ? (
@@ -392,12 +403,14 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
             icon="Users"
             description={`${members.length} team member${members.length !== 1 ? "s" : ""}`}
             actions={
-              <AddMemberDialog studyId={study.id}>
-                <Button variant="outline" size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Manage
-                </Button>
-              </AddMemberDialog>
+              canManage ? (
+                <AddMemberDialog studyId={study.id}>
+                  <Button variant="outline" size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Manage
+                  </Button>
+                </AddMemberDialog>
+              ) : null
             }
           >
             <div className="space-y-3">

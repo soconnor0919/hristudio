@@ -1001,4 +1001,20 @@ export const studiesRouter = createTRPCRouter({
 
       return updatedPlugin;
     }),
+
+  getMyMemberships: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const memberships = await ctx.db.query.studyMembers.findMany({
+      where: eq(studyMembers.userId, userId),
+      columns: {
+        studyId: true,
+        role: true,
+        joinedAt: true,
+      },
+      orderBy: [desc(studyMembers.joinedAt)],
+    });
+
+    return memberships;
+  }),
 });
