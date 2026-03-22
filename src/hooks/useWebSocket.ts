@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/exhaustive-deps */
-
 import { useSession } from "~/lib/auth-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -56,8 +54,40 @@ interface TrialActionExecutedMessage {
 interface InterventionLoggedMessage {
   type: "intervention_logged";
   data: {
+    intervention?: unknown;
     timestamp: number;
   } & Record<string, unknown>;
+}
+
+interface TrialEventMessage {
+  type: "trial_event";
+  data: {
+    event: unknown;
+    timestamp: number;
+  };
+}
+
+interface TrialEventsSnapshotMessage {
+  type: "trial_events_snapshot";
+  data: {
+    events: unknown[];
+    timestamp: number;
+  };
+}
+
+interface AnnotationAddedMessage {
+  type: "annotation_added";
+  data: {
+    annotation: unknown;
+    timestamp: number;
+  };
+}
+
+interface PongMessage {
+  type: "pong";
+  data: {
+    timestamp: number;
+  };
 }
 
 interface StepChangedMessage {
@@ -83,6 +113,10 @@ type KnownInboundMessage =
   | TrialStatusMessage
   | TrialActionExecutedMessage
   | InterventionLoggedMessage
+  | TrialEventMessage
+  | TrialEventsSnapshotMessage
+  | AnnotationAddedMessage
+  | PongMessage
   | StepChangedMessage
   | ErrorMessage;
 
@@ -98,18 +132,247 @@ export interface OutgoingMessage {
   data: Record<string, unknown>;
 }
 
-export interface UseWebSocketOptions {
+interface Subscription {
   trialId: string;
   onMessage?: (message: WebSocketMessage) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
-  reconnectAttempts?: number;
-  reconnectInterval?: number;
-  heartbeatInterval?: number;
 }
 
-export interface UseWebSocketReturn {
+interface GlobalWSState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  connectionError: string | null;
+  lastMessage: WebSocketMessage | null;
+}
+
+type StateListener = (state: GlobalWSState) => void;
+
+class GlobalWebSocketManager {
+  private ws: WebSocket | null = null;
+  private subscriptions: Map<string, Subscription> = new Map();
+  private stateListeners: Set<StateListener> = new Set();
+  private sessionRef: { user: { id: string } } | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private attemptCount = 0;
+  private maxAttempts = 5;
+
+  private state: GlobalWSState = {
+    isConnected: false,
+    isConnecting: false,
+    connectionError: null,
+    lastMessage: null,
+  };
+
+  private setState(partial: Partial<GlobalWSState>) {
+    this.state = { ...this.state, ...partial };
+    this.notifyListeners();
+  }
+
+  private notifyListeners() {
+    this.stateListeners.forEach((listener) => listener(this.state));
+  }
+
+  subscribe(
+    session: { user: { id: string } } | null,
+    subscription: Subscription,
+  ) {
+    this.sessionRef = session;
+    this.subscriptions.set(subscription.trialId, subscription);
+
+    if (this.subscriptions.size === 1 && !this.ws) {
+      this.connect();
+    }
+
+    return () => {
+      this.subscriptions.delete(subscription.trialId);
+      // Don't auto-disconnect - keep global connection alive
+    };
+  }
+
+  sendMessage(message: OutgoingMessage) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  connect() {
+    if (
+      this.ws?.readyState === WebSocket.CONNECTING ||
+      this.ws?.readyState === WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    if (!this.sessionRef?.user) {
+      this.setState({ connectionError: "No session", isConnecting: false });
+      return;
+    }
+
+    this.setState({ isConnecting: true, connectionError: null });
+
+    const token = btoa(JSON.stringify({ userId: this.sessionRef.user.id }));
+    const wsPort = process.env.NEXT_PUBLIC_WS_PORT || "3001";
+
+    // Collect all trial IDs from subscriptions
+    const trialIds = Array.from(this.subscriptions.keys());
+    const trialIdParam = trialIds.length > 0 ? `&trialId=${trialIds[0]}` : "";
+    const url = `ws://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:${wsPort}/api/websocket?token=${token}${trialIdParam}`;
+
+    try {
+      this.ws = new WebSocket(url);
+
+      this.ws.onopen = () => {
+        console.log("[GlobalWS] Connected");
+        this.setState({ isConnected: true, isConnecting: false });
+        this.attemptCount = 0;
+        this.startHeartbeat();
+
+        // Subscribe to all subscribed trials
+        this.subscriptions.forEach((sub) => {
+          this.ws?.send(
+            JSON.stringify({
+              type: "subscribe",
+              data: { trialId: sub.trialId },
+            }),
+          );
+        });
+
+        this.subscriptions.forEach((sub) => sub.onConnect?.());
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data) as WebSocketMessage;
+          this.setState({ lastMessage: message });
+
+          if (message.type === "connection_established") {
+            const data = (message as ConnectionEstablishedMessage).data;
+            const sub = this.subscriptions.get(data.trialId);
+            if (sub) {
+              sub.onMessage?.(message);
+            }
+          } else if (
+            message.type === "trial_event" ||
+            message.type === "trial_status"
+          ) {
+            const data = (message as TrialEventMessage).data;
+            const event = data.event as { trialId?: string };
+            if (event?.trialId) {
+              const sub = this.subscriptions.get(event.trialId);
+              sub?.onMessage?.(message);
+            }
+          } else {
+            // Broadcast to all subscriptions
+            this.subscriptions.forEach((sub) => sub.onMessage?.(message));
+          }
+        } catch (error) {
+          console.error("[GlobalWS] Failed to parse message:", error);
+        }
+      };
+
+      this.ws.onclose = (event) => {
+        console.log("[GlobalWS] Disconnected:", event.code);
+        this.setState({ isConnected: false, isConnecting: false });
+        this.stopHeartbeat();
+        this.subscriptions.forEach((sub) => sub.onDisconnect?.());
+
+        // Auto-reconnect if not intentionally closed
+        if (event.code !== 1000 && this.subscriptions.size > 0) {
+          this.scheduleReconnect();
+        }
+      };
+
+      this.ws.onerror = (error) => {
+        console.error("[GlobalWS] Error:", error);
+        this.setState({
+          connectionError: "Connection error",
+          isConnecting: false,
+        });
+        this.subscriptions.forEach((sub) =>
+          sub.onError?.(new Event("ws_error")),
+        );
+      };
+    } catch (error) {
+      console.error("[GlobalWS] Failed to create:", error);
+      this.setState({
+        connectionError: "Failed to create connection",
+        isConnecting: false,
+      });
+    }
+  }
+
+  disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    this.stopHeartbeat();
+    if (this.ws) {
+      this.ws.close(1000, "Manual disconnect");
+      this.ws = null;
+    }
+    this.setState({ isConnected: false, isConnecting: false });
+  }
+
+  private startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: "heartbeat", data: {} }));
+      }
+    }, 30000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  private scheduleReconnect() {
+    if (this.attemptCount >= this.maxAttempts) {
+      this.setState({ connectionError: "Max reconnection attempts reached" });
+      return;
+    }
+
+    const delay = Math.min(30000, 1000 * Math.pow(1.5, this.attemptCount));
+    this.attemptCount++;
+
+    console.log(
+      `[GlobalWS] Reconnecting in ${delay}ms (attempt ${this.attemptCount})`,
+    );
+
+    this.reconnectTimeout = setTimeout(() => {
+      if (this.subscriptions.size > 0) {
+        this.connect();
+      }
+    }, delay);
+  }
+
+  getState(): GlobalWSState {
+    return this.state;
+  }
+
+  addListener(listener: StateListener) {
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
+  }
+}
+
+const globalWS = new GlobalWebSocketManager();
+
+export interface UseGlobalWebSocketOptions {
+  trialId: string;
+  onMessage?: (message: WebSocketMessage) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  onError?: (error: Event) => void;
+}
+
+export interface UseGlobalWebSocketReturn {
   isConnected: boolean;
   isConnecting: boolean;
   connectionError: string | null;
@@ -119,333 +382,66 @@ export interface UseWebSocketReturn {
   lastMessage: WebSocketMessage | null;
 }
 
-export function useWebSocket({
+export function useGlobalWebSocket({
   trialId,
   onMessage,
   onConnect,
   onDisconnect,
   onError,
-  reconnectAttempts = 5,
-  reconnectInterval = 3000,
-  heartbeatInterval = 30000,
-}: UseWebSocketOptions): UseWebSocketReturn {
+}: UseGlobalWebSocketOptions): UseGlobalWebSocketReturn {
   const { data: session } = useSession();
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [hasAttemptedConnection, setHasAttemptedConnection] =
-    useState<boolean>(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const attemptCountRef = useRef<number>(0);
-  const mountedRef = useRef<boolean>(true);
-  const connectionStableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onMessageRef = useRef(onMessage);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+  const onErrorRef = useRef(onError);
 
-  // Generate auth token (simplified - in production use proper JWT)
-  const getAuthToken = useCallback((): string | null => {
-    if (!session?.user) return null;
-    // In production, this would be a proper JWT token
-    return btoa(
-      JSON.stringify({ userId: session.user.id, timestamp: Date.now() }),
-    );
-  }, [session]);
+  onMessageRef.current = onMessage;
+  onConnectRef.current = onConnect;
+  onDisconnectRef.current = onDisconnect;
+  onErrorRef.current = onError;
 
-  const sendMessage = useCallback((message: OutgoingMessage): void => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn("WebSocket not connected, message not sent:", message);
-    }
-  }, []);
-
-  const sendHeartbeat = useCallback((): void => {
-    sendMessage({ type: "heartbeat", data: {} });
-  }, [sendMessage]);
-
-  const scheduleHeartbeat = useCallback((): void => {
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-    }
-    heartbeatTimeoutRef.current = setTimeout(() => {
-      if (isConnected && mountedRef.current) {
-        sendHeartbeat();
-        scheduleHeartbeat();
-      }
-    }, heartbeatInterval);
-  }, [isConnected, sendHeartbeat, heartbeatInterval]);
-
-  const handleMessage = useCallback(
-    (event: MessageEvent<string>): void => {
-      try {
-        const message = JSON.parse(event.data) as WebSocketMessage;
-        setLastMessage(message);
-
-        // Handle system messages
-        switch (message.type) {
-          case "connection_established": {
-            console.log(
-              "WebSocket connection established:",
-              (message as ConnectionEstablishedMessage).data,
-            );
-            setIsConnected(true);
-            setIsConnecting(false);
-            setConnectionError(null);
-            attemptCountRef.current = 0;
-            scheduleHeartbeat();
-            onConnect?.();
-            break;
-          }
-
-          case "heartbeat_response":
-            // Heartbeat acknowledged, connection is alive
-            break;
-
-          case "error": {
-            console.error("WebSocket server error:", message);
-            const msg =
-              (message as ErrorMessage).data?.message ?? "Server error";
-            setConnectionError(msg);
-            onError?.(new Event("server_error"));
-            break;
-          }
-
-          default:
-            // Pass to user-defined message handler
-            onMessage?.(message);
-            break;
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-        setConnectionError("Failed to parse message");
-      }
-    },
-    [onMessage, onConnect, onError, scheduleHeartbeat],
-  );
-
-  const handleClose = useCallback(
-    (event: CloseEvent): void => {
-      console.log("WebSocket connection closed:", event.code, event.reason);
-      setIsConnected(false);
-      setIsConnecting(false);
-
-      if (heartbeatTimeoutRef.current) {
-        clearTimeout(heartbeatTimeoutRef.current);
-      }
-
-      onDisconnect?.();
-
-      // Attempt reconnection if not manually closed and component is still mounted
-      // In development, don't aggressively reconnect to prevent UI flashing
-      if (
-        event.code !== 1000 &&
-        mountedRef.current &&
-        attemptCountRef.current < reconnectAttempts &&
-        process.env.NODE_ENV !== "development"
-      ) {
-        attemptCountRef.current++;
-        const delay =
-          reconnectInterval * Math.pow(1.5, attemptCountRef.current - 1); // Exponential backoff
-
-        console.log(
-          `Attempting reconnection ${attemptCountRef.current}/${reconnectAttempts} in ${delay}ms`,
-        );
-        setConnectionError(
-          `Connection lost. Reconnecting... (${attemptCountRef.current}/${reconnectAttempts})`,
-        );
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (mountedRef.current) {
-            attemptCountRef.current = 0;
-            setIsConnecting(true);
-            setConnectionError(null);
-          }
-        }, delay);
-      } else if (attemptCountRef.current >= reconnectAttempts) {
-        setConnectionError("Failed to reconnect after maximum attempts");
-      } else if (
-        process.env.NODE_ENV === "development" &&
-        event.code !== 1000
-      ) {
-        // In development, set a stable error message without reconnection attempts
-        setConnectionError("WebSocket unavailable - using polling mode");
-      }
-    },
-    [onDisconnect, reconnectAttempts, reconnectInterval],
-  );
-
-  const handleError = useCallback(
-    (event: Event): void => {
-      // In development, WebSocket failures are expected with Edge Runtime
-      if (process.env.NODE_ENV === "development") {
-        // Only set error state after the first failed attempt to prevent flashing
-        if (!hasAttemptedConnection) {
-          setHasAttemptedConnection(true);
-          // Debounce the error state to prevent UI flashing
-          if (connectionStableTimeoutRef.current) {
-            clearTimeout(connectionStableTimeoutRef.current);
-          }
-          connectionStableTimeoutRef.current = setTimeout(() => {
-            setConnectionError("WebSocket unavailable - using polling mode");
-            setIsConnecting(false);
-          }, 1000);
-        }
-      } else {
-        console.error("WebSocket error:", event);
-        setConnectionError("Connection error");
+  useEffect(() => {
+    const unsubscribe = globalWS.subscribe(session, {
+      trialId,
+      onMessage: (msg) => {
+        setLastMessage(msg);
+        onMessageRef.current?.(msg);
+      },
+      onConnect: () => {
+        setIsConnected(true);
         setIsConnecting(false);
-      }
-      onError?.(event);
-    },
-    [onError, hasAttemptedConnection],
-  );
+        setConnectionError(null);
+        onConnectRef.current?.();
+      },
+      onDisconnect: () => {
+        setIsConnected(false);
+        onDisconnectRef.current?.();
+      },
+      onError: (err) => {
+        setConnectionError("Connection error");
+        onErrorRef.current?.(err);
+      },
+    });
 
-  const connectInternal = useCallback((): void => {
-    if (!session?.user || !trialId) {
-      if (!hasAttemptedConnection) {
-        setConnectionError("Missing authentication or trial ID");
-        setHasAttemptedConnection(true);
-      }
-      return;
-    }
+    return unsubscribe;
+  }, [trialId, session]);
 
-    if (
-      wsRef.current &&
-      (wsRef.current.readyState === WebSocket.CONNECTING ||
-        wsRef.current.readyState === WebSocket.OPEN)
-    ) {
-      return; // Already connecting or connected
-    }
-
-    const token = getAuthToken();
-    if (!token) {
-      if (!hasAttemptedConnection) {
-        setConnectionError("Failed to generate auth token");
-        setHasAttemptedConnection(true);
-      }
-      return;
-    }
-
-    // Only show connecting state for the first attempt or if we've been stable
-    if (!hasAttemptedConnection || isConnected) {
-      setIsConnecting(true);
-    }
-
-    // Clear any pending error updates
-    if (connectionStableTimeoutRef.current) {
-      clearTimeout(connectionStableTimeoutRef.current);
-    }
-
-    setConnectionError(null);
-
-    try {
-      // Use appropriate WebSocket URL based on environment
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/websocket?trialId=${trialId}&token=${token}`;
-
-      wsRef.current = new WebSocket(wsUrl);
-      wsRef.current.onmessage = handleMessage;
-      wsRef.current.onclose = handleClose;
-      wsRef.current.onerror = handleError;
-
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connection opened");
-        // Connection establishment is handled in handleMessage
-      };
-    } catch (error) {
-      console.error("Failed to create WebSocket connection:", error);
-      if (!hasAttemptedConnection) {
-        setConnectionError("Failed to create connection");
-        setHasAttemptedConnection(true);
-      }
-      setIsConnecting(false);
-    }
-  }, [
-    session,
-    trialId,
-    getAuthToken,
-    handleMessage,
-    handleClose,
-    handleError,
-    hasAttemptedConnection,
-    isConnected,
-  ]);
-
-  const disconnect = useCallback((): void => {
-    mountedRef.current = false;
-
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-    }
-
-    if (connectionStableTimeoutRef.current) {
-      clearTimeout(connectionStableTimeoutRef.current);
-    }
-
-    if (wsRef.current) {
-      wsRef.current.close(1000, "Manual disconnect");
-      wsRef.current = null;
-    }
-
-    setIsConnected(false);
-    setIsConnecting(false);
-    setConnectionError(null);
-    setHasAttemptedConnection(false);
-    attemptCountRef.current = 0;
+  const sendMessage = useCallback((message: OutgoingMessage) => {
+    globalWS.sendMessage(message);
   }, []);
 
-  const reconnect = useCallback((): void => {
-    disconnect();
-    mountedRef.current = true;
-    attemptCountRef.current = 0;
-    setHasAttemptedConnection(false);
-    setTimeout(() => {
-      if (mountedRef.current) {
-        void connectInternal();
-      }
-    }, 100); // Small delay to ensure cleanup
-  }, [disconnect, connectInternal]);
+  const disconnect = useCallback(() => {
+    globalWS.disconnect();
+  }, []);
 
-  // Effect to establish initial connection
-  useEffect(() => {
-    if (session?.user?.id && trialId) {
-      // In development, only attempt connection once to prevent flashing
-      if (process.env.NODE_ENV === "development" && hasAttemptedConnection) {
-        return;
-      }
-
-      // Trigger reconnection if timeout was set
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-        void connectInternal();
-      } else {
-        void connectInternal();
-      }
-    }
-
-    return () => {
-      mountedRef.current = false;
-      disconnect();
-    };
-  }, [session?.user?.id, trialId, hasAttemptedConnection]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      if (connectionStableTimeoutRef.current) {
-        clearTimeout(connectionStableTimeoutRef.current);
-      }
-      disconnect();
-    };
-  }, [disconnect]);
+  const reconnect = useCallback(() => {
+    globalWS.connect();
+  }, []);
 
   return {
     isConnected,
@@ -458,115 +454,180 @@ export function useWebSocket({
   };
 }
 
-// Hook for trial-specific WebSocket events
-export function useTrialWebSocket(trialId: string) {
-  const [trialEvents, setTrialEvents] = useState<WebSocketMessage[]>([]);
-  const [currentTrialStatus, setCurrentTrialStatus] =
-    useState<TrialSnapshot | null>(null);
-  const [wizardActions, setWizardActions] = useState<WebSocketMessage[]>([]);
+// Legacy alias
+export const useWebSocket = useGlobalWebSocket;
 
-  const handleMessage = useCallback((message: WebSocketMessage): void => {
-    // Add to events log
-    setTrialEvents((prev) => [...prev, message].slice(-100)); // Keep last 100 events
+// Trial-specific hook
+export interface TrialEvent {
+  id: string;
+  trialId: string;
+  eventType: string;
+  data: Record<string, unknown> | null;
+  timestamp: Date;
+  createdBy?: string | null;
+}
 
-    switch (message.type) {
-      case "trial_status": {
-        const data = (message as TrialStatusMessage).data;
-        setCurrentTrialStatus(data.trial);
-        break;
+export interface TrialWebSocketState {
+  trialEvents: TrialEvent[];
+  currentTrialStatus: TrialSnapshot | null;
+  wizardActions: WebSocketMessage[];
+}
+
+export function useTrialWebSocket(
+  trialId: string,
+  options?: {
+    onTrialEvent?: (event: TrialEvent) => void;
+    onStatusChange?: (status: TrialSnapshot) => void;
+    initialEvents?: TrialEvent[];
+    initialStatus?: TrialSnapshot | null;
+  },
+) {
+  const [state, setState] = useState<TrialWebSocketState>({
+    trialEvents: options?.initialEvents ?? [],
+    currentTrialStatus: options?.initialStatus ?? null,
+    wizardActions: [],
+  });
+
+  const handleMessage = useCallback(
+    (message: WebSocketMessage): void => {
+      switch (message.type) {
+        case "trial_status": {
+          const data = (message as TrialStatusMessage).data;
+          const status = data.trial as TrialSnapshot;
+          setState((prev) => ({
+            ...prev,
+            currentTrialStatus: status,
+          }));
+          options?.onStatusChange?.(status);
+          break;
+        }
+
+        case "trial_events_snapshot": {
+          const data = (message as TrialEventsSnapshotMessage).data;
+          const events = (
+            data.events as Array<{
+              id: string;
+              trialId: string;
+              eventType: string;
+              data: Record<string, unknown> | null;
+              timestamp: Date | string;
+              createdBy?: string | null;
+            }>
+          ).map((e) => ({
+            ...e,
+            timestamp:
+              typeof e.timestamp === "string"
+                ? new Date(e.timestamp)
+                : e.timestamp,
+          }));
+          setState((prev) => ({
+            ...prev,
+            trialEvents: events,
+          }));
+          break;
+        }
+
+        case "trial_event": {
+          const data = (message as TrialEventMessage).data;
+          const event = data.event as {
+            id: string;
+            trialId: string;
+            eventType: string;
+            data: Record<string, unknown> | null;
+            timestamp: Date | string;
+            createdBy?: string | null;
+          };
+          const newEvent: TrialEvent = {
+            ...event,
+            timestamp:
+              typeof event.timestamp === "string"
+                ? new Date(event.timestamp)
+                : event.timestamp,
+          };
+          setState((prev) => ({
+            ...prev,
+            trialEvents: [...prev.trialEvents, newEvent].slice(-500),
+          }));
+          options?.onTrialEvent?.(newEvent);
+          break;
+        }
+
+        case "trial_action_executed":
+        case "intervention_logged":
+        case "annotation_added":
+        case "step_changed": {
+          setState((prev) => ({
+            ...prev,
+            wizardActions: [...prev.wizardActions, message].slice(-100),
+          }));
+          break;
+        }
+
+        case "pong":
+          break;
+
+        default:
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[WS] Unknown message type: ${message.type}`);
+          }
       }
+    },
+    [options],
+  );
 
-      case "trial_action_executed":
-      case "intervention_logged":
-      case "step_changed":
-        setWizardActions((prev) => [...prev, message].slice(-50)); // Keep last 50 actions
-        break;
-
-      case "step_changed":
-        // Handle step transitions (optional logging)
-        console.log("Step changed:", (message as StepChangedMessage).data);
-        break;
-
-      default:
-        // Handle other trial-specific messages
-        break;
-    }
-  }, []);
-
-  const webSocket = useWebSocket({
+  const webSocket = useGlobalWebSocket({
     trialId,
     onMessage: handleMessage,
     onConnect: () => {
       if (process.env.NODE_ENV === "development") {
-        console.log(`Connected to trial ${trialId} WebSocket`);
+        console.log(`[WS] Connected to trial ${trialId}`);
       }
     },
     onDisconnect: () => {
       if (process.env.NODE_ENV === "development") {
-        console.log(`Disconnected from trial ${trialId} WebSocket`);
+        console.log(`[WS] Disconnected from trial ${trialId}`);
       }
     },
     onError: () => {
-      // Suppress noisy WebSocket errors in development
       if (process.env.NODE_ENV !== "development") {
-        console.error(`Trial ${trialId} WebSocket connection failed`);
+        console.error(`[WS] Trial ${trialId} WebSocket connection failed`);
       }
     },
   });
 
-  // Request trial status after connection is established
+  // Request initial data after connection is established
   useEffect(() => {
     if (webSocket.isConnected) {
       webSocket.sendMessage({ type: "request_trial_status", data: {} });
+      webSocket.sendMessage({
+        type: "request_trial_events",
+        data: { limit: 500 },
+      });
     }
-  }, [webSocket.isConnected, webSocket]);
+  }, [webSocket.isConnected]);
 
-  // Trial-specific actions
-  const executeTrialAction = useCallback(
-    (actionType: string, actionData: Record<string, unknown>): void => {
-      webSocket.sendMessage({
-        type: "trial_action",
-        data: {
-          actionType,
-          ...actionData,
-        },
-      });
-    },
-    [webSocket],
-  );
+  // Helper to add an event locally (for optimistic updates)
+  const addLocalEvent = useCallback((event: TrialEvent) => {
+    setState((prev) => ({
+      ...prev,
+      trialEvents: [...prev.trialEvents, event].slice(-500),
+    }));
+  }, []);
 
-  const logWizardIntervention = useCallback(
-    (interventionData: Record<string, unknown>): void => {
-      webSocket.sendMessage({
-        type: "wizard_intervention",
-        data: interventionData,
-      });
-    },
-    [webSocket],
-  );
-
-  const transitionStep = useCallback(
-    (stepData: {
-      from_step?: number;
-      to_step: number;
-      step_name?: string;
-      [k: string]: unknown;
-    }): void => {
-      webSocket.sendMessage({
-        type: "step_transition",
-        data: stepData,
-      });
-    },
-    [webSocket],
-  );
+  // Helper to update trial status locally
+  const updateLocalStatus = useCallback((status: TrialSnapshot) => {
+    setState((prev) => ({
+      ...prev,
+      currentTrialStatus: status,
+    }));
+  }, []);
 
   return {
     ...webSocket,
-    trialEvents,
-    currentTrialStatus,
-    wizardActions,
-    executeTrialAction,
-    logWizardIntervention,
-    transitionStep,
+    trialEvents: state.trialEvents,
+    currentTrialStatus: state.currentTrialStatus,
+    wizardActions: state.wizardActions,
+    addLocalEvent,
+    updateLocalStatus,
   };
 }

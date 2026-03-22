@@ -485,6 +485,25 @@ export const trials = createTable("trial", {
   metadata: jsonb("metadata").default({}),
 });
 
+export const wsConnections = createTable("ws_connection", {
+  id: uuid("id").notNull().primaryKey().defaultRandom(),
+  trialId: uuid("trial_id")
+    .notNull()
+    .references(() => trials.id, { onDelete: "cascade" }),
+  clientId: text("client_id").notNull().unique(),
+  userId: text("user_id"),
+  connectedAt: timestamp("connected_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const wsConnectionsRelations = relations(wsConnections, ({ one }) => ({
+  trial: one(trials, {
+    fields: [wsConnections.trialId],
+    references: [trials.id],
+  }),
+}));
+
 export const steps = createTable(
   "step",
   {

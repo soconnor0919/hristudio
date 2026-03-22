@@ -35,6 +35,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 import { uploadFile } from "~/lib/storage/minio";
+import { wsManager } from "~/server/services/websocket-manager";
 
 // Helper function to check if user has access to trial
 async function checkTrialAccess(
@@ -591,6 +592,16 @@ export const trialsRouter = createTRPCRouter({
         data: { userId },
       });
 
+      // Broadcast trial status update
+      await wsManager.broadcast(input.id, {
+        type: "trial_status",
+        data: {
+          trial: trial[0],
+          current_step_index: 0,
+          timestamp: Date.now(),
+        },
+      });
+
       return trial[0];
     }),
 
@@ -641,6 +652,16 @@ export const trialsRouter = createTRPCRouter({
         eventType: "trial_completed",
         timestamp: new Date(),
         data: { userId, notes: input.notes },
+      });
+
+      // Broadcast trial status update
+      await wsManager.broadcast(input.id, {
+        type: "trial_status",
+        data: {
+          trial,
+          current_step_index: 0,
+          timestamp: Date.now(),
+        },
       });
 
       return trial;
@@ -694,6 +715,16 @@ export const trialsRouter = createTRPCRouter({
         eventType: "trial_aborted",
         timestamp: new Date(),
         data: { userId, reason: input.reason },
+      });
+
+      // Broadcast trial status update
+      await wsManager.broadcast(input.id, {
+        type: "trial_status",
+        data: {
+          trial: trial[0],
+          current_step_index: 0,
+          timestamp: Date.now(),
+        },
       });
 
       return trial[0];
@@ -846,6 +877,15 @@ export const trialsRouter = createTRPCRouter({
         })
         .returning();
 
+      // Broadcast new event to all subscribers
+      await wsManager.broadcast(input.trialId, {
+        type: "trial_event",
+        data: {
+          event,
+          timestamp: Date.now(),
+        },
+      });
+
       return event;
     }),
 
@@ -880,6 +920,15 @@ export const trialsRouter = createTRPCRouter({
           parameters: input.data,
         })
         .returning();
+
+      // Broadcast intervention to all subscribers
+      await wsManager.broadcast(input.trialId, {
+        type: "intervention_logged",
+        data: {
+          intervention,
+          timestamp: Date.now(),
+        },
+      });
 
       return intervention;
     }),
@@ -935,6 +984,15 @@ export const trialsRouter = createTRPCRouter({
           },
         });
       }
+
+      // Broadcast annotation to all subscribers
+      await wsManager.broadcast(input.trialId, {
+        type: "annotation_added",
+        data: {
+          annotation,
+          timestamp: Date.now(),
+        },
+      });
 
       return annotation;
     }),
@@ -1302,20 +1360,33 @@ export const trialsRouter = createTRPCRouter({
       }
 
       // Log the manual robot action execution
-      await db.insert(trialEvents).values({
-        trialId: input.trialId,
-        eventType: "manual_robot_action",
-        actionId: null, // Ad-hoc action, not linked to a protocol action definition
+      const [event] = await db
+        .insert(trialEvents)
+        .values({
+          trialId: input.trialId,
+          eventType: "manual_robot_action",
+          actionId: null,
+          data: {
+            userId,
+            pluginName: input.pluginName,
+            actionId: input.actionId,
+            parameters: input.parameters,
+            result: result.data,
+            duration: result.duration,
+          },
+          timestamp: new Date(),
+          createdBy: userId,
+        })
+        .returning();
+
+      // Broadcast robot action to all subscribers
+      await wsManager.broadcast(input.trialId, {
+        type: "trial_action_executed",
         data: {
-          userId,
-          pluginName: input.pluginName,
-          actionId: input.actionId,
-          parameters: input.parameters,
-          result: result.data,
-          duration: result.duration,
+          action_type: `${input.pluginName}.${input.actionId}`,
+          event,
+          timestamp: Date.now(),
         },
-        timestamp: new Date(),
-        createdBy: userId,
       });
 
       return {
@@ -1347,21 +1418,34 @@ export const trialsRouter = createTRPCRouter({
         "wizard",
       ]);
 
-      await db.insert(trialEvents).values({
-        trialId: input.trialId,
-        eventType: "manual_robot_action",
+      const [event] = await db
+        .insert(trialEvents)
+        .values({
+          trialId: input.trialId,
+          eventType: "manual_robot_action",
+          data: {
+            userId,
+            pluginName: input.pluginName,
+            actionId: input.actionId,
+            parameters: input.parameters,
+            result: input.result,
+            duration: input.duration,
+            error: input.error,
+            executionMode: "websocket_client",
+          },
+          timestamp: new Date(),
+          createdBy: userId,
+        })
+        .returning();
+
+      // Broadcast robot action to all subscribers
+      await wsManager.broadcast(input.trialId, {
+        type: "trial_action_executed",
         data: {
-          userId,
-          pluginName: input.pluginName,
-          actionId: input.actionId,
-          parameters: input.parameters,
-          result: input.result,
-          duration: input.duration,
-          error: input.error,
-          executionMode: "websocket_client",
+          action_type: `${input.pluginName}.${input.actionId}`,
+          event,
+          timestamp: Date.now(),
         },
-        timestamp: new Date(),
-        createdBy: userId,
       });
 
       return { success: true };

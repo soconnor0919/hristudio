@@ -163,6 +163,11 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
   const form = useForm<TrialFormData>({
     resolver: zodResolver(trialSchema),
     defaultValues: {
+      experimentId: "" as any,
+      participantId: "" as any,
+      scheduledAt: new Date(),
+      wizardId: undefined,
+      notes: "",
       sessionNumber: 1,
     },
   });
@@ -347,7 +352,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             <FormField>
               <Label htmlFor="experimentId">Experiment *</Label>
               <Select
-                value={form.watch("experimentId")}
+                value={form.watch("experimentId") ?? ""}
                 onValueChange={(value) => form.setValue("experimentId", value)}
                 disabled={experimentsLoading || mode === "edit"}
               >
@@ -387,7 +392,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
             <FormField>
               <Label htmlFor="participantId">Participant *</Label>
               <Select
-                value={form.watch("participantId")}
+                value={form.watch("participantId") ?? ""}
                 onValueChange={(value) => form.setValue("participantId", value)}
                 disabled={participantsLoading || mode === "edit"}
               >

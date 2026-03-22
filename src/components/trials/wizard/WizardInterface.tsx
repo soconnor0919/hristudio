@@ -32,6 +32,7 @@ import { WebcamPanel } from "./panels/WebcamPanel";
 import { TrialStatusBar } from "./panels/TrialStatusBar";
 import { api } from "~/trpc/react";
 import { useWizardRos } from "~/hooks/useWizardRos";
+import { useTrialWebSocket, type TrialEvent } from "~/hooks/useWebSocket";
 import { toast } from "sonner";
 import { useTour } from "~/components/onboarding/TourProvider";
 
@@ -252,59 +253,65 @@ export const WizardInterface = React.memo(function WizardInterface({
     [setAutonomousLifeRaw],
   );
 
-  // Use polling for trial status updates (no trial WebSocket server exists)
-  const { data: pollingData } = api.trials.get.useQuery(
-    { id: trial.id },
-    {
-      refetchInterval: trial.status === "in_progress" ? 5000 : 15000,
-      staleTime: 2000,
-      refetchOnWindowFocus: false,
+  // Trial WebSocket for real-time updates
+  const {
+    isConnected: wsConnected,
+    connectionError: wsError,
+    trialEvents: wsTrialEvents,
+    currentTrialStatus,
+    addLocalEvent,
+  } = useTrialWebSocket(trial.id, {
+    onStatusChange: (status) => {
+      // Update local trial state when WebSocket reports status changes
+      setTrial((prev) => ({
+        ...prev,
+        status: status.status,
+        startedAt: status.startedAt
+          ? new Date(status.startedAt)
+          : prev.startedAt,
+        completedAt: status.completedAt
+          ? new Date(status.completedAt)
+          : prev.completedAt,
+      }));
     },
-  );
-
-  // Poll for trial events
-  const { data: fetchedEvents } = api.trials.getEvents.useQuery(
-    { trialId: trial.id, limit: 100 },
-    {
-      refetchInterval: 3000,
-      staleTime: 1000,
-    },
-  );
-
-  // Update local trial state from polling only if changed
-  useEffect(() => {
-    if (pollingData && JSON.stringify(pollingData) !== JSON.stringify(trial)) {
-      // Only update if specific fields we care about have changed to avoid
-      // unnecessary re-renders that might cause UI flashing
-      if (
-        pollingData.status !== trial.status ||
-        pollingData.startedAt?.getTime() !== trial.startedAt?.getTime() ||
-        pollingData.completedAt?.getTime() !== trial.completedAt?.getTime()
-      ) {
-        setTrial((prev) => {
-          // Double check inside setter to be safe
-          if (
-            prev.status === pollingData.status &&
-            prev.startedAt?.getTime() === pollingData.startedAt?.getTime() &&
-            prev.completedAt?.getTime() === pollingData.completedAt?.getTime()
-          ) {
-            return prev;
-          }
-          return {
-            ...prev,
-            status: pollingData.status,
-            startedAt: pollingData.startedAt
-              ? new Date(pollingData.startedAt)
-              : prev.startedAt,
-            completedAt: pollingData.completedAt
-              ? new Date(pollingData.completedAt)
-              : prev.completedAt,
-          };
-        });
+    onTrialEvent: (event) => {
+      // Optionally show toast for new events
+      if (event.eventType === "trial_started") {
+        toast.info("Trial started");
+      } else if (event.eventType === "trial_completed") {
+        toast.info("Trial completed");
+      } else if (event.eventType === "trial_aborted") {
+        toast.warning("Trial aborted");
       }
+    },
+  });
+
+  // Update trial state from WebSocket status
+  useEffect(() => {
+    if (currentTrialStatus) {
+      setTrial((prev) => {
+        if (
+          prev.status === currentTrialStatus.status &&
+          prev.startedAt?.getTime() ===
+            new Date(currentTrialStatus.startedAt ?? "").getTime() &&
+          prev.completedAt?.getTime() ===
+            new Date(currentTrialStatus.completedAt ?? "").getTime()
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          status: currentTrialStatus.status,
+          startedAt: currentTrialStatus.startedAt
+            ? new Date(currentTrialStatus.startedAt)
+            : prev.startedAt,
+          completedAt: currentTrialStatus.completedAt
+            ? new Date(currentTrialStatus.completedAt)
+            : prev.completedAt,
+        };
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pollingData]);
+  }, [currentTrialStatus]);
 
   // Auto-start trial on mount if scheduled
   useEffect(() => {
@@ -313,7 +320,7 @@ export const WizardInterface = React.memo(function WizardInterface({
     }
   }, []); // Run once on mount
 
-  // Trial events from robot actions
+  // Trial events from WebSocket (and initial load)
   const trialEvents = useMemo<
     Array<{
       type: string;
@@ -322,8 +329,8 @@ export const WizardInterface = React.memo(function WizardInterface({
       message?: string;
     }>
   >(() => {
-    return (fetchedEvents ?? [])
-      .map((event) => {
+    return (wsTrialEvents ?? [])
+      .map((event: TrialEvent) => {
         let message: string | undefined;
         const eventData = event.data as any;
 
@@ -364,7 +371,7 @@ export const WizardInterface = React.memo(function WizardInterface({
         };
       })
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()); // Newest first
-  }, [fetchedEvents]);
+  }, [wsTrialEvents]);
 
   // Transform experiment steps to component format
   const steps: StepData[] = useMemo(
