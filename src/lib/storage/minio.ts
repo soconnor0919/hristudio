@@ -19,7 +19,7 @@ const s3Client = new S3Client({
   forcePathStyle: true, // Required for MinIO
 });
 
-const BUCKET_NAME = env.MINIO_BUCKET_NAME ?? "hristudio";
+const BUCKET_NAME = env.MINIO_BUCKET_NAME ?? "hristudio-data";
 const PRESIGNED_URL_EXPIRY = 3600; // 1 hour in seconds
 
 export interface UploadParams {

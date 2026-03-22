@@ -18,7 +18,7 @@ const minioClient = new Minio.Client({
   secretKey: env.MINIO_SECRET_KEY ?? "minioadmin",
 });
 
-const BUCKET_NAME = env.MINIO_BUCKET_NAME ?? "hristudio-assets";
+const BUCKET_NAME = env.MINIO_BUCKET_NAME ?? "hristudio";
 
 // Ensure bucket exists on startup (best effort)
 const ensureBucket = async () => {

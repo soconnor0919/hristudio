@@ -36,8 +36,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/hristudio;
-      /usr/bin/mc anonymous set public myminio/hristudio;
+      /usr/bin/mc mb myminio/hristudio-data;
+      /usr/bin/mc anonymous set public myminio/hristudio-data;
       exit 0;
       "
 
