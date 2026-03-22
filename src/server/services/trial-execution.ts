@@ -668,7 +668,7 @@ export class TrialExecutionEngine {
           .from(plugins)
           .where(eq(plugins.identifier, pluginName))
           .limit(1);
-        
+
         if (byIdentifier) {
           plugin = byIdentifier;
         } else {

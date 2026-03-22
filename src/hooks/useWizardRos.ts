@@ -345,7 +345,8 @@ export function useWizardRos(
             ...execution,
             status: "failed",
             endTime: new Date(),
-            error: error instanceof Error ? error.message : "System action failed",
+            error:
+              error instanceof Error ? error.message : "System action failed",
           };
           service.emit("action_failed", failedExecution);
           throw error;

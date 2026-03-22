@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { exec } from "child_process";
 import { promisify } from "util";
- 
+
 const execAsync = promisify(exec);
 import type { db } from "~/server/db";
 import {
@@ -491,7 +491,7 @@ export const robotsRouter = createTRPCRouter({
 
         return installedPlugins;
       }),
- 
+
     initialize: protectedProcedure
       .input(
         z.object({
@@ -499,27 +499,31 @@ export const robotsRouter = createTRPCRouter({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const robotIp = process.env.NAO_ROBOT_IP || process.env.NAO_IP || "134.82.159.168";
+        const robotIp =
+          process.env.NAO_ROBOT_IP || process.env.NAO_IP || "134.82.159.168";
         const password = process.env.NAO_PASSWORD || "robolab";
- 
+
         console.log(`[Robots] Initializing robot ${input.id} at ${robotIp}`);
- 
+
         try {
           // 1. Disable Autonomous Life
           const disableAlCmd = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; al = naoqi.ALProxy('ALAutonomousLife', '127.0.0.1', 9559); al.setState('disabled')\\""`;
- 
+
           // 2. Wake Up (Stand Up)
           const wakeUpCmd = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; m = naoqi.ALProxy('ALMotion', '127.0.0.1', 9559); m.wakeUp()\\""`;
- 
+
           // Execute commands sequentially
           console.log("[Robots] Executing AL disable...");
           await execAsync(disableAlCmd).catch((e) =>
-            console.warn("AL disable failed (non-critical/already disabled):", e),
+            console.warn(
+              "AL disable failed (non-critical/already disabled):",
+              e,
+            ),
           );
- 
+
           console.log("[Robots] Executing Wake Up...");
           await execAsync(wakeUpCmd);
- 
+
           return { success: true };
         } catch (error) {
           console.error("Robot initialization failed:", error);
@@ -529,7 +533,7 @@ export const robotsRouter = createTRPCRouter({
           });
         }
       }),
- 
+
     executeSystemAction: protectedProcedure
       .input(
         z.object({
@@ -538,14 +542,15 @@ export const robotsRouter = createTRPCRouter({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const robotIp = process.env.NAO_ROBOT_IP || process.env.NAO_IP || "134.82.159.168";
+        const robotIp =
+          process.env.NAO_ROBOT_IP || process.env.NAO_IP || "134.82.159.168";
         const password = process.env.NAO_PASSWORD || "robolab";
- 
+
         console.log(`[Robots] Executing system action ${input.id}`);
- 
+
         try {
           let command = "";
- 
+
           switch (input.id) {
             case "say_with_emotion":
             case "say_text_with_emotion": {
@@ -560,23 +565,23 @@ export const robotsRouter = createTRPCRouter({
                     : emotion === "thinking"
                       ? "^thoughtful"
                       : "^joyful";
- 
+
               command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; s = naoqi.ALProxy('ALAnimatedSpeech', '127.0.0.1', 9559); s.say('${tag} ${text.replace(/'/g, "\\'")}')\\""`;
               break;
             }
- 
+
             case "wake_up":
               command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; m = naoqi.ALProxy('ALMotion', '127.0.0.1', 9559); m.wakeUp()\\""`;
               break;
- 
+
             case "rest":
               command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; m = naoqi.ALProxy('ALMotion', '127.0.0.1', 9559); m.rest()\\""`;
               break;
- 
+
             default:
               throw new Error(`System action ${input.id} not implemented`);
           }
- 
+
           await execAsync(command);
           return { success: true };
         } catch (error) {

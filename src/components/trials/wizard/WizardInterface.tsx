@@ -187,7 +187,8 @@ export const WizardInterface = React.memo(function WizardInterface({
     },
   });
 
-  const executeSystemActionMutation = api.robots.executeSystemAction.useMutation();
+  const executeSystemActionMutation =
+    api.robots.executeSystemAction.useMutation();
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Map database step types to component step types
@@ -632,17 +633,19 @@ export const WizardInterface = React.memo(function WizardInterface({
 
       if (matchedOption) {
         // Handle both string options and object options for nextStepId
-        const nextStepId = typeof matchedOption === "string"
-          ? null  // String options don't have nextStepId
-          : matchedOption.nextStepId;
+        const nextStepId =
+          typeof matchedOption === "string"
+            ? null // String options don't have nextStepId
+            : matchedOption.nextStepId;
 
         if (nextStepId) {
           // Find index of the target step
           const targetIndex = steps.findIndex((s) => s.id === nextStepId);
           if (targetIndex !== -1) {
-            const label = typeof matchedOption === "string"
-              ? matchedOption
-              : matchedOption.label;
+            const label =
+              typeof matchedOption === "string"
+                ? matchedOption
+                : matchedOption.label;
 
             console.log(
               `[WizardInterface] Branching to step ${targetIndex} (${label})`,

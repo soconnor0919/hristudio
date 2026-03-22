@@ -9,7 +9,12 @@ import {
 } from "~/lib/storage/minio";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { experiments, mediaCaptures, studyMembers, trials } from "~/server/db/schema";
+import {
+  experiments,
+  mediaCaptures,
+  studyMembers,
+  trials,
+} from "~/server/db/schema";
 
 const uploadSchema = z.object({
   trialId: z.string().optional(),
@@ -91,15 +96,15 @@ export async function POST(request: NextRequest) {
         .where(
           and(
             eq(studyMembers.studyId, trial[0].studyId),
-            eq(studyMembers.userId, session.user.id)
-          )
+            eq(studyMembers.userId, session.user.id),
+          ),
         )
         .limit(1);
 
       if (!membership.length) {
         return NextResponse.json(
           { error: "Insufficient permissions to upload to this trial" },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }

@@ -119,39 +119,39 @@ export function ParticipantForm({
     { label: "Studies", href: "/studies" },
     ...(contextStudyId
       ? [
-        {
-          label: participant?.study?.name ?? "Study",
-          href: `/studies/${contextStudyId}`,
-        },
-        {
-          label: "Participants",
-          href: `/studies/${contextStudyId}/participants`,
-        },
-        ...(mode === "edit" && participant
-          ? [
-            {
-              label: participant.name ?? participant.participantCode,
-              href: `/studies/${contextStudyId}/participants/${participant.id}`,
-            },
-            { label: "Edit" },
-          ]
-          : [{ label: "New Participant" }]),
-      ]
+          {
+            label: participant?.study?.name ?? "Study",
+            href: `/studies/${contextStudyId}`,
+          },
+          {
+            label: "Participants",
+            href: `/studies/${contextStudyId}/participants`,
+          },
+          ...(mode === "edit" && participant
+            ? [
+                {
+                  label: participant.name ?? participant.participantCode,
+                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Participant" }]),
+        ]
       : [
-        {
-          label: "Participants",
-          href: `/studies/${contextStudyId}/participants`,
-        },
-        ...(mode === "edit" && participant
-          ? [
-            {
-              label: participant.name ?? participant.participantCode,
-              href: `/studies/${contextStudyId}/participants/${participant.id}`,
-            },
-            { label: "Edit" },
-          ]
-          : [{ label: "New Participant" }]),
-      ]),
+          {
+            label: "Participants",
+            href: `/studies/${contextStudyId}/participants`,
+          },
+          ...(mode === "edit" && participant
+            ? [
+                {
+                  label: participant.name ?? participant.participantCode,
+                  href: `/studies/${contextStudyId}/participants/${participant.id}`,
+                },
+                { label: "Edit" },
+              ]
+            : [{ label: "New Participant" }]),
+        ]),
   ];
 
   useBreadcrumbsEffect(breadcrumbs);
@@ -291,7 +291,7 @@ export function ParticipantForm({
               readOnly={true}
               className={cn(
                 "bg-muted text-muted-foreground",
-                form.formState.errors.participantCode ? "border-red-500" : ""
+                form.formState.errors.participantCode ? "border-red-500" : "",
               )}
             />
             {form.formState.errors.participantCode && (
@@ -338,7 +338,11 @@ export function ParticipantForm({
 
       <FormSection
         title={contextStudyId ? "Demographics" : "Demographics & Study"}
-        description={contextStudyId ? "Participant demographic details." : "Study association and demographic details."}
+        description={
+          contextStudyId
+            ? "Participant demographic details."
+            : "Study association and demographic details."
+        }
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {!contextStudyId && (
@@ -358,7 +362,9 @@ export function ParticipantForm({
                     }
                   >
                     <SelectValue
-                      placeholder={studiesLoading ? "Loading..." : "Select study"}
+                      placeholder={
+                        studiesLoading ? "Loading..." : "Select study"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -404,11 +410,11 @@ export function ParticipantForm({
                 form.setValue(
                   "gender",
                   value as
-                  | "male"
-                  | "female"
-                  | "non_binary"
-                  | "prefer_not_to_say"
-                  | "other",
+                    | "male"
+                    | "female"
+                    | "non_binary"
+                    | "prefer_not_to_say"
+                    | "other",
                 )
               }
             >

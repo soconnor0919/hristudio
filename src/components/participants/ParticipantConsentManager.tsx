@@ -56,7 +56,10 @@ export function ParticipantConsentManager({
   existingConsent,
   participantName,
   participantCode,
-}: ParticipantConsentManagerProps & { participantName?: string | null; participantCode: string }) {
+}: ParticipantConsentManagerProps & {
+  participantName?: string | null;
+  participantCode: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const utils = api.useUtils();
 
@@ -99,14 +102,24 @@ export function ParticipantConsentManager({
 
       // Substitute placeholders in markdown
       let customMd = activeForm.content;
-      customMd = customMd.replace(/{{PARTICIPANT_NAME}}/g, participantName ?? "_________________");
+      customMd = customMd.replace(
+        /{{PARTICIPANT_NAME}}/g,
+        participantName ?? "_________________",
+      );
       customMd = customMd.replace(/{{PARTICIPANT_CODE}}/g, participantCode);
       customMd = customMd.replace(/{{DATE}}/g, "_________________");
       customMd = customMd.replace(/{{SIGNATURE_IMAGE}}/g, ""); // Blank ready for physical signature
 
       // Use headless Tiptap to parse MD to HTML via same extensions
       const editor = new Editor({
-        extensions: [StarterKit, Table, TableRow, TableHeader, TableCell, Markdown],
+        extensions: [
+          StarterKit,
+          Table,
+          TableRow,
+          TableHeader,
+          TableCell,
+          Markdown,
+        ],
         content: customMd,
       });
 
@@ -195,7 +208,11 @@ export function ParticipantConsentManager({
                     activeForm={activeForm}
                     onSuccess={handleSuccess}
                   />
-                  <Button variant="outline" size="sm" onClick={handleDownloadUnsigned}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadUnsigned}
+                  >
                     <Download className="mr-2 h-4 w-4" />
                     Print Empty Form
                   </Button>

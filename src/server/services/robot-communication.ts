@@ -188,7 +188,7 @@ export class RobotCommunicationService extends EventEmitter {
         console.log(`[RobotComm] Executing robot action: ${action.actionId}`);
         console.log(`[RobotComm] Topic: ${action.implementation.topic}`);
         console.log(`[RobotComm] Parameters:`, action.parameters);
-        
+
         // Execute action based on type and platform
         this.executeRobotActionInternal(action, actionId);
       } catch (error) {

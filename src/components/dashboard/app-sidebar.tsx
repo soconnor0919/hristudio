@@ -197,9 +197,9 @@ export function AppSidebar({
   // Build study work items with proper URLs when study is selected
   const studyWorkItemsWithUrls = selectedStudyId
     ? studyWorkItems.map((item) => ({
-      ...item,
-      url: `/studies/${selectedStudyId}${item.url}`,
-    }))
+        ...item,
+        url: `/studies/${selectedStudyId}${item.url}`,
+      }))
     : [];
 
   const handleSignOut = async () => {
