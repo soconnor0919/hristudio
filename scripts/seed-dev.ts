@@ -197,6 +197,7 @@ async function main() {
     const [corePlugin] = await db
       .insert(schema.plugins)
       .values({
+        identifier: CORE_PLUGIN_DEF.id,
         name: CORE_PLUGIN_DEF.name,
         version: CORE_PLUGIN_DEF.version,
         description: CORE_PLUGIN_DEF.description,
@@ -212,6 +213,7 @@ async function main() {
     const [wozPlugin] = await db
       .insert(schema.plugins)
       .values({
+        identifier: WOZ_PLUGIN_DEF.id,
         name: WOZ_PLUGIN_DEF.name,
         version: WOZ_PLUGIN_DEF.version,
         description: WOZ_PLUGIN_DEF.description,
