@@ -404,7 +404,7 @@ export function WizardExecutionPanel({
                       onClick={
                         currentStepIndex === steps.length - 1
                           ? onCompleteTrial
-                          : onNextStep
+                          : () => onNextStep()
                       }
                       className={`w-full max-w-sm text-white shadow-lg transition-all hover:scale-[1.02] ${
                         currentStepIndex === steps.length - 1

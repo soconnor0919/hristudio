@@ -188,7 +188,7 @@ export function TrialControlPanel({
                   Pause
                 </Button>
                 <Button
-                  onClick={onNextStep}
+                  onClick={() => onNextStep()}
                   disabled={currentStepIndex >= steps.length - 1}
                   size="sm"
                 >
