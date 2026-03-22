@@ -927,11 +927,17 @@ export const adminRouter = createTRPCRouter({
 
               if (existingPlugin.length === 0) {
                 // Create new plugin
+                const pluginName = pluginData.name ?? "unknown";
+                const slugIdentifier = pluginName
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/^-|-$/g, "");
                 const newPlugin = await db
                   .insert(plugins)
                   .values({
+                    identifier: slugIdentifier,
                     robotId,
-                    name: pluginData.name ?? "",
+                    name: pluginName,
                     version: pluginData.version ?? "",
                     description: pluginData.description,
                     author:

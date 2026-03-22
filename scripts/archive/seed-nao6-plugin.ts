@@ -564,6 +564,7 @@ async function seedNAO6Plugin() {
 
     const pluginData: InsertPlugin = {
       robotId: robotId,
+      identifier: "nao6-ros2",
       name: "NAO6 Robot (Enhanced ROS2 Integration)",
       version: "2.0.0",
       description:

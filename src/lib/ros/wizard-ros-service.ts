@@ -438,8 +438,25 @@ export class WizardRosService extends EventEmitter {
 
     this.publish(config.topic, config.messageType, msg);
 
-    // Wait for action completion (simple delay for now)
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for action completion based on topic type
+    if (config.topic === "/speech") {
+      // Estimate speech duration based on text content
+      const text =
+        typeof msg === "object" && msg !== null && "data" in msg
+          ? String((msg as any).data || "")
+          : JSON.stringify(msg);
+      const wordCount = text.split(/\s+/).filter(Boolean).length;
+      // Emotion markup adds overhead: ~200ms per word base + emotion animation time
+      const emotionOverhead = 1500; // Animation prep time
+      const duration = emotionOverhead + Math.max(1000, wordCount * 300);
+      console.log(
+        `[WizardROS] Speech action estimated duration: ${duration}ms (${wordCount} words)`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, duration));
+    } else {
+      // Short delay for non-speech actions
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
 
   /**
@@ -452,11 +469,23 @@ export class WizardRosService extends EventEmitter {
   ): Promise<void> {
     switch (actionId) {
       case "say_text":
+      case "say_with_emotion":
         const text = String(parameters.text || "Hello");
         this.publish("/speech", "std_msgs/String", { data: text });
-        const wordCount = text.split(/\s+/).length;
-        const duration = Math.max(800, wordCount * 250 + 500);
+        const wordCount = text.split(/\s+/).filter(Boolean).length;
+        const emotion = String(parameters.emotion || "neutral");
+        const emotionOverhead = 1500;
+        const duration = emotionOverhead + Math.max(1000, wordCount * 300);
+        console.log(
+          `[WizardROS] Speech action (${actionId}) estimated: ${duration}ms`,
+        );
         await new Promise((resolve) => setTimeout(resolve, duration));
+        break;
+
+      case "wave_goodbye":
+        const waveText = String(parameters.text || "Goodbye");
+        this.publish("/speech", "std_msgs/String", { data: waveText });
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         break;
 
       case "walk_forward":

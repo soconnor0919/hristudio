@@ -536,7 +536,8 @@ export function WizardActionItem({
                       onClick={(e) => {
                         e.preventDefault();
                         onExecute(action.id, { value, label, nextStepId });
-                        onCompleted();
+                        // Don't call onCompleted() here - the branching logic in handleWizardResponse
+                        // will handle the jump and reset completedActionsCount
                       }}
                       disabled={readOnly || isExecuting}
                     >
