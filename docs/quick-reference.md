@@ -111,6 +111,39 @@ http://localhost:3000/api/trpc/
 - **`dashboard`**: Overview stats, recent activity, study progress
 - **`admin`**: Repository management, system settings
 
+---
+
+## 🤖 NAO6 Docker Integration
+
+### Quick Start
+```bash
+cd ~/Documents/Projects/nao6-hristudio-integration
+docker compose up -d
+```
+
+Robot automatically wakes up and disables autonomous life on startup.
+
+### ROS Topics
+```
+/speech          - Text-to-speech
+/cmd_vel         - Movement commands
+/joint_angles    - Joint position control
+/camera/front/image_raw
+/camera/bottom/image_raw
+/imu/torso
+/bumper
+/{hand,head}_touch
+/sonar/{left,right}
+/info
+```
+
+### Plugin System
+- Plugin identifier: `nao6-ros2`
+- Plugin name: `NAO6 Robot (ROS2 Integration)`
+- Action types: `nao6-ros2.say_with_emotion`, `nao6-ros2.move_arm`, etc.
+
+See [nao6-quick-reference.md](./nao6-quick-reference.md) for full details.
+
 ### Example Usage
 ```typescript
 // Get user's studies

@@ -2,88 +2,92 @@
 
 Essential commands for using NAO6 robots with HRIStudio.
 
-## Quick Start
+## Quick Start (Docker)
 
-### 1. Start NAO Integration
+### 1. Start Docker Integration
 ```bash
-cd ~/naoqi_ros2_ws
-source install/setup.bash
-ros2 launch nao_launch nao6_hristudio.launch.py nao_ip:=nao.local password:=robolab
+cd ~/Documents/Projects/nao6-hristudio-integration
+docker compose up -d
 ```
 
-### 2. Wake Robot
-Press chest button for 3 seconds, or use:
-```bash
-# Via SSH (institution-specific password)
-ssh nao@nao.local
-# Then run wake-up command (see integration repo docs)
-```
+The robot will automatically wake up and autonomous life will be disabled on startup.
 
-### 3. Start HRIStudio
+### 2. Start HRIStudio
 ```bash
 cd ~/Documents/Projects/hristudio
 bun dev
 ```
 
-### 4. Test Connection
-- Open: `http://localhost:3000/nao-test`
-- Click "Connect" 
-- Test robot commands
+### 3. Verify Connection
+- Open: `http://localhost:3000`
+- Navigate to trial wizard
+- WebSocket should connect automatically
 
-## Essential Commands
+## Docker Services
 
-### Test Connectivity
-```bash
-ping nao.local                    # Test network
-ros2 topic list | grep naoqi      # Check ROS topics
-```
-
-### Manual Control
-```bash
-# Speech
-ros2 topic pub --once /speech std_msgs/String "data: 'Hello world'"
-
-# Movement (robot must be awake!)
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1}}'
-
-# Stop
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0}}'
-```
-
-### Monitor Status
-```bash
-ros2 topic echo /naoqi_driver/battery        # Battery level
-ros2 topic echo /naoqi_driver/joint_states   # Joint positions
-```
-
-## Troubleshooting
-
-**Robot not moving:** Press chest button for 3 seconds to wake up
-
-**WebSocket fails:** Check rosbridge is running on port 9090
-```bash
-ss -an | grep 9090
-```
-
-**Connection lost:** Restart rosbridge
-```bash
-pkill -f rosbridge
-ros2 run rosbridge_server rosbridge_websocket
-```
+| Service | Port | Description |
+|---------|------|-------------|
+| nao_driver | - | NAOqi driver node |
+| ros_bridge | 9090 | WebSocket bridge |
+| ros_api | - | ROS API services |
 
 ## ROS Topics
 
-**Commands (Input):**
-- `/speech` - Text-to-speech
-- `/cmd_vel` - Movement
-- `/joint_angles` - Joint control
+**Commands (Publish to these):**
+```
+/speech          - Text-to-speech
+/cmd_vel         - Velocity commands (movement)
+/joint_angles    - Joint position commands
+```
 
-**Sensors (Output):**
-- `/naoqi_driver/joint_states` - Joint data
-- `/naoqi_driver/battery` - Battery level
-- `/naoqi_driver/bumper` - Foot sensors
-- `/naoqi_driver/sonar/*` - Distance sensors
-- `/naoqi_driver/camera/*` - Camera feeds
+**Sensors (Subscribe to these):**
+```
+/camera/front/image_raw    - Front camera
+/camera/bottom/image_raw  - Bottom camera
+/joint_states             - Joint positions
+/imu/torso               - IMU data
+/bumper                   - Foot bumpers
+/{hand,head}_touch        - Touch sensors
+/sonar/{left,right}       - Ultrasonic sensors
+/info                     - Robot info
+```
+
+## Manual Control
+
+### Test Connectivity
+```bash
+# Network
+ping 10.0.0.42
+
+# ROS topics (inside Docker)
+docker exec -it nao6-hristudio-integration-nao_driver-1 ros2 topic list
+```
+
+### Direct Commands (inside Docker)
+```bash
+# Speech
+docker exec -it nao6-hristudio-integration-nao_driver-1 \
+  ros2 topic pub --once /speech std_msgs/String "{data: 'Hello'}"
+
+# Movement (robot must be awake!)
+docker exec -it nao6-hristudio-integration-nao_driver-1 \
+  ros2 topic pub --once /cmd_vel geometry_msgs/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}}"
+```
+
+### Robot Control via SSH
+```bash
+# SSH to robot
+sshpass -p "nao" ssh nao@10.0.0.42
+
+# Wake up
+qicli call ALMotion.wakeUp
+
+# Disable autonomous life
+qicli call ALAutonomousLife.setState disabled
+
+# Go to stand
+qicli call ALRobotPosture.goToPosture Stand 0.5
+```
 
 ## WebSocket
 
@@ -99,79 +103,76 @@ ros2 run rosbridge_server rosbridge_websocket
 }
 ```
 
-## More Information
+## Troubleshooting
 
-See **[nao6-hristudio-integration](../../nao6-hristudio-integration/)** repository for:
-- Complete installation guide
-- Detailed usage instructions
-- Full troubleshooting guide
-- Plugin definitions
-- Launch file configurations
+**Robot not moving:**
+- Check robot is awake: `qicli call ALMotion.isWakeUp` → returns `true`
+- If not: `qicli call ALMotion.wakeUp`
 
-## Common Use Cases
-
-### Make Robot Speak
+**WebSocket fails:**
 ```bash
-ros2 topic pub --once /speech std_msgs/String "data: 'Welcome to the experiment'"
+# Check rosbridge is running
+docker compose ps
+
+# View logs
+docker compose logs ros_bridge
 ```
 
-### Walk Forward 3 Steps
+**Connection issues:**
 ```bash
-ros2 topic pub --times 3 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'
+# Restart Docker
+docker compose down && docker compose up -d
+
+# Check robot IP in .env
+cat nao6-hristudio-integration/.env
 ```
 
-### Turn Head Left
-```bash
-ros2 topic pub --once /joint_angles naoqi_bridge_msgs/msg/JointAnglesWithSpeed '{joint_names: ["HeadYaw"], joint_angles: [0.8], speed: 0.2}'
-```
+## Environment Variables
 
-### Emergency Stop
-```bash
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'
+Create `nao6-hristudio-integration/.env`:
+```
+NAO_IP=10.0.0.42
+NAO_USERNAME=nao
+NAO_PASSWORD=nao
+BRIDGE_PORT=9090
 ```
 
 ## 🚨 Safety Notes
 
-- **Always wake up robot before movement commands**
-- **Keep emergency stop accessible**
+- **Always verify robot is awake before movement commands**
+- **Keep emergency stop accessible** (`qicli call ALMotion.rest()`)
 - **Start with small movements (0.05 m/s)**
-- **Monitor battery level during experiments**
+- **Monitor battery level**
 - **Ensure clear space around robot**
 
-## 📝 Credentials
+## Credentials
 
-**Default NAO Login:**
+**NAO Robot:**
+- IP: `10.0.0.42` (configurable)
 - Username: `nao`
-- Password: `robolab` (institution-specific)
+- Password: `nao`
 
-**HRIStudio Login:**
+**HRIStudio:**
 - Email: `sean@soconnor.dev`
 - Password: `password123`
 
-## 🔄 Complete Restart Procedure
+## Complete Restart
 
 ```bash
-# 1. Kill all processes
-sudo fuser -k 9090/tcp
-pkill -f "rosbridge\|naoqi\|ros2"
+# 1. Restart Docker integration
+cd ~/Documents/Projects/nao6-hristudio-integration
+docker compose down
+docker compose up -d
 
-# 2. Restart database
-sudo docker compose down && sudo docker compose up -d
+# 2. Verify robot is awake (check logs)
+docker compose logs nao_driver | grep -i "wake\|autonomous"
 
-# 3. Start ROS integration
-cd ~/naoqi_ros2_ws && source install/setup.bash
-ros2 launch install/nao_launch/share/nao_launch/launch/nao6_hristudio.launch.py nao_ip:=nao.local password:=robolab
-
-# 4. Wake up robot (in another terminal)
-sshpass -p "robolab" ssh nao@nao.local "python2 -c \"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; naoqi.ALProxy('ALMotion', '127.0.0.1', 9559).wakeUp()\""
-
-# 5. Start HRIStudio (in another terminal)
-cd /home/robolab/Documents/Projects/hristudio && bun dev
+# 3. Start HRIStudio
+cd ~/Documents/Projects/hristudio
+bun dev
 ```
 
 ---
 
-**📖 For detailed setup instructions, see:** [NAO6 Complete Integration Guide](./nao6-integration-complete-guide.md)
-
 **✅ Integration Status:** Production Ready  
-**🤖 Tested With:** NAO V6.0 / NAOqi 2.8.7.4 / ROS2 Humble
+**🤖 Tested With:** NAO V6 / ROS2 Humble / Docker
