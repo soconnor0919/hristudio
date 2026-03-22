@@ -20,6 +20,7 @@ import { PageHeader } from "~/components/ui/page-header";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { useSession } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
+import { AddMemberDialog } from "~/components/studies/add-member-dialog";
 
 interface StudyDetailPageProps {
   params: Promise<{
@@ -391,10 +392,12 @@ export default function StudyDetailPage({ params }: StudyDetailPageProps) {
             icon="Users"
             description={`${members.length} team member${members.length !== 1 ? "s" : ""}`}
             actions={
-              <Button variant="outline" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Invite
-              </Button>
+              <AddMemberDialog studyId={study.id}>
+                <Button variant="outline" size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Manage
+                </Button>
+              </AddMemberDialog>
             }
           >
             <div className="space-y-3">
