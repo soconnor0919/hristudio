@@ -64,16 +64,15 @@ bun dev
 
 ## Technology Stack
 
-- **Framework**: Next.js 15 with App Router and React 19 RC
+- **Framework**: Next.js 15 (16.x compatible) with App Router and React 19
 - **Language**: TypeScript (strict mode) - 100% type safety throughout
 - **Database**: PostgreSQL with Drizzle ORM for type-safe operations
-- **Authentication**: NextAuth.js v5 with database sessions and JWT
+- **Authentication**: Better Auth with database sessions
 - **API**: tRPC for end-to-end type-safe client-server communication
 - **UI**: Tailwind CSS + shadcn/ui (built on Radix UI primitives)
 - **Storage**: Cloudflare R2 (S3-compatible) for media files
-- **Deployment**: Vercel serverless platform with Edge Runtime
+- **Real-time**: WebSocket with polling fallback for trial execution
 - **Package Manager**: Bun exclusively
-- **Real-time**: WebSocket with Edge Runtime compatibility
 
 ## Architecture
 
@@ -203,14 +202,11 @@ src/
 
 Comprehensive documentation available in the `docs/` folder:
 
-- **[Quick Reference](docs/quick-reference.md)**: 5-minute setup guide and essential commands
-- **[Project Overview](docs/project-overview.md)**: Complete feature overview and architecture
-- **[Implementation Details](docs/implementation-details.md)**: Architecture decisions and patterns
-- **[Database Schema](docs/database-schema.md)**: Complete PostgreSQL schema documentation
-- **[API Routes](docs/api-routes.md)**: Comprehensive tRPC API reference
-- **[Core Blocks System](docs/core-blocks-system.md)**: Repository-based block architecture
-- **[Plugin System](docs/plugin-system-implementation-guide.md)**: Robot integration guide
-- **[Project Status](docs/project-status.md)**: Current completion status (98% complete)
+- **[Quick Reference](docs/quick-reference.md)**: Essential commands and setup
+- **[Implementation Guide](docs/implementation-guide.md)**: Technical implementation details
+- **[Project Status](docs/project-status.md)**: Current development state
+- **[NAO6 Integration](docs/nao6-quick-reference.md)**: Robot setup and commands
+- **[Archive](docs/_archive/)**: Historical documentation (outdated)
 
 ## Research Paper
 
@@ -234,19 +230,39 @@ Full paper available at: [docs/paper.md](docs/paper.md)
 - **4 User Roles**: Complete role-based access control
 - **Plugin System**: Extensible robot integration architecture
 - **Trial System**: Unified design with real-time execution capabilities
+- **WebSocket Ready**: Real-time trial updates with polling fallback
+- **Docker Integration**: NAO6 deployment via docker-compose
+- **Conditional Branching**: Experiment flow with wizard choices and convergence paths
 
 ## NAO6 Robot Integration
 
 Complete NAO6 robot integration is available in the separate **[nao6-hristudio-integration](../nao6-hristudio-integration/)** repository.
 
 ### Features
-- Complete ROS2 driver integration for NAO V6.0
+- Complete ROS2 Humble driver integration for NAO V6.0
+- Docker-based deployment with three services: nao_driver, ros_bridge, ros_api
 - WebSocket communication via rosbridge
-- 9 robot actions: speech, movement, gestures, sensors, LEDs
+- 14 robot actions: speech, movement, gestures, sensors, LEDs, animations
 - Real-time control from wizard interface
-- Production-ready with NAOqi 2.8.7.4
+- Production-ready with NAOqi 2.8.7.4, ROS2 Humble
 
-### Quick Start
+### Docker Deployment
+```bash
+# Start NAO integration
+cd nao6-hristudio-integration
+docker compose up -d
+
+# Start HRIStudio
+cd ~/Documents/Projects/hristudio
+bun dev
+
+# Access
+# - HRIStudio: http://localhost:3000
+# - Test page: http://localhost:3000/nao-test
+# - rosbridge: ws://localhost:9090
+```
+
+### Quick Start Commands
 ```bash
 # Start NAO integration
 cd ~/naoqi_ros2_ws

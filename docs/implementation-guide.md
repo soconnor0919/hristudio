@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides step-by-step technical instructions for implementing HRIStudio using the T3 stack with Next.js, tRPC, Drizzle ORM, NextAuth.js v5, and supporting infrastructure.
+This guide provides step-by-step technical instructions for implementing HRIStudio using the T3 stack with Next.js, tRPC, Drizzle ORM, Better Auth, and supporting infrastructure.
 
 ## Table of Contents
 
@@ -25,7 +25,14 @@ This guide provides step-by-step technical instructions for implementing HRIStud
 ### 1. Initialize Project
 
 ```bash
-# Create new Next.js project with T3 stack
+# Clone repository (includes robot-plugins as submodule)
+git clone https://github.com/soconnor0919/hristudio.git
+cd hristudio
+
+# Initialize submodules
+git submodule update --init --recursive
+
+# Or create from scratch with T3 stack:
 bunx create-t3-app@latest hristudio \
   --nextjs \
   --tailwind \

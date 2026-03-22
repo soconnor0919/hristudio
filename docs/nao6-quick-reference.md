@@ -27,9 +27,14 @@ bun dev
 
 | Service | Port | Description |
 |---------|------|-------------|
-| nao_driver | - | NAOqi driver node |
+| nao_driver | - | NAOqi driver + robot init |
 | ros_bridge | 9090 | WebSocket bridge |
 | ros_api | - | ROS API services |
+
+**Auto-initialization**: On Docker startup, `init_robot.sh` runs automatically via SSH to:
+- Wake up the robot (`ALMotion.wakeUp`)
+- Disable autonomous life (`ALAutonomousLife.setState disabled`)
+- Ensure robot is ready for commands
 
 ## ROS Topics
 
@@ -51,6 +56,21 @@ bun dev
 /sonar/{left,right}       - Ultrasonic sensors
 /info                     - Robot info
 ```
+
+## Robot Actions (HRIStudio)
+
+When actions are triggered via the wizard interface, they publish to these topics:
+
+| Action | Topic | Message Type |
+|--------|-------|--------------|
+| say | `/speech` | `std_msgs/String` |
+| say_with_emotion | `/speech` | `std_msgs/String` (with NAOqi markup) |
+| wave_goodbye | `/speech` | `std_msgs/String` + gesture |
+| walk | `/cmd_vel` | `geometry_msgs/Twist` |
+| turn | `/cmd_vel` | `geometry_msgs/Twist` |
+| move_to_posture | `/service/robot_pose` | `naoqi_bridge_msgs/SetRobotPose` |
+| play_animation | `/animation` | `std_msgs/String` |
+| set_eye_leds | `/leds/eyes` | `std_msgs/ColorRGBA` |
 
 ## Manual Control
 
