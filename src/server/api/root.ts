@@ -7,7 +7,7 @@ import { experimentsRouter } from "~/server/api/routers/experiments";
 import { filesRouter } from "~/server/api/routers/files";
 import { mediaRouter } from "~/server/api/routers/media";
 import { participantsRouter } from "~/server/api/routers/participants";
-import { robotsRouter } from "~/server/api/routers/robots";
+import { pluginsRouter } from "~/server/api/routers/plugins";
 import { studiesRouter } from "~/server/api/routers/studies";
 import { trialsRouter } from "~/server/api/routers/trials";
 import { usersRouter } from "~/server/api/routers/users";
@@ -26,9 +26,9 @@ export const appRouter = createTRPCRouter({
   experiments: experimentsRouter,
   participants: participantsRouter,
   trials: trialsRouter,
-  robots: robotsRouter,
   files: filesRouter,
   media: mediaRouter,
+  plugins: pluginsRouter,
   analytics: analyticsRouter,
   collaboration: collaborationRouter,
   admin: adminRouter,

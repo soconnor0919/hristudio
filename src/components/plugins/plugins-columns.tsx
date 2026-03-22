@@ -90,12 +90,12 @@ function PluginActionsCell({ plugin }: { plugin: Plugin }) {
   const { selectedStudyId } = useStudyContext();
   const utils = api.useUtils();
 
-  const uninstallMutation = api.robots.plugins.uninstall.useMutation({
+  const uninstallMutation = api.plugins.uninstall.useMutation({
     onSuccess: () => {
       toast.success("Plugin uninstalled successfully");
       // Invalidate plugin queries to refresh the UI
-      void utils.robots.plugins.getStudyPlugins.invalidate();
-      void utils.robots.plugins.list.invalidate();
+      void utils.studies.getStudyPlugins.invalidate();
+      void utils.plugins.list.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to uninstall plugin");

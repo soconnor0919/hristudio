@@ -841,6 +841,63 @@ export const studiesRouter = createTRPCRouter({
       };
     }),
 
+  getStudyPlugins: protectedProcedure
+    .input(
+      z.object({
+        studyId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { studyId } = input;
+      const userId = ctx.session.user.id;
+
+      // Check if user has access to this study (any role)
+      const membership = await ctx.db.query.studyMembers.findFirst({
+        where: and(
+          eq(studyMembers.studyId, studyId),
+          eq(studyMembers.userId, userId),
+        ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have access to this study",
+        });
+      }
+
+      const installedPlugins = await ctx.db
+        .select({
+          plugin: {
+            id: plugins.id,
+            robotId: plugins.robotId,
+            name: plugins.name,
+            version: plugins.version,
+            description: plugins.description,
+            author: plugins.author,
+            repositoryUrl: plugins.repositoryUrl,
+            trustLevel: plugins.trustLevel,
+            status: plugins.status,
+            actionDefinitions: plugins.actionDefinitions,
+            createdAt: plugins.createdAt,
+            updatedAt: plugins.updatedAt,
+            metadata: plugins.metadata,
+          },
+          installation: {
+            id: studyPlugins.id,
+            configuration: studyPlugins.configuration,
+            installedAt: studyPlugins.installedAt,
+            installedBy: studyPlugins.installedBy,
+          },
+        })
+        .from(studyPlugins)
+        .innerJoin(plugins, eq(studyPlugins.pluginId, plugins.id))
+        .where(eq(studyPlugins.studyId, studyId))
+        .orderBy(desc(studyPlugins.installedAt));
+
+      return installedPlugins;
+    }),
+
   // Plugin configuration management
   getPluginConfiguration: protectedProcedure
     .input(

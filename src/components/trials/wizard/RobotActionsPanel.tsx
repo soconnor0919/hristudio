@@ -182,7 +182,7 @@ export function RobotActionsPanel({
 
   // Get installed plugins for the study
   const { data: plugins = [], isLoading } =
-    api.robots.plugins.getStudyPlugins.useQuery({
+    api.studies.getStudyPlugins.useQuery({
       studyId,
     });
 

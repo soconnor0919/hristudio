@@ -197,22 +197,21 @@ export function PluginStoreBrowse() {
   ) as { data: Array<{ id: string; url: string; name: string }> | undefined };
 
   // Get installed plugins for current study
-  const { data: installedPlugins } =
-    api.robots.plugins.getStudyPlugins.useQuery(
-      {
-        studyId: selectedStudyId!,
-      },
-      {
-        enabled: !!selectedStudyId,
-        refetchOnWindowFocus: false,
-      },
-    );
+  const { data: installedPlugins } = api.studies.getStudyPlugins.useQuery(
+    {
+      studyId: selectedStudyId!,
+    },
+    {
+      enabled: !!selectedStudyId,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   const {
     data: availablePlugins,
     isLoading,
     error,
-  } = api.robots.plugins.list.useQuery(
+  } = api.plugins.list.useQuery(
     {
       status:
         statusFilter === "all"
@@ -228,12 +227,12 @@ export function PluginStoreBrowse() {
 
   const utils = api.useUtils();
 
-  const installPluginMutation = api.robots.plugins.install.useMutation({
+  const installPluginMutation = api.plugins.install.useMutation({
     onSuccess: () => {
       toast.success("Plugin installed successfully!");
       // Invalidate both plugin queries to refresh the UI
-      void utils.robots.plugins.list.invalidate();
-      void utils.robots.plugins.getStudyPlugins.invalidate();
+      void utils.plugins.list.invalidate();
+      void utils.studies.getStudyPlugins.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to install plugin");
@@ -430,7 +429,7 @@ export function PluginStoreBrowse() {
                 "An error occurred while loading the plugin store."}
             </p>
             <Button
-              onClick={() => void utils.robots.plugins.list.refetch()}
+              onClick={() => void utils.plugins.list.refetch()}
               variant="outline"
             >
               Try Again

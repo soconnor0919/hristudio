@@ -274,7 +274,7 @@ export function DesignerRoot({
     },
   });
 
-  const { data: studyPluginsRaw } = api.robots.plugins.getStudyPlugins.useQuery(
+  const { data: studyPluginsRaw } = api.studies.getStudyPlugins.useQuery(
     { studyId: experiment?.studyId ?? "" },
     { enabled: !!experiment?.studyId },
   );

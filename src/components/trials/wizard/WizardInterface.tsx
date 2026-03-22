@@ -167,19 +167,36 @@ export const WizardInterface = React.memo(function WizardInterface({
     },
   });
 
-  // Robot initialization mutation (for startup routine)
-  const initializeRobotMutation = api.robots.plugins.initialize.useMutation({
-    onSuccess: () => {
+  const [isInitializing, setIsInitializing] = useState(false);
+
+  const initializeRobot = async () => {
+    setIsInitializing(true);
+    try {
+      const response = await fetch("/api/robots/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "initialize",
+          studyId: trial?.experiment.studyId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to initialize robot");
+      }
+
       toast.success("Robot initialized", {
         description: "Autonomous Life disabled and robot awake.",
       });
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast.error("Robot initialization failed", {
         description: error.message,
       });
-    },
-  });
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   // Log robot action mutation (for client-side execution)
   const logRobotActionMutation = api.trials.logRobotAction.useMutation({
@@ -188,8 +205,34 @@ export const WizardInterface = React.memo(function WizardInterface({
     },
   });
 
-  const executeSystemActionMutation =
-    api.robots.plugins.executeSystemAction.useMutation();
+  const executeSystemAction = async (
+    actionId: string,
+    params?: Record<string, unknown>,
+  ) => {
+    setIsExecutingAction(true);
+    try {
+      const response = await fetch("/api/robots/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "executeSystemAction",
+          studyId: trial?.experiment.studyId,
+          parameters: { id: actionId, parameters: params },
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to execute action");
+      }
+
+      return { success: true };
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsExecutingAction(false);
+    }
+  };
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Map database step types to component step types
@@ -236,10 +279,7 @@ export const WizardInterface = React.memo(function WizardInterface({
     autoConnect: true,
     onSystemAction: async (actionId, parameters) => {
       console.log(`[Wizard] Executing system action: ${actionId}`, parameters);
-      await executeSystemActionMutation.mutateAsync({
-        id: actionId,
-        parameters,
-      });
+      await executeSystemAction(actionId, parameters);
     },
   });
 
@@ -549,7 +589,7 @@ export const WizardInterface = React.memo(function WizardInterface({
           "[WizardInterface] Triggering robot initialization:",
           trial.experiment.robotId,
         );
-        initializeRobotMutation.mutate({ id: trial.experiment.robotId });
+        await initializeRobot();
       }
 
       toast.success("Trial started successfully");

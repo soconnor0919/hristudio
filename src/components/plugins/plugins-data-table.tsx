@@ -28,7 +28,7 @@ export function PluginsDataTable() {
     isLoading,
     error,
     refetch,
-  } = api.robots.plugins.getStudyPlugins.useQuery(
+  } = api.studies.getStudyPlugins.useQuery(
     {
       studyId: selectedStudyId!,
     },

@@ -42,7 +42,7 @@ async function main() {
     return;
   }
 
-  const result = await caller.experiments.get({ id: exp.id });
+  const result = await caller.experiments!.get({ id: exp.id });
 
   console.log(`✅ Fetched experiment: ${result.name} (${result.id})`);
 

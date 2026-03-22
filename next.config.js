@@ -5,6 +5,9 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const nextConfig = {
+  // Mark server-only packages as external to prevent bundling in client
+  serverExternalPackages: ["postgres", "minio", "child_process"],
+};
 
-export default config;
+export default nextConfig;

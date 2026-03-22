@@ -8,6 +8,9 @@ import type {
 } from "~/lib/experiment-designer/types";
 import { api } from "~/trpc/server";
 import { DesignerPageClient } from "./DesignerPageClient";
+import { db } from "~/server/db";
+import { studyPlugins, plugins } from "~/server/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 interface ExperimentDesignerPageProps {
   params: Promise<{
@@ -74,10 +77,20 @@ export default async function ExperimentDesignerPage({
             actionDefinitions: Array<{ id: string }> | null;
           };
         };
-        const rawInstalledPluginsUnknown: unknown =
-          await api.robots.plugins.getStudyPlugins({
-            studyId: experiment.study.id,
-          });
+        const installedPluginsResult = await db
+          .select({
+            plugin: {
+              id: plugins.id,
+              name: plugins.name,
+              version: plugins.version,
+              actionDefinitions: plugins.actionDefinitions,
+            },
+          })
+          .from(studyPlugins)
+          .innerJoin(plugins, eq(studyPlugins.pluginId, plugins.id))
+          .where(eq(studyPlugins.studyId, experiment.study.id))
+          .orderBy(desc(studyPlugins.installedAt));
+        const rawInstalledPluginsUnknown = installedPluginsResult;
 
         function asRecord(v: unknown): Record<string, unknown> | null {
           return v && typeof v === "object"
