@@ -608,6 +608,7 @@ export const plugins = createTable(
     robotId: uuid("robot_id").references(() => robots.id, {
       onDelete: "cascade",
     }),
+    identifier: varchar("identifier", { length: 100 }).notNull().unique(),
     name: varchar("name", { length: 255 }).notNull(),
     version: varchar("version", { length: 50 }).notNull(),
     description: text("description"),

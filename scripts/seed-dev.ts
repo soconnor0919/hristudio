@@ -159,6 +159,7 @@ async function main() {
       .insert(schema.plugins)
       .values({
         robotId: naoRobot!.id,
+        identifier: NAO_PLUGIN_DEF.robotId,
         name: NAO_PLUGIN_DEF.name,
         version: NAO_PLUGIN_DEF.version,
         description: NAO_PLUGIN_DEF.description,

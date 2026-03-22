@@ -653,20 +653,37 @@ export class TrialExecutionEngine {
           pluginName,
         );
 
-      const query = isUuid
-        ? eq(plugins.id, pluginName)
-        : eq(plugins.name, pluginName);
-
-      const [plugin] = await this.db
-        .select()
-        .from(plugins)
-        .where(query)
-        .limit(1);
+      let plugin;
+      if (isUuid) {
+        const [result] = await this.db
+          .select()
+          .from(plugins)
+          .where(eq(plugins.id, pluginName))
+          .limit(1);
+        plugin = result;
+      } else {
+        // Look up by identifier first (e.g., "nao6-ros2"), then fall back to name
+        const [byIdentifier] = await this.db
+          .select()
+          .from(plugins)
+          .where(eq(plugins.identifier, pluginName))
+          .limit(1);
+        
+        if (byIdentifier) {
+          plugin = byIdentifier;
+        } else {
+          const [byName] = await this.db
+            .select()
+            .from(plugins)
+            .where(eq(plugins.name, pluginName))
+            .limit(1);
+          plugin = byName;
+        }
+      }
 
       if (plugin) {
         // Cache the plugin definition
-        // Use the actual name for cache key if we looked up by ID
-        const cacheKey = isUuid ? plugin.name : pluginName;
+        const cacheKey = isUuid ? plugin.id : plugin.identifier;
 
         const pluginData = {
           ...plugin,
@@ -676,9 +693,12 @@ export class TrialExecutionEngine {
         };
 
         this.pluginCache.set(cacheKey, pluginData);
-        // Also cache by ID if accessible
+        // Also cache by ID and identifier
         if (plugin.id) {
           this.pluginCache.set(plugin.id, pluginData);
+        }
+        if (plugin.identifier) {
+          this.pluginCache.set(plugin.identifier, pluginData);
         }
 
         return pluginData;
