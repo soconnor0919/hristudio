@@ -13,7 +13,6 @@ import {
   FileQuestion,
   FileSignature,
   MoreHorizontal,
-  Pencil,
   Trash2,
   Eye,
   CheckCircle,
@@ -40,9 +39,11 @@ const formTypeIcons = {
 };
 
 const formTypeColors = {
-  consent: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  consent:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   survey: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  questionnaire: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  questionnaire:
+    "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
 };
 
 interface StudyFormsPageProps {
@@ -55,7 +56,9 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const utils = api.useUtils();
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -134,10 +137,11 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
 
       {forms.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Forms Yet</h3>
+          <FileText className="text-muted-foreground mb-4 h-12 w-12" />
+          <h3 className="mb-2 text-lg font-semibold">No Forms Yet</h3>
           <p className="text-muted-foreground mb-4">
-            Create consent forms, surveys, or questionnaires to collect data from participants
+            Create consent forms, surveys, or questionnaires to collect data
+            from participants
           </p>
           {canManage && (
             <Button asChild>
@@ -151,8 +155,8 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative max-w-sm flex-1">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Search forms..."
                 value={search}
@@ -164,8 +168,12 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {forms.map((form) => {
-              const TypeIcon = formTypeIcons[form.type as keyof typeof formTypeIcons] || FileText;
-              const typeColor = formTypeColors[form.type as keyof typeof formTypeColors] || "bg-gray-100";
+              const TypeIcon =
+                formTypeIcons[form.type as keyof typeof formTypeIcons] ||
+                FileText;
+              const typeColor =
+                formTypeColors[form.type as keyof typeof formTypeColors] ||
+                "bg-gray-100";
               const isActive = form.active;
 
               return (
@@ -177,7 +185,9 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
                           <TypeIcon className="h-4 w-4" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">{form.title}</CardTitle>
+                          <CardTitle className="text-base">
+                            {form.title}
+                          </CardTitle>
                           <p className="text-muted-foreground text-xs capitalize">
                             {form.type}
                           </p>
@@ -192,18 +202,22 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
                   </CardHeader>
                   <CardContent className="pb-3">
                     {form.description && (
-                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                      <p className="text-muted-foreground mb-3 line-clamp-2 text-sm">
                         {form.description}
                       </p>
                     )}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center justify-between text-xs">
                       <span>v{form.version}</span>
-                      <span>{(form as any)._count?.responses ?? 0} responses</span>
+                      <span>
+                        {(form as any)._count?.responses ?? 0} responses
+                      </span>
                     </div>
                   </CardContent>
-                  <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2">
+                  <div className="bg-muted/30 flex items-center justify-between border-t px-4 py-2">
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/studies/${resolvedParams?.id}/forms/${form.id}`}>
+                      <Link
+                        href={`/studies/${resolvedParams?.id}/forms/${form.id}`}
+                      >
                         <Eye className="mr-1 h-3 w-3" />
                         View
                       </Link>
@@ -216,15 +230,11 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/studies/${resolvedParams?.id}/forms/${form.id}/edit`}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
                           {!isActive && (
                             <DropdownMenuItem
-                              onClick={() => setActiveMutation.mutate({ id: form.id })}
+                              onClick={() =>
+                                setActiveMutation.mutate({ id: form.id })
+                              }
                             >
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Set Active
@@ -232,7 +242,11 @@ export default function StudyFormsPage({ params }: StudyFormsPageProps) {
                           )}
                           <DropdownMenuItem
                             onClick={() => {
-                              if (confirm("Are you sure you want to delete this form?")) {
+                              if (
+                                confirm(
+                                  "Are you sure you want to delete this form?",
+                                )
+                              ) {
                                 deleteMutation.mutate({ id: form.id });
                               }
                             }}

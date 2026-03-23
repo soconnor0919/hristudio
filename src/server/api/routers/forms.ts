@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import {
   activityLogs,
   formResponses,
@@ -11,6 +15,7 @@ import {
   formFieldTypeEnum,
   participants,
   studyMembers,
+  studies,
   userSystemRoles,
 } from "~/server/db/schema";
 
@@ -60,7 +65,7 @@ async function checkStudyAccess(
 
 export const formsRouter = createTRPCRouter({
   list: protectedProcedure
-      .input(
+    .input(
       z.object({
         studyId: z.string().uuid(),
         type: z.enum(formTypes).optional(),
@@ -116,8 +121,11 @@ export const formsRouter = createTRPCRouter({
             .select({ count: count() })
             .from(formResponses)
             .where(eq(formResponses.formId, form.id));
-          return { ...form, _count: { responses: responseCount[0]?.count ?? 0 } };
-        })
+          return {
+            ...form,
+            _count: { responses: responseCount[0]?.count ?? 0 },
+          };
+        }),
       );
 
       return {
@@ -178,16 +186,18 @@ export const formsRouter = createTRPCRouter({
         type: z.enum(formTypes),
         title: z.string().min(1).max(255),
         description: z.string().optional(),
-        fields: z.array(
-          z.object({
-            id: z.string(),
-            type: z.string(),
-            label: z.string(),
-            required: z.boolean().default(false),
-            options: z.array(z.string()).optional(),
-            settings: z.record(z.string(), z.any()).optional(),
-          }),
-        ).default([]),
+        fields: z
+          .array(
+            z.object({
+              id: z.string(),
+              type: z.string(),
+              label: z.string(),
+              required: z.boolean().default(false),
+              options: z.array(z.string()).optional(),
+              settings: z.record(z.string(), z.any()).optional(),
+            }),
+          )
+          .default([]),
         settings: z.record(z.string(), z.any()).optional(),
         isTemplate: z.boolean().optional(),
         templateName: z.string().max(100).optional(),
@@ -195,7 +205,7 @@ export const formsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { isTemplate, templateName, ...formData } = input;
-      
+
       if (isTemplate && !templateName) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -248,16 +258,18 @@ export const formsRouter = createTRPCRouter({
         id: z.string().uuid(),
         title: z.string().min(1).max(255).optional(),
         description: z.string().optional(),
-        fields: z.array(
-          z.object({
-            id: z.string(),
-            type: z.string(),
-            label: z.string(),
-            required: z.boolean().default(false),
-            options: z.array(z.string()).optional(),
-            settings: z.record(z.string(), z.any()).optional(),
-          }),
-        ).optional(),
+        fields: z
+          .array(
+            z.object({
+              id: z.string(),
+              type: z.string(),
+              label: z.string(),
+              required: z.boolean().default(false),
+              options: z.array(z.string()).optional(),
+              settings: z.record(z.string(), z.any()).optional(),
+            }),
+          )
+          .optional(),
         settings: z.record(z.string(), z.any()).optional(),
       }),
     )
@@ -275,10 +287,12 @@ export const formsRouter = createTRPCRouter({
         });
       }
 
-      await checkStudyAccess(ctx.db, ctx.session.user.id, existingForm.studyId, [
-        "owner",
-        "researcher",
-      ]);
+      await checkStudyAccess(
+        ctx.db,
+        ctx.session.user.id,
+        existingForm.studyId,
+        ["owner", "researcher"],
+      );
 
       const [updatedForm] = await ctx.db
         .update(forms)
@@ -407,10 +421,12 @@ export const formsRouter = createTRPCRouter({
         });
       }
 
-      await checkStudyAccess(ctx.db, ctx.session.user.id, existingForm.studyId, [
-        "owner",
-        "researcher",
-      ]);
+      await checkStudyAccess(
+        ctx.db,
+        ctx.session.user.id,
+        existingForm.studyId,
+        ["owner", "researcher"],
+      );
 
       const latestForm = await ctx.db.query.forms.findFirst({
         where: eq(forms.studyId, existingForm.studyId),
@@ -517,6 +533,81 @@ export const formsRouter = createTRPCRouter({
       };
     }),
 
+  exportCsv: protectedProcedure
+    .input(z.object({ formId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const form = await ctx.db.query.forms.findFirst({
+        where: eq(forms.id, input.formId),
+      });
+
+      if (!form) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Form not found",
+        });
+      }
+
+      await checkStudyAccess(ctx.db, ctx.session.user.id, form.studyId);
+
+      const responses = await ctx.db.query.formResponses.findMany({
+        where: eq(formResponses.formId, input.formId),
+        with: {
+          participant: {
+            columns: {
+              id: true,
+              participantCode: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: [desc(formResponses.submittedAt)],
+      });
+
+      const fields = form.fields as Array<{
+        id: string;
+        label: string;
+        type: string;
+      }>;
+      const headers = [
+        "Participant Code",
+        "Name",
+        "Email",
+        "Status",
+        "Submitted At",
+        ...fields.map((f) => f.label),
+      ];
+
+      const rows = responses.map((r) => {
+        const participantResponses = r.responses as Record<string, any>;
+        return [
+          r.participant?.participantCode ?? "",
+          r.participant?.name ?? "",
+          r.participant?.email ?? "",
+          r.status,
+          r.submittedAt?.toISOString() ?? "",
+          ...fields.map((f) => {
+            const val = participantResponses[f.id];
+            if (val === undefined || val === null) return "";
+            if (typeof val === "boolean") return val ? "Yes" : "No";
+            return String(val);
+          }),
+        ];
+      });
+
+      const escape = (s: string | null | undefined) =>
+        `"${String(s ?? "").replace(/"/g, '""')}"`;
+      const csv = [
+        headers.map((h) => escape(h)).join(","),
+        ...rows.map((row) => row.map((cell) => escape(cell)).join(",")),
+      ].join("\n");
+
+      return {
+        csv,
+        filename: `${form.title.replace(/\s+/g, "_")}_responses.csv`,
+      };
+    }),
+
   submitResponse: protectedProcedure
     .input(
       z.object({
@@ -596,22 +687,24 @@ export const formsRouter = createTRPCRouter({
             .select({ count: count() })
             .from(formResponses)
             .where(eq(formResponses.formId, form.id));
-          return { ...form, _count: { responses: responseCount[0]?.count ?? 0 } };
-        })
+          return {
+            ...form,
+            _count: { responses: responseCount[0]?.count ?? 0 },
+          };
+        }),
       );
 
       return formsWithCounts;
     }),
 
-  listTemplates: protectedProcedure
-    .query(async ({ ctx }) => {
-      const templates = await ctx.db.query.forms.findMany({
-        where: eq(forms.isTemplate, true),
-        orderBy: [desc(forms.updatedAt)],
-      });
+  listTemplates: protectedProcedure.query(async ({ ctx }) => {
+    const templates = await ctx.db.query.forms.findMany({
+      where: eq(forms.isTemplate, true),
+      orderBy: [desc(forms.updatedAt)],
+    });
 
-      return templates;
-    }),
+    return templates;
+  }),
 
   createFromTemplate: protectedProcedure
     .input(
@@ -628,10 +721,7 @@ export const formsRouter = createTRPCRouter({
       ]);
 
       const template = await ctx.db.query.forms.findFirst({
-        where: and(
-          eq(forms.id, input.templateId),
-          eq(forms.isTemplate, true),
-        ),
+        where: and(eq(forms.id, input.templateId), eq(forms.isTemplate, true)),
       });
 
       if (!template) {
@@ -672,5 +762,102 @@ export const formsRouter = createTRPCRouter({
       });
 
       return newForm;
+    }),
+
+  getPublic: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const form = await ctx.db.query.forms.findFirst({
+        where: and(eq(forms.id, input.id), eq(forms.active, true)),
+        columns: {
+          id: true,
+          studyId: true,
+          type: true,
+          title: true,
+          description: true,
+          version: true,
+          fields: true,
+          settings: true,
+        },
+      });
+
+      if (!form) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Form not found or not active",
+        });
+      }
+
+      const study = await ctx.db.query.studies.findFirst({
+        where: eq(studies.id, form.studyId),
+        columns: {
+          name: true,
+        },
+      });
+
+      return { ...form, studyName: study?.name };
+    }),
+
+  submitPublic: publicProcedure
+    .input(
+      z.object({
+        formId: z.string().uuid(),
+        participantCode: z.string().min(1).max(100),
+        responses: z.record(z.string(), z.any()),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { formId, participantCode, responses } = input;
+
+      const form = await ctx.db.query.forms.findFirst({
+        where: and(eq(forms.id, formId), eq(forms.active, true)),
+      });
+
+      if (!form) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Form not found or not active",
+        });
+      }
+
+      const participant = await ctx.db.query.participants.findFirst({
+        where: and(
+          eq(participants.studyId, form.studyId),
+          eq(participants.participantCode, participantCode),
+        ),
+      });
+
+      if (!participant) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid participant code",
+        });
+      }
+
+      const existingResponse = await ctx.db.query.formResponses.findFirst({
+        where: and(
+          eq(formResponses.formId, formId),
+          eq(formResponses.participantId, participant.id),
+        ),
+      });
+
+      if (existingResponse) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "You have already submitted this form",
+        });
+      }
+
+      const [newResponse] = await ctx.db
+        .insert(formResponses)
+        .values({
+          formId,
+          participantId: participant.id,
+          responses,
+          status: "completed",
+        })
+        .returning();
+
+      return newResponse;
     }),
 });
