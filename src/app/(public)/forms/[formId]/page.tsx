@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   FileText,
@@ -22,18 +22,10 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-
-interface Field {
-  id: string;
-  type: string;
-  label: string;
-  required: boolean;
-  options?: string[];
-  settings?: Record<string, any>;
-}
+import type { FormField } from "~/lib/types/forms";
+import { FormFieldRenderer } from "~/components/forms/FormFieldRenderer";
 
 const formTypeIcons = {
   consent: FileSignature,
@@ -47,7 +39,7 @@ export default function ParticipantFormPage() {
   const formId = params.formId as string;
 
   const [participantCode, setParticipantCode] = useState("");
-  const [formResponses, setFormResponses] = useState<Record<string, any>>({});
+  const [formResponses, setFormResponses] = useState<Record<string, unknown>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -113,7 +105,7 @@ export default function ParticipantFormPage() {
 
   const TypeIcon =
     formTypeIcons[form.type as keyof typeof formTypeIcons] || FileText;
-  const fields = (form.fields as Field[]) || [];
+  const fields = (form.fields as FormField[]) || [];
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -158,7 +150,7 @@ export default function ParticipantFormPage() {
     });
   };
 
-  const updateResponse = (fieldId: string, value: any) => {
+  const updateResponse = (fieldId: string, value: unknown) => {
     setFormResponses({ ...formResponses, [fieldId]: value });
     if (fieldErrors[fieldId]) {
       const newErrors = { ...fieldErrors };
@@ -217,175 +209,21 @@ export default function ParticipantFormPage() {
               <div className="border-t pt-6">
                 {fields.map((field, index) => (
                   <div key={field.id} className="mb-6 last:mb-0">
-                    <Label
-                      htmlFor={field.id}
-                      className={
-                        fieldErrors[field.id] ? "text-destructive" : ""
-                      }
-                    >
-                      {index + 1}. {field.label}
-                      {field.required && (
-                        <span className="text-destructive"> *</span>
-                      )}
-                    </Label>
+                    <FormFieldLabel
+                      field={field}
+                      index={index}
+                      showIndex
+                    />
 
                     <div className="mt-2">
-                      {field.type === "text" && (
-                        <Input
-                          id={field.id}
-                          value={formResponses[field.id] || ""}
-                          onChange={(e) =>
-                            updateResponse(field.id, e.target.value)
-                          }
-                          placeholder="Enter your response..."
-                          className={
-                            fieldErrors[field.id] ? "border-destructive" : ""
-                          }
-                        />
-                      )}
-
-                      {field.type === "textarea" && (
-                        <Textarea
-                          id={field.id}
-                          value={formResponses[field.id] || ""}
-                          onChange={(e) =>
-                            updateResponse(field.id, e.target.value)
-                          }
-                          placeholder="Enter your response..."
-                          className={
-                            fieldErrors[field.id] ? "border-destructive" : ""
-                          }
-                        />
-                      )}
-
-                      {field.type === "multiple_choice" && (
-                        <div
-                          className={`mt-2 space-y-2 ${fieldErrors[field.id] ? "border-destructive rounded-md border p-2" : ""}`}
-                        >
-                          {field.options?.map((opt, i) => (
-                            <label
-                              key={i}
-                              className="flex cursor-pointer items-center gap-2"
-                            >
-                              <input
-                                type="radio"
-                                name={field.id}
-                                value={opt}
-                                checked={formResponses[field.id] === opt}
-                                onChange={() => updateResponse(field.id, opt)}
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm">{opt}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-
-                      {field.type === "checkbox" && (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id={field.id}
-                            checked={formResponses[field.id] || false}
-                            onChange={(e) =>
-                              updateResponse(field.id, e.target.checked)
-                            }
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <Label
-                            htmlFor={field.id}
-                            className="cursor-pointer font-normal"
-                          >
-                            Yes, I agree
-                          </Label>
-                        </div>
-                      )}
-
-                      {field.type === "yes_no" && (
-                        <div className="mt-2 flex gap-4">
-                          <label className="flex cursor-pointer items-center gap-2">
-                            <input
-                              type="radio"
-                              name={field.id}
-                              value="yes"
-                              checked={formResponses[field.id] === "yes"}
-                              onChange={() => updateResponse(field.id, "yes")}
-                              className="h-4 w-4"
-                            />
-                            <span className="text-sm">Yes</span>
-                          </label>
-                          <label className="flex cursor-pointer items-center gap-2">
-                            <input
-                              type="radio"
-                              name={field.id}
-                              value="no"
-                              checked={formResponses[field.id] === "no"}
-                              onChange={() => updateResponse(field.id, "no")}
-                              className="h-4 w-4"
-                            />
-                            <span className="text-sm">No</span>
-                          </label>
-                        </div>
-                      )}
-
-                      {field.type === "rating" && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {Array.from(
-                            { length: field.settings?.scale || 5 },
-                            (_, i) => (
-                              <label key={i} className="cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={field.id}
-                                  value={String(i + 1)}
-                                  checked={formResponses[field.id] === i + 1}
-                                  onChange={() =>
-                                    updateResponse(field.id, i + 1)
-                                  }
-                                  className="peer sr-only"
-                                />
-                                <span className="hover:bg-muted peer-checked:bg-primary peer-checked:text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full border text-sm font-medium transition-colors">
-                                  {i + 1}
-                                </span>
-                              </label>
-                            ),
-                          )}
-                        </div>
-                      )}
-
-                      {field.type === "date" && (
-                        <Input
-                          type="date"
-                          id={field.id}
-                          value={formResponses[field.id] || ""}
-                          onChange={(e) =>
-                            updateResponse(field.id, e.target.value)
-                          }
-                          className={
-                            fieldErrors[field.id] ? "border-destructive" : ""
-                          }
-                        />
-                      )}
-
-                      {field.type === "signature" && (
-                        <div className="space-y-2">
-                          <Input
-                            id={field.id}
-                            value={formResponses[field.id] || ""}
-                            onChange={(e) =>
-                              updateResponse(field.id, e.target.value)
-                            }
-                            placeholder="Type your full name as signature"
-                            className={
-                              fieldErrors[field.id] ? "border-destructive" : ""
-                            }
-                          />
-                          <p className="text-muted-foreground text-xs">
-                            By entering your name above, you confirm that the
-                            information provided is accurate.
-                          </p>
-                        </div>
-                      )}
+                      <FormFieldRenderer
+                        field={field}
+                        value={formResponses[field.id]}
+                        onChange={(val) => updateResponse(field.id, val)}
+                        mode="participant"
+                        index={index}
+                        error={fieldErrors[field.id]}
+                      />
                     </div>
 
                     {fieldErrors[field.id] && (
@@ -426,5 +264,27 @@ export default function ParticipantFormPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+function FormFieldLabel({
+  field,
+  index,
+  showIndex = true,
+  error,
+}: {
+  field: FormField;
+  index: number;
+  showIndex?: boolean;
+  error?: string;
+}) {
+  return (
+    <Label
+      className={error ? "text-destructive" : ""}
+    >
+      {showIndex && `${index + 1}. `}
+      {field.label}
+      {field.required && <span className="text-destructive"> *</span>}
+    </Label>
   );
 }

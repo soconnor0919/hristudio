@@ -24,6 +24,7 @@ type TourType =
 
 interface TourContextType {
   startTour: (tour: TourType) => void;
+  stopTour: () => void;
   isTourActive: boolean;
 }
 
@@ -354,7 +355,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         },
       })),
       onDestroyed: () => {
-        // Persistence handled by localStorage state
+        localStorage.removeItem("hristudio_tour_mode");
+        Cookies.remove("hristudio_tour_mode");
         setIsTourActive(false);
       },
     });
@@ -389,8 +391,18 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const stopTour = () => {
+    localStorage.removeItem("hristudio_tour_mode");
+    Cookies.remove("hristudio_tour_mode");
+    if (driverObj.current) {
+      driverObj.current.destroy();
+      driverObj.current = null;
+    }
+    setIsTourActive(false);
+  };
+
   return (
-    <TourContext.Provider value={{ startTour, isTourActive }}>
+    <TourContext.Provider value={{ startTour, stopTour, isTourActive }}>
       {children}
       <style jsx global>{`
         /* 

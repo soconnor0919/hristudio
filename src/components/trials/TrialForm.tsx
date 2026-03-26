@@ -137,7 +137,7 @@ const trialSchema = z.object({
   experimentId: z.string().uuid("Please select an experiment"),
   participantId: z.string().uuid("Please select a participant"),
   scheduledAt: z.date(),
-  wizardId: z.string().uuid().optional(),
+  wizardId: z.string().uuid().optional().or(z.literal("")),
   notes: z.string().max(1000, "Notes cannot exceed 1000 characters").optional(),
   sessionNumber: z
     .number()
@@ -269,8 +269,18 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     }
   }, [trial, mode, form]);
 
-  const createTrialMutation = api.trials.create.useMutation();
-  const updateTrialMutation = api.trials.update.useMutation();
+  const createTrialMutation = api.trials.create.useMutation({
+    onError: (error) => {
+      console.error("Create trial error:", error);
+      setError(error.message);
+    },
+  });
+  const updateTrialMutation = api.trials.update.useMutation({
+    onError: (error) => {
+      console.error("Update trial error:", error);
+      setError(error.message);
+    },
+  });
 
   // Form submission
   const onSubmit = async (data: TrialFormData) => {
@@ -283,7 +293,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
           experimentId: data.experimentId,
           participantId: data.participantId,
           scheduledAt: data.scheduledAt,
-          wizardId: data.wizardId,
+          wizardId: data.wizardId || undefined,
           sessionNumber: data.sessionNumber ?? 1,
           notes: data.notes ?? undefined,
         });

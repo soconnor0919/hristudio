@@ -20,17 +20,16 @@ import {
   Users,
   CheckCircle,
   Printer,
-  Download,
   Pencil,
   X,
   FileDown,
 } from "lucide-react";
+import { Textarea } from "~/components/ui/textarea";
 import { useBreadcrumbsEffect } from "~/components/ui/breadcrumb-provider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -42,37 +41,16 @@ import { Badge } from "~/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-
-interface Field {
-  id: string;
-  type: string;
-  label: string;
-  required: boolean;
-  options?: string[];
-  settings?: Record<string, any>;
-}
-
-const fieldTypes = [
-  { value: "text", label: "Text (short)", icon: "📝" },
-  { value: "textarea", label: "Text (long)", icon: "📄" },
-  { value: "multiple_choice", label: "Multiple Choice", icon: "☑️" },
-  { value: "checkbox", label: "Checkbox", icon: "✅" },
-  { value: "rating", label: "Rating Scale", icon: "⭐" },
-  { value: "yes_no", label: "Yes/No", icon: "✔️" },
-  { value: "date", label: "Date", icon: "📅" },
-  { value: "signature", label: "Signature", icon: "✍️" },
-];
+import type { FormField, FormFieldType } from "~/lib/types/forms";
+import { FORM_FIELD_TYPES } from "~/lib/types/forms";
+import { formStatusColors } from "~/lib/constants";
+import { FormBuilder } from "~/components/forms/FormBuilder";
+import { FormFieldRenderer } from "~/components/forms/FormFieldRenderer";
 
 const formTypeIcons = {
   consent: FileSignature,
   survey: ClipboardList,
   questionnaire: FileQuestion,
-};
-
-const statusColors = {
-  pending: "bg-yellow-100 text-yellow-700",
-  completed: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
 };
 
 interface FormViewPageProps {
@@ -99,7 +77,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [fields, setFields] = useState<Field[]>([]);
+  const [fields, setFields] = useState<FormField[]>([]);
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -213,7 +191,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
               '<div style="margin-top: 4px;"><input type="radio" name="yn" /> Yes &nbsp; <input type="radio" name="yn" /> No</div>';
             break;
           case "rating":
-            const scale = field.settings?.scale || 5;
+            const scale = (field.settings?.scale as number) || 5;
             inputField = `<div style="margin-top: 4px;">${Array.from(
               { length: scale },
               (_, i) => `<input type="radio" name="rating" /> ${i + 1} `,
@@ -284,7 +262,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
     if (form) {
       setTitle(form.title);
       setDescription(form.description || "");
-      setFields((form.fields as Field[]) || []);
+      setFields((form.fields as FormField[]) || []);
     }
   }, [form]);
 
@@ -307,10 +285,10 @@ export default function FormViewPage({ params }: FormViewPageProps) {
   const responses = responsesData?.responses ?? [];
 
   const addField = (type: string) => {
-    const newField: Field = {
+    const newField: FormField = {
       id: crypto.randomUUID(),
-      type,
-      label: `New ${fieldTypes.find((f) => f.value === type)?.label || "Field"}`,
+      type: type as FormFieldType,
+      label: `New ${FORM_FIELD_TYPES.find((f) => f.value === type)?.label || "Field"}`,
       required: false,
       options:
         type === "multiple_choice" ? ["Option 1", "Option 2"] : undefined,
@@ -322,7 +300,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
     setFields(fields.filter((f) => f.id !== id));
   };
 
-  const updateField = (id: string, updates: Partial<Field>) => {
+  const updateField = (id: string, updates: Partial<FormField>) => {
     setFields(fields.map((f) => (f.id === id ? { ...f, ...updates } : f)));
   };
 
@@ -332,7 +310,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
       title,
       description,
       fields,
-      settings: form.settings as Record<string, any>,
+      settings: form.settings as Record<string, unknown>,
     });
   };
 
@@ -415,7 +393,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                     <SelectValue placeholder="Add field..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {fieldTypes.map((type) => (
+                    {FORM_FIELD_TYPES.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         <span className="mr-2">{type.icon}</span>
                         {type.label}
@@ -444,11 +422,11 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           <div className="flex items-center gap-3">
                             <Badge variant="outline" className="text-xs">
                               {
-                                fieldTypes.find((f) => f.value === field.type)
+                                FORM_FIELD_TYPES.find((f) => f.value === field.type)
                                   ?.icon
                               }{" "}
                               {
-                                fieldTypes.find((f) => f.value === field.type)
+                                FORM_FIELD_TYPES.find((f) => f.value === field.type)
                                   ?.label
                               }
                             </Badge>
@@ -569,7 +547,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           <p className="font-medium">{field.label}</p>
                           <p className="text-muted-foreground text-xs">
                             {
-                              fieldTypes.find((f) => f.value === field.type)
+                              FORM_FIELD_TYPES.find((f) => f.value === field.type)
                                 ?.label
                             }
                             {field.required && " • Required"}
@@ -646,7 +624,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                       {field.type === "rating" && (
                         <div className="flex gap-2">
                           {Array.from(
-                            { length: field.settings?.scale || 5 },
+                            { length: (field.settings?.scale as number) || 5 },
                             (_, i) => (
                               <button
                                 key={i}
@@ -831,7 +809,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                               </SelectTrigger>
                               <SelectContent>
                                 {Array.from(
-                                  { length: field.settings?.scale || 5 },
+                                  { length: (field.settings?.scale as number) || 5 },
                                   (_, i) => (
                                     <SelectItem key={i} value={String(i + 1)}>
                                       {i + 1}
@@ -948,7 +926,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           </span>
                         </div>
                         <Badge
-                          className={`text-xs ${statusColors[response.status as keyof typeof statusColors]}`}
+                          className={`text-xs ${formStatusColors[response.status as keyof typeof formStatusColors]}`}
                         >
                           {response.status}
                         </Badge>

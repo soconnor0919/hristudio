@@ -153,7 +153,13 @@ export function EntityForm<T extends FieldValues = FieldValues>({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e).catch((err) => console.error("handleSubmit error:", err));
+                }}
+                className="space-y-6"
+              >
                 {/* Form Fields */}
                 {children}
 

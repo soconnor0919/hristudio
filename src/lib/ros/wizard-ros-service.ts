@@ -464,6 +464,7 @@ export class WizardRosService extends EventEmitter {
    * Subscribe to robot sensor topics
    */
   private subscribeToRobotTopics(): void {
+    console.log("[WizardROS] Setting up robot topics...");
     const topics = [
       { topic: "/joint_states", type: "sensor_msgs/JointState" },
       { topic: "/bumper", type: "naoqi_bridge_msgs/Bumper" },
@@ -476,6 +477,11 @@ export class WizardRosService extends EventEmitter {
     topics.forEach(({ topic, type }) => {
       this.subscribe(topic, type);
     });
+
+    this.advertise("/speech", "std_msgs/String");
+    this.advertise("/cmd_vel", "geometry_msgs/Twist");
+    this.advertise("/robot_pose", "geometry_msgs/Pose");
+    this.advertise("/animation", "std_msgs/String");
   }
 
   /**
@@ -487,6 +493,21 @@ export class WizardRosService extends EventEmitter {
       topic,
       type: messageType,
       id: `sub_${this.messageId++}`,
+    };
+
+    this.send(message);
+  }
+
+  /**
+   * Advertise a ROS topic (declare the type before publishing)
+   */
+  private advertise(topic: string, messageType: string): void {
+    console.log(`[WizardROS] Advertising topic ${topic} as ${messageType}`);
+    const message: RosMessage = {
+      op: "advertise",
+      topic,
+      type: messageType,
+      id: `adv_${this.messageId++}`,
     };
 
     this.send(message);

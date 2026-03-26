@@ -88,7 +88,8 @@ async function main() {
     await db.delete(schema.participants).where(sql`1=1`);
     await db.delete(schema.studyPlugins).where(sql`1=1`);
     await db.delete(schema.studyMembers).where(sql`1=1`);
-    await db.delete(schema.studies).where(sql`1=1`);
+    await db.delete(schema.formResponses).where(sql`1=1`);
+    await db.delete(schema.forms).where(sql`1=1`);
     await db.delete(schema.studies).where(sql`1=1`);
     await db.delete(schema.plugins).where(sql`1=1`);
     await db.delete(schema.pluginRepositories).where(sql`1=1`);
@@ -236,7 +237,7 @@ async function main() {
         description: "A comprehensive informed consent document template for HRI research studies.",
         isTemplate: true,
         templateName: "Informed Consent",
-        version: 1,
+        version: 100,
         fields: [
           { id: "1", type: "text", label: "Study Title", required: true },
           { id: "2", type: "text", label: "Principal Investigator Name", required: true },
@@ -262,7 +263,7 @@ async function main() {
         description: "Standard questionnaire to collect participant feedback after HRI sessions.",
         isTemplate: true,
         templateName: "Post-Session Survey",
-        version: 2,
+        version: 101,
         fields: [
           { id: "1", type: "rating", label: "How engaging was the robot?", required: true, settings: { scale: 5 } },
           { id: "2", type: "rating", label: "How understandable was the robot's speech?", required: true, settings: { scale: 5 } },
@@ -285,7 +286,7 @@ async function main() {
         description: "Basic demographic information collection form.",
         isTemplate: true,
         templateName: "Demographics",
-        version: 3,
+        version: 102,
         fields: [
           { id: "1", type: "text", label: "Age", required: true },
           { id: "2", type: "multiple_choice", label: "Gender", required: true, options: ["Male", "Female", "Non-binary", "Prefer not to say"] },
@@ -305,8 +306,8 @@ async function main() {
         type: "consent",
         title: "Interactive Storyteller Consent",
         description: "Consent form for the Comparative WoZ Study - Interactive Storyteller scenario.",
+        version: 1,
         active: true,
-        version: 4,
         fields: [
           { id: "1", type: "text", label: "Participant Name", required: true },
           { id: "2", type: "date", label: "Date", required: true },

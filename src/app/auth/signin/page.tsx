@@ -138,7 +138,6 @@ export default function SignInPage() {
                   id="not-robot"
                   checked={notRobot}
                   onCheckedChange={(checked) => setNotRobot(checked === true)}
-                  disabled={isLoading}
                 />
                 <label
                   htmlFor="not-robot"

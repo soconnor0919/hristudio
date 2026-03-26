@@ -506,6 +506,10 @@ export const WizardInterface = React.memo(function WizardInterface({
       setTrial({ ...trial, status: data.status, startedAt: data.startedAt });
       setTrialStartTime(new Date());
     },
+    onError: (error) => {
+      console.error("Start trial error:", error);
+      toast.error("Failed to start trial", { description: error.message });
+    },
   });
 
   const completeTrialMutation = api.trials.complete.useMutation({
@@ -527,6 +531,10 @@ export const WizardInterface = React.memo(function WizardInterface({
   const abortTrialMutation = api.trials.abort.useMutation({
     onSuccess: (data) => {
       setTrial({ ...trial, status: data.status });
+    },
+    onError: (error) => {
+      console.error("Abort trial error:", error);
+      toast.error("Failed to abort trial", { description: error.message });
     },
   });
 
@@ -1306,8 +1314,6 @@ export const WizardInterface = React.memo(function WizardInterface({
                 onStepSelect={handleStepSelect}
                 onExecuteAction={handleExecuteAction}
                 onExecuteRobotAction={handleExecuteRobotAction}
-                activeTab={executionPanelTab}
-                onTabChange={setExecutionPanelTab}
                 onSkipAction={handleSkipAction}
                 isExecuting={isExecutingAction}
                 onNextStep={handleNextStep}

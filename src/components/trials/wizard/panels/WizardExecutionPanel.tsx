@@ -3,85 +3,14 @@
 import React from "react";
 import { WizardActionItem } from "./WizardActionItem";
 import {
-  Play,
-  SkipForward,
   CheckCircle,
   AlertCircle,
   ArrowRight,
-  Zap,
   Loader2,
   Clock,
-  RotateCcw,
-  AlertTriangle,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import { ScrollArea } from "~/components/ui/scroll-area";
-
-interface StepData {
-  id: string;
-  name: string;
-  description: string | null;
-  type: "wizard_action" | "robot_action" | "parallel_steps" | "conditional";
-  parameters: Record<string, unknown>;
-  conditions?: {
-    options?: {
-      label: string;
-      value: string;
-      nextStepId?: string;
-      nextStepIndex?: number;
-      variant?:
-        | "default"
-        | "destructive"
-        | "outline"
-        | "secondary"
-        | "ghost"
-        | "link";
-    }[];
-  };
-  order: number;
-  actions?: {
-    id: string;
-    name: string;
-    description: string | null;
-    type: string;
-    parameters: Record<string, unknown>;
-    order: number;
-    pluginId: string | null;
-  }[];
-}
-
-interface TrialData {
-  id: string;
-  status: "scheduled" | "in_progress" | "completed" | "aborted" | "failed";
-  scheduledAt: Date | null;
-  startedAt: Date | null;
-  completedAt: Date | null;
-  duration: number | null;
-  sessionNumber: number | null;
-  notes: string | null;
-  experimentId: string;
-  participantId: string | null;
-  wizardId: string | null;
-  experiment: {
-    id: string;
-    name: string;
-    description: string | null;
-    studyId: string;
-  };
-  participant: {
-    id: string;
-    participantCode: string;
-    demographics: Record<string, unknown> | null;
-  };
-}
-
-interface TrialEvent {
-  type: string;
-  timestamp: Date;
-  data?: unknown;
-  message?: string;
-}
+import type { TrialData, StepData, TrialEvent } from "~/lib/types/trial";
 
 interface WizardExecutionPanelProps {
   trial: TrialData;
@@ -100,8 +29,6 @@ interface WizardExecutionPanelProps {
     parameters: Record<string, unknown>,
     options?: { autoAdvance?: boolean },
   ) => Promise<void>;
-  activeTab: "current" | "timeline" | "events"; // Deprecated/Ignored
-  onTabChange: (tab: "current" | "timeline" | "events") => void; // Deprecated/Ignored
   onSkipAction: (
     pluginName: string,
     actionId: string,
@@ -118,7 +45,7 @@ interface WizardExecutionPanelProps {
   rosConnected?: boolean;
   completedStepIndices?: Set<number>;
   skippedStepIndices?: Set<number>;
-  onLogEvent?: (type: string, data?: any) => void;
+  onLogEvent?: (type: string, data?: unknown) => void;
 }
 
 export function WizardExecutionPanel({
@@ -130,8 +57,6 @@ export function WizardExecutionPanel({
   onStepSelect,
   onExecuteAction,
   onExecuteRobotAction,
-  activeTab,
-  onTabChange,
   onSkipAction,
   isExecuting = false,
   onNextStep,

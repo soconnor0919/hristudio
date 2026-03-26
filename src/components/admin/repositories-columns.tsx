@@ -31,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { api } from "~/trpc/react";
 
 // Define error type for mutations
 interface TRPCError {
@@ -101,131 +100,37 @@ const syncStatusConfig = {
   },
 };
 
-function RepositoryActionsCell({ repository }: { repository: Repository }) {
-  const utils = api.useUtils();
-
-  const syncMutation = api.admin.repositories.sync.useMutation({
-    onSuccess: () => {
-      toast.success("Repository sync started");
-      void utils.admin.repositories.list.invalidate();
-    },
-    onError: (error: TRPCError) => {
-      toast.error(error.message ?? "Failed to sync repository");
-    },
-  });
-
-  const deleteMutation = api.admin.repositories.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Repository deleted successfully");
-      void utils.admin.repositories.list.invalidate();
-    },
-    onError: (error: TRPCError) => {
-      toast.error(error.message ?? "Failed to delete repository");
-    },
-  });
-
-  const handleSync = async () => {
-    syncMutation.mutate({ id: repository.id });
+function RepositoryUrlCell({ url }: { url: string }) {
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(url);
+    toast.success("URL copied to clipboard");
   };
-
-  const handleDelete = async () => {
-    if (
-      window.confirm(`Are you sure you want to delete "${repository.name}"?`)
-    ) {
-      deleteMutation.mutate({ id: repository.id });
-    }
-  };
-
-  const handleCopyId = () => {
-    void navigator.clipboard.writeText(repository.id);
-    toast.success("Repository ID copied to clipboard");
-  };
-
-  const handleCopyUrl = () => {
-    void navigator.clipboard.writeText(repository.url);
-    toast.success("Repository URL copied to clipboard");
-  };
-
-  const canDelete = !repository.isOfficial;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          onClick={handleSync}
-          disabled={syncMutation.isPending}
+    <div className="flex items-center gap-2">
+      <Button variant="ghost" size="icon" onClick={handleCopy}>
+        <Copy className="h-4 w-4" />
+      </Button>
+      {url && (
+        <Link
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`}
-          />
-          Sync Repository
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <Link href={`/admin/repositories/${repository.id}/edit`}>
-            <Settings className="mr-2 h-4 w-4" />
-            Edit Repository
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <a href={repository.url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            View Repository
-          </a>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem onClick={handleCopyId}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Repository ID
-        </DropdownMenuItem>
-
-        <DropdownMenuItem onClick={handleCopyUrl}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Repository URL
-        </DropdownMenuItem>
-
-        {canDelete && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Repository
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <ExternalLink className="mr-1 h-3 w-3" />
+          Visit
+        </Link>
+      )}
+    </div>
   );
 }
 
 export const repositoriesColumns: ColumnDef<Repository>[] = [
   {
     id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="#" />
     ),
     cell: ({ row }) => (
       <Checkbox
@@ -240,34 +145,16 @@ export const repositoriesColumns: ColumnDef<Repository>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Repository Name" />
+      <DataTableColumnHeader column={column} title="Repository" />
     ),
     cell: ({ row }) => {
-      const repository = row.original;
       return (
-        <div className="max-w-[200px] min-w-0 space-y-1">
-          <div className="flex items-center space-x-2">
-            <Database className="text-muted-foreground h-4 w-4 flex-shrink-0" />
-            <Link
-              href={`/admin/repositories/${repository.id}`}
-              className="truncate font-medium hover:underline"
-              title={repository.name}
-            >
-              {repository.name}
-            </Link>
-            {repository.isOfficial && (
-              <Badge variant="outline" className="text-xs">
-                Official
-              </Badge>
-            )}
-          </div>
-          {repository.description && (
-            <p
-              className="text-muted-foreground line-clamp-1 truncate text-sm"
-              title={repository.description}
-            >
-              {repository.description}
-            </p>
+        <div className="flex flex-col">
+          <span className="font-medium">{row.original.name}</span>
+          {row.original.description && (
+            <span className="text-muted-foreground text-xs">
+              {row.original.description}
+            </span>
           )}
         </div>
       );
@@ -276,22 +163,11 @@ export const repositoriesColumns: ColumnDef<Repository>[] = [
   {
     accessorKey: "url",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Repository URL" />
+      <DataTableColumnHeader column={column} title="URL" />
     ),
-    cell: ({ row }) => {
-      const url = row.original.url;
-      return (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="max-w-[300px] truncate text-sm text-blue-600 hover:underline"
-          title={url}
-        >
-          {url}
-        </a>
-      );
-    },
+    cell: ({ row }) => (
+      <RepositoryUrlCell url={row.original.url} />
+    ),
   },
   {
     accessorKey: "trustLevel",
@@ -327,25 +203,15 @@ export const repositoriesColumns: ColumnDef<Repository>[] = [
       const isEnabled = row.original.isEnabled;
       return (
         <Badge
-          variant="secondary"
-          className={
-            isEnabled
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }
+          variant={isEnabled ? "default" : "secondary"}
+          className={isEnabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
         >
-          {isEnabled ? (
-            <CheckCircle className="mr-1 h-3 w-3" />
-          ) : (
-            <XCircle className="mr-1 h-3 w-3" />
-          )}
           {isEnabled ? "Enabled" : "Disabled"}
         </Badge>
       );
     },
     filterFn: (row, id, value: string[]) => {
-      const isEnabled = row.original.isEnabled;
-      return value.includes(isEnabled ? "enabled" : "disabled");
+      return value.includes(row.original.isEnabled ? "enabled" : "disabled");
     },
   },
   {
@@ -354,80 +220,97 @@ export const repositoriesColumns: ColumnDef<Repository>[] = [
       <DataTableColumnHeader column={column} title="Sync Status" />
     ),
     cell: ({ row }) => {
-      const syncStatus = row.original.syncStatus;
-      const lastSyncAt = row.original.lastSyncAt;
-      const syncError = row.original.syncError;
-
-      if (!syncStatus) return "-";
-
-      const config =
-        syncStatusConfig[syncStatus as keyof typeof syncStatusConfig];
-      if (!config) return syncStatus;
-
-      const SyncIcon = config.icon;
+      const status = row.original.syncStatus || "pending";
+      const config = syncStatusConfig[status as keyof typeof syncStatusConfig];
+      const StatusIcon = config?.icon ?? Clock;
 
       return (
-        <div className="space-y-1">
-          <Badge
-            variant="secondary"
-            className={config.className}
-            title={config.description}
-          >
-            <SyncIcon
-              className={`mr-1 h-3 w-3 ${syncStatus === "syncing" ? "animate-spin" : ""}`}
-            />
-            {config.label}
-          </Badge>
-          {lastSyncAt && syncStatus === "completed" && (
-            <div className="text-muted-foreground text-xs">
-              {formatDistanceToNow(lastSyncAt, { addSuffix: true })}
-            </div>
+        <div className="flex items-center gap-2">
+          {config && (
+            <Badge variant="secondary" className={config.className}>
+              <StatusIcon className="mr-1 h-3 w-3" />
+              {config.label}
+            </Badge>
           )}
-          {syncError && syncStatus === "failed" && (
-            <div
-              className="max-w-[150px] truncate text-xs text-red-600"
-              title={syncError}
+          {row.original.syncError && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto whitespace-normal text-xs text-destructive"
+              title={row.original.syncError}
             >
-              {syncError}
-            </div>
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              Error
+            </Button>
           )}
         </div>
       );
     },
-  },
-  {
-    accessorKey: "createdAt",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Created" />
-    ),
-    cell: ({ row }) => {
-      const date = row.original.createdAt;
-      return (
-        <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date, { addSuffix: true })}
-        </div>
-      );
+    filterFn: (row, id, value: string[]) => {
+      const status = row.original.syncStatus || "pending";
+      return value.includes(status);
     },
   },
   {
-    accessorKey: "updatedAt",
+    accessorKey: "lastSyncAt",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Updated" />
+      <DataTableColumnHeader column={column} title="Last Sync" />
     ),
     cell: ({ row }) => {
-      const date = row.original.updatedAt;
+      const lastSync = row.original.lastSyncAt;
       return (
-        <div className="text-sm whitespace-nowrap">
-          {formatDistanceToNow(date, { addSuffix: true })}
-        </div>
+        <span className="text-muted-foreground text-sm">
+          {lastSync ? formatDistanceToNow(lastSync, { addSuffix: true }) : "Never"}
+        </span>
       );
     },
+    sortingFn: "datetime",
   },
   {
     id: "actions",
-    header: "Actions",
-    cell: ({ row }) => <RepositoryActionsCell repository={row.original} />,
-    enableSorting: false,
-    enableHiding: false,
+    cell: ({ row }) => {
+      const repository = row.original;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(repository.id)}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Copy ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href={`/admin/repositories/${repository.id}`}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              asChild
+              disabled={!repository.url}
+            >
+              <Link href={repository.url ?? "#"} target="_blank">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Visit Repository
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {!repository.isOfficial && (
+              <DropdownMenuItem className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Repository
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   },
 ];

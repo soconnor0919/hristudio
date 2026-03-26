@@ -23,6 +23,7 @@ import {
   UserCheck,
   Users,
   FileText,
+  X,
 } from "lucide-react";
 
 import { useSidebar } from "~/components/ui/sidebar";
@@ -156,7 +157,7 @@ export function AppSidebar({
     isLoadingUserStudies,
   } = useStudyManagement();
 
-  const { startTour, isTourActive } = useTour();
+  const { startTour, stopTour, isTourActive } = useTour();
 
   // Reference to track if we've already attempted auto-selection to avoid fighting with manual clearing
   const hasAutoSelected = useRef(false);
@@ -308,12 +309,21 @@ export function AppSidebar({
         </SidebarMenu>
         {isTourActive && !isCollapsed && (
           <div className="mt-1 px-3 pb-2">
-            <div className="bg-primary/10 text-primary border-primary/20 animate-in fade-in slide-in-from-top-2 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
-                <span className="bg-primary relative inline-flex h-2 w-2 rounded-full"></span>
-              </span>
-              Tutorial Active
+            <div className="bg-primary/10 text-primary border-primary/20 animate-in fade-in slide-in-from-top-2 flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
+                  <span className="bg-primary relative inline-flex h-2 w-2 rounded-full"></span>
+                </span>
+                Tutorial Active
+              </div>
+              <button
+                onClick={stopTour}
+                className="text-primary/60 hover:text-primary hover:bg-primary/10 rounded p-0.5 transition-colors"
+                title="Cancel tutorial"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
           </div>
         )}

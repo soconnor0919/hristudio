@@ -17,6 +17,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTableColumnHeader } from "~/components/ui/data-table-column-header";
+import { trustLevelConfig } from "~/lib/constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,24 +49,6 @@ export type Plugin = {
     installedAt: Date;
     installedBy: string;
   };
-};
-
-const trustLevelConfig = {
-  official: {
-    label: "Official",
-    className: "bg-blue-100 text-blue-800 hover:bg-blue-200",
-    description: "Official HRIStudio plugin",
-  },
-  verified: {
-    label: "Verified",
-    className: "bg-green-100 text-green-800 hover:bg-green-200",
-    description: "Verified by the community",
-  },
-  community: {
-    label: "Community",
-    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-    description: "Community contributed",
-  },
 };
 
 const statusConfig = {
