@@ -26,9 +26,9 @@ export default function HelpCenterPage() {
       description: "Learn the basics of HRIStudio and set up your first study.",
       icon: BookOpen,
       items: [
-        { label: "Platform Overview", href: "#" },
-        { label: "Creating a New Study", href: "#" },
-        { label: "Managing Team Members", href: "#" },
+        { label: "Tutorials Overview", href: "/help/tutorials" },
+        { label: "Getting Started Guide", href: "/help/tutorials/getting-started" },
+        { label: "Your First Study", href: "/help/tutorials/your-first-study" },
       ],
     },
     {
@@ -36,9 +36,9 @@ export default function HelpCenterPage() {
       description: "Master the visual experiment designer and flow control.",
       icon: FlaskConical,
       items: [
-        { label: "Using the Visual Designer", href: "#" },
-        { label: "Robot Actions & Plugins", href: "#" },
-        { label: "Variables & Logic", href: "#" },
+        { label: "Visual Designer Guide", href: "/help/tutorials/designing-experiments" },
+        { label: "Robot Actions & Plugins", href: "/help/tutorials/robot-integration" },
+        { label: "Wizard Interface", href: "/help/tutorials/wizard-interface" },
       ],
     },
     {
@@ -46,9 +46,9 @@ export default function HelpCenterPage() {
       description: "Execute experiments and manage Wizard of Oz sessions.",
       icon: PlayCircle,
       items: [
-        { label: "Wizard Interface Guide", href: "#" },
-        { label: "Participant Management", href: "#" },
-        { label: "Handling Robot Errors", href: "#" },
+        { label: "Running Trials Guide", href: "/help/tutorials/running-trials" },
+        { label: "Participant Management", href: "/help/tutorials/your-first-study" },
+        { label: "Simulation Mode", href: "/help/tutorials/simulation-mode" },
       ],
     },
     {
@@ -56,9 +56,9 @@ export default function HelpCenterPage() {
       description: "Analyze trial results and export research data.",
       icon: BarChart3,
       items: [
-        { label: "Understanding Analytics", href: "#" },
-        { label: "Exporting Data (CSV/JSON)", href: "#" },
-        { label: "Video Replay & Annotation", href: "#" },
+        { label: "Data & Analysis Guide", href: "/help/tutorials/data-and-analysis" },
+        { label: "Forms & Surveys", href: "/help/tutorials/forms-and-surveys" },
+        { label: "Exporting Data", href: "/help/tutorials/data-and-analysis" },
       ],
     },
   ];

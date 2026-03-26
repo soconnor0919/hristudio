@@ -236,6 +236,7 @@ async function main() {
         description: "A comprehensive informed consent document template for HRI research studies.",
         isTemplate: true,
         templateName: "Informed Consent",
+        version: 1,
         fields: [
           { id: "1", type: "text", label: "Study Title", required: true },
           { id: "2", type: "text", label: "Principal Investigator Name", required: true },
@@ -261,6 +262,7 @@ async function main() {
         description: "Standard questionnaire to collect participant feedback after HRI sessions.",
         isTemplate: true,
         templateName: "Post-Session Survey",
+        version: 2,
         fields: [
           { id: "1", type: "rating", label: "How engaging was the robot?", required: true, settings: { scale: 5 } },
           { id: "2", type: "rating", label: "How understandable was the robot's speech?", required: true, settings: { scale: 5 } },
@@ -283,6 +285,7 @@ async function main() {
         description: "Basic demographic information collection form.",
         isTemplate: true,
         templateName: "Demographics",
+        version: 3,
         fields: [
           { id: "1", type: "text", label: "Age", required: true },
           { id: "2", type: "multiple_choice", label: "Gender", required: true, options: ["Male", "Female", "Non-binary", "Prefer not to say"] },
@@ -303,6 +306,7 @@ async function main() {
         title: "Interactive Storyteller Consent",
         description: "Consent form for the Comparative WoZ Study - Interactive Storyteller scenario.",
         active: true,
+        version: 4,
         fields: [
           { id: "1", type: "text", label: "Participant Name", required: true },
           { id: "2", type: "date", label: "Date", required: true },

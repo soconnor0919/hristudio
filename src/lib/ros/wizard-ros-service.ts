@@ -60,6 +60,10 @@ export class WizardRosService extends EventEmitter {
   private maxReconnectAttempts = 5;
   private isConnecting = false;
 
+  // Simulation mode
+  private simulationMode: boolean;
+  private simulationInterval: NodeJS.Timeout | null = null;
+
   // Robot state
   private robotStatus: RobotStatus = {
     connected: false,
@@ -73,15 +77,40 @@ export class WizardRosService extends EventEmitter {
   // Active action tracking
   private activeActions: Map<string, RobotActionExecution> = new Map();
 
-  constructor(url: string = "ws://localhost:9090") {
+  constructor(url: string = "ws://localhost:9090", simulationMode: boolean = false) {
     super();
     this.url = url;
+    this.simulationMode = simulationMode || 
+      (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SIMULATION_MODE === "true");
+  }
+
+  /**
+   * Check if running in simulation mode
+   */
+  isSimulationMode(): boolean {
+    return this.simulationMode;
+  }
+
+  /**
+   * Enable or disable simulation mode
+   */
+  setSimulationMode(enabled: boolean): void {
+    this.simulationMode = enabled;
+    if (!enabled && this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
+    }
   }
 
   /**
    * Connect to ROS bridge WebSocket
    */
   async connect(): Promise<void> {
+    // Simulation mode - fake connection
+    if (this.simulationMode) {
+      return this.connectSimulation();
+    }
+
     return new Promise((resolve, reject) => {
       if (
         this.isConnected ||
@@ -167,6 +196,11 @@ export class WizardRosService extends EventEmitter {
   disconnect(): void {
     this.clearReconnectTimer();
 
+    if (this.simulationMode) {
+      this.disconnectSimulation();
+      return;
+    }
+
     if (this.ws) {
       this.ws.close(1000, "Manual disconnect");
       this.ws = null;
@@ -179,9 +213,172 @@ export class WizardRosService extends EventEmitter {
   }
 
   /**
+   * Simulation mode connection - simulates robot responses
+   */
+  private async connectSimulation(): Promise<void> {
+    console.log(`[WizardROS] SIMULATION MODE - Connecting to mock robot`);
+    this.isConnected = true;
+    this.isConnecting = false;
+    this.connectionAttempts = 0;
+
+    // Initialize mock robot state
+    const mockStates = this.getMockJointStates();
+    this.robotStatus = {
+      connected: true,
+      battery: 85,
+      position: { x: 0, y: 0, theta: 0 },
+      joints: mockStates.names.reduce((acc, name, i) => {
+        acc[name] = mockStates.positions[i] ?? 0;
+        return acc;
+      }, {} as Record<string, number>),
+      sensors: {},
+      lastUpdate: new Date(),
+    };
+
+    // Start publishing simulated sensor data
+    this.simulationInterval = setInterval(() => {
+      this.publishSimulationData();
+    }, 100);
+
+    this.emit("connected");
+    console.log(`[WizardROS] SIMULATION MODE - Connected to mock robot`);
+  }
+
+  /**
+   * Simulation mode disconnection
+   */
+  private disconnectSimulation(): void {
+    console.log(`[WizardROS] SIMULATION MODE - Disconnecting`);
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
+    }
+    this.isConnected = false;
+    this.robotStatus.connected = false;
+    this.emit("disconnected");
+  }
+
+  /**
+   * Publish simulated sensor data
+   */
+  private publishSimulationData(): void {
+    if (!this.simulationMode || !this.isConnected) return;
+
+    const mockData = this.getMockJointStates();
+    this.updateJointStates(mockData);
+    this.robotStatus.battery = 85 + Math.random() * 2 - 1; // Slight variation
+    this.robotStatus.sensors = {
+      "/bumper": { left: false, right: false },
+      "/hand_touch": { leftHand: false, rightHand: false },
+      "/head_touch": { front: false, middle: false, rear: false },
+      "/sonar/left": { range: 0.5 + Math.random() * 0.5 },
+      "/sonar/right": { range: 0.5 + Math.random() * 0.5 },
+    };
+    this.robotStatus.lastUpdate = new Date();
+    this.emit("robot_status_updated", this.robotStatus);
+  }
+
+  /**
+   * Get mock joint states for simulation
+   */
+  private getMockJointStates(): { names: string[]; positions: number[] } {
+    const names = [
+      "HeadYaw", "HeadPitch",
+      "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand",
+      "RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand",
+      "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
+      "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
+    ];
+    const positions = names.map(() => (Math.random() - 0.5) * 0.1);
+    return { names, positions };
+  }
+
+  /**
+   * Execute action in simulation mode
+   */
+  private async executeSimulationAction(
+    pluginName: string,
+    actionId: string,
+    parameters: Record<string, unknown>,
+    actionConfig?: {
+      topic: string;
+      messageType: string;
+      payloadMapping: {
+        type: string;
+        payload?: Record<string, unknown>;
+        transformFn?: string;
+      };
+    },
+  ): Promise<RobotActionExecution> {
+    const executionId = `${pluginName}_${actionId}_${Date.now()}`;
+    const execution: RobotActionExecution = {
+      id: executionId,
+      actionId,
+      pluginName,
+      parameters,
+      status: "pending",
+      startTime: new Date(),
+    };
+
+    this.activeActions.set(executionId, execution);
+    this.emit("action_started", execution);
+
+    try {
+      execution.status = "executing";
+      this.activeActions.set(executionId, execution);
+
+      console.log(`[WizardROS] SIMULATION MODE - Executing ${actionId}:`, parameters);
+
+      // Simulate action execution based on action type
+      let duration = 500;
+
+      if (actionId === "say_text" || actionId === "say_with_emotion" || actionConfig?.topic === "/speech") {
+        const text = String(parameters.text || parameters.data || "Hello");
+        const wordCount = text.split(/\s+/).filter(Boolean).length;
+        duration = 1500 + Math.max(1000, wordCount * 300);
+      } else if (actionId.includes("walk") || actionId.includes("turn") || actionConfig?.topic === "/cmd_vel") {
+        duration = 500;
+        // Simulate position change
+        const speed = Number(parameters.speed) || 0.1;
+        if (actionId === "walk_forward") {
+          this.robotStatus.position.x += speed * 0.5;
+        } else if (actionId === "walk_backward") {
+          this.robotStatus.position.x -= speed * 0.5;
+        } else if (actionId === "turn_left") {
+          this.robotStatus.position.theta -= 0.5;
+        } else if (actionId === "turn_right") {
+          this.robotStatus.position.theta += 0.5;
+        }
+      } else if (actionId.includes("head") || actionId.includes("move") || actionConfig?.topic === "/joint_angles") {
+        duration = 1000;
+      }
+
+      // Simulate async execution
+      await new Promise((resolve) => setTimeout(resolve, duration));
+
+      execution.status = "completed";
+      execution.endTime = new Date();
+      this.emit("action_completed", execution);
+    } catch (error) {
+      execution.status = "failed";
+      execution.error = error instanceof Error ? error.message : String(error);
+      execution.endTime = new Date();
+      this.emit("action_failed", execution);
+    }
+
+    this.activeActions.set(executionId, execution);
+    return execution;
+  }
+
+
+
+  /**
    * Check if connected to ROS bridge
    */
   getConnectionStatus(): boolean {
+    if (this.simulationMode) {
+      return this.isConnected;
+    }
     return this.isConnected && this.ws?.readyState === WebSocket.OPEN;
   }
 
@@ -211,6 +408,11 @@ export class WizardRosService extends EventEmitter {
   ): Promise<RobotActionExecution> {
     if (!this.isConnected) {
       throw new Error("Not connected to ROS bridge");
+    }
+
+    // Simulation mode - simulate action execution
+    if (this.simulationMode) {
+      return this.executeSimulationAction(pluginName, actionId, parameters, actionConfig);
     }
 
     const executionId = `${pluginName}_${actionId}_${Date.now()}`;
@@ -587,6 +789,42 @@ export class WizardRosService extends EventEmitter {
       throw new Error("Not connected to ROS bridge");
     }
 
+    // Simulation mode - return mock responses
+    if (this.simulationMode) {
+      console.log(`[WizardROS] SIMULATION MODE - Service call: ${service}`, args);
+
+      const mockResponses: Record<string, ServiceResponse> = {
+        "/naoqi_driver/get_robot_info": {
+          result: true,
+          values: {
+            robotName: "MOCK-NAO6",
+            robotVersion: "6.0",
+            bodyType: "nao",
+          },
+        },
+        "/naoqi_driver/get_joint_names": {
+          result: true,
+          values: {
+            joint_names: [
+              "HeadYaw", "HeadPitch", "LShoulderPitch", "LShoulderRoll",
+              "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand",
+              "RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll",
+              "RWristYaw", "RHand", "LHipYawPitch", "LHipRoll",
+              "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
+              "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch",
+              "RAnklePitch", "RAnkleRoll",
+            ],
+          },
+        },
+        "/naoqi_driver/get_position": {
+          result: true,
+          values: this.robotStatus.position,
+        },
+      };
+
+      return mockResponses[service] || { result: true };
+    }
+
     const id = `call_${this.messageId++}`;
 
     return new Promise((resolve, reject) => {
@@ -892,7 +1130,7 @@ let isCreatingInstance = false;
 /**
  * Get or create the global wizard ROS service (true singleton)
  */
-export function getWizardRosService(): WizardRosService {
+export function getWizardRosService(simulationMode?: boolean): WizardRosService {
   // Prevent multiple instances during creation
   if (isCreatingInstance && !wizardRosService) {
     throw new Error("WizardRosService is being initialized, please wait");
@@ -901,7 +1139,10 @@ export function getWizardRosService(): WizardRosService {
   if (!wizardRosService) {
     isCreatingInstance = true;
     try {
-      wizardRosService = new WizardRosService();
+      const url = typeof window !== "undefined" 
+        ? (process.env.NEXT_PUBLIC_ROS_BRIDGE_URL || "ws://localhost:9090")
+        : "ws://localhost:9090";
+      wizardRosService = new WizardRosService(url, simulationMode);
     } finally {
       isCreatingInstance = false;
     }
@@ -912,12 +1153,26 @@ export function getWizardRosService(): WizardRosService {
 /**
  * Initialize wizard ROS service with connection
  */
-export async function initWizardRosService(): Promise<WizardRosService> {
-  const service = getWizardRosService();
+export async function initWizardRosService(simulationMode?: boolean): Promise<WizardRosService> {
+  const service = getWizardRosService(simulationMode);
+
+  if (simulationMode !== undefined) {
+    service.setSimulationMode(simulationMode);
+  }
 
   if (!service.getConnectionStatus()) {
     await service.connect();
   }
 
   return service;
+}
+
+/**
+ * Reset the global wizard ROS service (useful for testing or reinitializing)
+ */
+export function resetWizardRosService(): void {
+  if (wizardRosService) {
+    wizardRosService.disconnect();
+    wizardRosService = null;
+  }
 }

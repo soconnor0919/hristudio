@@ -202,6 +202,7 @@ src/
 
 Comprehensive documentation available in the `docs/` folder:
 
+- **[Tutorials](docs/tutorials/README.md)**: Step-by-step guides for new users
 - **[Quick Reference](docs/quick-reference.md)**: Essential commands and setup
 - **[Implementation Guide](docs/implementation-guide.md)**: Technical implementation details
 - **[Project Status](docs/project-status.md)**: Current development state

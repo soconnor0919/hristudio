@@ -6,10 +6,27 @@ HRIStudio is a web-based Wizard-of-Oz platform for Human-Robot Interaction resea
 
 | Document | Description |
 |----------|-------------|
+| **[Tutorials](tutorials/README.md)** | Step-by-step guides for using HRIStudio |
 | **[Quick Reference](quick-reference.md)** | Essential commands, setup, troubleshooting |
 | **[Project Status](project-status.md)** | Current development state (March 2026) |
 | **[Implementation Guide](implementation-guide.md)** | Full technical implementation |
 | **[NAO6 Integration](nao6-quick-reference.md)** | Robot setup and commands |
+
+## Tutorials
+
+New to HRIStudio? Start with our comprehensive tutorials:
+
+| Tutorial | Description | Time |
+|----------|-------------|------|
+| [Getting Started](tutorials/01-getting-started.md) | Installation and first login | 10 min |
+| [Your First Study](tutorials/02-your-first-study.md) | Creating a research study | 15 min |
+| [Designing Experiments](tutorials/03-designing-experiments.md) | Building experiment protocols | 25 min |
+| [Running Trials](tutorials/04-running-trials.md) | Executing experiments | 20 min |
+| [Wizard Interface](tutorials/05-wizard-interface.md) | Real-time trial control | 15 min |
+| [Robot Integration](tutorials/06-robot-integration.md) | Connecting NAO6 robot | 20 min |
+| [Forms & Surveys](tutorials/07-forms-and-surveys.md) | Managing consent and data | 15 min |
+| [Data & Analysis](tutorials/08-data-and-analysis.md) | Collecting and exporting data | 15 min |
+| [Simulation Mode](tutorials/09-simulation-mode.md) | Testing without a robot | 10 min |
 
 ## Getting Started
 
@@ -162,9 +179,22 @@ bun db:seed
 - `docs/quick-reference.md` - Commands & setup
 - `docs/nao6-quick-reference.md` - NAO6 commands
 
+### Tutorials
+- `docs/tutorials/README.md` - Tutorial overview
+- `docs/tutorials/01-getting-started.md` - Installation & setup
+- `docs/tutorials/02-your-first-study.md` - Creating studies
+- `docs/tutorials/03-designing-experiments.md` - Building protocols
+- `docs/tutorials/04-running-trials.md` - Executing trials
+- `docs/tutorials/05-wizard-interface.md` - Trial control
+- `docs/tutorials/06-robot-integration.md` - Robot setup
+- `docs/tutorials/07-forms-and-surveys.md` - Forms management
+- `docs/tutorials/08-data-and-analysis.md` - Data collection
+- `docs/tutorials/09-simulation-mode.md` - Testing without robot
+
 ### Technical Documentation
 - `docs/implementation-guide.md` - Full technical implementation
 - `docs/project-status.md` - Development status
+- `docs/mock-robot-simulation.md` - Robot simulation
 
 ### Archive (Historical)
 - `docs/_archive/` - Old documentation (outdated but preserved)

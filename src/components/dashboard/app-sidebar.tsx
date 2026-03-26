@@ -11,6 +11,7 @@ import {
   Building,
   ChevronDown,
   FlaskConical,
+  GraduationCap,
   Home,
   LogOut,
   MoreHorizontal,
@@ -59,7 +60,6 @@ import { Logo } from "~/components/ui/logo";
 
 import { useStudyManagement } from "~/hooks/useStudyManagement";
 import { handleAuthError, isAuthError } from "~/lib/auth-error-handler";
-import { api } from "~/trpc/react";
 
 // Global items - always available
 const globalItems = [
@@ -129,10 +129,9 @@ const helpItems = [
     icon: BookOpen,
   },
   {
-    title: "Interactive Tour",
-    url: "#tour",
+    title: "Tutorials",
+    url: "/help/tutorials",
     icon: PlayCircle,
-    action: "tour",
   },
 ];
 
@@ -182,12 +181,6 @@ export function AppSidebar({
       }
     }
   }, [isLoadingUserStudies, selectedStudyId, userStudies, selectStudy]);
-
-  // Debug API call
-  const { data: debugData } = api.dashboard.debug.useQuery(undefined, {
-    enabled: process.env.NODE_ENV === "development",
-    staleTime: 1000 * 30, // 30 seconds
-  });
 
   type Study = {
     id: string;
@@ -284,9 +277,6 @@ export function AppSidebar({
 
     return () => clearInterval(interval);
   }, [refreshStudyData]);
-
-  // Show debug info in development
-  const showDebug = process.env.NODE_ENV === "development";
 
   const [mounted, setMounted] = React.useState(false);
 
@@ -600,23 +590,14 @@ export function AppSidebar({
             {helpItems.map((item) => {
               const isActive = pathname.startsWith(item.url);
 
-              const menuButton =
-                item.action === "tour" ? (
-                  <SidebarMenuButton
-                    onClick={() => startTour("full_platform")}
-                    isActive={false}
-                  >
+              const menuButton = (
+                <SidebarMenuButton asChild isActive={isActive}>
+                  <Link href={item.url}>
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
-                  </SidebarMenuButton>
-                ) : (
-                  <SidebarMenuButton asChild isActive={isActive}>
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                );
+                  </Link>
+                </SidebarMenuButton>
+              );
 
               return (
                 <SidebarMenuItem key={item.title}>
@@ -639,99 +620,8 @@ export function AppSidebar({
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* Debug info moved to footer tooltip button */}
-
       <SidebarFooter>
         <SidebarMenu>
-          {showDebug && (
-            <SidebarMenuItem>
-              {isCollapsed ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-xs"
-                        aria-label="Debug info"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="right"
-                      className="space-y-1 p-2 text-[10px]"
-                    >
-                      <div>Session: {session?.user?.email ?? "No session"}</div>
-                      <div>Role: {userRole ?? "No role"}</div>
-                      <div>Studies: {userStudies.length}</div>
-                      <div>Selected: {selectedStudy?.name ?? "None"}</div>
-                      <div>Auth: {session ? "✓" : "✗"}</div>
-                      {debugData && (
-                        <>
-                          <div>DB User: {debugData.user?.email ?? "None"}</div>
-                          <div>
-                            System Roles:{" "}
-                            {debugData.systemRoles.join(", ") || "None"}
-                          </div>
-                          <div>
-                            Memberships: {debugData.studyMemberships.length}
-                          </div>
-                          <div>All Studies: {debugData.allStudies.length}</div>
-                          <div>
-                            Session ID: {debugData.session.userId.slice(0, 8)}
-                            ...
-                          </div>
-                        </>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className="w-full justify-start">
-                      <BarChart3 className="h-4 w-4" />
-                      <span className="truncate">Debug</span>
-                      <ChevronDown className="ml-auto h-4 w-4 flex-shrink-0" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[--radix-popper-anchor-width] max-w-72"
-                    align="start"
-                  >
-                    <DropdownMenuLabel className="text-xs font-medium">
-                      Debug Info
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <div className="space-y-1 px-2 py-1 text-[11px] leading-tight">
-                      <div>Session: {session?.user?.email ?? "No session"}</div>
-                      <div>Role: {userRole ?? "No role"}</div>
-                      <div>Studies: {userStudies.length}</div>
-                      <div>Selected: {selectedStudy?.name ?? "None"}</div>
-                      <div>Auth: {session ? "✓" : "✗"}</div>
-                      {debugData && (
-                        <>
-                          <div>DB User: {debugData.user?.email ?? "None"}</div>
-                          <div>
-                            System Roles:{" "}
-                            {debugData.systemRoles.join(", ") || "None"}
-                          </div>
-                          <div>
-                            Memberships: {debugData.studyMemberships.length}
-                          </div>
-                          <div>All Studies: {debugData.allStudies.length}</div>
-                          <div>
-                            Session ID: {debugData.session.userId.slice(0, 8)}
-                            ...
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </SidebarMenuItem>
-          )}
           <SidebarMenuItem>
             {isCollapsed ? (
               <TooltipProvider>

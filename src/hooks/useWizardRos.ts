@@ -10,6 +10,7 @@ import {
 
 export interface UseWizardRosOptions {
   autoConnect?: boolean;
+  simulationMode?: boolean;
   onConnected?: () => void;
   onDisconnected?: () => void;
   onError?: (error: unknown) => void;
@@ -24,6 +25,7 @@ export interface UseWizardRosOptions {
 export interface UseWizardRosReturn {
   isConnected: boolean;
   isConnecting: boolean;
+  isSimulationMode: boolean;
   connectionError: string | null;
   robotStatus: RobotStatus;
   activeActions: RobotActionExecution[];
@@ -48,6 +50,7 @@ export interface UseWizardRosReturn {
     args?: Record<string, unknown>,
   ) => Promise<any>;
   setAutonomousLife: (enabled: boolean) => Promise<boolean>;
+  setSimulationMode: (enabled: boolean) => void;
 }
 
 export function useWizardRos(
@@ -55,6 +58,7 @@ export function useWizardRos(
 ): UseWizardRosReturn {
   const {
     autoConnect = true,
+    simulationMode = false,
     onConnected,
     onDisconnected,
     onError,
@@ -101,14 +105,17 @@ export function useWizardRos(
   // Initialize service (only once)
   useEffect(() => {
     if (!isInitializedRef.current) {
-      serviceRef.current = getWizardRosService();
+      serviceRef.current = getWizardRosService(simulationMode);
+      if (simulationMode) {
+        serviceRef.current.setSimulationMode(true);
+      }
       isInitializedRef.current = true;
     }
 
     return () => {
       mountedRef.current = false;
     };
-  }, []);
+  }, [simulationMode]);
 
   // Set up event listeners with stable callbacks
   useEffect(() => {
@@ -381,9 +388,19 @@ export function useWizardRos(
     [isConnected],
   );
 
+  const setSimulationMode = useCallback((enabled: boolean) => {
+    const service = serviceRef.current;
+    if (service) {
+      service.setSimulationMode(enabled);
+    }
+  }, []);
+
+  const isSimulationMode = serviceRef.current?.isSimulationMode() ?? simulationMode;
+
   return {
     isConnected,
     isConnecting,
+    isSimulationMode,
     connectionError,
     robotStatus,
     activeActions,
@@ -392,5 +409,6 @@ export function useWizardRos(
     executeRobotAction,
     callService,
     setAutonomousLife,
+    setSimulationMode,
   };
 }
