@@ -659,6 +659,47 @@ export class WizardRosService extends EventEmitter {
       msg = parameters;
     }
 
+    // Handle gesture sequences - send multiple movements with delays
+    if ((msg as any).type === "gesture_sequence") {
+      const sequence = (msg as any).movements as Array<{
+        joint_names: string[];
+        joint_angles: number[];
+        speed: number;
+      }>;
+
+      if (!sequence || sequence.length === 0) {
+        console.warn("[WizardROS] Gesture sequence has no movements");
+        return;
+      }
+
+      console.log(`[WizardROS] Executing gesture sequence with ${sequence.length} movements`);
+
+      for (let i = 0; i < sequence.length; i++) {
+        const movement = sequence[i];
+        if (!movement) continue;
+
+        this.publish(
+          "/joint_angles",
+          "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
+          {
+            joint_names: movement.joint_names,
+            joint_angles: movement.joint_angles,
+            speed: movement.speed || 0.3,
+          }
+        );
+
+        // Delay between movements
+        const delay = movement.speed ? Math.max(300, 1000 / movement.speed) : 800;
+        if (i < sequence.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      // Wait for final movement to complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return;
+    }
+
     this.publish(config.topic, config.messageType, msg);
 
     // Wait for action completion based on topic type
@@ -1048,6 +1089,12 @@ export class WizardRosService extends EventEmitter {
       case "transformToAnimation":
         return this.transformToAnimation(parameters);
 
+      case "transformToGestureSequence":
+        return this.transformToGestureSequence(parameters);
+
+      case "transformToWaveGoodbye":
+        return this.transformToWaveGoodbye(parameters);
+
       default:
         console.warn(`Unknown transform function: ${transformFn}`);
         return parameters;
@@ -1111,6 +1158,38 @@ export class WizardRosService extends EventEmitter {
     const animation = String(parameters.animation || "Hey_1");
     const markedText = `^start(animations/Stand/Gestures/${animation})`;
     return { data: markedText };
+  }
+
+  /**
+   * Transform for gesture sequences - sends multiple joint angle movements
+   * Parameters: movements = [{joints: string[], angles: number[], duration: number}, ...]
+   */
+  private transformToGestureSequence(parameters: Record<string, unknown>): {
+    type: string;
+    movements: Array<{
+      joint_names: string[];
+      joint_angles: number[];
+      speed: number;
+    }>;
+  } {
+    const movements = parameters.movements as Array<{
+      joints?: string[];
+      angles?: number[];
+      duration?: number;
+      speed?: number;
+    }>;
+
+    if (!Array.isArray(movements)) {
+      return { type: "gesture_sequence", movements: [] };
+    }
+
+    const parsedMovements = movements.map((m, index) => ({
+      joint_names: m.joints || [],
+      joint_angles: m.angles || [],
+      speed: m.speed || (m.duration ? 1 / (m.duration / 1000) : 0.3),
+    }));
+
+    return { type: "gesture_sequence", movements: parsedMovements };
   }
 
   /**
