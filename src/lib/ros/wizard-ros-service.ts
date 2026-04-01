@@ -926,48 +926,15 @@ export class WizardRosService extends EventEmitter {
         break;
 
       case "play_animation_bow":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/BowShort_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_hey":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Hey_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_show_floor":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/ShowFloor_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
-      case "play_animation_show_sole":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/ShowSole_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
+      case "play_animation_friendly":
       case "play_animation_enthusiastic":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Enthusiastic_4" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_think":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Think_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_yes":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Yes_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_no":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/No_3" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        break;
-
       case "play_animation_idontknow":
-        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/IDontKnow_1" });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await this.executeAnimationSSH(actionId);
         break;
 
       default:
@@ -1055,6 +1022,47 @@ export class WizardRosService extends EventEmitter {
         reject(new Error("Service call timed out"));
       }, 5000);
     });
+  }
+
+  /**
+   * Execute animation via API route (SSH to robot)
+   */
+  private async executeAnimationSSH(actionId: string): Promise<void> {
+    const animationMap: Record<string, string> = {
+      "play_animation_bow": "animations/Stand/Gestures/BowShort_1",
+      "play_animation_hey": "animations/Stand/Gestures/Hey_1",
+      "play_animation_show_floor": "animations/Stand/Gestures/ShowFloor_1",
+      "play_animation_friendly": "animations/Stand/Gestures/Friendly_1",
+      "play_animation_enthusiastic": "animations/Stand/Gestures/Enthusiastic_4",
+      "play_animation_think": "animations/Stand/Gestures/Think_1",
+      "play_animation_yes": "animations/Stand/Gestures/Yes_1",
+      "play_animation_no": "animations/Stand/Gestures/No_3",
+      "play_animation_idontknow": "animations/Stand/Gestures/IDontKnow_1",
+    };
+
+    const animation = animationMap[actionId];
+    if (!animation) {
+      throw new Error(`Unknown animation: ${actionId}`);
+    }
+
+    console.log(`[WizardROS] Executing animation via API: ${animation}`);
+
+    // Use the robots command API to execute via SSH
+    const response = await fetch("/api/robots/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "executeSystemAction",
+        parameters: { id: actionId },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Animation failed: ${error}`);
+    }
+
+    console.log(`[WizardROS] Animation completed: ${animation}`);
   }
 
   /**
