@@ -1079,14 +1079,18 @@ export function DesignerRoot({
           }
         }
 
+        const defExec = actionDef.execution as any;
         const execution: ExperimentAction["execution"] =
-          actionDef.execution &&
-          (actionDef.execution.transport === "internal" ||
-            actionDef.execution.transport === "rest" ||
-            actionDef.execution.transport === "ros2")
+          defExec &&
+          (defExec.transport === "internal" ||
+            defExec.transport === "rest" ||
+            defExec.transport === "ros2")
             ? {
-                transport: actionDef.execution.transport,
-                retryable: actionDef.execution.retryable ?? false,
+                transport: defExec.transport,
+                retryable: defExec.retryable ?? false,
+                timeoutMs: defExec.timeoutMs,
+                ros2: defExec.ros2,
+                rest: defExec.rest,
               }
             : undefined;
 

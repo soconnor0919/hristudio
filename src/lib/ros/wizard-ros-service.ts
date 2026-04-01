@@ -1042,6 +1042,12 @@ export class WizardRosService extends EventEmitter {
       case "transformToEmotionalSpeech":
         return this.transformToEmotionalSpeech(parameters);
 
+      case "transformToWaveGoodbye":
+        return this.transformToWaveGoodbye(parameters);
+
+      case "transformToAnimation":
+        return this.transformToAnimation(parameters);
+
       default:
         console.warn(`Unknown transform function: ${transformFn}`);
         return parameters;
@@ -1051,7 +1057,7 @@ export class WizardRosService extends EventEmitter {
   /**
    * Transform parameters for emotional speech
    * NAOqi markup: \rspd=<speed>\<text>
-   * For animated speech: ^start(animations/Stand/Gestures/...)
+   * Using pure speech modifiers without animations to avoid sound effects
    */
   private transformToEmotionalSpeech(parameters: Record<string, unknown>): {
     data: string;
@@ -1065,20 +1071,20 @@ export class WizardRosService extends EventEmitter {
 
     switch (emotion) {
       case "happy":
-        markedText = `\\rspd=120\\^start(animations/Stand/Gestures/Happy_4) ${text}`;
+        markedText = `\\\\rspd=120\\\\vct=100\\\\ ${text}`;
         break;
       case "excited":
-        markedText = `\\rspd=140\\^start(animations/Stand/Gestures/Enthusiastic_1) ${text}`;
+        markedText = `\\\\rspd=140\\\\vct=110\\\\ ${text}`;
         break;
       case "sad":
-        markedText = `\\rspd=80\\vct=80\\${text}`;
+        markedText = `\\\\rspd=80\\\\vct=80\\\\ ${text}`;
         break;
       case "calm":
-        markedText = `\\rspd=90\\${text}`;
+        markedText = `\\\\rspd=90\\\\vct=90\\\\ ${text}`;
         break;
       case "neutral":
       default:
-        markedText = `\\rspd=${speedPercent}\\${text}`;
+        markedText = `\\\\rspd=${speedPercent}\\\\vct=100\\\\ ${text}`;
         break;
     }
 
@@ -1086,13 +1092,13 @@ export class WizardRosService extends EventEmitter {
   }
 
   /**
-   * Transform for wave goodbye - animated speech with waving
+   * Transform for wave goodbye - speech without animation sound
    */
   private transformToWaveGoodbye(parameters: Record<string, unknown>): {
     data: string;
   } {
     const text = String(parameters.text || "Goodbye!");
-    const markedText = `\\rspd=110\\^start(animations/Stand/Gestures/Hey_1) ${text} ^start(animations/Stand/Gestures/Hey_1)`;
+    const markedText = `\\\\rspd=110\\\\ ${text}`;
     return { data: markedText };
   }
 

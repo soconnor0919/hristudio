@@ -11,6 +11,7 @@ import {
   EntityForm,
   FormField,
   FormSection,
+  NextSteps,
   Tips,
 } from "~/components/ui/entity-form";
 import { Input } from "~/components/ui/input";
@@ -26,7 +27,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useStudyContext } from "~/lib/study-context";
 import { api } from "~/trpc/react";
 
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Clock2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -84,60 +85,61 @@ function DateTimePicker({
 
   return (
     <div className="flex items-end gap-2">
-      <div className="grid gap-1.5">
-        <Label htmlFor="date-picker" className="text-xs">
-          Date
-        </Label>
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              id="date-picker"
-              className={cn(
-                "w-[240px] justify-start text-left font-normal",
-                !value && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(value, "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={value}
-              onSelect={onDateSelect}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            id="date-picker"
+            className={cn(
+              "w-[200px] justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(value, "MMM d, yyyy") : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={onDateSelect}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+
+      <div className="relative">
+        <Input
+          id="time-picker"
+          type="time"
+          value={timeValue}
+          onChange={onTimeChange}
+          disabled={!value}
+          className="w-[110px]"
+        />
+        <Clock className="text-muted-foreground pointer-events-none absolute top-2.5 right-3 h-4 w-4" />
       </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="time-picker" className="text-xs">
-          Time
-        </Label>
-        <div className="relative">
-          <Input
-            id="time-picker"
-            type="time"
-            value={timeValue}
-            onChange={onTimeChange}
-            disabled={!value}
-            className="w-[120px]"
-          />
-          <Clock className="text-muted-foreground pointer-events-none absolute top-2.5 right-3 h-4 w-4" />
-        </div>
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(new Date())}
+        className="h-10 gap-1.5"
+      >
+        <Clock2 className="h-4 w-4" />
+        Now
+      </Button>
     </div>
   );
 }
 
 const trialSchema = z.object({
-  experimentId: z.string().uuid("Please select an experiment"),
-  participantId: z.string().uuid("Please select a participant"),
-  scheduledAt: z.date(),
-  wizardId: z.string().uuid().optional().or(z.literal("")),
+  experimentId: z.string().min(1, "Please select an experiment *"),
+  participantId: z.string().min(1, "Please select a participant *"),
+  scheduledAt: z.date({ message: "Scheduled date and time is required *" }),
+  wizardId: z.string().optional().or(z.literal("")),
   notes: z.string().max(1000, "Notes cannot exceed 1000 characters").optional(),
   sessionNumber: z
     .number()
@@ -165,7 +167,7 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     defaultValues: {
       experimentId: "" as any,
       participantId: "" as any,
-      scheduledAt: new Date(),
+      scheduledAt: undefined,
       wizardId: undefined,
       notes: "",
       sessionNumber: 1,
@@ -329,6 +331,249 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
     return <div>Error loading trial: {fetchError.message}</div>;
   }
 
+  // Sidebar content
+  const sidebar = (
+    <>
+      <NextSteps
+        steps={[
+          {
+            title: "Configure Experiment",
+            description: "Ensure the experiment protocol is designed and ready",
+            completed: !!form.watch("experimentId"),
+          },
+          {
+            title: "Select Participant",
+            description: "Choose a participant for this trial",
+            completed: !!form.watch("participantId"),
+          },
+          {
+            title: "Assign Wizard",
+            description: "Assign a wizard to operate the robot",
+          },
+          {
+            title: "Run Trial",
+            description: "Execute the trial and collect data",
+          },
+        ]}
+      />
+      <Tips
+        tips={[
+          "Verify experiment status: Only 'Ready' experiments can be used in trials.",
+          "Check participant availability: Ensure participants are available at the scheduled time.",
+          "Assign wizards early: Give wizards time to prepare before the trial.",
+          "Prepare notes: Add any special instructions for the wizard.",
+        ]}
+      />
+    </>
+  );
+
+  // Form fields
+  const formFields = (
+    <>
+      <FormSection
+        title="Trial Configuration"
+        description="Select the experiment and participant for this trial."
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormField>
+            <Label htmlFor="experimentId">
+              Experiment <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={form.watch("experimentId") ?? ""}
+              onValueChange={(value) => form.setValue("experimentId", value)}
+              disabled={experimentsLoading || mode === "edit"}
+            >
+              <SelectTrigger
+                className={
+                  form.formState.errors.experimentId ? "border-red-500 ring-1 ring-red-500" : ""
+                }
+              >
+                <SelectValue
+                  placeholder={
+                    experimentsLoading
+                      ? "Loading experiments..."
+                      : "Select an experiment"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {experimentsData?.map((experiment) => (
+                  <SelectItem key={experiment.id} value={experiment.id}>
+                    {experiment.name} ({experiment.status})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.experimentId && (
+              <p className="mt-1 text-sm text-red-500 font-medium">
+                {form.formState.errors.experimentId.message}
+              </p>
+            )}
+            {mode === "edit" && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                Experiment cannot be changed after creation
+              </p>
+            )}
+          </FormField>
+
+          <FormField>
+            <Label htmlFor="participantId">
+              Participant <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={form.watch("participantId") ?? ""}
+              onValueChange={(value) => form.setValue("participantId", value)}
+              disabled={participantsLoading || mode === "edit"}
+            >
+              <SelectTrigger
+                className={
+                  form.formState.errors.participantId ? "border-red-500 ring-1 ring-red-500" : ""
+                }
+              >
+                <SelectValue
+                  placeholder={
+                    participantsLoading
+                      ? "Loading participants..."
+                      : "Select a participant"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {participantsData?.participants?.map((participant) => (
+                  <SelectItem key={participant.id} value={participant.id}>
+                    {participant.name ?? participant.participantCode}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.participantId && (
+              <p className="mt-1 text-sm text-red-500 font-medium">
+                {form.formState.errors.participantId.message}
+              </p>
+            )}
+            {mode === "edit" && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                Participant cannot be changed after creation
+              </p>
+            )}
+          </FormField>
+        </div>
+      </FormSection>
+
+      <FormSection
+        title="Scheduling"
+        description="Set when this trial should be conducted."
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormField>
+            <Label htmlFor="scheduledAt">
+              Scheduled Date & Time <span className="text-red-500">*</span>
+            </Label>
+            <Controller
+              control={form.control}
+              name="scheduledAt"
+              render={({ field }) => (
+                <DateTimePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            {form.formState.errors.scheduledAt && (
+              <p className="mt-1 text-sm text-red-500 font-medium">
+                {form.formState.errors.scheduledAt.message}
+              </p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              When should this trial be conducted?
+            </p>
+          </FormField>
+
+          <FormField>
+            <Label htmlFor="sessionNumber">Session Number</Label>
+            <Input
+              id="sessionNumber"
+              type="number"
+              min="1"
+              {...form.register("sessionNumber", { valueAsNumber: true })}
+              placeholder="1"
+              className={
+                form.formState.errors.sessionNumber ? "border-red-500 ring-1 ring-red-500" : ""
+              }
+            />
+            {form.formState.errors.sessionNumber && (
+              <p className="mt-1 text-sm text-red-500 font-medium">
+                {form.formState.errors.sessionNumber.message}
+              </p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              Auto-incremented based on participant history
+            </p>
+          </FormField>
+        </div>
+      </FormSection>
+
+      <FormSection
+        title="Assignment & Notes"
+        description="Assign a wizard and add any special instructions."
+      >
+        <FormField>
+          <Label htmlFor="wizardId">Assigned Wizard</Label>
+          <Select
+            value={form.watch("wizardId") ?? "none"}
+            onValueChange={(value) =>
+              form.setValue("wizardId", value === "none" ? undefined : value)
+            }
+            disabled={usersLoading}
+          >
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  usersLoading
+                    ? "Loading wizards..."
+                    : "Select a wizard (optional)"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No wizard assigned</SelectItem>
+              {usersData?.map(
+                (user: { id: string; name: string; email: string }) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Who will operate the robot during this trial?
+          </p>
+        </FormField>
+
+        <FormField>
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            {...form.register("notes")}
+            placeholder="Special instructions for the wizard, environmental setup notes, or other relevant information..."
+            rows={4}
+            className={form.formState.errors.notes ? "border-red-500 ring-1 ring-red-500" : ""}
+          />
+          {form.formState.errors.notes && (
+            <p className="mt-1 text-sm text-red-500 font-medium">
+              {form.formState.errors.notes.message}
+            </p>
+          )}
+          <p className="text-muted-foreground mt-1 text-xs">
+            Optional: Add any special instructions for this trial
+          </p>
+        </FormField>
+      </FormSection>
+    </>
+  );
+
   return (
     <EntityForm
       mode={mode}
@@ -351,196 +596,10 @@ export function TrialForm({ mode, trialId, studyId }: TrialFormProps) {
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
       error={error}
-      sidebar={undefined}
+      sidebar={sidebar}
       submitText={mode === "create" ? "Schedule Trial" : "Save Changes"}
-      layout="full-width"
     >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Left Column: Main Info (Spans 2) */}
-        <div className="space-y-6 md:col-span-2">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <FormField>
-              <Label htmlFor="experimentId">Experiment *</Label>
-              <Select
-                value={form.watch("experimentId") ?? ""}
-                onValueChange={(value) => form.setValue("experimentId", value)}
-                disabled={experimentsLoading || mode === "edit"}
-              >
-                <SelectTrigger
-                  className={
-                    form.formState.errors.experimentId ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue
-                    placeholder={
-                      experimentsLoading
-                        ? "Loading experiments..."
-                        : "Select an experiment"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {experimentsData?.map((experiment) => (
-                    <SelectItem key={experiment.id} value={experiment.id}>
-                      {experiment.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.experimentId && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.experimentId.message}
-                </p>
-              )}
-              {mode === "edit" && (
-                <p className="text-muted-foreground text-xs">
-                  Experiment cannot be changed after creation
-                </p>
-              )}
-            </FormField>
-
-            <FormField>
-              <Label htmlFor="participantId">Participant *</Label>
-              <Select
-                value={form.watch("participantId") ?? ""}
-                onValueChange={(value) => form.setValue("participantId", value)}
-                disabled={participantsLoading || mode === "edit"}
-              >
-                <SelectTrigger
-                  className={
-                    form.formState.errors.participantId ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue
-                    placeholder={
-                      participantsLoading
-                        ? "Loading participants..."
-                        : "Select a participant"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {participantsData?.participants?.map((participant) => (
-                    <SelectItem key={participant.id} value={participant.id}>
-                      {participant.name ?? participant.participantCode} (
-                      {participant.participantCode})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.participantId && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.participantId.message}
-                </p>
-              )}
-              {mode === "edit" && (
-                <p className="text-muted-foreground text-xs">
-                  Participant cannot be changed after creation
-                </p>
-              )}
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <FormField>
-              <Label htmlFor="scheduledAt">Scheduled Date & Time *</Label>
-              <Controller
-                control={form.control}
-                name="scheduledAt"
-                render={({ field }) => (
-                  <DateTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-              {form.formState.errors.scheduledAt && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.scheduledAt.message}
-                </p>
-              )}
-              <p className="text-muted-foreground text-xs">
-                When should this trial be conducted?
-              </p>
-            </FormField>
-
-            <FormField>
-              <Label htmlFor="sessionNumber">Session Number</Label>
-              <Input
-                id="sessionNumber"
-                type="number"
-                min="1"
-                {...form.register("sessionNumber", { valueAsNumber: true })}
-                placeholder="1"
-                className={
-                  form.formState.errors.sessionNumber ? "border-red-500" : ""
-                }
-              />
-              {form.formState.errors.sessionNumber && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.sessionNumber.message}
-                </p>
-              )}
-              <p className="text-muted-foreground text-xs">
-                Auto-incremented based on participant history
-              </p>
-            </FormField>
-          </div>
-        </div>
-
-        {/* Right Column: Assignment & Notes (Spans 1) */}
-        <div className="space-y-6">
-          <FormField>
-            <Label htmlFor="wizardId">Assigned Wizard</Label>
-            <Select
-              value={form.watch("wizardId") ?? "none"}
-              onValueChange={(value) =>
-                form.setValue("wizardId", value === "none" ? undefined : value)
-              }
-              disabled={usersLoading}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    usersLoading
-                      ? "Loading wizards..."
-                      : "Select a wizard (optional)"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No wizard assigned</SelectItem>
-                {usersData?.map(
-                  (user: { id: string; name: string; email: string }) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              Who will operate the robot?
-            </p>
-          </FormField>
-
-          <FormField>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              {...form.register("notes")}
-              placeholder="Special instructions..."
-              rows={5}
-              className={form.formState.errors.notes ? "border-red-500" : ""}
-            />
-            {form.formState.errors.notes && (
-              <p className="text-sm text-red-600">
-                {form.formState.errors.notes.message}
-              </p>
-            )}
-          </FormField>
-        </div>
-      </div>
+      {formFields}
     </EntityForm>
   );
 }

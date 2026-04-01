@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: hristudio
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hristudio}
       PGSSLMODE: disable
     command: -c ssl=off
     ports:
-      - "5140:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,11 +20,11 @@ services:
   minio:
     image: minio/minio
     ports:
-      - "9000:9000" # API
-      - "9001:9001" # Console
+      - "${MINIO_PORT_API:-9000}:9000" # API
+      - "${MINIO_PORT_CONSOLE:-9001}:9001" # Console
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
     command: server --console-address ":9001" /data
@@ -35,9 +35,9 @@ services:
       - minio
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/hristudio-data;
-      /usr/bin/mc anonymous set public myminio/hristudio-data;
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-hristudio-data};
+      /usr/bin/mc anonymous set public myminio/${MINIO_BUCKET_NAME:-hristudio-data};
       exit 0;
       "
 

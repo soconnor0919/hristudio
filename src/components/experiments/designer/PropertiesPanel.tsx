@@ -43,7 +43,14 @@ import {
   Plus,
   GitBranch,
   Trash2,
+  PlayCircle,
+  Square,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { getWizardRosService, initWizardRosService, resetWizardRosService } from "~/lib/ros/wizard-ros-service";
 
 /**
  * PropertiesPanel
@@ -89,6 +96,10 @@ export function PropertiesPanelBase({
   const [localStepName, setLocalStepName] = useState("");
   const [localStepDescription, setLocalStepDescription] = useState("");
   const [localParams, setLocalParams] = useState<Record<string, unknown>>({});
+
+  // Test action state
+  const [isTesting, setIsTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState<"idle" | "running" | "success" | "error">("idle");
 
   // Debounce timers
   const actionUpdateTimer = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -167,6 +178,74 @@ export function PropertiesPanelBase({
   const containingStep =
     selectedAction &&
     design.steps.find((s) => s.actions.some((a) => a.id === selectedAction.id));
+
+  // Test action handler
+  const handleTestAction = useCallback(async () => {
+    if (!selectedAction || !containingStep) return;
+
+    setIsTesting(true);
+    setTestStatus("running");
+
+    try {
+      console.log("[Test Action] Starting test for action:", selectedAction.name, selectedAction.type);
+      console.log("[Test Action] Execution config:", JSON.stringify(selectedAction.execution, null, 2));
+      console.log("[Test Action] Parameters:", selectedAction.parameters);
+
+      // Reset service to ensure clean state for testing
+      resetWizardRosService();
+      
+      // Initialize with actual robot connection (not simulation)
+      const rosService = await initWizardRosService(false);
+      console.log("[Test Action] ROS service initialized, connected:", rosService.getConnectionStatus());
+
+      // Build action config from execution descriptor
+      const execution = selectedAction.execution;
+      let actionConfig: {
+        topic: string;
+        messageType: string;
+        payloadMapping: {
+          type: string;
+          payload?: Record<string, unknown>;
+          transformFn?: string;
+        };
+      } | undefined;
+
+      if (execution?.transport === "ros2" && execution.ros2) {
+        const ros2 = execution.ros2 as any;
+        actionConfig = {
+          topic: ros2.topic || "/speech",
+          messageType: ros2.messageType || "std_msgs/msg/String",
+          payloadMapping: {
+            type: ros2.payloadMapping?.type || "static",
+            payload: ros2.payloadMapping?.payload,
+            transformFn: ros2.payloadMapping?.transformFn,
+          },
+        };
+        console.log("[Test Action] Action config built:", JSON.stringify(actionConfig, null, 2));
+      }
+
+      // Execute the action on the real robot
+      const result = await rosService.executeRobotAction(
+        selectedAction.source?.kind === "plugin" ? (selectedAction.source?.pluginId || "core") : "core",
+        selectedAction.type,
+        selectedAction.parameters,
+        actionConfig,
+      );
+      console.log("[Test Action] Execution result:", result);
+
+      setTestStatus("success");
+      toast.success(`Action "${selectedAction.name}" executed on robot`);
+    } catch (error) {
+      setTestStatus("error");
+      const message = error instanceof Error ? error.message : "Action execution failed";
+      toast.error(message);
+      console.error("Test action error:", error);
+    } finally {
+      setIsTesting(false);
+      // Reset status after a delay
+      setTimeout(() => setTestStatus("idle"), 2000);
+    }
+  }, [selectedAction, containingStep]);
 
   /* -------------------------- Action Properties View -------------------------- */
   if (selectedAction && containingStep) {
@@ -276,6 +355,41 @@ export function PropertiesPanelBase({
             </p>
           )}
         </div>
+
+        {/* Test Action Button */}
+        {selectedAction.execution?.transport !== "internal" && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={handleTestAction}
+              disabled={isTesting}
+            >
+              {testStatus === "running" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Running...
+                </>
+              ) : testStatus === "success" ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Success!
+                </>
+              ) : testStatus === "error" ? (
+                <>
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  Failed
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="h-4 w-4" />
+                  Test Action
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* General */}
         <div className="space-y-2">
