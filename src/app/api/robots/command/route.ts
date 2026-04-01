@@ -117,6 +117,22 @@ export async function POST(request: NextRequest) {
             command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/IDontKnow_1'"`;
             break;
 
+          case "stand":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALRobotPosture.goToPosture Stand 0.5"`;
+            break;
+
+          case "stand_init":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALRobotPosture.goToPosture StandInit 0.5"`;
+            break;
+
+          case "sit":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALRobotPosture.goToPosture Sit 0.5"`;
+            break;
+
+          case "crouch":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALRobotPosture.goToPosture Crouch 0.5"`;
+            break;
+
           default:
             return NextResponse.json(
               { error: `System action ${id} not implemented` },
