@@ -128,6 +128,35 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      case "executeSSH": {
+        const { command } = parameters ?? {};
+        if (!command) {
+          return NextResponse.json(
+            { error: "Missing command parameter" },
+            { status: 400 },
+          );
+        }
+
+        console.log(`[Robots API] Executing SSH command: ${command}`);
+
+        const sshCmd = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "nao@${robotIp}" "${command}"`;
+
+        try {
+          const { stdout, stderr } = await execAsync(sshCmd);
+          if (stderr && !stderr.includes("null") && stderr.trim()) {
+            console.warn(`[Robots API] SSH stderr: ${stderr}`);
+          }
+          console.log(`[Robots API] SSH result: ${stdout}`);
+          return NextResponse.json({ success: true, stdout, stderr });
+        } catch (error) {
+          console.error(`[Robots API] SSH command failed:`, error);
+          return NextResponse.json(
+            { error: error instanceof Error ? error.message : "SSH command failed" },
+            { status: 500 },
+          );
+        }
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },

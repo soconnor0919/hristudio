@@ -26,6 +26,22 @@ export interface RobotAction {
     topic: string;
     messageType: string;
     messageTemplate: Record<string, unknown>;
+    payloadMapping?: {
+      type?: string;
+      transformFn?: string;
+      payload?: Record<string, unknown>;
+    };
+    ros2?: {
+      topic?: string;
+      messageType?: string;
+      service?: string;
+      action?: string;
+      payloadMapping?: {
+        type?: string;
+        transformFn?: string;
+        payload?: Record<string, unknown>;
+      };
+    };
   };
 }
 
@@ -238,11 +254,39 @@ export class RobotCommunicationService extends EventEmitter {
       return;
     }
 
-    // Build ROS message from template
-    const message = this.buildRosMessage(
-      implementation.messageTemplate,
-      parameters,
-    );
+    // Check for SSH command type
+    const sshCommand = implementation.payloadMapping?.sshCommand 
+      || implementation.ros2?.payloadMapping?.sshCommand;
+    
+    if (sshCommand) {
+      this.executeSSHCommand(sshCommand).then(() => {
+        this.completeAction(actionId, {
+          success: true,
+          duration:
+            Date.now() -
+            (this.pendingActions.get(actionId)?.startTime || Date.now()),
+          data: { method: "ssh", command: sshCommand },
+        });
+      }).catch((error) => {
+        this.pendingActions.get(actionId)?.reject(error);
+      });
+      return;
+    }
+
+    // Apply transform if specified
+    let message: Record<string, unknown>;
+    const transformFn = implementation.payloadMapping?.transformFn 
+      || implementation.ros2?.payloadMapping?.transformFn;
+    
+    if (transformFn) {
+      message = this.applyTransform(transformFn, parameters);
+    } else {
+      // Build ROS message from template
+      message = this.buildRosMessage(
+        implementation.messageTemplate,
+        parameters,
+      );
+    }
 
     // Publish to ROS topic
     this.publishToTopic(
@@ -266,6 +310,23 @@ export class RobotCommunicationService extends EventEmitter {
         },
       });
     }, 100);
+  }
+
+  private async executeSSHCommand(command: string): Promise<void> {
+    const robotIp = process.env.NAO_IP || "134.82.159.168";
+    const password = process.env.NAO_PASSWORD || "robolab";
+
+    console.log(`[RobotComm] Executing SSH command: ${command}`);
+
+    const sshCommand = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "nao@${robotIp}" "${command}"`;
+
+    const { stdout, stderr } = await execAsync(sshCommand);
+
+    if (stderr && !stderr.includes("null") && stderr.trim()) {
+      console.warn(`[RobotComm] SSH stderr: ${stderr}`);
+    }
+
+    console.log(`[RobotComm] SSH result: ${stdout}`);
   }
 
   private async executeAnimationViaSSH(actionType: string): Promise<void> {
@@ -298,6 +359,32 @@ export class RobotCommunicationService extends EventEmitter {
     }
 
     console.log(`[RobotComm] Animation result: ${stdout}`);
+  }
+
+  private transformToEmotionalSpeech(parameters: Record<string, unknown>): { data: string } {
+    const text = String(parameters.text || "Hello");
+    const emotion = String(parameters.emotion || "neutral");
+
+    switch (emotion) {
+      case "happy":
+        return { data: `\\rspd=120\\ ${text}` };
+      case "sad":
+        return { data: `\\rspd=80\\ ${text}` };
+      case "neutral":
+      default:
+        return { data: text };
+    }
+  }
+
+  private applyTransform(transformFn: string, parameters: Record<string, unknown>): Record<string, unknown> {
+    switch (transformFn) {
+      case "transformToEmotionalSpeech":
+      case "transformToEmotionSpeech":
+        return this.transformToEmotionalSpeech(parameters);
+      default:
+        console.warn(`[RobotComm] Unknown transform: ${transformFn}`);
+        return parameters;
+    }
   }
 
   private buildRosMessage(

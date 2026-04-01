@@ -718,11 +718,18 @@ export class WizardRosService extends EventEmitter {
         transformFn?: string;
         service?: string;
         args?: Record<string, unknown>;
+        sshCommand?: string;
       };
     },
     parameters: Record<string, unknown>,
     actionId?: string,
   ): Promise<void> {
+    // SSH command actions
+    if (config.payloadMapping.type === "ssh" && config.payloadMapping.sshCommand) {
+      await this.executeSSHCommand(config.payloadMapping.sshCommand);
+      return;
+    }
+
     // Service-call actions — no topic publish involved
     if (config.payloadMapping.type === "service") {
       const service = config.payloadMapping.service ?? config.topic;
@@ -1066,6 +1073,29 @@ export class WizardRosService extends EventEmitter {
     }
 
     console.log(`[WizardROS] Animation completed: ${animation}`);
+  }
+
+  /**
+   * Execute an arbitrary SSH command via the API
+   */
+  private async executeSSHCommand(command: string): Promise<void> {
+    console.log(`[WizardROS] Executing SSH command: ${command}`);
+
+    const response = await fetch("/api/robots/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "executeSSH",
+        command,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`SSH command failed: ${error}`);
+    }
+
+    console.log(`[WizardROS] SSH command completed: ${command}`);
   }
 
   /**
