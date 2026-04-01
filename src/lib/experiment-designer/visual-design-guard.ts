@@ -55,7 +55,7 @@ const actionSourceSchema = z
 const executionDescriptorSchema = z
   .object({
     transport: z.enum(["ros2", "rest", "internal"]),
-    timeoutMs: z.number().int().positive().optional(),
+    timeoutMs: z.number().int().min(0).optional(),
     retryable: z.boolean().optional(),
     ros2: z
       .object({
