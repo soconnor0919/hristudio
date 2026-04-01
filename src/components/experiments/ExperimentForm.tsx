@@ -34,8 +34,8 @@ const experimentSchema = z.object({
     .max(100, "Name too long"),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description too long"),
+    .max(1000, "Description too long")
+    .optional(),
   studyId: z.string().uuid("Please select a study"),
   estimatedDuration: z
     .number()
@@ -123,7 +123,7 @@ export function ExperimentForm({ mode, experimentId }: ExperimentFormProps) {
     if (mode === "edit" && experiment) {
       form.reset({
         name: experiment.name,
-        description: experiment.description ?? "",
+        description: experiment.description ?? undefined,
         studyId: experiment.studyId,
         estimatedDuration: experiment.estimatedDuration ?? undefined,
         status: experiment.status,
