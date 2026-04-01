@@ -1262,27 +1262,19 @@ export class WizardRosService extends EventEmitter {
   } {
     const text = String(parameters.text || "Hello");
     const emotion = String(parameters.emotion || "neutral");
-    const speed = Number(parameters.speed || 1.0);
-    const speedPercent = Math.round(speed * 100);
 
     let markedText = text;
 
     switch (emotion) {
       case "happy":
-        markedText = `\\\\rspd=120\\\\vct=100\\\\ ${text}`;
-        break;
-      case "excited":
-        markedText = `\\\\rspd=140\\\\vct=110\\\\ ${text}`;
+        markedText = `\\rspd=120\\ ${text}`;
         break;
       case "sad":
-        markedText = `\\\\rspd=80\\\\vct=80\\\\ ${text}`;
-        break;
-      case "calm":
-        markedText = `\\\\rspd=90\\\\vct=90\\\\ ${text}`;
+        markedText = `\\rspd=80\\ ${text}`;
         break;
       case "neutral":
       default:
-        markedText = `\\\\rspd=${speedPercent}\\\\vct=100\\\\ ${text}`;
+        markedText = text;
         break;
     }
 
@@ -1296,8 +1288,7 @@ export class WizardRosService extends EventEmitter {
     data: string;
   } {
     const text = String(parameters.text || "Goodbye!");
-    const markedText = `\\\\rspd=110\\\\ ${text}`;
-    return { data: markedText };
+    return { data: text };
   }
 
   /**
