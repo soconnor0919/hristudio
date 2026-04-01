@@ -1231,6 +1231,9 @@ export class WizardRosService extends EventEmitter {
       case "transformToEmotionalSpeech":
         return this.transformToEmotionalSpeech(parameters);
 
+      case "transformToEmotionSpeech":
+        return this.transformToEmotionalSpeech(parameters);
+
       case "transformToWaveGoodbye":
         return this.transformToWaveGoodbye(parameters);
 
