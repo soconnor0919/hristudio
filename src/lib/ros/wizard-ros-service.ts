@@ -925,6 +925,51 @@ export class WizardRosService extends EventEmitter {
         });
         break;
 
+      case "play_animation_bow":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/BowShort_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_hey":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Hey_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_show_floor":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/ShowFloor_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_show_sole":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/ShowSole_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_enthusiastic":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Enthusiastic_4" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_think":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Think_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_yes":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/Yes_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_no":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/No_3" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
+      case "play_animation_idontknow":
+        this.publish("/animation", "std_msgs/String", { data: "animations/Stand/Gestures/IDontKnow_1" });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        break;
+
       default:
         throw new Error(
           `Unknown action: ${actionId}. Define this action in your robot plugin.`,
