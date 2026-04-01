@@ -89,6 +89,42 @@ export async function POST(request: NextRequest) {
             command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; m = naoqi.ALProxy('ALMotion', '127.0.0.1', 9559); m.rest()\\""`;
             break;
 
+          case "play_animation_bow":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/BowShort_1'"`;
+            break;
+
+          case "play_animation_hey":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Hey_1'"`;
+            break;
+
+          case "play_animation_show_floor":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/ShowFloor_1'"`;
+            break;
+
+          case "play_animation_show_sole":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/ShowSole_1'"`;
+            break;
+
+          case "play_animation_enthusiastic":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Enthusiastic_4'"`;
+            break;
+
+          case "play_animation_think":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Think_1'"`;
+            break;
+
+          case "play_animation_yes":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Yes_1'"`;
+            break;
+
+          case "play_animation_no":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/No_3'"`;
+            break;
+
+          case "play_animation_idontknow":
+            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/IDontKnow_1'"`;
+            break;
+
           default:
             return NextResponse.json(
               { error: `System action ${id} not implemented` },

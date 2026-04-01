@@ -6,6 +6,10 @@
 
 import WebSocket from "ws";
 import { EventEmitter } from "events";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 export interface RobotCommunicationConfig {
   rosBridgeUrl: string;
@@ -212,7 +216,23 @@ export class RobotCommunicationService extends EventEmitter {
     action: RobotAction,
     actionId: string,
   ): void {
-    const { implementation, parameters } = action;
+    const { implementation, parameters, actionId: actionType } = action;
+
+    // Use SSH for play_animation actions
+    if (actionType.startsWith("play_animation_")) {
+      this.executeAnimationViaSSH(actionType).then(() => {
+        this.completeAction(actionId, {
+          success: true,
+          duration:
+            Date.now() -
+            (this.pendingActions.get(actionId)?.startTime || Date.now()),
+          data: { method: "ssh", action: actionType },
+        });
+      }).catch((error) => {
+        this.pendingActions.get(actionId)?.reject(error);
+      });
+      return;
+    }
 
     // Build ROS message from template
     const message = this.buildRosMessage(
@@ -242,6 +262,40 @@ export class RobotCommunicationService extends EventEmitter {
         },
       });
     }, 100);
+  }
+
+  private async executeAnimationViaSSH(actionType: string): Promise<void> {
+    const animationMap: Record<string, string> = {
+      "play_animation_bow": "animations/Stand/Gestures/BowShort_1",
+      "play_animation_hey": "animations/Stand/Gestures/Hey_1",
+      "play_animation_show_floor": "animations/Stand/Gestures/ShowFloor_1",
+      "play_animation_show_sole": "animations/Stand/Gestures/ShowSole_1",
+      "play_animation_enthusiastic": "animations/Stand/Gestures/Enthusiastic_4",
+      "play_animation_think": "animations/Stand/Gestures/Think_1",
+      "play_animation_yes": "animations/Stand/Gestures/Yes_1",
+      "play_animation_no": "animations/Stand/Gestures/No_3",
+      "play_animation_idontknow": "animations/Stand/Gestures/IDontKnow_1",
+    };
+
+    const animation = animationMap[actionType];
+    if (!animation) {
+      throw new Error(`Unknown animation: ${actionType}`);
+    }
+
+    const robotIp = process.env.NAO_IP || "134.82.159.168";
+    const password = process.env.NAO_PASSWORD || "robolab";
+
+    console.log(`[RobotComm] Executing animation via SSH: ${animation}`);
+
+    const command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "nao@${robotIp}" "qicli call ALAnimationPlayer.run '${animation}'"`;
+
+    const { stdout, stderr } = await execAsync(command);
+
+    if (stderr && !stderr.includes("null")) {
+      console.warn(`[RobotComm] SSH stderr: ${stderr}`);
+    }
+
+    console.log(`[RobotComm] Animation result: ${stdout}`);
   }
 
   private buildRosMessage(
