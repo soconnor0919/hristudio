@@ -46,6 +46,21 @@ export interface RobotActionExecution {
 }
 
 /**
+ * A single frame in a multi-step joint animation.
+ * @param joint_names  - NAO joint names to move (e.g. "LShoulderPitch")
+ * @param joint_angles - Target angles in radians, one per joint_name
+ * @param speed        - Movement speed as a fraction of max (0.0–1.0)
+ * @param delay_after  - Milliseconds to wait after publishing this frame
+ *                       before sending the next one. Defaults to 800 ms.
+ */
+export interface AnimationMovement {
+  joint_names: string[];
+  joint_angles: number[];
+  speed?: number;
+  delay_after?: number;
+}
+
+/**
  * Unified ROS WebSocket service for wizard interface
  * Manages connection to rosbridge and handles robot action execution
  */
@@ -329,6 +344,19 @@ export class WizardRosService extends EventEmitter {
 
       console.log(`[WizardROS] SIMULATION MODE - Executing ${actionId}:`, parameters);
 
+      // If the action config carries a gesture_sequence payload, run the sim animation handler
+      if (actionConfig?.payloadMapping?.payload) {
+        const payload = actionConfig.payloadMapping.payload as { type?: string; movements?: AnimationMovement[] };
+        if (payload.type === "gesture_sequence" && payload.movements?.length) {
+          await this.executeSimulationAnimationSequence(payload.movements);
+          execution.status = "completed";
+          execution.endTime = new Date();
+          this.emit("action_completed", execution);
+          this.activeActions.set(executionId, execution);
+          return execution;
+        }
+      }
+
       // Simulate action execution based on action type
       let duration = 500;
 
@@ -336,9 +364,8 @@ export class WizardRosService extends EventEmitter {
         const text = String(parameters.text || parameters.data || "Hello");
         const wordCount = text.split(/\s+/).filter(Boolean).length;
         duration = 1500 + Math.max(1000, wordCount * 300);
-      } else if (actionId.includes("walk") || actionId.includes("turn") || actionConfig?.topic === "/cmd_vel") {
+      } else if (actionId.includes("walk") || actionId === "stop_walking" || actionConfig?.topic === "/cmd_vel") {
         duration = 500;
-        // Simulate position change
         const speed = Number(parameters.speed) || 0.1;
         if (actionId === "walk_forward") {
           this.robotStatus.position.x += speed * 0.5;
@@ -349,8 +376,10 @@ export class WizardRosService extends EventEmitter {
         } else if (actionId === "turn_right") {
           this.robotStatus.position.theta += 0.5;
         }
-      } else if (actionId.includes("head") || actionId.includes("move") || actionConfig?.topic === "/joint_angles") {
+      } else if (actionConfig?.topic === "/joint_angles") {
         duration = 1000;
+      } else if (actionId === "wake_up" || actionId === "rest" || actionId === "set_posture") {
+        duration = 2000;
       }
 
       // Simulate async execution
@@ -461,6 +490,60 @@ export class WizardRosService extends EventEmitter {
   }
 
   /**
+   * Execute a multi-frame joint animation by sending each movement in sequence.
+   * Each frame is published to /joint_angles then held for delay_after ms
+   * (default 800 ms) before the next frame is sent.
+   */
+  async executeAnimationSequence(movements: AnimationMovement[]): Promise<void> {
+    if (!movements.length) {
+      console.warn("[WizardROS] executeAnimationSequence called with empty movements");
+      return;
+    }
+
+    for (let i = 0; i < movements.length; i++) {
+      const movement = movements[i]!;
+      console.log(
+        `[WizardROS] Animation frame ${i + 1}/${movements.length}:`,
+        movement.joint_names,
+        "→",
+        movement.joint_angles,
+      );
+
+      this.publish(
+        "/joint_angles",
+        "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
+        {
+          joint_names: movement.joint_names,
+          joint_angles: movement.joint_angles,
+          speed: movement.speed ?? 0.3,
+        },
+      );
+
+      // Always wait after each frame (including the last) so the caller
+      // can await this method and know the animation has finished.
+      const delayMs = movement.delay_after ?? 800;
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  /**
+   * Execute a multi-frame joint animation in simulation mode (logs only).
+   */
+  private async executeSimulationAnimationSequence(
+    movements: AnimationMovement[],
+  ): Promise<void> {
+    for (let i = 0; i < movements.length; i++) {
+      const movement = movements[i]!;
+      console.log(
+        `[WizardROS] SIMULATION animation frame ${i + 1}/${movements.length}:`,
+        movement.joint_names,
+      );
+      const delayMs = movement.delay_after ?? 800;
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  /**
    * Subscribe to robot sensor topics
    */
   private subscribeToRobotTopics(): void {
@@ -480,6 +563,7 @@ export class WizardRosService extends EventEmitter {
 
     this.advertise("/speech", "std_msgs/String");
     this.advertise("/cmd_vel", "geometry_msgs/Twist");
+    this.advertise("/joint_angles", "naoqi_bridge_msgs/msg/JointAnglesWithSpeed");
     this.advertise("/robot_pose", "geometry_msgs/Pose");
     this.advertise("/animation", "std_msgs/String");
   }
@@ -632,10 +716,22 @@ export class WizardRosService extends EventEmitter {
         type: string;
         payload?: Record<string, unknown>;
         transformFn?: string;
+        service?: string;
+        args?: Record<string, unknown>;
       };
     },
     parameters: Record<string, unknown>,
   ): Promise<void> {
+    // Service-call actions — no topic publish involved
+    if (config.payloadMapping.type === "service") {
+      const service = config.payloadMapping.service ?? config.topic;
+      const args = config.payloadMapping.args
+        ? this.buildTemplatePayload(config.payloadMapping.args, parameters)
+        : parameters;
+      await this.callService(service, args);
+      return;
+    }
+
     let msg: Record<string, unknown>;
 
     if (
@@ -643,60 +739,22 @@ export class WizardRosService extends EventEmitter {
         config.payloadMapping.type === "static") &&
       config.payloadMapping.payload
     ) {
-      // Template-based payload construction
-      msg = this.buildTemplatePayload(
-        config.payloadMapping.payload,
-        parameters,
-      );
+      msg = this.buildTemplatePayload(config.payloadMapping.payload, parameters);
     } else if (config.payloadMapping.transformFn) {
-      // Custom transform function
-      msg = this.applyTransformFunction(
-        config.payloadMapping.transformFn,
-        parameters,
-      );
+      msg = this.applyTransformFunction(config.payloadMapping.transformFn, parameters);
     } else {
-      // Direct parameter mapping
       msg = parameters;
     }
 
-    // Handle gesture sequences - send multiple movements with delays
-    if ((msg as any).type === "gesture_sequence") {
-      const sequence = (msg as any).movements as Array<{
-        joint_names: string[];
-        joint_angles: number[];
-        speed: number;
-      }>;
-
-      if (!sequence || sequence.length === 0) {
-        console.warn("[WizardROS] Gesture sequence has no movements");
+    // Delegate gesture_sequence payloads to the animation handler
+    if ((msg as { type?: string }).type === "gesture_sequence") {
+      const movements = (msg as { movements?: AnimationMovement[] }).movements;
+      if (!movements?.length) {
+        console.warn("[WizardROS] gesture_sequence payload has no movements");
         return;
       }
-
-      console.log(`[WizardROS] Executing gesture sequence with ${sequence.length} movements`);
-
-      for (let i = 0; i < sequence.length; i++) {
-        const movement = sequence[i];
-        if (!movement) continue;
-
-        this.publish(
-          "/joint_angles",
-          "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
-          {
-            joint_names: movement.joint_names,
-            joint_angles: movement.joint_angles,
-            speed: movement.speed || 0.3,
-          }
-        );
-
-        // Delay between movements
-        const delay = movement.speed ? Math.max(300, 1000 / movement.speed) : 800;
-        if (i < sequence.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-
-      // Wait for final movement to complete
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log(`[WizardROS] Delegating to animation handler (${movements.length} frames)`);
+      await this.executeAnimationSequence(movements);
       return;
     }
 
@@ -788,7 +846,7 @@ export class WizardRosService extends EventEmitter {
       case "turn_head":
         this.publish(
           "/joint_angles",
-          "naoqi_bridge_msgs/JointAnglesWithSpeed",
+          "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
           {
             joint_names: ["HeadYaw", "HeadPitch"],
             joint_angles: [
@@ -801,12 +859,12 @@ export class WizardRosService extends EventEmitter {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         break;
 
-      case "move_arm":
+      case "move_arm": {
         const arm = String(parameters.arm || "right");
         const prefix = arm.toLowerCase() === "left" ? "L" : "R";
         this.publish(
           "/joint_angles",
-          "naoqi_bridge_msgs/JointAnglesWithSpeed",
+          "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
           {
             joint_names: [
               `${prefix}ShoulderPitch`,
@@ -824,6 +882,40 @@ export class WizardRosService extends EventEmitter {
           },
         );
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        break;
+      }
+
+      case "wake_up":
+        // Try known naoqi_driver2 service names in order
+        for (const svc of [
+          "/naoqi_driver/ALMotion/wakeUp",
+          "/naoqi_driver/motion/wake_up",
+          "/motion/wake_up",
+        ]) {
+          try {
+            await this.callService(svc, {});
+            console.log(`[WizardROS] wake_up succeeded via ${svc}`);
+            break;
+          } catch {
+            // try next
+          }
+        }
+        break;
+
+      case "rest":
+        for (const svc of [
+          "/naoqi_driver/ALMotion/rest",
+          "/naoqi_driver/motion/rest",
+          "/motion/rest",
+        ]) {
+          try {
+            await this.callService(svc, {});
+            console.log(`[WizardROS] rest succeeded via ${svc}`);
+            break;
+          } catch {
+            // try next
+          }
+        }
         break;
 
       case "emergency_stop":
