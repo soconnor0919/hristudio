@@ -218,15 +218,19 @@ export class RobotCommunicationService extends EventEmitter {
   ): void {
     const { implementation, parameters, actionId: actionType } = action;
 
-    // Use SSH for play_animation actions
-    if (actionType.startsWith("play_animation_")) {
-      this.executeAnimationViaSSH(actionType).then(() => {
+    // Use SSH for play_animation actions (check both namespaced and non-namespaced)
+    const baseActionId = actionType.includes(".")
+      ? actionType.split(".").pop()
+      : actionType;
+    
+    if (baseActionId?.startsWith("play_animation_")) {
+      this.executeAnimationViaSSH(baseActionId).then(() => {
         this.completeAction(actionId, {
           success: true,
           duration:
             Date.now() -
             (this.pendingActions.get(actionId)?.startTime || Date.now()),
-          data: { method: "ssh", action: actionType },
+          data: { method: "ssh", action: baseActionId },
         });
       }).catch((error) => {
         this.pendingActions.get(actionId)?.reject(error);
