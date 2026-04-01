@@ -810,10 +810,10 @@ export class TrialExecutionEngine {
       }
     }
 
-    // Prepare robot action
+    // Prepare robot action - use action.type which contains the namespaced format (plugin.actionId)
     const robotAction: RobotAction = {
       pluginName: plugin.name,
-      actionId: actionDefinition.id,
+      actionId: action.type, // e.g., "nao6-ros2.play_animation_bow"
       parameters,
       implementation: actionDefinition.implementation,
     };
