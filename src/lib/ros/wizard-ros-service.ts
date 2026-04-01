@@ -463,7 +463,7 @@ export class WizardRosService extends EventEmitter {
 
       // Execute based on action configuration or built-in mappings
       if (actionConfig) {
-        await this.executeWithConfig(actionConfig, parameters);
+        await this.executeWithConfig(actionConfig, parameters, actionId);
       } else {
         await this.executeBuiltinAction(actionId, parameters);
       }
@@ -721,6 +721,7 @@ export class WizardRosService extends EventEmitter {
       };
     },
     parameters: Record<string, unknown>,
+    actionId?: string,
   ): Promise<void> {
     // Service-call actions — no topic publish involved
     if (config.payloadMapping.type === "service") {
@@ -755,6 +756,12 @@ export class WizardRosService extends EventEmitter {
       }
       console.log(`[WizardROS] Delegating to animation handler (${movements.length} frames)`);
       await this.executeAnimationSequence(movements);
+      return;
+    }
+
+    // Route /animation topic through SSH instead of ROS to avoid crashes
+    if (config.topic === "/animation" && actionId?.startsWith("play_animation_")) {
+      await this.executeAnimationSSH(actionId);
       return;
     }
 
@@ -928,9 +935,7 @@ export class WizardRosService extends EventEmitter {
       case "play_animation_bow":
       case "play_animation_hey":
       case "play_animation_show_floor":
-      case "play_animation_friendly":
       case "play_animation_enthusiastic":
-      case "play_animation_think":
       case "play_animation_yes":
       case "play_animation_no":
       case "play_animation_idontknow":
@@ -1032,9 +1037,7 @@ export class WizardRosService extends EventEmitter {
       "play_animation_bow": "animations/Stand/Gestures/BowShort_1",
       "play_animation_hey": "animations/Stand/Gestures/Hey_1",
       "play_animation_show_floor": "animations/Stand/Gestures/ShowFloor_1",
-      "play_animation_friendly": "animations/Stand/Gestures/Friendly_1",
       "play_animation_enthusiastic": "animations/Stand/Gestures/Enthusiastic_4",
-      "play_animation_think": "animations/Stand/Gestures/Think_1",
       "play_animation_yes": "animations/Stand/Gestures/Yes_1",
       "play_animation_no": "animations/Stand/Gestures/No_3",
       "play_animation_idontknow": "animations/Stand/Gestures/IDontKnow_1",

@@ -101,16 +101,8 @@ export async function POST(request: NextRequest) {
             command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/ShowFloor_1'"`;
             break;
 
-          case "play_animation_show_sole":
-            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/ShowSole_1'"`;
-            break;
-
           case "play_animation_enthusiastic":
             command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Enthusiastic_4'"`;
-            break;
-
-          case "play_animation_think":
-            command = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "qicli call ALAnimationPlayer.run 'animations/Stand/Gestures/Think_1'"`;
             break;
 
           case "play_animation_yes":
