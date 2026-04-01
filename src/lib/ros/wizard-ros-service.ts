@@ -1057,20 +1057,8 @@ export class WizardRosService extends EventEmitter {
 
     console.log(`[WizardROS] Executing animation via API: ${animation}`);
 
-    // Use the robots command API to execute via SSH
-    const response = await fetch("/api/robots/command", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "executeSystemAction",
-        parameters: { id: actionId },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Animation failed: ${error}`);
-    }
+    // Use executeSSH to run animation via qicli (bypasses studyId requirement)
+    await this.executeSSHCommand(`qicli call ALAnimationPlayer.run '${animation}'`);
 
     console.log(`[WizardROS] Animation completed: ${animation}`);
   }
