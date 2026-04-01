@@ -181,41 +181,71 @@ export class RobotCommunicationService extends EventEmitter {
    * Execute a robot action
    */
   async executeAction(action: RobotAction): Promise<RobotActionResult> {
+    const actionId = `action_${this.messageId++}`;
+    const startTime = Date.now();
+
+    // Check if this is an SSH-only action (animations, posture, arbitrary SSH commands)
+    const { implementation, actionId: actionType } = action;
+    const baseActionId = actionType.includes(".")
+      ? actionType.split(".").pop()
+      : actionType;
+
+    const isAnimationAction = baseActionId?.startsWith("play_animation_");
+    const sshCommand = implementation.payloadMapping?.sshCommand
+      || implementation.ros2?.payloadMapping?.sshCommand;
+
+    // SSH actions don't require ROS connection
+    if (isAnimationAction || sshCommand) {
+      const timeout = setTimeout(() => {
+        throw new Error(`SSH action timeout: ${action.actionId}`);
+      }, 30000);
+
+      try {
+        console.log(`[RobotComm] Executing SSH action: ${action.actionId}`);
+        const result = await this.executeRobotActionInternal(action, actionId, startTime);
+        clearTimeout(timeout);
+        return result;
+      } catch (error) {
+        clearTimeout(timeout);
+        throw error;
+      }
+    }
+
+    // Non-SSH actions require ROS connection
     if (!this.isConnected) {
       throw new Error("Not connected to ROS bridge");
     }
 
-    const startTime = Date.now();
-    const actionId = `action_${this.messageId++}`;
-
-    return new Promise((resolve, reject) => {
-      // Set up timeout
-      const timeout = setTimeout(() => {
+    // Store pending action
+    const pending = {
+      resolve: (() => {}) as (result: RobotActionResult) => void,
+      reject: (() => {}) as (error: Error) => void,
+      timeout: setTimeout(() => {
         this.pendingActions.delete(actionId);
-        reject(new Error(`Action timeout: ${action.actionId}`));
-      }, 30000); // 30 second timeout
+        pending.reject(new Error(`Action timeout: ${action.actionId}`));
+      }, 30000),
+      startTime,
+    };
 
-      // Store pending action
-      this.pendingActions.set(actionId, {
-        resolve,
-        reject,
-        timeout,
-        startTime,
-      });
+    this.pendingActions.set(actionId, pending);
 
-      try {
-        // Log the action we're about to execute
-        console.log(`[RobotComm] Executing robot action: ${action.actionId}`);
-        console.log(`[RobotComm] Topic: ${action.implementation.topic}`);
-        console.log(`[RobotComm] Parameters:`, action.parameters);
+    // Wrap the pending resolve/reject in a way that works with async method
+    return new Promise<RobotActionResult>((resolve, reject) => {
+      pending.resolve = resolve;
+      pending.reject = reject;
 
-        // Execute action based on type and platform
-        this.executeRobotActionInternal(action, actionId);
-      } catch (error) {
-        clearTimeout(timeout);
-        this.pendingActions.delete(actionId);
-        reject(error);
-      }
+      // Execute action
+      this.executeRobotActionInternal(action, actionId, startTime)
+        .then((result) => {
+          clearTimeout(pending.timeout);
+          this.pendingActions.delete(actionId);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(pending.timeout);
+          this.pendingActions.delete(actionId);
+          reject(error);
+        });
     });
   }
 
@@ -228,10 +258,11 @@ export class RobotCommunicationService extends EventEmitter {
 
   // Private methods
 
-  private executeRobotActionInternal(
+  private async executeRobotActionInternal(
     action: RobotAction,
     actionId: string,
-  ): void {
+    startTime: number,
+  ): Promise<RobotActionResult> {
     const { implementation, parameters, actionId: actionType } = action;
 
     // Use SSH for play_animation actions (check both namespaced and non-namespaced)
@@ -240,18 +271,12 @@ export class RobotCommunicationService extends EventEmitter {
       : actionType;
     
     if (baseActionId?.startsWith("play_animation_")) {
-      this.executeAnimationViaSSH(baseActionId).then(() => {
-        this.completeAction(actionId, {
-          success: true,
-          duration:
-            Date.now() -
-            (this.pendingActions.get(actionId)?.startTime || Date.now()),
-          data: { method: "ssh", action: baseActionId },
-        });
-      }).catch((error) => {
-        this.pendingActions.get(actionId)?.reject(error);
-      });
-      return;
+      await this.executeAnimationViaSSH(baseActionId);
+      return {
+        success: true,
+        duration: Date.now() - startTime,
+        data: { method: "ssh", action: baseActionId },
+      };
     }
 
     // Check for SSH command type
@@ -259,18 +284,12 @@ export class RobotCommunicationService extends EventEmitter {
       || implementation.ros2?.payloadMapping?.sshCommand;
     
     if (sshCommand) {
-      this.executeSSHCommand(sshCommand).then(() => {
-        this.completeAction(actionId, {
-          success: true,
-          duration:
-            Date.now() -
-            (this.pendingActions.get(actionId)?.startTime || Date.now()),
-          data: { method: "ssh", command: sshCommand },
-        });
-      }).catch((error) => {
-        this.pendingActions.get(actionId)?.reject(error);
-      });
-      return;
+      await this.executeSSHCommand(sshCommand);
+      return {
+        success: true,
+        duration: Date.now() - startTime,
+        data: { method: "ssh", command: sshCommand },
+      };
     }
 
     // Apply transform if specified
@@ -297,19 +316,19 @@ export class RobotCommunicationService extends EventEmitter {
 
     // For actions that complete immediately (like movement commands),
     // we simulate completion after a short delay
-    setTimeout(() => {
-      this.completeAction(actionId, {
-        success: true,
-        duration:
-          Date.now() -
-          (this.pendingActions.get(actionId)?.startTime || Date.now()),
-        data: {
-          topic: implementation.topic,
-          messageType: implementation.messageType,
-          message,
-        },
-      });
-    }, 100);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          success: true,
+          duration: Date.now() - startTime,
+          data: {
+            topic: implementation.topic,
+            messageType: implementation.messageType,
+            message,
+          },
+        });
+      }, 100);
+    });
   }
 
   private async executeSSHCommand(command: string): Promise<void> {
