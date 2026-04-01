@@ -917,12 +917,13 @@ const ParameterEditor = React.memo(function ParameterEditor({
 
   if (param.type === "text") {
     control = (
-      <Input
+      <textarea
         value={(localValue as string) ?? ""}
         placeholder={param.placeholder}
         onChange={(e) => handleUpdate(e.target.value)}
         onBlur={handleCommit}
-        className="mt-1 h-7 w-full text-xs"
+        rows={3}
+        className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       />
     );
   } else if (param.type === "select") {
@@ -982,14 +983,24 @@ const ParameterEditor = React.memo(function ParameterEditor({
               max={max}
               step={step}
               value={[Number(numericVal)]}
-              onValueChange={(vals) => setLocalValue(vals[0])} // Update only local visual
-              onPointerUp={() => handleUpdate(localValue)} // Commit on release
+              onValueChange={(vals) => setLocalValue(vals[0])}
+              onPointerUp={() => handleUpdate(localValue)}
             />
-            <span className="text-muted-foreground min-w-[2.5rem] text-right text-[10px] tabular-nums">
-              {step < 1
-                ? Number(numericVal).toFixed(2)
-                : Number(numericVal).toString()}
-            </span>
+            <Input
+              type="number"
+              value={Number(numericVal)}
+              min={min}
+              max={max}
+              step={step}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) {
+                  setLocalValue(Math.max(min, Math.min(max, v)));
+                }
+              }}
+              onBlur={handleCommit}
+              className="h-7 w-16 text-xs tabular-nums"
+            />
           </div>
           <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
             <span>{min}</span>
