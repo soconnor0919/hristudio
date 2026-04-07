@@ -675,8 +675,11 @@ export const experimentsRouter = createTRPCRouter({
           // Delete existing steps and actions for this experiment
           await ctx.db.delete(steps).where(eq(steps.experimentId, id));
 
+          // Map from designer temp step ID → new DB UUID (for branch nextStepId fix-up)
+          const stepIdMap = new Map<string, string>();
+
           // Create new steps and actions
-          for (const convertedStep of convertedSteps) {
+          for (const [i, convertedStep] of convertedSteps.entries()) {
             const [newStep] = await ctx.db
               .insert(steps)
               .values({
@@ -697,6 +700,10 @@ export const experimentsRouter = createTRPCRouter({
                 message: "Failed to create step",
               });
             }
+
+            // Record temp ID → real UUID so branch nextStepId refs can be fixed up
+            const tempId = normalizedSteps[i]?.id;
+            if (tempId) stepIdMap.set(tempId, newStep.id);
 
             // Create actions for this step
             for (const convertedAction of convertedStep.actions) {
@@ -723,6 +730,25 @@ export const experimentsRouter = createTRPCRouter({
                 parameterSchemaRaw: convertedAction.parameterSchemaRaw,
               });
             }
+          }
+
+          // Fix-up branch nextStepId: replace temp designer IDs with real DB UUIDs
+          // in both action parameters and step conditions
+          for (const [tempId, dbId] of stepIdMap) {
+            await ctx.db.execute(
+              sql`UPDATE ${actions}
+                  SET parameters = replace(parameters::text, ${tempId}, ${dbId})::jsonb
+                  WHERE step_id IN (
+                    SELECT id FROM ${steps} WHERE experiment_id = ${id}
+                  )
+                  AND parameters::text LIKE ${"%" + tempId + "%"}`,
+            );
+            await ctx.db.execute(
+              sql`UPDATE ${steps}
+                  SET conditions = replace(conditions::text, ${tempId}, ${dbId})::jsonb
+                  WHERE experiment_id = ${id}
+                  AND conditions::text LIKE ${"%" + tempId + "%"}`,
+            );
           }
         } catch (error) {
           throw new TRPCError({

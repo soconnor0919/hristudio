@@ -799,8 +799,18 @@ export class TrialExecutionEngine {
     parameters: Record<string, unknown>,
     trialId: string,
   ): Promise<string> {
-    // Ensure robot communication service is available
-    if (!this.robotComm.getConnectionStatus()) {
+    // Plugin JSON uses a top-level "ros2" key; fall back to it if "implementation" is absent
+    const impl = actionDefinition.implementation ?? actionDefinition.ros2;
+
+    // Determine if this action uses SSH (animations or explicit sshCommand)
+    const sshCommand =
+      impl?.payloadMapping?.sshCommand ||
+      impl?.ros2?.payloadMapping?.sshCommand;
+    const isSSHAction =
+      actionDefinition.id?.startsWith("play_animation_") || !!sshCommand;
+
+    // SSH actions bypass ROS bridge — only connect for ROS-dependent actions
+    if (!isSSHAction && !this.robotComm.getConnectionStatus()) {
       try {
         await this.robotComm.connect();
       } catch (error) {
@@ -810,12 +820,12 @@ export class TrialExecutionEngine {
       }
     }
 
-    // Prepare robot action - use action.type which contains the namespaced format (plugin.actionId)
+    // Prepare robot action
     const robotAction: RobotAction = {
       pluginName: plugin.name,
-      actionId: action.type, // e.g., "nao6-ros2.play_animation_bow"
+      actionId: actionDefinition.id, // e.g., "play_animation_yes"
       parameters,
-      implementation: actionDefinition.implementation,
+      implementation: impl,
     };
 
     // Execute action through robot communication service

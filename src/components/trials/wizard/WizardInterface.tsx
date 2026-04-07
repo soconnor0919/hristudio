@@ -430,8 +430,7 @@ export const WizardInterface = React.memo(function WizardInterface({
         order: step.order ?? index,
         actions:
           step.actions
-            ?.filter((a) => a.type !== "branch")
-            .map((action) => ({
+            ?.map((action) => ({
               id: action.id,
               name: action.name,
               description: action.description,

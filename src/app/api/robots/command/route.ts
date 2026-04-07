@@ -21,27 +21,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, studyId, robotId, parameters } = body;
 
-    // Verify user has access to the study
-    const membership = await db.query.studyMembers.findFirst({
-      where: and(
-        eq(studyMembers.studyId, studyId),
-        eq(studyMembers.userId, session.user.id),
-      ),
-    });
-
-    if (!membership || !["owner", "researcher"].includes(membership.role)) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 },
-      );
-    }
-
     const robotIp =
       process.env.NAO_ROBOT_IP || process.env.NAO_IP || "134.82.159.168";
     const password = process.env.NAO_PASSWORD || "robolab";
 
     switch (action) {
       case "initialize": {
+        // Requires study membership
+        const membership = await db.query.studyMembers.findFirst({
+          where: and(
+            eq(studyMembers.studyId, studyId),
+            eq(studyMembers.userId, session.user.id),
+          ),
+        });
+
+        if (!membership || !["owner", "researcher"].includes(membership.role)) {
+          return NextResponse.json(
+            { error: "Insufficient permissions" },
+            { status: 403 },
+          );
+        }
+
         console.log(`[Robots API] Initializing robot at ${robotIp}`);
 
         const disableAlCmd = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no "nao@${robotIp}" "python2 -c \\"import sys; sys.path.append('/opt/aldebaran/lib/python2.7/site-packages'); import naoqi; al = naoqi.ALProxy('ALAutonomousLife', '127.0.0.1', 9559); al.setState('disabled')\\""`;
@@ -58,6 +58,21 @@ export async function POST(request: NextRequest) {
       }
 
       case "executeSystemAction": {
+        // Requires study membership
+        const membership = await db.query.studyMembers.findFirst({
+          where: and(
+            eq(studyMembers.studyId, studyId),
+            eq(studyMembers.userId, session.user.id),
+          ),
+        });
+
+        if (!membership || !["owner", "researcher"].includes(membership.role)) {
+          return NextResponse.json(
+            { error: "Insufficient permissions" },
+            { status: 403 },
+          );
+        }
+
         const { id, parameters: actionParams } = parameters ?? {};
         console.log(`[Robots API] Executing system action ${id}`);
 
@@ -145,7 +160,9 @@ export async function POST(request: NextRequest) {
       }
 
       case "executeSSH": {
-        const { command } = parameters ?? {};
+        // Session auth is sufficient — no studyId needed
+        // command may be top-level in body or nested under parameters
+        const { command } = parameters ?? body;
         if (!command) {
           return NextResponse.json(
             { error: "Missing command parameter" },

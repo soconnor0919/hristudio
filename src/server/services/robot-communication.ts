@@ -30,6 +30,7 @@ export interface RobotAction {
       type?: string;
       transformFn?: string;
       payload?: Record<string, unknown>;
+      sshCommand?: string;
     };
     ros2?: {
       topic?: string;
@@ -40,6 +41,7 @@ export interface RobotAction {
         type?: string;
         transformFn?: string;
         payload?: Record<string, unknown>;
+        sshCommand?: string;
       };
     };
   };
