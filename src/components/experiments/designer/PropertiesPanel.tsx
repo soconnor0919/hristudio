@@ -835,6 +835,40 @@ export function PropertiesPanelBase({
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label className="text-xs">After this step, go to</Label>
+                <p className="text-muted-foreground mb-1 text-[10px]">
+                  Override the next step (use to converge branch paths).
+                </p>
+                <Select
+                  value={(selectedStep.trigger.conditions as any)?.nextStepId ?? "__linear__"}
+                  onValueChange={(val) => {
+                    onStepUpdate(selectedStep.id, {
+                      trigger: {
+                        ...selectedStep.trigger,
+                        conditions: {
+                          ...(selectedStep.trigger.conditions as any),
+                          nextStepId: val === "__linear__" ? undefined : val,
+                        },
+                      },
+                    });
+                  }}
+                >
+                  <SelectTrigger className="mt-1 h-7 w-full text-xs">
+                    <SelectValue placeholder="Next step (default)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__linear__">Next step (default)</SelectItem>
+                    {design.steps
+                      .filter((s) => s.id !== selectedStep.id)
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>

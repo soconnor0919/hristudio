@@ -922,8 +922,8 @@ export const WizardInterface = React.memo(function WizardInterface({
       // Log action execution
       console.log("Executing action:", actionId, parameters);
 
-      // Handle branching logic (wizard_wait_for_response)
-      if (parameters?.value && parameters?.label) {
+      // Handle branching logic (wizard_wait_for_response / branch)
+      if (parameters?.label || parameters?.nextStepId) {
         setLastResponse(String(parameters.value));
 
         // If nextStepId is provided, jump immediately

@@ -499,6 +499,7 @@ export function WizardActionItem({
                 // Manual/Wizard Actions (Leaf nodes)
                 !isContainer &&
                 action.type !== "wizard_wait_for_response" &&
+                !isBranch &&
                 !isCompleted && (
                   <Button
                     size="sm"
@@ -524,7 +525,7 @@ export function WizardActionItem({
               <div className="grid grid-cols-1 gap-2 pt-3 sm:grid-cols-2">
                 {(action.parameters.options as any[]).map((opt, optIdx) => {
                   const label = typeof opt === "string" ? opt : opt.label;
-                  const value = typeof opt === "string" ? opt : opt.value;
+                  const value = typeof opt === "string" ? opt : (opt.value ?? opt.label);
                   const nextStepId =
                     typeof opt === "object" ? opt.nextStepId : undefined;
 
