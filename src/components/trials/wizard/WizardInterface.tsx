@@ -792,8 +792,11 @@ export const WizardInterface = React.memo(function WizardInterface({
       );
     }
 
-    // Default: Linear progression
-    const nextIndex = currentStepIndex + 1;
+    // Default: Linear progression (skip steps marked as skipped by branching)
+    let nextIndex = currentStepIndex + 1;
+    while (nextIndex < steps.length && skippedSteps.has(nextIndex)) {
+      nextIndex++;
+    }
     if (nextIndex < steps.length) {
       // Mark current step as complete
       setCompletedSteps((prev) => {
@@ -942,6 +945,24 @@ export const WizardInterface = React.memo(function WizardInterface({
             console.log(
               `[WizardInterface] Choice-based jump to step ${targetIndex} (${nextId})`,
             );
+
+            // Mark other branch targets as skipped so linear progression bypasses them
+            const branchingStep = steps[currentStepIndex];
+            const allOptions =
+              (branchingStep?.conditions?.options as any[]) ?? [];
+            setSkippedSteps((prev) => {
+              const next = new Set(prev);
+              for (const opt of allOptions) {
+                if (opt.nextStepId && opt.nextStepId !== nextId) {
+                  const otherIdx = steps.findIndex(
+                    (s) => s.id === opt.nextStepId,
+                  );
+                  if (otherIdx !== -1) next.add(otherIdx);
+                }
+              }
+              return next;
+            });
+
             handleNextStep(targetIndex);
             return; // Exit after jump
           } else {
