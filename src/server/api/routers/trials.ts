@@ -593,7 +593,7 @@ export const trialsRouter = createTRPCRouter({
       });
 
       // Broadcast trial status update
-      await wsManager.broadcast(input.id, {
+      await wsManager.broadcastExternal(input.id, {
         type: "trial_status",
         data: {
           trial: trial[0],
@@ -655,7 +655,7 @@ export const trialsRouter = createTRPCRouter({
       });
 
       // Broadcast trial status update
-      await wsManager.broadcast(input.id, {
+      await wsManager.broadcastExternal(input.id, {
         type: "trial_status",
         data: {
           trial,
@@ -718,7 +718,7 @@ export const trialsRouter = createTRPCRouter({
       });
 
       // Broadcast trial status update
-      await wsManager.broadcast(input.id, {
+      await wsManager.broadcastExternal(input.id, {
         type: "trial_status",
         data: {
           trial: trial[0],
@@ -878,7 +878,7 @@ export const trialsRouter = createTRPCRouter({
         .returning();
 
       // Broadcast new event to all subscribers
-      await wsManager.broadcast(input.trialId, {
+      await wsManager.broadcastExternal(input.trialId, {
         type: "trial_event",
         data: {
           event,
@@ -922,7 +922,7 @@ export const trialsRouter = createTRPCRouter({
         .returning();
 
       // Broadcast intervention to all subscribers
-      await wsManager.broadcast(input.trialId, {
+      await wsManager.broadcastExternal(input.trialId, {
         type: "intervention_logged",
         data: {
           intervention,
@@ -986,7 +986,7 @@ export const trialsRouter = createTRPCRouter({
       }
 
       // Broadcast annotation to all subscribers
-      await wsManager.broadcast(input.trialId, {
+      await wsManager.broadcastExternal(input.trialId, {
         type: "annotation_added",
         data: {
           annotation,
@@ -1380,7 +1380,7 @@ export const trialsRouter = createTRPCRouter({
         .returning();
 
       // Broadcast robot action to all subscribers
-      await wsManager.broadcast(input.trialId, {
+      await wsManager.broadcastExternal(input.trialId, {
         type: "trial_action_executed",
         data: {
           action_type: `${input.pluginName}.${input.actionId}`,
@@ -1439,7 +1439,7 @@ export const trialsRouter = createTRPCRouter({
         .returning();
 
       // Broadcast robot action to all subscribers
-      await wsManager.broadcast(input.trialId, {
+      await wsManager.broadcastExternal(input.trialId, {
         type: "trial_action_executed",
         data: {
           action_type: `${input.pluginName}.${input.actionId}`,

@@ -46,8 +46,21 @@ console.log(`Starting WebSocket server on port ${port}...`);
 
 serve<WSData>({
   port,
-  fetch(req, server) {
+  async fetch(req, server) {
     const url = new URL(req.url);
+
+    // Internal broadcast endpoint — called by Next.js tRPC router
+    if (url.pathname === "/internal/broadcast") {
+      if (req.method !== "POST") {
+        return new Response("Method not allowed", { status: 405 });
+      }
+      const { trialId, message } = (await req.json()) as {
+        trialId: string;
+        message: { type: string; data: Record<string, unknown> };
+      };
+      await wsManager.broadcast(trialId, message);
+      return new Response("OK", { status: 200 });
+    }
 
     if (url.pathname === "/api/websocket") {
       if (req.headers.get("upgrade") !== "websocket") {
@@ -114,7 +127,7 @@ serve<WSData>({
         }),
       );
     },
-    message(ws: ServerWebSocket<WSData>, message) {
+    async message(ws: ServerWebSocket<WSData>, message) {
       const { clientId, trialId } = ws.data;
 
       try {
@@ -131,7 +144,7 @@ serve<WSData>({
             break;
 
           case "request_trial_status": {
-            const status = wsManager.getTrialStatusSync(trialId);
+            const status = await wsManager.getTrialStatus(trialId);
             ws.send(
               JSON.stringify({
                 type: "trial_status",
@@ -146,7 +159,7 @@ serve<WSData>({
           }
 
           case "request_trial_events": {
-            const events = wsManager.getTrialEventsSync(
+            const events = await wsManager.getTrialEvents(
               trialId,
               msg.data?.limit ?? 100,
             );

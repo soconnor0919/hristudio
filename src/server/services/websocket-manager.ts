@@ -146,6 +146,24 @@ class WebSocketManager {
     );
   }
 
+  // Called from Next.js tRPC router — POSTs to the Bun ws-server process
+  // which holds the actual client connections.
+  async broadcastExternal(
+    trialId: string,
+    message: OutgoingMessage,
+  ): Promise<void> {
+    const wsPort = process.env.WS_PORT ?? "3001";
+    try {
+      await fetch(`http://localhost:${wsPort}/internal/broadcast`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trialId, message }),
+      });
+    } catch (error) {
+      console.error(`[WS] Failed to broadcast externally for trial ${trialId}:`, error);
+    }
+  }
+
   async broadcastToAll(message: OutgoingMessage): Promise<void> {
     const messageStr = JSON.stringify(message);
     const disconnectedClients: string[] = [];

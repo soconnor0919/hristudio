@@ -441,10 +441,6 @@ export class TrialExecutionEngine {
       case "hristudio-core.loop":
         return await this.executeLoopAction(trialId, action);
 
-      case "branch":
-      case "hristudio-core.branch":
-        return await this.executeBranchAction(trialId, action);
-
       default:
         // Check if it's a robot action (contains plugin prefix)
         if (
