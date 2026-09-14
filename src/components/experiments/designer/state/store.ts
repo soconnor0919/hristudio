@@ -460,7 +460,7 @@ export const createDesignerStore = (props: {
     reorderAction: (stepId: string, from: number, to: number) =>
       get().moveAction(
         stepId,
-        get().steps.find((s) => s.id === stepId)?.actions[from]?.id!,
+        get().steps.find((s) => s.id === stepId)?.actions[from]?.id as string,
         null,
         to,
       ), // Legacy compat support (only works for root level reorder)

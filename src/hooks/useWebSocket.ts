@@ -151,8 +151,8 @@ type StateListener = (state: GlobalWSState) => void;
 
 class GlobalWebSocketManager {
   private ws: WebSocket | null = null;
-  private subscriptions: Map<string, Subscription> = new Map();
-  private stateListeners: Set<StateListener> = new Set();
+  private subscriptions = new Map<string, Subscription>();
+  private stateListeners = new Set<StateListener>();
   private sessionRef: { user: { id: string } } | null = null;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;

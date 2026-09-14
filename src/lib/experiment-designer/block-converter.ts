@@ -229,7 +229,7 @@ export function convertDatabaseToAction(dbAction: any): ExperimentAction {
 
   // Robust Inference: If properties are missing but Type suggests a plugin (e.g., "nao6-ros2.say_text"),
   // assume/infer the pluginId to ensure validation passes.
-  if (dbAction.type && dbAction.type.includes(".") && !source.pluginId) {
+  if (dbAction.type?.includes(".") && !source.pluginId) {
     const parts = dbAction.type.split(".");
     if (parts.length === 2) {
       source.kind = "plugin";

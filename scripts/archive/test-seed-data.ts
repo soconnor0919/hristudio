@@ -185,7 +185,7 @@ function validateSeedData() {
   const seanRole = userRoles.find(
     (r) => r.userId === "01234567-89ab-cdef-0123-456789abcde0",
   );
-  if (seanRole && seanRole.role === "administrator") {
+  if (seanRole?.role === "administrator") {
     console.log(`   ✅ Sean has administrator role`);
   } else {
     console.error(`   ❌ Sean missing administrator role`);

@@ -495,12 +495,14 @@ export function DesignerRoot({
 
     // console.log('[DesignerRoot] Steps changed, scheduling hash recomputation');
 
-    const timeoutId = setTimeout(async () => {
-      // console.log('[DesignerRoot] Executing debounced hash recomputation');
-      const result = await recomputeHash();
-      if (result) {
-        // console.log('[DesignerRoot] Hash recomputed:', result.designHash.slice(0, 16));
-      }
+    const timeoutId = setTimeout(() => {
+      void (async () => {
+        // console.log('[DesignerRoot] Executing debounced hash recomputation');
+        const result = await recomputeHash();
+        if (result) {
+          // console.log('[DesignerRoot] Hash recomputed:', result.designHash.slice(0, 16));
+        }
+      })();
     }, 300); // Debounce 300ms
 
     return () => clearTimeout(timeoutId);
@@ -899,7 +901,7 @@ export function DesignerRoot({
     // Detect target based on over id
     if (overId.startsWith("s-act-")) {
       const data = over.data.current;
-      if (data && data.stepId) {
+      if (data?.stepId) {
         stepId = data.stepId;
         parentId = data.parentId ?? null; // Use parentId from the action we are hovering over
         // Use sortable index (insertion point provided by dnd-kit sortable strategy)
@@ -908,7 +910,7 @@ export function DesignerRoot({
     } else if (overId.startsWith("container-")) {
       // Dropping into a container (e.g. Loop)
       const data = over.data.current;
-      if (data && data.stepId) {
+      if (data?.stepId) {
         stepId = data.stepId;
         parentId = data.parentId ?? overId.slice("container-".length);
         // If dropping into container, appending is a safe default if specific index logic is missing
@@ -944,12 +946,7 @@ export function DesignerRoot({
     if (stepId) {
       const current = store.insertionProjection;
       // Optimization: avoid redundant updates if projection matches
-      if (
-        current &&
-        current.stepId === stepId &&
-        current.parentId === parentId &&
-        current.index === index
-      ) {
+      if (current?.stepId === stepId && current?.index === index) {
         return;
       }
 

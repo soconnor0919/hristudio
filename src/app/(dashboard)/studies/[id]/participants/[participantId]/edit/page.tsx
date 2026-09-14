@@ -16,7 +16,7 @@ export default async function EditParticipantPage({
 
   const participant = await api.participants.get({ id: participantId });
 
-  if (!participant || participant.studyId !== studyId) {
+  if (participant?.studyId !== studyId) {
     notFound();
   }
 

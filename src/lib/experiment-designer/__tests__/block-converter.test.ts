@@ -97,7 +97,7 @@ const steps: ExperimentStep[] = [
   }
 
   const first = converted[0];
-  if (!first || first.actions.length !== 2) {
+  if (first?.actions.length !== 2) {
     throw new Error(
       `Expected first converted step to contain 2 actions, got ${first?.actions.length ?? "undefined"}`,
     );

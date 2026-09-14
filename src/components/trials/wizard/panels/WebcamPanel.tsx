@@ -78,10 +78,7 @@ export function WebcamPanel({
 
   const handleStartRecording = () => {
     if (!webcamRef.current?.stream) return;
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
+    if (mediaRecorderRef.current?.state === "recording") {
       console.log("Already recording, skipping start");
       return;
     }

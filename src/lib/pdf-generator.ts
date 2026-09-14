@@ -44,7 +44,7 @@ export async function downloadPdfFromHtml(
   htmlContent: string,
   options: PdfOptions = {},
 ): Promise<void> {
-  // @ts-ignore - Dynamic import to prevent SSR issues with window/document
+  // Dynamic import to prevent SSR issues with window/document
   const html2pdf = (await import("html2pdf.js")).default;
 
   const { printWrapper, element } = createPrintWrapper(htmlContent);
@@ -61,7 +61,7 @@ export async function generatePdfBlobFromHtml(
   htmlContent: string,
   options: PdfOptions = {},
 ): Promise<Blob> {
-  // @ts-ignore - Dynamic import to prevent SSR issues with window/document
+  // Dynamic import to prevent SSR issues with window/document
   const html2pdf = (await import("html2pdf.js")).default;
 
   const { printWrapper, element } = createPrintWrapper(htmlContent);

@@ -501,7 +501,7 @@ export const studiesRouter = createTRPCRouter({
         ),
       });
 
-      if (!membership || membership.role !== "owner") {
+      if (membership?.role !== "owner") {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only study owners can remove members",
@@ -521,7 +521,7 @@ export const studiesRouter = createTRPCRouter({
         },
       });
 
-      if (!memberToRemove || memberToRemove.studyId !== studyId) {
+      if (memberToRemove?.studyId !== studyId) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Member not found",

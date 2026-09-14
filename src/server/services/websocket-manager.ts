@@ -20,9 +20,9 @@ type OutgoingMessage = {
 };
 
 class WebSocketManager {
-  private clients: Map<string, ClientConnection> = new Map();
-  private heartbeatIntervals: Map<string, ReturnType<typeof setInterval>> =
-    new Map();
+  private clients = new Map<string, ClientConnection>();
+  private heartbeatIntervals =
+    new Map<string, ReturnType<typeof setInterval>>();
 
   private getTrialRoomClients(trialId: string): ClientConnection[] {
     const clients: ClientConnection[] = [];
@@ -224,7 +224,7 @@ class WebSocketManager {
 
   async getTrialEvents(
     trialId: string,
-    limit: number = 100,
+    limit = 100,
   ): Promise<unknown[]> {
     const events = await db
       .select()
@@ -248,7 +248,7 @@ class WebSocketManager {
     return null;
   }
 
-  getTrialEventsSync(trialId: string, limit: number = 100): unknown[] {
+  getTrialEventsSync(trialId: string, limit = 100): unknown[] {
     return [];
   }
 

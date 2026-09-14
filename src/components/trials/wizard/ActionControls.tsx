@@ -309,7 +309,7 @@ export function ActionControls({
       </Card>
 
       {/* Step-Specific Controls */}
-      {currentStep && currentStep.type === "wizard_action" && (
+      {currentStep?.type === "wizard_action" && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">

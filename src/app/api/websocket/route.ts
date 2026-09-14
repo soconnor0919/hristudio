@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { wsManager } from "~/server/services/websocket-manager";
 import { auth } from "~/lib/auth";
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
   const pair = new WebSocketPair();
   const clientId = generateClientId();
-  const serverWebSocket = Object.values(pair)[0] as WebSocket;
+  const serverWebSocket = Object.values(pair)[0]!;
 
   clientConnections.set(clientId, { socket: serverWebSocket, clientId });
 
@@ -56,59 +56,61 @@ export async function GET(request: NextRequest) {
 
   serverWebSocket.accept();
 
-  serverWebSocket.addEventListener("message", async (event) => {
-    try {
-      const message = JSON.parse(event.data as string);
+  serverWebSocket.addEventListener("message", (event) => {
+    void (async () => {
+      try {
+        const message = JSON.parse(event.data as string);
 
-      switch (message.type) {
-        case "heartbeat":
-          wsManager.sendToClient(clientId, {
-            type: "heartbeat_response",
-            data: { timestamp: Date.now() },
-          });
-          break;
+        switch (message.type) {
+          case "heartbeat":
+            wsManager.sendToClient(clientId, {
+              type: "heartbeat_response",
+              data: { timestamp: Date.now() },
+            });
+            break;
 
-        case "request_trial_status": {
-          const status = await wsManager.getTrialStatus(trialId);
-          wsManager.sendToClient(clientId, {
-            type: "trial_status",
-            data: {
-              trial: status?.trial ?? null,
-              current_step_index: status?.currentStepIndex ?? 0,
-              timestamp: Date.now(),
-            },
-          });
-          break;
+          case "request_trial_status": {
+            const status = await wsManager.getTrialStatus(trialId);
+            wsManager.sendToClient(clientId, {
+              type: "trial_status",
+              data: {
+                trial: status?.trial ?? null,
+                current_step_index: status?.currentStepIndex ?? 0,
+                timestamp: Date.now(),
+              },
+            });
+            break;
+          }
+
+          case "request_trial_events": {
+            const events = await wsManager.getTrialEvents(
+              trialId,
+              message.data?.limit ?? 100,
+            );
+            wsManager.sendToClient(clientId, {
+              type: "trial_events_snapshot",
+              data: { events, timestamp: Date.now() },
+            });
+            break;
+          }
+
+          case "ping":
+            wsManager.sendToClient(clientId, {
+              type: "pong",
+              data: { timestamp: Date.now() },
+            });
+            break;
+
+          default:
+            console.log(
+              `[WS] Unknown message type from client ${clientId}:`,
+              message.type,
+            );
         }
-
-        case "request_trial_events": {
-          const events = await wsManager.getTrialEvents(
-            trialId,
-            message.data?.limit ?? 100,
-          );
-          wsManager.sendToClient(clientId, {
-            type: "trial_events_snapshot",
-            data: { events, timestamp: Date.now() },
-          });
-          break;
-        }
-
-        case "ping":
-          wsManager.sendToClient(clientId, {
-            type: "pong",
-            data: { timestamp: Date.now() },
-          });
-          break;
-
-        default:
-          console.log(
-            `[WS] Unknown message type from client ${clientId}:`,
-            message.type,
-          );
+      } catch (error) {
+        console.error(`[WS] Error processing message from ${clientId}:`, error);
       }
-    } catch (error) {
-      console.error(`[WS] Error processing message from ${clientId}:`, error);
-    }
+    })();
   });
 
   serverWebSocket.addEventListener("close", () => {

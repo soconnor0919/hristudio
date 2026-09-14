@@ -246,9 +246,10 @@ export function DigitalSignatureModal({
                 Agreement
               </h4>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                By clicking "Submit Signed Document", you confirm that you have
-                read and understood the information provided in the document
-                preview, and you voluntarily agree to participate in this study.
+                By clicking &quot;Submit Signed Document&quot;, you confirm that
+                you have read and understood the information provided in the
+                document preview, and you voluntarily agree to participate in
+                this study.
               </p>
               <Button
                 className="mt-2 w-full"

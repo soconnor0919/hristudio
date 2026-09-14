@@ -191,7 +191,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
               '<div style="margin-top: 4px;"><input type="radio" name="yn" /> Yes &nbsp; <input type="radio" name="yn" /> No</div>';
             break;
           case "rating":
-            const scale = (field.settings?.scale as number) || 5;
+            const scale = field.settings?.scale ?? 5;
             inputField = `<div style="margin-top: 4px;">${Array.from(
               { length: scale },
               (_, i) => `<input type="radio" name="rating" /> ${i + 1} `,
@@ -422,12 +422,14 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           <div className="flex items-center gap-3">
                             <Badge variant="outline" className="text-xs">
                               {
-                                FORM_FIELD_TYPES.find((f) => f.value === field.type)
-                                  ?.icon
+                                FORM_FIELD_TYPES.find(
+                                  (f) => f.value === field.type,
+                                )?.icon
                               }{" "}
                               {
-                                FORM_FIELD_TYPES.find((f) => f.value === field.type)
-                                  ?.label
+                                FORM_FIELD_TYPES.find(
+                                  (f) => f.value === field.type,
+                                )?.label
                               }
                             </Badge>
                             <Input
@@ -547,8 +549,9 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           <p className="font-medium">{field.label}</p>
                           <p className="text-muted-foreground text-xs">
                             {
-                              FORM_FIELD_TYPES.find((f) => f.value === field.type)
-                                ?.label
+                              FORM_FIELD_TYPES.find(
+                                (f) => f.value === field.type,
+                              )?.label
                             }
                             {field.required && " • Required"}
                             {field.type === "multiple_choice" &&
@@ -624,7 +627,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                       {field.type === "rating" && (
                         <div className="flex gap-2">
                           {Array.from(
-                            { length: (field.settings?.scale as number) || 5 },
+                            { length: field.settings?.scale ?? 5 },
                             (_, i) => (
                               <button
                                 key={i}
@@ -809,7 +812,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                               </SelectTrigger>
                               <SelectContent>
                                 {Array.from(
-                                  { length: (field.settings?.scale as number) || 5 },
+                                  { length: field.settings?.scale ?? 5 },
                                   (_, i) => (
                                     <SelectItem key={i} value={String(i + 1)}>
                                       {i + 1}
@@ -926,7 +929,7 @@ export default function FormViewPage({ params }: FormViewPageProps) {
                           </span>
                         </div>
                         <Badge
-                          className={`text-xs ${formStatusColors[response.status as keyof typeof formStatusColors]}`}
+                          className={`text-xs ${formStatusColors[response.status!]}`}
                         >
                           {response.status}
                         </Badge>

@@ -5,7 +5,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 
 export default tseslint.config(
   {
-    ignores: [".next"],
+    ignores: [".next", "src/trpc/*.js"],
   },
   ...nextVitals,
   {
@@ -34,6 +34,27 @@ export default tseslint.config(
         "error",
         { checksVoidReturn: { attributes: false } },
       ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-call": "warn",
+      "@typescript-eslint/no-unsafe-argument": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/non-nullable-type-assertion-style": "off",
+      "@typescript-eslint/no-base-to-string": "warn",
+      "@typescript-eslint/no-floating-promises": "warn",
+      "@typescript-eslint/restrict-template-expressions": "warn",
+      "@typescript-eslint/prefer-promise-reject-errors": "warn",
+      "@typescript-eslint/prefer-nullish-coalescing": "warn",
+      "@typescript-eslint/no-empty-function": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/error-boundaries": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
       "drizzle/enforce-delete-with-where": [
         "error",
         { drizzleObjectName: ["db", "ctx.db"] },

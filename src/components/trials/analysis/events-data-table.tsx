@@ -103,9 +103,7 @@ export function EventsDataTable({ data, startTime }: EventsDataTableProps) {
     return null;
   }, [events, currentEventIndex]);
 
-  const rowRefs = React.useRef<{ [key: string]: HTMLTableRowElement | null }>(
-    {},
-  );
+  const rowRefs = React.useRef<Record<string, HTMLTableRowElement | null>>({});
 
   React.useEffect(() => {
     if (activeEventId && rowRefs.current[activeEventId]) {
@@ -281,7 +279,7 @@ export function EventsDataTable({ data, startTime }: EventsDataTableProps) {
                         <strong>{d?.command || d?.type || "Action"}</strong>
                         {text && (
                           <span className="text-muted-foreground ml-1">
-                            "{text}"
+                            &quot;{text}&quot;
                           </span>
                         )}
                       </span>

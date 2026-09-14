@@ -169,7 +169,7 @@ export default function NaoTestPage() {
   };
 
   const publishMessage = (topic: string, type: string, msg: any) => {
-    if (!rosSocket || rosSocket.readyState !== WebSocket.OPEN) {
+    if (rosSocket?.readyState !== WebSocket.OPEN) {
       addLog("Error: Not connected to ROS bridge");
       return;
     }

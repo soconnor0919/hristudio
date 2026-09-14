@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
 import WebSocket from "ws";
@@ -193,8 +193,9 @@ export class RobotCommunicationService extends EventEmitter {
       : actionType;
 
     const isAnimationAction = baseActionId?.startsWith("play_animation_");
-    const sshCommand = implementation.payloadMapping?.sshCommand
-      || implementation.ros2?.payloadMapping?.sshCommand;
+    const sshCommand =
+      implementation.payloadMapping?.sshCommand ||
+      implementation.ros2?.payloadMapping?.sshCommand;
 
     // SSH actions don't require ROS connection
     if (isAnimationAction || sshCommand) {
@@ -204,7 +205,11 @@ export class RobotCommunicationService extends EventEmitter {
 
       try {
         console.log(`[RobotComm] Executing SSH action: ${action.actionId}`);
-        const result = await this.executeRobotActionInternal(action, actionId, startTime);
+        const result = await this.executeRobotActionInternal(
+          action,
+          actionId,
+          startTime,
+        );
         clearTimeout(timeout);
         return result;
       } catch (error) {
@@ -271,7 +276,7 @@ export class RobotCommunicationService extends EventEmitter {
     const baseActionId = actionType.includes(".")
       ? actionType.split(".").pop()
       : actionType;
-    
+
     if (baseActionId?.startsWith("play_animation_")) {
       await this.executeAnimationViaSSH(baseActionId);
       return {
@@ -282,9 +287,10 @@ export class RobotCommunicationService extends EventEmitter {
     }
 
     // Check for SSH command type
-    const sshCommand = implementation.payloadMapping?.sshCommand 
-      || implementation.ros2?.payloadMapping?.sshCommand;
-    
+    const sshCommand =
+      implementation.payloadMapping?.sshCommand ||
+      implementation.ros2?.payloadMapping?.sshCommand;
+
     if (sshCommand) {
       await this.executeSSHCommand(sshCommand);
       return {
@@ -296,9 +302,10 @@ export class RobotCommunicationService extends EventEmitter {
 
     // Apply transform if specified
     let message: Record<string, unknown>;
-    const transformFn = implementation.payloadMapping?.transformFn 
-      || implementation.ros2?.payloadMapping?.transformFn;
-    
+    const transformFn =
+      implementation.payloadMapping?.transformFn ||
+      implementation.ros2?.payloadMapping?.transformFn;
+
     if (transformFn) {
       message = this.applyTransform(transformFn, parameters);
     } else {
@@ -352,13 +359,13 @@ export class RobotCommunicationService extends EventEmitter {
 
   private async executeAnimationViaSSH(actionType: string): Promise<void> {
     const animationMap: Record<string, string> = {
-      "play_animation_bow": "animations/Stand/Gestures/BowShort_1",
-      "play_animation_hey": "animations/Stand/Gestures/Hey_1",
-      "play_animation_show_floor": "animations/Stand/Gestures/ShowFloor_1",
-      "play_animation_enthusiastic": "animations/Stand/Gestures/Enthusiastic_4",
-      "play_animation_yes": "animations/Stand/Gestures/Yes_1",
-      "play_animation_no": "animations/Stand/Gestures/No_3",
-      "play_animation_idontknow": "animations/Stand/Gestures/IDontKnow_1",
+      play_animation_bow: "animations/Stand/Gestures/BowShort_1",
+      play_animation_hey: "animations/Stand/Gestures/Hey_1",
+      play_animation_show_floor: "animations/Stand/Gestures/ShowFloor_1",
+      play_animation_enthusiastic: "animations/Stand/Gestures/Enthusiastic_4",
+      play_animation_yes: "animations/Stand/Gestures/Yes_1",
+      play_animation_no: "animations/Stand/Gestures/No_3",
+      play_animation_idontknow: "animations/Stand/Gestures/IDontKnow_1",
     };
 
     const animation = animationMap[actionType];
@@ -382,7 +389,9 @@ export class RobotCommunicationService extends EventEmitter {
     console.log(`[RobotComm] Animation result: ${stdout}`);
   }
 
-  private transformToEmotionalSpeech(parameters: Record<string, unknown>): { data: string } {
+  private transformToEmotionalSpeech(parameters: Record<string, unknown>): {
+    data: string;
+  } {
     const text = String(parameters.text || "Hello");
     const emotion = String(parameters.emotion || "neutral");
 
@@ -397,7 +406,10 @@ export class RobotCommunicationService extends EventEmitter {
     }
   }
 
-  private applyTransform(transformFn: string, parameters: Record<string, unknown>): Record<string, unknown> {
+  private applyTransform(
+    transformFn: string,
+    parameters: Record<string, unknown>,
+  ): Record<string, unknown> {
     switch (transformFn) {
       case "transformToEmotionalSpeech":
       case "transformToEmotionSpeech":
@@ -440,8 +452,8 @@ export class RobotCommunicationService extends EventEmitter {
           substituted.includes(":")
         ) {
           // Simple conditional: {{condition ? valueTrue : valueFalse}}
-          const match = substituted.match(
-            /\{\{(.+?)\s*\?\s*(.+?)\s*:\s*(.+?)\}\}/,
+          const match = /\{\{(.+?)\s*\?\s*(.+?)\s*:\s*(.+?)\}\}/.exec(
+            substituted,
           );
           if (match && match.length >= 4) {
             const condition = match[1];
@@ -587,21 +599,23 @@ export class RobotCommunicationService extends EventEmitter {
       `[RobotComm] Scheduling reconnect attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${this.config.reconnectInterval}ms`,
     );
 
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = null;
+    this.reconnectTimer = setTimeout(() => {
+      void (async () => {
+        this.reconnectTimer = null;
 
-      try {
-        await this.connect();
-      } catch (error) {
-        console.error("[RobotComm] Reconnect failed:", error);
+        try {
+          await this.connect();
+        } catch (error) {
+          console.error("[RobotComm] Reconnect failed:", error);
 
-        if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
-          this.scheduleReconnect();
-        } else {
-          console.error("[RobotComm] Max reconnect attempts reached");
-          this.emit("max_reconnects_reached");
+          if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
+            this.scheduleReconnect();
+          } else {
+            console.error("[RobotComm] Max reconnect attempts reached");
+            this.emit("max_reconnects_reached");
+          }
         }
-      }
+      })();
     }, this.config.reconnectInterval);
   }
 

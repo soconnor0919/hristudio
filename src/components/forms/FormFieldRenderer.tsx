@@ -43,7 +43,7 @@ export function FormFieldRenderer({
     className: error ? "border-destructive" : "",
   };
 
-  const scale = (field.settings?.scale as number) || 5;
+  const scale = field.settings?.scale ?? 5;
 
   switch (field.type) {
     case "text":

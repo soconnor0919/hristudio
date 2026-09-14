@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  WizardRosService,
+  type WizardRosService,
   type RobotStatus,
   type RobotActionExecution,
   getWizardRosService,

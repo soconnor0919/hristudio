@@ -90,13 +90,15 @@ export class WizardRosService extends EventEmitter {
   };
 
   // Active action tracking
-  private activeActions: Map<string, RobotActionExecution> = new Map();
+  private activeActions = new Map<string, RobotActionExecution>();
 
-  constructor(url: string = "ws://localhost:9090", simulationMode: boolean = false) {
+  constructor(url = "ws://localhost:9090", simulationMode = false) {
     super();
     this.url = url;
-    this.simulationMode = simulationMode || 
-      (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SIMULATION_MODE === "true");
+    this.simulationMode =
+      simulationMode ||
+      (typeof window !== "undefined" &&
+        process.env.NEXT_PUBLIC_SIMULATION_MODE === "true");
   }
 
   /**
@@ -242,10 +244,13 @@ export class WizardRosService extends EventEmitter {
       connected: true,
       battery: 85,
       position: { x: 0, y: 0, theta: 0 },
-      joints: mockStates.names.reduce((acc, name, i) => {
-        acc[name] = mockStates.positions[i] ?? 0;
-        return acc;
-      }, {} as Record<string, number>),
+      joints: mockStates.names.reduce(
+        (acc, name, i) => {
+          acc[name] = mockStates.positions[i] ?? 0;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
       sensors: {},
       lastUpdate: new Date(),
     };
@@ -298,11 +303,32 @@ export class WizardRosService extends EventEmitter {
    */
   private getMockJointStates(): { names: string[]; positions: number[] } {
     const names = [
-      "HeadYaw", "HeadPitch",
-      "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand",
-      "RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand",
-      "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
-      "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
+      "HeadYaw",
+      "HeadPitch",
+      "LShoulderPitch",
+      "LShoulderRoll",
+      "LElbowYaw",
+      "LElbowRoll",
+      "LWristYaw",
+      "LHand",
+      "RShoulderPitch",
+      "RShoulderRoll",
+      "RElbowYaw",
+      "RElbowRoll",
+      "RWristYaw",
+      "RHand",
+      "LHipYawPitch",
+      "LHipRoll",
+      "LHipPitch",
+      "LKneePitch",
+      "LAnklePitch",
+      "LAnkleRoll",
+      "RHipYawPitch",
+      "RHipRoll",
+      "RHipPitch",
+      "RKneePitch",
+      "RAnklePitch",
+      "RAnkleRoll",
     ];
     const positions = names.map(() => (Math.random() - 0.5) * 0.1);
     return { names, positions };
@@ -342,11 +368,17 @@ export class WizardRosService extends EventEmitter {
       execution.status = "executing";
       this.activeActions.set(executionId, execution);
 
-      console.log(`[WizardROS] SIMULATION MODE - Executing ${actionId}:`, parameters);
+      console.log(
+        `[WizardROS] SIMULATION MODE - Executing ${actionId}:`,
+        parameters,
+      );
 
       // If the action config carries a gesture_sequence payload, run the sim animation handler
       if (actionConfig?.payloadMapping?.payload) {
-        const payload = actionConfig.payloadMapping.payload as { type?: string; movements?: AnimationMovement[] };
+        const payload = actionConfig.payloadMapping.payload as {
+          type?: string;
+          movements?: AnimationMovement[];
+        };
         if (payload.type === "gesture_sequence" && payload.movements?.length) {
           await this.executeSimulationAnimationSequence(payload.movements);
           execution.status = "completed";
@@ -360,11 +392,19 @@ export class WizardRosService extends EventEmitter {
       // Simulate action execution based on action type
       let duration = 500;
 
-      if (actionId === "say_text" || actionId === "say_with_emotion" || actionConfig?.topic === "/speech") {
+      if (
+        actionId === "say_text" ||
+        actionId === "say_with_emotion" ||
+        actionConfig?.topic === "/speech"
+      ) {
         const text = String(parameters.text || parameters.data || "Hello");
         const wordCount = text.split(/\s+/).filter(Boolean).length;
         duration = 1500 + Math.max(1000, wordCount * 300);
-      } else if (actionId.includes("walk") || actionId === "stop_walking" || actionConfig?.topic === "/cmd_vel") {
+      } else if (
+        actionId.includes("walk") ||
+        actionId === "stop_walking" ||
+        actionConfig?.topic === "/cmd_vel"
+      ) {
         duration = 500;
         const speed = Number(parameters.speed) || 0.1;
         if (actionId === "walk_forward") {
@@ -378,7 +418,11 @@ export class WizardRosService extends EventEmitter {
         }
       } else if (actionConfig?.topic === "/joint_angles") {
         duration = 1000;
-      } else if (actionId === "wake_up" || actionId === "rest" || actionId === "set_posture") {
+      } else if (
+        actionId === "wake_up" ||
+        actionId === "rest" ||
+        actionId === "set_posture"
+      ) {
         duration = 2000;
       }
 
@@ -398,8 +442,6 @@ export class WizardRosService extends EventEmitter {
     this.activeActions.set(executionId, execution);
     return execution;
   }
-
-
 
   /**
    * Check if connected to ROS bridge
@@ -441,7 +483,12 @@ export class WizardRosService extends EventEmitter {
 
     // Simulation mode - simulate action execution
     if (this.simulationMode) {
-      return this.executeSimulationAction(pluginName, actionId, parameters, actionConfig);
+      return this.executeSimulationAction(
+        pluginName,
+        actionId,
+        parameters,
+        actionConfig,
+      );
     }
 
     const executionId = `${pluginName}_${actionId}_${Date.now()}`;
@@ -494,9 +541,13 @@ export class WizardRosService extends EventEmitter {
    * Each frame is published to /joint_angles then held for delay_after ms
    * (default 800 ms) before the next frame is sent.
    */
-  async executeAnimationSequence(movements: AnimationMovement[]): Promise<void> {
+  async executeAnimationSequence(
+    movements: AnimationMovement[],
+  ): Promise<void> {
     if (!movements.length) {
-      console.warn("[WizardROS] executeAnimationSequence called with empty movements");
+      console.warn(
+        "[WizardROS] executeAnimationSequence called with empty movements",
+      );
       return;
     }
 
@@ -563,7 +614,10 @@ export class WizardRosService extends EventEmitter {
 
     this.advertise("/speech", "std_msgs/String");
     this.advertise("/cmd_vel", "geometry_msgs/Twist");
-    this.advertise("/joint_angles", "naoqi_bridge_msgs/msg/JointAnglesWithSpeed");
+    this.advertise(
+      "/joint_angles",
+      "naoqi_bridge_msgs/msg/JointAnglesWithSpeed",
+    );
     this.advertise("/robot_pose", "geometry_msgs/Pose");
     this.advertise("/animation", "std_msgs/String");
   }
@@ -725,7 +779,10 @@ export class WizardRosService extends EventEmitter {
     actionId?: string,
   ): Promise<void> {
     // SSH command actions
-    if (config.payloadMapping.type === "ssh" && config.payloadMapping.sshCommand) {
+    if (
+      config.payloadMapping.type === "ssh" &&
+      config.payloadMapping.sshCommand
+    ) {
       await this.executeSSHCommand(config.payloadMapping.sshCommand);
       return;
     }
@@ -747,9 +804,15 @@ export class WizardRosService extends EventEmitter {
         config.payloadMapping.type === "static") &&
       config.payloadMapping.payload
     ) {
-      msg = this.buildTemplatePayload(config.payloadMapping.payload, parameters);
+      msg = this.buildTemplatePayload(
+        config.payloadMapping.payload,
+        parameters,
+      );
     } else if (config.payloadMapping.transformFn) {
-      msg = this.applyTransformFunction(config.payloadMapping.transformFn, parameters);
+      msg = this.applyTransformFunction(
+        config.payloadMapping.transformFn,
+        parameters,
+      );
     } else {
       msg = parameters;
     }
@@ -761,13 +824,18 @@ export class WizardRosService extends EventEmitter {
         console.warn("[WizardROS] gesture_sequence payload has no movements");
         return;
       }
-      console.log(`[WizardROS] Delegating to animation handler (${movements.length} frames)`);
+      console.log(
+        `[WizardROS] Delegating to animation handler (${movements.length} frames)`,
+      );
       await this.executeAnimationSequence(movements);
       return;
     }
 
     // Route /animation topic through SSH instead of ROS to avoid crashes
-    if (config.topic === "/animation" && actionId?.startsWith("play_animation_")) {
+    if (
+      config.topic === "/animation" &&
+      actionId?.startsWith("play_animation_")
+    ) {
       await this.executeAnimationSSH(actionId);
       return;
     }
@@ -969,7 +1037,10 @@ export class WizardRosService extends EventEmitter {
 
     // Simulation mode - return mock responses
     if (this.simulationMode) {
-      console.log(`[WizardROS] SIMULATION MODE - Service call: ${service}`, args);
+      console.log(
+        `[WizardROS] SIMULATION MODE - Service call: ${service}`,
+        args,
+      );
 
       const mockResponses: Record<string, ServiceResponse> = {
         "/naoqi_driver/get_robot_info": {
@@ -984,13 +1055,32 @@ export class WizardRosService extends EventEmitter {
           result: true,
           values: {
             joint_names: [
-              "HeadYaw", "HeadPitch", "LShoulderPitch", "LShoulderRoll",
-              "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand",
-              "RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll",
-              "RWristYaw", "RHand", "LHipYawPitch", "LHipRoll",
-              "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
-              "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch",
-              "RAnklePitch", "RAnkleRoll",
+              "HeadYaw",
+              "HeadPitch",
+              "LShoulderPitch",
+              "LShoulderRoll",
+              "LElbowYaw",
+              "LElbowRoll",
+              "LWristYaw",
+              "LHand",
+              "RShoulderPitch",
+              "RShoulderRoll",
+              "RElbowYaw",
+              "RElbowRoll",
+              "RWristYaw",
+              "RHand",
+              "LHipYawPitch",
+              "LHipRoll",
+              "LHipPitch",
+              "LKneePitch",
+              "LAnklePitch",
+              "LAnkleRoll",
+              "RHipYawPitch",
+              "RHipRoll",
+              "RHipPitch",
+              "RKneePitch",
+              "RAnklePitch",
+              "RAnkleRoll",
             ],
           },
         },
@@ -1041,13 +1131,13 @@ export class WizardRosService extends EventEmitter {
    */
   private async executeAnimationSSH(actionId: string): Promise<void> {
     const animationMap: Record<string, string> = {
-      "play_animation_bow": "animations/Stand/Gestures/BowShort_1",
-      "play_animation_hey": "animations/Stand/Gestures/Hey_1",
-      "play_animation_show_floor": "animations/Stand/Gestures/ShowFloor_1",
-      "play_animation_enthusiastic": "animations/Stand/Gestures/Enthusiastic_4",
-      "play_animation_yes": "animations/Stand/Gestures/Yes_1",
-      "play_animation_no": "animations/Stand/Gestures/No_3",
-      "play_animation_idontknow": "animations/Stand/Gestures/IDontKnow_1",
+      play_animation_bow: "animations/Stand/Gestures/BowShort_1",
+      play_animation_hey: "animations/Stand/Gestures/Hey_1",
+      play_animation_show_floor: "animations/Stand/Gestures/ShowFloor_1",
+      play_animation_enthusiastic: "animations/Stand/Gestures/Enthusiastic_4",
+      play_animation_yes: "animations/Stand/Gestures/Yes_1",
+      play_animation_no: "animations/Stand/Gestures/No_3",
+      play_animation_idontknow: "animations/Stand/Gestures/IDontKnow_1",
     };
 
     const animation = animationMap[actionId];
@@ -1058,7 +1148,9 @@ export class WizardRosService extends EventEmitter {
     console.log(`[WizardROS] Executing animation via API: ${animation}`);
 
     // Use executeSSH to run animation via qicli (bypasses studyId requirement)
-    await this.executeSSHCommand(`qicli call ALAnimationPlayer.run '${animation}'`);
+    await this.executeSSHCommand(
+      `qicli call ALAnimationPlayer.run '${animation}'`,
+    );
 
     console.log(`[WizardROS] Animation completed: ${animation}`);
   }
@@ -1363,18 +1455,20 @@ export class WizardRosService extends EventEmitter {
       `[WizardROS] Scheduling reconnect attempt ${this.connectionAttempts}/${this.maxReconnectAttempts}`,
     );
 
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = null;
-      try {
-        await this.connect();
-      } catch (error) {
-        console.warn("[WizardROS] Reconnect failed:", error);
-        if (this.connectionAttempts < this.maxReconnectAttempts) {
-          this.scheduleReconnect();
-        } else {
-          this.emit("max_reconnects_reached");
+    this.reconnectTimer = setTimeout(() => {
+      void (async () => {
+        this.reconnectTimer = null;
+        try {
+          await this.connect();
+        } catch (error) {
+          console.warn("[WizardROS] Reconnect failed:", error);
+          if (this.connectionAttempts < this.maxReconnectAttempts) {
+            this.scheduleReconnect();
+          } else {
+            this.emit("max_reconnects_reached");
+          }
         }
-      }
+      })();
     }, this.reconnectInterval);
   }
 
@@ -1396,7 +1490,9 @@ let isCreatingInstance = false;
 /**
  * Get or create the global wizard ROS service (true singleton)
  */
-export function getWizardRosService(simulationMode?: boolean): WizardRosService {
+export function getWizardRosService(
+  simulationMode?: boolean,
+): WizardRosService {
   // Prevent multiple instances during creation
   if (isCreatingInstance && !wizardRosService) {
     throw new Error("WizardRosService is being initialized, please wait");
@@ -1405,9 +1501,10 @@ export function getWizardRosService(simulationMode?: boolean): WizardRosService 
   if (!wizardRosService) {
     isCreatingInstance = true;
     try {
-      const url = typeof window !== "undefined" 
-        ? (process.env.NEXT_PUBLIC_ROS_BRIDGE_URL || "ws://localhost:9090")
-        : "ws://localhost:9090";
+      const url =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_ROS_BRIDGE_URL || "ws://localhost:9090"
+          : "ws://localhost:9090";
       wizardRosService = new WizardRosService(url, simulationMode);
     } finally {
       isCreatingInstance = false;
@@ -1419,7 +1516,9 @@ export function getWizardRosService(simulationMode?: boolean): WizardRosService 
 /**
  * Initialize wizard ROS service with connection
  */
-export async function initWizardRosService(simulationMode?: boolean): Promise<WizardRosService> {
+export async function initWizardRosService(
+  simulationMode?: boolean,
+): Promise<WizardRosService> {
   const service = getWizardRosService(simulationMode);
 
   if (simulationMode !== undefined) {

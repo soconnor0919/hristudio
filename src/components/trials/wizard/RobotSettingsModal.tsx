@@ -80,7 +80,7 @@ export function RobotSettingsModal({
   });
 
   // Initialize settings from current configuration
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useState(() => {
     if (currentSettings) {
       setSettings(currentSettings as Record<string, unknown>);
@@ -103,7 +103,7 @@ export function RobotSettingsModal({
   const renderField = (
     key: string,
     schema: PropertySchema,
-    parentPath: string = "",
+    parentPath = "",
   ) => {
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
     const value = getNestedValue(settings, fullPath);

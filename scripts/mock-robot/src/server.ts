@@ -20,7 +20,7 @@ interface Subscriber {
 const PORT = parseInt(process.env.MOCK_ROBOT_PORT || "9090", 10);
 const PUBLISH_INTERVAL = parseInt(process.env.MOCK_PUBLISH_INTERVAL || "100", 10);
 
-const subscribers: Map<string, Subscriber> = new Map();
+const subscribers = new Map<string, Subscriber>();
 let subscriberIdCounter = 0;
 
 const mockRobotState = {
